@@ -1,18 +1,21 @@
+from __future__ import annotations
+
+from collections.abc import Iterable
 from types import ModuleType
-from typing import Dict, Iterable, Optional, Union
 
 from sanic import Sanic  # pylint: disable=E0401
 
-from tortoise import Tortoise, connections
+from tortoise import Tortoise
+from tortoise.connection import get_connections
 from tortoise.log import logger
 
 
 def register_tortoise(
     app: Sanic,
-    config: Optional[dict] = None,
-    config_file: Optional[str] = None,
-    db_url: Optional[str] = None,
-    modules: Optional[Dict[str, Iterable[Union[str, ModuleType]]]] = None,
+    config: dict | None = None,
+    config_file: str | None = None,
+    db_url: str | None = None,
+    modules: dict[str, Iterable[str | ModuleType]] | None = None,
     generate_schemas: bool = False,
 ) -> None:
     """
@@ -79,23 +82,24 @@ def register_tortoise(
 
     async def tortoise_init() -> None:
         await Tortoise.init(config=config, config_file=config_file, db_url=db_url, modules=modules)
-        logger.info(
-            "Tortoise-ORM started, %s, %s", connections._get_storage(), Tortoise.apps
-        )  # pylint: disable=W0212
+        logger.info("Tortoise-ORM started, %s, %s", get_connections()._get_storage(), Tortoise.apps)  # pylint: disable=W0212
 
     if generate_schemas:
 
-        @app.listener("main_process_start")
-        async def init_orm_main(app, loop):  # pylint: disable=W0612
+        @app.main_process_start
+        async def init_orm_main(app):  # pylint: disable=W0612
             await tortoise_init()
             logger.info("Tortoise-ORM generating schema")
             await Tortoise.generate_schemas()
 
-    @app.listener("before_server_start")
-    async def init_orm(app, loop):  # pylint: disable=W0612
+    @app.before_server_start
+    async def init_orm(app):
         await tortoise_init()
+        if generate_schemas and getattr(app, "_test_manager", None):
+            # Running by sanic-testing
+            await Tortoise.generate_schemas()
 
-    @app.listener("after_server_stop")
-    async def close_orm(app, loop):  # pylint: disable=W0612
-        await connections.close_all()
+    @app.after_server_stop
+    async def close_orm(app):  # pylint: disable=W0612
+        await Tortoise.close_connections()
         logger.info("Tortoise-ORM shutdown")

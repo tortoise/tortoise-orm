@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 # Configuration file for the Sphinx documentation builder.
 #
@@ -8,7 +7,6 @@
 import json
 
 # -- Path setup --------------------------------------------------------------
-
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
@@ -17,7 +15,10 @@ import os
 import sys
 from datetime import datetime
 
-import importlib_metadata
+try:
+    import importlib.metadata as importlib_metadata
+except ImportError:
+    import importlib_metadata
 
 sys.path.insert(0, os.path.abspath("."))
 sys.path.insert(0, os.path.abspath(".."))
@@ -179,10 +180,10 @@ html_theme_options = {
 
 # The name for this set of Sphinx documents.  If None, it defaults to
 # "<project> v<release> documentation".
-html_title = "%s v%s Documentation" % (project, release)
+html_title = f"{project} v{release} Documentation"
 
 # A shorter title for the navigation bar.  Default is the same as html_title.
-html_short_title = "%s %s Documentation" % (project, version)
+html_short_title = f"{project} {version} Documentation"
 
 # The name of an image file (relative to this directory) to place at the top
 # of the sidebar.

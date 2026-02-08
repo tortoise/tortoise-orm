@@ -1,4 +1,5 @@
 .. _changelog:
+:no-search:
 
 =========
 Changelog
@@ -6,8 +7,200 @@ Changelog
 
 .. rst-class:: emphasize-children
 
+1.0
+===
+
+1.0.0
+-----
+
+.. warning::
+
+    This is a **major release** with breaking changes.
+    Please read the :ref:`migration_guide` before upgrading.
+
+Breaking Changes
+^^^^^^^^^^^^^^^^
+- **Minimum Python version raised to 3.10** (was 3.9). (#2062)
+- **``use_tz`` now defaults to ``True``** (was ``False``). Set ``use_tz=False`` explicitly if you need naive datetimes.
+- **Context-first architecture**: All ORM state now lives in ``TortoiseContext`` instances. ``Tortoise.init()`` returns a ``TortoiseContext`` (previously returned ``None``). Multiple separate ``asyncio.run()`` calls require explicit context management; the typical single ``asyncio.run(main())`` pattern works unchanged.
+- **Removed legacy test infrastructure**: ``test.TestCase``, ``test.IsolatedTestCase``, ``test.TruncationTestCase``, ``test.SimpleTestCase``, ``initializer()``, ``finalizer()``, ``env_initializer()``, ``getDBConfig()``. Use ``tortoise_test_context()`` with pytest instead.
+- **Removed ``pytz`` dependency**: Timezone handling now uses the standard library ``zoneinfo`` module. Tortoise APIs return ``ZoneInfo`` objects instead of ``pytz`` timezones. (#2023)
+- **``DatetimeField``/``TimeField`` with ``auto_now=True``** no longer implicitly sets ``auto_now_add=True``. In practice ``auto_now=True`` alone still sets the value on every save (including creation), so this is unlikely to affect most users. The internal flag coupling was removed for correctness.
+- **Shell extras required**: Interactive shell dependencies are now optional. Install with ``pip install tortoise-orm[ipython]`` or ``pip install tortoise-orm[ptpython]``.
+
+Added
+^^^^^
+- **Native migrations framework** with CLI commands: ``tortoise makemigrations``, ``tortoise migrate``, ``tortoise sqlmigrate``. Supports ``RunPython``, ``RunSQL``, reversible migrations, and multi-app projects. (#2061)
+- **Database schema support** for PostgreSQL and MSSQL (on MySQL maps to database name) — tables can live in non-default schemas (e.g., ``warehouse.inventory``), with cross-schema relations and migration support. (#2084)
+- **PostgreSQL full-text search**: ``TSVectorField``, ``SearchVector``, ``SearchQuery``, ``SearchRank``, ``SearchHeadline`` expressions, and GIN/GiST index support. (#2065)
+- **Query API** (``tortoise.query_api``) for building and executing custom pypika queries against models, with ``Model.get_table()`` classmethod. (#2064)
+- ``TortoiseContext`` — explicit context manager for ORM state with full isolation. (#2069)
+- ``tortoise_test_context()`` — modern pytest fixture helper for test isolation. (#2069)
+- ``get_connection(alias)`` / ``get_connections()`` — functions to access connections from current context.
+- ``Tortoise.close_connections()`` — restored (was deprecated in 0.19) as the canonical way to close connections, now context-aware.
+- ``Tortoise.is_inited()`` — explicit method version of ``Tortoise._inited`` property.
+- ``ForeignKeyField`` and ``ManyToManyField`` now accept a model class directly, not just string references. (#2027)
+- ``DateField`` now supports ``__year`` / ``__month`` / ``__day`` filters. (#2067)
+
+Changed
+^^^^^^^
+- Framework integrations (FastAPI, Starlette, Sanic, etc.) now use ``Tortoise.close_connections()`` internally.
+- ``ConnectionHandler`` uses per-instance ContextVar storage for context isolation.
+- ``Tortoise.apps`` and ``Tortoise._inited`` are now ``classproperty`` descriptors.
+- Performance optimizations for model hydration, object construction, and query building. (#2078)
+- Pydantic model creator internals cleaned up: removed legacy validator, improved computed field handling. (#2079)
+
+Deprecated
+^^^^^^^^^^
+- ``from tortoise import connections`` — use ``get_connection()`` / ``get_connections()`` instead (still works but deprecated).
+
+Fixed
+^^^^^
+- ``use_tz=False`` now correctly preserves naive datetimes instead of silently making them timezone-aware. (#631)
+- Annotations incorrectly selected in ``ValuesListQuery`` when not specified in ``.values_list()`` fields. (#2059)
+- M2M filtering broken when two relations point to the same target model. (#2083)
+- Pydantic incorrectly marking fields with default values as ``Optional``. (#2082)
+- ``Model.in_bulk`` type annotation now supports any primary key type. (#2075)
+- Migration bug fixes: field serialization, operation ordering, and ``sqlmigrate`` command added. (#2076)
+
+0.25
+====
+
+0.25.4
+------
+
+Fixed
+^^^^^
+- Fix ``AttributeError`` when using ``tortoise-orm`` with Nuitka-compiled Python code (#2053)
+- Fix 'Self' in python standard library typing.py, but tortoise/model.py required it in 'typing_extensions' (#2051)
+- Fix examples should not be installed (#2050)
+
+
+0.25.3
+------
+Fixed
+^^^^^
+- Fix exception when creating aiosqlite connections on aiosqlite==0.22.0 (#2035)
+- Fix implicit anyio dependency introduced, but not declared (#2045)
+
+0.25.2
+------
+Fixed
+^^^^^
+- Fix grouping by in subqueries (#2021)
+- Fix sqlite decimal filter error with `__gt` (#2019)
+
+Changed
+^^^^^
+- Official support python3.14 (#2026)
+- Migrate from poetry to uv (#1987)
+- Reorder imports by ruff (#1966)
+- Migrate lint tool from isort+black to ruff (#1963)
+
+Added
+^^^^^
+- Add `create()` method to reverse ForeignKey relations, enabling `parent.children.create()` syntax (#1991)
+
+
+0.25.1
+------------------
+Changed
+^^^^^
+- Force async task switch every 2000 rows when converting db objects to python objects to avoid blocking the event loop (#1939)
+
+Added
+^^^^^
+- Add `no_key` parameter to `queryset.select_for_update`.
+- `F()` supports referencing JSONField attributes, e.g. `F("json_field__custom_field__nested_id")` (#1960)
+
+0.25.0
+------
+Fixed
+^^^^^
+- Fix `pydantic_model_creator` incompatibility with Pydantic 2.11 (#1925)
+
+Changed
+^^^^^^^
+- Skip database selection if the router is not configured to improve performance (#1915)
+- `.values()`, `.values_list()` and `.only()` cannot be used together (#1923)
+
+Added
+^^^^^
+- `.only` supports selecting related fields, e.g. `.only("related__field")` (#1923)
+
+
+0.24
+====
+
+0.24.2
+------
+
+Fixed
+^^^^^
+- Fix model with multi m2m fields generates wrong references name (#1897)
+- Fix using reserved words in order_by (#1900)
+- Fix installing tortoise-orm with poetry 2 (#1885)
+
+Changed
+^^^^^^^
+- Use 'unique' instead of 'create_unique_index' for m2m field (#1903)
+
+0.24.1
+------
+Added
+^^^^^
+- Implement __contains, __contained_by, __overlap and __len for ArrayField (#1877)
+
+Fixed
+^^^^^
+- Fix update pk field raises unfriendly error (#1873)
+- Using `.distinct()` with an annotation and `.order_by()` produces invalid SQL for PostgreSQL (#1886)
+
+
+0.24.0
+------
+Fixed
+^^^^^
+- `_get_dialects`: support properties (#1859)
+- Rename pypika to pypika_tortoise for fixing package name conflict (#1829)
+- Concurrent connection pool initialization (#1825)
+
+Changed
+^^^^^^^
+- Drop support for Python3.8 (#1848)
+- Optimize field conversion to database format to speed up `create` and `bulk_create` (#1840)
+- Improved query performance by optimizing SQL generation (#1837)
+
+0.23.0
+------
+Added
+^^^^^
+- Implement savepoints for transactions (#1816)
+- Added type validation for foreign key fields to ensure type safety. Now raises `ValidationError` when assigning foreign key values with incorrect model types (#1792)
+
+Fixed
+^^^^^
+- Fixed a deadlock in three level nested transactions (#1810)
+- Fix backward_relations in PydanticMeta (#1814)
+
 0.22
 ====
+
+0.22.2
+------
+Fixed
+^^^^^
+- Fix bug related to `Connector.div` in combined expressions. (#1794)
+- Fix recovery in case of database downtime (#1796)
+
+Changed
+^^^^^^^
+- Parametrizes UPDATE, DELETE, bulk update and create operations (#1785)
+- Parametrizes related field queries (#1797)
+
+Added
+^^^^^
+- CharEnumField and IntEnumField is supported by pydantic_model_creator (#1798)
 
 0.22.1
 ------
@@ -15,6 +208,10 @@ Fixed
 ^^^^^
 - Fix unable to use ManyToManyField if OneToOneField passed as Primary Key (#1783)
 - Fix sorting by Term (e.g. RawSQL) (#1788)
+
+Changed
+^^^^^^^
+- Parametrizes SELECT queries including `.count()`, `.exists()`, `.values()`, `.values_list()` (#1777)
 
 0.22.0
 ------
@@ -33,11 +230,10 @@ Added
 - Allow use of annotate fields within Case-When expression (#1748)
 - Added new queryset methods: last(), latest(), earliest() (#1754) (#1756)
 
-
 Changed
 ^^^^^^^
 - Change old pydantic docs link to new one (#1775).
-- Refactored pydantic_model_creator, interface not changed  (#1763)
+- Refactored pydantic_model_creator, interface not changed  (#1745)
 - Values are no longer validated to be right type upon loading from database (#1750)
 - Refactored private field names in queryset classes (#1751)
 

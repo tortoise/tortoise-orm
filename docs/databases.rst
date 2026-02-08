@@ -18,9 +18,7 @@ To use, please ensure that corresponding asyncio driver is installed.
 DB_URL
 ======
 
-Tortoise supports specifying Database configuration in a URL form.
-
-The form is:
+Tortoise supports specifying Database configuration in a URL form. The form is:
 
 :samp:`{DB_TYPE}://{USERNAME}:{PASSWORD}@{HOST}:{PORT}/{DB_NAME}?{PARAM1}=value&{PARAM2}=value`
 
@@ -49,6 +47,12 @@ The supported ``DB_TYPE``:
     Typically in the form of :samp:`mysql://myuser:mypass@db.host:3306/somedb`
 ``mssql``:
     Typically in the form of :samp:`mssql://myuser:mypass@db.host:1433/somedb?driver=the odbc driver`
+    You can also pass driver options such as :samp:`encrypt` and
+    :samp:`trust_server_certificate` (or their ODBC-cased equivalents
+    :samp:`Encrypt` and :samp:`TrustServerCertificate`) which will be appended
+    to the DSN. For example::
+
+        mssql://myuser:mypass@db.host:1433/somedb?driver=ODBC%20Driver%2018%20for%20SQL%20Server&encrypt=no&trust_server_certificate=yes
 
 Capabilities
 ============
@@ -79,7 +83,7 @@ So if the ``DB_FILE`` is "/data/db.sqlite3" then the string will be ``sqlite:///
 Required Parameters
 -------------------
 
-``path``:
+``file_path``:
     Path to SQLite3 file. ``:memory:`` is a special path that indicates in-memory database.
 
 Optional parameters:

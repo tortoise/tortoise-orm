@@ -1,5 +1,8 @@
+from __future__ import annotations
+
 import sys
-from typing import TYPE_CHECKING, Any, Iterable, Optional, Tuple
+from collections.abc import Iterable
+from typing import TYPE_CHECKING, Any
 
 from tortoise.log import logger
 
@@ -8,7 +11,7 @@ if sys.version_info >= (3, 12):
 else:
     from itertools import islice
 
-    def batched(iterable: Iterable[Any], n: int) -> Iterable[Tuple[Any]]:
+    def batched(iterable: Iterable[Any], n: int) -> Iterable[tuple[Any]]:
         it = iter(iterable)
         while batch := tuple(islice(it, n)):
             yield batch
@@ -18,7 +21,7 @@ if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.backends.base.client import BaseDBAsyncClient
 
 
-def get_schema_sql(client: "BaseDBAsyncClient", safe: bool) -> str:
+def get_schema_sql(client: BaseDBAsyncClient, safe: bool) -> str:
     """
     Generates the SQL schema for the given client.
 
@@ -29,7 +32,7 @@ def get_schema_sql(client: "BaseDBAsyncClient", safe: bool) -> str:
     return generator.get_create_schema_sql(safe)
 
 
-async def generate_schema_for_client(client: "BaseDBAsyncClient", safe: bool) -> None:
+async def generate_schema_for_client(client: BaseDBAsyncClient, safe: bool) -> None:
     """
     Generates and applies the SQL schema directly to the given client.
 
@@ -43,7 +46,7 @@ async def generate_schema_for_client(client: "BaseDBAsyncClient", safe: bool) ->
         await generator.generate_from_string(schema)
 
 
-def chunk(instances: Iterable[Any], batch_size: Optional[int] = None) -> Iterable[Iterable[Any]]:
+def chunk(instances: Iterable[Any], batch_size: int | None = None) -> Iterable[Iterable[Any]]:
     """
     Generate iterable chunk by batch_size
     # noqa: DAR301

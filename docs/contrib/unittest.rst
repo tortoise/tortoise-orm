@@ -1,133 +1,233 @@
 .. _unittest:
 
-================
-UnitTest support
-================
+==============
+Testing Support
+==============
 
-Tortoise ORM includes its own helper utilities to assist in unit tests.
+Tortoise ORM provides testing utilities designed for pytest with true test isolation.
+Each test gets its own database context, ensuring tests don't interfere with each other.
 
-Usage
-=====
+.. contents::
+    :local:
+    :depth: 2
 
-.. code-block:: python3
+Quick Start
+===========
 
-    from tortoise.contrib import test
+1. Create a ``conftest.py`` file in your tests directory:
 
-    class TestSomething(test.TestCase):
-        def test_something(self):
-            ...
-
-        async def test_something_async(self):
-            ...
-
-        @test.skip('Skip this')
-        def test_skip(self):
-            ...
-
-        @test.expectedFailure
-        def test_something(self):
-            ...
-
-
-To get ``test.TestCase`` to work as expected, you need to configure your test environment setup and teardown to call the following:
-
-.. code-block:: python3
-
-    from tortoise.contrib.test import initializer, finalizer
-
-    # In setup
-    initializer(['module.a', 'module.b.c'])
-    # With optional db_url, app_label and loop parameters
-    initializer(['module.a', 'module.b.c'], db_url='...', app_label="someapp", loop=loop)
-    # Or env-var driven → See Green test runner section below.
-    env_initializer()
-
-    # In teardown
-    finalizer()
-
-
-On the DB_URL it should follow the following standard:
-
-    TORTOISE_TEST_DB=sqlite:///tmp/test-{}.sqlite
-    TORTOISE_TEST_DB=postgres://postgres:@127.0.0.1:5432/test_{}
-
-
-The ``{}`` is a string-replacement parameter, that will create a randomized database name.
-This is currently required for ``test.IsolatedTestCase`` to function.
-If you don't use ``test.IsolatedTestCase`` then you can give an absolute address.
-The SQLite in-memory ``:memory:`` database will always work, and is the default.
-
-.. rst-class:: emphasize-children
-
-Test Runners
-============
-
-Green
------
-
-In your ``.green`` file:
-
-.. code-block:: ini
-
-    initializer = tortoise.contrib.test.env_initializer
-    finalizer = tortoise.contrib.test.finalizer
-
-And then define the ``TORTOISE_TEST_MODULES`` environment variable with a comma separated list of module paths.
-
-Furthermore, you may set the database configuration parameter as an environment variable (defaults to ``sqlite://:memory:``):
-
-    TORTOISE_TEST_DB=sqlite:///tmp/test-{}.sqlite
-    TORTOISE_TEST_DB=postgres://postgres:@127.0.0.1:5432/test_{}
-
-
-Py.test
--------
-
-.. note::
-
-    pytest 5.4.0 & 5.4.1 has a bug that stops it from working with async test cases. You may have to install ``pytest>=5.4.2`` to get it to work.
-
-Run the initializer and finalizer in your ``conftest.py`` file:
-
-.. code-block:: python3
+.. code-block:: python
 
     import os
+    import pytest_asyncio
+    from tortoise.contrib.test import tortoise_test_context
+
+    @pytest_asyncio.fixture
+    async def db():
+        """Provide isolated database context for each test."""
+        db_url = os.getenv("TORTOISE_TEST_DB", "sqlite://:memory:")
+        async with tortoise_test_context(["myapp.models"], db_url=db_url) as ctx:
+            yield ctx
+
+2. Write your tests as async functions:
+
+.. code-block:: python
+
     import pytest
-    from tortoise.contrib.test import finalizer, initializer
+    from myapp.models import User
 
-    @pytest.fixture(scope="session", autouse=True)
-    def initialize_tests(request):
-        db_url = os.environ.get("TORTOISE_TEST_DB", "sqlite://:memory:")
-        initializer(["tests.testmodels"], db_url=db_url, app_label="models")
-        request.addfinalizer(finalizer)
+    @pytest.mark.asyncio
+    async def test_create_user(db):
+        user = await User.create(name="Test User", email="test@example.com")
+        assert user.id is not None
+        assert user.name == "Test User"
 
+    @pytest.mark.asyncio
+    async def test_filter_users(db):
+        await User.create(name="Alice")
+        await User.create(name="Bob")
 
-Nose2
------
+        users = await User.filter(name="Alice")
+        assert len(users) == 1
+        assert users[0].name == "Alice"
 
-Load the plugin ``tortoise.contrib.test.nose2`` either via command line::
+3. Run your tests:
 
-    nose2 --plugin tortoise.contrib.test.nose2 --db-module tortoise.tests.testmodels
+.. code-block:: bash
 
-Or via the config file:
+    pytest tests/ -v
 
-.. code-block:: ini
+``tortoise_test_context`` Reference
+===================================
 
-    [unittest]
-    plugins = tortoise.contrib.test.nose2
+The ``tortoise_test_context`` function creates an isolated ORM context for testing:
 
-    [tortoise]
-    # Must specify at least one module path
-    db-module =
-        tests.testmodels
-    # You can optionally override the db_url here
-    db-url = sqlite://testdb-{}.sqlite
+.. code-block:: python
 
+    from tortoise.contrib.test import tortoise_test_context
+
+    async with tortoise_test_context(
+        modules=["myapp.models"],           # Required: List of model modules
+        db_url="sqlite://:memory:",         # Optional: Database URL (default: sqlite://:memory:)
+        app_label="models",                 # Optional: App label (default: "models")
+        connection_label="default",         # Optional: Connection alias (default: "default")
+    ) as ctx:
+        # Your test code here
+        pass
+
+**Parameters:**
+
+- ``modules`` (list): List of module paths containing your models. Required.
+- ``db_url`` (str): Database connection URL. Defaults to ``sqlite://:memory:``.
+- ``app_label`` (str): Label for the app in the ORM registry. Defaults to ``"models"``.
+- ``connection_label`` (str): Alias for the database connection. Defaults to ``"default"``.
+
+The context manager:
+
+1. Creates a fresh ``TortoiseContext``
+2. Initializes the ORM with the given configuration
+3. Generates database schemas
+4. Yields the context for your test
+5. Closes all connections on exit
+
+Testing with Multiple Databases
+===============================
+
+For tests that require multiple database connections:
+
+.. code-block:: python
+
+    import pytest_asyncio
+    from tortoise.context import TortoiseContext
+
+    @pytest_asyncio.fixture
+    async def multi_db():
+        """Fixture for testing with multiple databases."""
+        async with TortoiseContext() as ctx:
+            await ctx.init(config={
+                "connections": {
+                    "primary": "sqlite://:memory:",
+                    "secondary": "sqlite://:memory:",
+                },
+                "apps": {
+                    "models": {
+                        "models": ["myapp.models"],
+                        "default_connection": "primary",
+                    },
+                    "archive": {
+                        "models": ["myapp.archive_models"],
+                        "default_connection": "secondary",
+                    }
+                }
+            })
+            await ctx.generate_schemas()
+            yield ctx
+
+Testing Database Capabilities
+=============================
+
+Use ``requireCapability`` to skip tests based on database capabilities:
+
+.. code-block:: python
+
+    from tortoise.contrib.test import requireCapability
+
+    @pytest.mark.asyncio
+    @requireCapability(dialect="postgres")
+    async def test_postgres_specific_feature(db):
+        """This test only runs on PostgreSQL."""
+        # Test postgres-specific functionality
+        pass
+
+    @pytest.mark.asyncio
+    @requireCapability(dialect="sqlite")
+    async def test_sqlite_specific_feature(db):
+        """This test only runs on SQLite."""
+        pass
+
+Environment Variables
+=====================
+
+Configure your test database via environment variables:
+
+.. code-block:: bash
+
+    # SQLite (default)
+    export TORTOISE_TEST_DB="sqlite://:memory:"
+
+    # PostgreSQL
+    export TORTOISE_TEST_DB="postgres://user:pass@localhost:5432/testdb"
+
+    # MySQL
+    export TORTOISE_TEST_DB="mysql://user:pass@localhost:3306/testdb"
+
+Using ``{}`` in the URL creates randomized database names (useful for parallel testing):
+
+.. code-block:: bash
+
+    export TORTOISE_TEST_DB="sqlite:///tmp/test-{}.sqlite"
+    export TORTOISE_TEST_DB="postgres://user:pass@localhost:5432/test_{}"
+
+Utility Functions
+=================
+
+truncate_all_models
+-------------------
+
+Truncate all model tables in the current context:
+
+.. code-block:: python
+
+    from tortoise.contrib.test import truncate_all_models
+
+    @pytest.mark.asyncio
+    async def test_with_truncation(db):
+        # Create some data
+        await User.create(name="Test")
+
+        # Truncate all tables
+        await truncate_all_models()
+
+        # Tables are now empty
+        count = await User.all().count()
+        assert count == 0
+
+Migration from Legacy Test Classes
+==================================
+
+If you're upgrading from the legacy ``test.TestCase`` classes, see the
+:ref:`migration_guide` for detailed migration instructions.
+
+**Quick reference:**
+
+.. list-table:: Migration Mapping
+   :header-rows: 1
+   :widths: 40 60
+
+   * - Legacy (Removed)
+     - Modern Replacement
+   * - ``test.TestCase``
+     - pytest + ``db`` fixture
+   * - ``test.IsolatedTestCase``
+     - pytest + ``db`` fixture (isolation is default)
+   * - ``test.TruncationTestCase``
+     - pytest + ``db`` fixture + ``truncate_all_models()``
+   * - ``test.SimpleTestCase``
+     - pytest + ``db`` fixture
+   * - ``initializer()``
+     - ``tortoise_test_context()``
+   * - ``finalizer()``
+     - (automatic with context manager)
+   * - ``self.assertEqual(a, b)``
+     - ``assert a == b``
+   * - ``self.assertIn(a, b)``
+     - ``assert a in b``
+   * - ``self.assertRaises(Exc)``
+     - ``pytest.raises(Exc)``
 
 Reference
 =========
 
 .. automodule:: tortoise.contrib.test
-    :members:
-    :undoc-members:
+    :members: tortoise_test_context, truncate_all_models, requireCapability
     :show-inheritance:

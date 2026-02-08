@@ -1,4 +1,7 @@
-from typing import TYPE_CHECKING, Any, List, Type
+from __future__ import annotations
+
+from collections.abc import Sequence
+from typing import TYPE_CHECKING, Any
 
 from tortoise.backends.base.schema_generator import BaseSchemaGenerator
 from tortoise.converters import encoders
@@ -11,18 +14,18 @@ if TYPE_CHECKING:  # pragma: nocoverage
 
 class OracleSchemaGenerator(BaseSchemaGenerator):
     DIALECT = "oracle"
-    TABLE_CREATE_TEMPLATE = 'CREATE TABLE "{table_name}" ({fields}){extra};'
-    FIELD_TEMPLATE = '"{name}" {type}{default} {nullable} {unique}{primary}'
-    TABLE_COMMENT_TEMPLATE = "COMMENT ON TABLE \"{table}\" IS '{comment}';"
-    COLUMN_COMMENT_TEMPLATE = 'COMMENT ON COLUMN "{table}"."{column}" IS \'{comment}\';'
-    INDEX_CREATE_TEMPLATE = 'CREATE INDEX "{index_name}" ON "{table_name}" ({fields});'
+    TABLE_CREATE_TEMPLATE = "CREATE TABLE {table_name} ({fields}){extra};"
+    FIELD_TEMPLATE = '"{name}" {type}{default}{nullable}{unique}{primary}'
+    TABLE_COMMENT_TEMPLATE = "COMMENT ON TABLE {table} IS '{comment}';"
+    COLUMN_COMMENT_TEMPLATE = "COMMENT ON COLUMN {table}.\"{column}\" IS '{comment}';"
+    INDEX_CREATE_TEMPLATE = 'CREATE INDEX "{index_name}" ON {table_name} ({fields});'
     GENERATED_PK_TEMPLATE = '"{field_name}" {generated_sql}'
     FK_TEMPLATE = (
         '{constraint}FOREIGN KEY ("{db_column}")'
-        ' REFERENCES "{table}" ("{field}") ON DELETE {on_delete}'
+        ' REFERENCES {table} ("{field}") ON DELETE {on_delete}'
     )
     M2M_TABLE_TEMPLATE = (
-        'CREATE TABLE "{table_name}" (\n'
+        "CREATE TABLE {table_name} (\n"
         '    "{backward_key}" {backward_type} NOT NULL,\n'
         '    "{forward_key}" {forward_type} NOT NULL,\n'
         "    {backward_fk},\n"
@@ -30,17 +33,14 @@ class OracleSchemaGenerator(BaseSchemaGenerator):
         "){extra};"
     )
 
-    def __init__(self, client: "OracleClient") -> None:
+    def __init__(self, client: OracleClient) -> None:
         super().__init__(client)
-        self._field_indexes: List[str] = []
-        self._foreign_keys: List[str] = []
-        self.comments_array: List[str] = []
-
-    def quote(self, val: str) -> str:
-        return f'"{val}"'
+        self._field_indexes: list[str] = []
+        self._foreign_keys: list[str] = []
+        self.comments_array: list[str] = []
 
     @classmethod
-    def _get_escape_translation_table(cls) -> List[str]:
+    def _get_escape_translation_table(cls) -> list[str]:
         table = super()._get_escape_translation_table()
         table[ord("'")] = "''"
         return table
@@ -78,18 +78,28 @@ class OracleSchemaGenerator(BaseSchemaGenerator):
         default_str = " DEFAULT"
         if not (auto_now or auto_now_add):
             default_str += f" {default}"
-        if auto_now_add:
+        if auto_now_add or auto_now:
             default_str += " CURRENT_TIMESTAMP"
         return default_str
 
     def _escape_default_value(self, default: Any):
         return encoders.get(type(default))(default)  # type: ignore
 
-    def _get_index_sql(self, model: "Type[Model]", field_names: List[str], safe: bool) -> str:
-        return super(OracleSchemaGenerator, self)._get_index_sql(model, field_names, False)
+    def _get_index_sql(
+        self,
+        model: type[Model],
+        field_names: Sequence[str],
+        safe: bool,
+        index_name: str | None = None,
+        index_type: str | None = None,
+        extra: str | None = None,
+    ) -> str:
+        return super()._get_index_sql(
+            model, field_names, False, index_name=index_name, index_type=index_type, extra=extra
+        )
 
-    def _get_table_sql(self, model: "Type[Model]", safe: bool = True) -> dict:
-        return super(OracleSchemaGenerator, self)._get_table_sql(model, False)
+    def _get_table_sql(self, model: type[Model], safe: bool = True) -> dict:
+        return super()._get_table_sql(model, False)
 
     def _create_fk_string(
         self,

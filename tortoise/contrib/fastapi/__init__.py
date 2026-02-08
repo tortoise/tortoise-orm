@@ -2,20 +2,21 @@ from __future__ import annotations
 
 import sys
 import warnings
+from collections.abc import Generator, Iterable
 from contextlib import AbstractAsyncContextManager, asynccontextmanager
 from types import ModuleType
-from typing import TYPE_CHECKING, Dict, Generator, Iterable, Optional, Union
+from typing import TYPE_CHECKING
 
-from fastapi.responses import JSONResponse
-from pydantic import BaseModel  # pylint: disable=E0611
-from starlette.routing import _DefaultLifespan
-
-from tortoise import Tortoise, connections
+from tortoise import Tortoise
+from tortoise.config import TortoiseConfig
+from tortoise.connection import get_connections
+from tortoise.context import TortoiseContext
 from tortoise.exceptions import DoesNotExist, IntegrityError
 from tortoise.log import logger
 
 if TYPE_CHECKING:
     from fastapi import FastAPI, Request
+
 
 if sys.version_info >= (3, 11):
     from typing import Self
@@ -23,8 +24,22 @@ else:
     from typing_extensions import Self
 
 
-class HTTPNotFoundError(BaseModel):
-    detail: str
+def tortoise_exception_handlers() -> dict:
+    from fastapi.responses import JSONResponse
+
+    async def doesnotexist_exception_handler(request: Request, exc: DoesNotExist):
+        return JSONResponse(status_code=404, content={"detail": str(exc)})
+
+    async def integrityerror_exception_handler(request: Request, exc: IntegrityError):
+        return JSONResponse(
+            status_code=422,
+            content={"detail": [{"loc": [], "msg": str(exc), "type": "IntegrityError"}]},
+        )
+
+    return {
+        DoesNotExist: doesnotexist_exception_handler,
+        IntegrityError: integrityerror_exception_handler,
+    }
 
 
 class RegisterTortoise(AbstractAsyncContextManager):
@@ -40,7 +55,7 @@ class RegisterTortoise(AbstractAsyncContextManager):
     app:
         FastAPI app.
     config:
-        Dict containing config:
+        Dict containing config or TortoiseConfig instance:
 
         Example
         -------
@@ -90,6 +105,10 @@ class RegisterTortoise(AbstractAsyncContextManager):
         A boolean that specifies if datetime will be timezone-aware by default or not.
     timezone:
         Timezone to use, default is UTC.
+    _enable_global_fallback:
+        If True, enables global context fallback for cross-task access (e.g., when
+        using asgi-lifespan which runs lifespan in a background task). Default is True.
+        Set to False when running multiple apps in the same process to avoid conflicts.
 
     Raises
     ------
@@ -99,16 +118,17 @@ class RegisterTortoise(AbstractAsyncContextManager):
 
     def __init__(
         self,
-        app: Optional[FastAPI] = None,
-        config: Optional[dict] = None,
-        config_file: Optional[str] = None,
-        db_url: Optional[str] = None,
-        modules: Optional[Dict[str, Iterable[Union[str, ModuleType]]]] = None,
+        app: FastAPI | None = None,
+        config: dict | TortoiseConfig | None = None,
+        config_file: str | None = None,
+        db_url: str | None = None,
+        modules: dict[str, Iterable[str | ModuleType]] | None = None,
         generate_schemas: bool = False,
         add_exception_handlers: bool = False,
-        use_tz: bool = False,
+        use_tz: bool = True,
         timezone: str = "UTC",
         _create_db: bool = False,
+        _enable_global_fallback: bool = True,
     ) -> None:
         self.app = app
         self.config = config
@@ -119,22 +139,29 @@ class RegisterTortoise(AbstractAsyncContextManager):
         self.use_tz = use_tz
         self.timezone = timezone
         self._create_db = _create_db
+        self._enable_global_fallback = _enable_global_fallback
+        self._context: TortoiseContext | None = None
 
         if add_exception_handlers and app is not None:
+            from starlette.middleware.exceptions import ExceptionMiddleware
 
-            @app.exception_handler(DoesNotExist)
-            async def doesnotexist_exception_handler(request: "Request", exc: DoesNotExist):
-                return JSONResponse(status_code=404, content={"detail": str(exc)})
+            warnings.warn(
+                "Setting `add_exception_handlers` to be true is deprecated, "
+                "use `FastAPI(exception_handlers=tortoise_exception_handlers())` instead."
+                "See more about it on https://tortoise.github.io/examples/fastapi",
+                DeprecationWarning,
+            )
+            original_call_func = ExceptionMiddleware.__call__
 
-            @app.exception_handler(IntegrityError)
-            async def integrityerror_exception_handler(request: "Request", exc: IntegrityError):
-                return JSONResponse(
-                    status_code=422,
-                    content={"detail": [{"loc": [], "msg": str(exc), "type": "IntegrityError"}]},
-                )
+            async def wrap_middleware_call(self, *args, **kw) -> None:
+                if DoesNotExist not in self._exception_handlers:
+                    self._exception_handlers.update(tortoise_exception_handlers())
+                await original_call_func(self, *args, **kw)
 
-    async def init_orm(self) -> None:  # pylint: disable=W0612
-        await Tortoise.init(
+            ExceptionMiddleware.__call__ = wrap_middleware_call  # type:ignore
+
+    async def init_orm(self) -> TortoiseContext:  # pylint: disable=W0612
+        self._context = await Tortoise.init(
             config=self.config,
             config_file=self.config_file,
             db_url=self.db_url,
@@ -142,15 +169,23 @@ class RegisterTortoise(AbstractAsyncContextManager):
             use_tz=self.use_tz,
             timezone=self.timezone,
             _create_db=self._create_db,
+            _enable_global_fallback=self._enable_global_fallback,
         )
-        logger.info("Tortoise-ORM started, %s, %s", connections._get_storage(), Tortoise.apps)
+        # Store context in app.state for explicit access when global fallback is disabled
+        if self.app is not None:
+            self.app.state._tortoise_context = self._context
+        logger.info("Tortoise-ORM started, %s, %s", get_connections()._get_storage(), Tortoise.apps)
         if self.generate_schemas:
             logger.info("Tortoise-ORM generating schema")
             await Tortoise.generate_schemas()
+        return self._context
 
-    @staticmethod
-    async def close_orm() -> None:  # pylint: disable=W0612
-        await connections.close_all()
+    async def close_orm(self) -> None:  # pylint: disable=W0612
+        await Tortoise.close_connections()
+        # Clear context from app.state
+        if self.app is not None and hasattr(self.app.state, "_tortoise_context"):
+            delattr(self.app.state, "_tortoise_context")
+        self._context = None
         logger.info("Tortoise-ORM shutdown")
 
     def __call__(self, *args, **kwargs) -> Self:
@@ -165,24 +200,24 @@ class RegisterTortoise(AbstractAsyncContextManager):
 
     def __await__(self) -> Generator[None, None, Self]:
         async def _self() -> Self:
-            await self.init_orm()
-            return self
+            return await self.__aenter__()
 
         return _self().__await__()
 
 
 def register_tortoise(
-    app: "FastAPI",
-    config: Optional[dict] = None,
-    config_file: Optional[str] = None,
-    db_url: Optional[str] = None,
-    modules: Optional[Dict[str, Iterable[Union[str, ModuleType]]]] = None,
+    app: FastAPI,
+    config: dict | TortoiseConfig | None = None,
+    config_file: str | None = None,
+    db_url: str | None = None,
+    modules: dict[str, Iterable[str | ModuleType]] | None = None,
     generate_schemas: bool = False,
     add_exception_handlers: bool = False,
 ) -> None:
     """
-    Registers ``startup`` and ``shutdown`` events to set-up and tear-down Tortoise-ORM
-    inside a FastAPI application.
+    Registers Tortoise-ORM with set-up at the beginning of FastAPI application's lifespan
+    (which allow user to read/write data from/to db inside the lifespan function),
+    and tear-down at the end of that lifespan.
 
     You can configure using only one of ``config``, ``config_file``
     and ``(db_url, modules)``.
@@ -192,7 +227,7 @@ def register_tortoise(
     app:
         FastAPI app.
     config:
-        Dict containing config:
+        Dict containing config or TortoiseConfig instance:
 
         Example
         -------
@@ -244,40 +279,26 @@ def register_tortoise(
     ConfigurationError
         For any configuration error
     """
-    orm = RegisterTortoise(
-        app,
-        config,
-        config_file,
-        db_url,
-        modules,
-        generate_schemas,
-        add_exception_handlers,
-    )
-    if isinstance(lifespan := app.router.lifespan_context, _DefaultLifespan):
-        # Leave on_event here to compare with old versions
-        # So people can upgrade tortoise-orm in running project without changing any code
+    from fastapi.routing import _merge_lifespan_context
 
-        @app.on_event("startup")
-        async def init_orm() -> None:  # pylint: disable=W0612
-            await orm.init_orm()
+    # Leave this function here to compare with old versions
+    # So people can upgrade tortoise-orm in running project without changing any code
 
-        @app.on_event("shutdown")
-        async def close_orm() -> None:  # pylint: disable=W0612
-            await orm.close_orm()
+    @asynccontextmanager
+    async def orm_lifespan(app_instance: FastAPI):
+        async with RegisterTortoise(
+            app_instance,
+            config,
+            config_file,
+            db_url,
+            modules,
+            generate_schemas,
+        ):
+            yield
 
-    else:
-        # If custom lifespan was passed to app, register tortoise in it
-        warnings.warn(
-            "`register_tortoise` function is deprecated, "
-            "use the `RegisterTortoise` class instead."
-            "See more about it on https://tortoise.github.io/examples/fastapi",
-            DeprecationWarning,
-        )
+    original_lifespan = app.router.lifespan_context
+    app.router.lifespan_context = _merge_lifespan_context(orm_lifespan, original_lifespan)
 
-        @asynccontextmanager
-        async def orm_lifespan(app_instance: "FastAPI"):
-            async with orm:
-                async with lifespan(app_instance):
-                    yield
-
-        app.router.lifespan_context = orm_lifespan
+    if add_exception_handlers:
+        for exp_type, endpoint in tortoise_exception_handlers().items():
+            app.exception_handler(exp_type)(endpoint)

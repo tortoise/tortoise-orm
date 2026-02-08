@@ -1,5 +1,6 @@
 # pylint: disable=E0401,E0611
-from typing import Union
+from __future__ import annotations
+
 from uuid import UUID
 
 from blacksheep import Response
@@ -25,7 +26,7 @@ docs.bind_app(app)
 
 
 @app.router.get("/")
-async def users_list() -> Union[UserPydanticOut]:
+async def users_list() -> UserPydanticOut:
     return ok(await UserPydanticOut.from_queryset(Users.all()))
 
 

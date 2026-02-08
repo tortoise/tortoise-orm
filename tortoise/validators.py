@@ -107,10 +107,10 @@ class CommaSeparatedIntegerListValidator(Validator):
     """
 
     def __init__(self, allow_negative: bool = False) -> None:
-        pattern = r"^%(neg)s\d+(?:%(sep)s%(neg)s\d+)*\Z" % {
-            "neg": "(-)?" if allow_negative else "",
-            "sep": re.escape(","),
-        }
+        pattern = r"^{neg}\d+(?:{sep}{neg}\d+)*\Z".format(
+            neg="(-)?" if allow_negative else "",
+            sep=re.escape(","),
+        )
         self.regex = RegexValidator(pattern, re.I)
 
     def __call__(self, value: str) -> None:

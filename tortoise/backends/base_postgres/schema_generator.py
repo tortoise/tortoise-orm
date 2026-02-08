@@ -1,7 +1,11 @@
-from typing import TYPE_CHECKING, Any, List
+from __future__ import annotations
+
+from collections.abc import Sequence
+from typing import TYPE_CHECKING, Any
 
 from tortoise.backends.base.schema_generator import BaseSchemaGenerator
 from tortoise.converters import encoders
+from tortoise.models import Model
 
 if TYPE_CHECKING:  # pragma: nocoverage
     from .client import BasePostgresClient
@@ -9,16 +13,25 @@ if TYPE_CHECKING:  # pragma: nocoverage
 
 class BasePostgresSchemaGenerator(BaseSchemaGenerator):
     DIALECT = "postgres"
-    TABLE_COMMENT_TEMPLATE = "COMMENT ON TABLE \"{table}\" IS '{comment}';"
-    COLUMN_COMMENT_TEMPLATE = 'COMMENT ON COLUMN "{table}"."{column}" IS \'{comment}\';'
+    INDEX_CREATE_TEMPLATE = (
+        'CREATE INDEX {exists}"{index_name}" ON {table_name} {index_type}({fields}){extra};'
+    )
+    UNIQUE_INDEX_CREATE_TEMPLATE = INDEX_CREATE_TEMPLATE.replace("INDEX", "UNIQUE INDEX")
+    TABLE_COMMENT_TEMPLATE = "COMMENT ON TABLE {table} IS '{comment}';"
+    COLUMN_COMMENT_TEMPLATE = "COMMENT ON COLUMN {table}.\"{column}\" IS '{comment}';"
     GENERATED_PK_TEMPLATE = '"{field_name}" {generated_sql}'
 
-    def __init__(self, client: "BasePostgresClient") -> None:
+    def __init__(self, client: BasePostgresClient) -> None:
         super().__init__(client)
-        self.comments_array: List[str] = []
+        self.comments_array: list[str] = []
+
+    def _get_schema_create_sql(self, schema: str, safe: bool) -> str:
+        if safe:
+            return f"CREATE SCHEMA IF NOT EXISTS {self.quote(schema)};"
+        return f"CREATE SCHEMA {self.quote(schema)};"
 
     @classmethod
-    def _get_escape_translation_table(cls) -> List[str]:
+    def _get_escape_translation_table(cls) -> list[str]:
         table = super()._get_escape_translation_table()
         table[ord("'")] = "''"
         return table
@@ -54,10 +67,26 @@ class BasePostgresSchemaGenerator(BaseSchemaGenerator):
         auto_now: bool = False,
     ) -> str:
         default_str = " DEFAULT"
-        default_str += " CURRENT_TIMESTAMP" if auto_now_add else f" {default}"
+        default_str += " CURRENT_TIMESTAMP" if (auto_now_add or auto_now) else f" {default}"
         return default_str
 
     def _escape_default_value(self, default: Any):
         if isinstance(default, bool):
             return default
         return encoders.get(type(default))(default)  # type: ignore
+
+    def _get_index_sql(
+        self,
+        model: type[Model],
+        field_names: Sequence[str],
+        safe: bool,
+        index_name: str | None = None,
+        index_type: str | None = None,
+        extra: str | None = None,
+    ) -> str:
+        if index_type:
+            index_type = f"USING {index_type}"
+
+        return super()._get_index_sql(
+            model, field_names, safe, index_name=index_name, index_type=index_type, extra=extra
+        )

@@ -1,17 +1,20 @@
+from __future__ import annotations
+
 import asyncio
 from abc import ABC
+from collections.abc import Callable, Coroutine
 from functools import wraps
-from typing import Any, Callable, Coroutine, List, Optional, Tuple, TypeVar, Union
+from typing import Any, TypeVar
 
 import asyncodbc
 import pyodbc
 
 from tortoise import BaseDBAsyncClient
 from tortoise.backends.base.client import (
-    BaseTransactionWrapper,
     ConnectionWrapper,
-    NestedTransactionPooledContext,
+    NestedTransactionContext,
     PoolConnectionWrapper,
+    TransactionalDBClient,
     TransactionContext,
 )
 from tortoise.backends.odbc.executor import ODBCExecutor
@@ -24,9 +27,9 @@ from tortoise.exceptions import (
 
 T = TypeVar("T")
 FuncType = Callable[..., Coroutine[None, None, T]]
-ConnWrapperType = Union[
-    ConnectionWrapper[asyncodbc.Connection], PoolConnectionWrapper[asyncodbc.Connection]
-]
+ConnWrapperType = (
+    ConnectionWrapper[asyncodbc.Connection] | PoolConnectionWrapper[asyncodbc.Connection]
+)
 
 
 def translate_exceptions(func: FuncType) -> FuncType:
@@ -65,11 +68,12 @@ class ODBCClient(BaseDBAsyncClient, ABC):
         self.maxsize = self._kwargs.pop("maxsize", 10)
         self.pool_recycle = self._kwargs.pop("pool_recycle", -1)
         self.echo = self._kwargs.pop("echo", False)
-        self.dsn: Optional[str] = None
+        self.dsn: str | None = None
 
         self._template: dict = {}
-        self._pool: Optional[asyncodbc.Pool] = None
+        self._pool: asyncodbc.Pool | None = None
         self._connection = None
+        self._pool_init_lock = asyncio.Lock()
 
     async def create_connection(self, with_db: bool) -> None:
         self._template = {
@@ -114,7 +118,7 @@ class ODBCClient(BaseDBAsyncClient, ABC):
             self._pool = None
 
     def acquire_connection(self) -> ConnWrapperType:
-        return PoolConnectionWrapper(self)
+        return PoolConnectionWrapper(self, self._pool_init_lock)
 
     @translate_exceptions
     async def execute_many(self, query: str, values: list) -> None:
@@ -130,9 +134,7 @@ class ODBCClient(BaseDBAsyncClient, ABC):
                     await cursor.commit()
 
     @translate_exceptions
-    async def execute_query(
-        self, query: str, values: Optional[list] = None
-    ) -> Tuple[int, List[dict]]:
+    async def execute_query(self, query: str, values: list | None = None) -> tuple[int, list[dict]]:
         async with self.acquire_connection() as connection:
             self.log.debug("%s: %s", query, values)
             async with connection.cursor() as cursor:
@@ -151,7 +153,7 @@ class ODBCClient(BaseDBAsyncClient, ABC):
                     return cursor.rowcount, [dict(zip(fields, row)) for row in rows]
                 return cursor.rowcount, []
 
-    async def execute_query_dict(self, query: str, values: Optional[list] = None) -> List[dict]:
+    async def execute_query_dict(self, query: str, values: list | None = None) -> list[dict]:
         return (await self.execute_query(query, values))[1]
 
     @translate_exceptions
@@ -162,20 +164,19 @@ class ODBCClient(BaseDBAsyncClient, ABC):
                 await cursor.execute(query)
 
 
-class ODBCTransactionWrapper(BaseTransactionWrapper):
+class ODBCTransactionWrapper(TransactionalDBClient):
     def __init__(self, connection: ODBCClient) -> None:
         self.database = connection.database
         self.connection_name = connection.connection_name
         self._connection: asyncodbc.Connection = connection._connection
         self._lock = asyncio.Lock()
-        self._trxlock = asyncio.Lock()
         self.log = connection.log
-        self._finalized: Optional[bool] = None
+        self._finalized: bool = False
         self.fetch_inserted = connection.fetch_inserted
         self._parent = connection
 
-    def _in_transaction(self) -> "TransactionContext":
-        return NestedTransactionPooledContext(self)
+    def _in_transaction(self) -> TransactionContext:
+        return NestedTransactionContext(self)
 
     def acquire_connection(self) -> ConnWrapperType:
         return ConnectionWrapper(self._lock, self)
@@ -187,7 +188,7 @@ class ODBCTransactionWrapper(BaseTransactionWrapper):
             cursor = await connection.cursor()
             await cursor.executemany(query, values)
 
-    async def start(self) -> None:
+    async def begin(self) -> None:
         self._finalized = False
         self._connection._conn.autocommit = False
 
@@ -204,3 +205,12 @@ class ODBCTransactionWrapper(BaseTransactionWrapper):
         await self._connection.rollback()
         self._finalized = True
         self._connection._conn.autocommit = True
+
+    async def savepoint(self) -> None:
+        pass
+
+    async def savepoint_rollback(self) -> None:
+        pass
+
+    async def release_savepoint(self) -> None:
+        pass

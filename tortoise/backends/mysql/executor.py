@@ -1,7 +1,10 @@
-from pypika import functions
-from pypika.enums import SqlTypes
-from pypika.terms import BasicCriterion, Criterion
-from pypika.utils import format_quotes
+import enum
+
+from pypika_tortoise import SqlContext, functions
+from pypika_tortoise.enums import SqlTypes
+from pypika_tortoise.functions import Cast, Coalesce
+from pypika_tortoise.terms import BasicCriterion, Criterion
+from pypika_tortoise.utils import format_quotes
 
 from tortoise import Model
 from tortoise.backends.base.executor import BaseExecutor
@@ -31,13 +34,17 @@ from tortoise.filters import (
 )
 
 
+class MySQLRegexpComparators(enum.Enum):
+    REGEXP = " REGEXP "
+
+
 class StrWrapper(ValueWrapper):
     """
     Naive str wrapper that doesn't use the monkey-patched pypika ValueWrapper for MySQL
     """
 
-    def get_value_sql(self, **kwargs) -> str:
-        quote_char = kwargs.get("secondary_quote_char") or ""
+    def get_value_sql(self, ctx: SqlContext) -> str:
+        quote_char = ctx.secondary_quote_char or ""
         value = self.value.replace(quote_char, quote_char * 2)
         return format_quotes(value, quote_char)
 
@@ -97,7 +104,9 @@ def mysql_search(field: Term, value: str) -> SearchCriterion:
 
 
 def mysql_posix_regex(field: Term, value: str) -> BasicCriterion:
-    return BasicCriterion(" REGEXP ", field, StrWrapper(value))  # type:ignore[arg-type]
+    return BasicCriterion(
+        MySQLRegexpComparators.REGEXP, Coalesce(Cast(field, SqlTypes.CHAR)), StrWrapper(value)
+    )
 
 
 class MySQLExecutor(BaseExecutor):

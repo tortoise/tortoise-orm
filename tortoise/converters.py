@@ -1,8 +1,11 @@
+from __future__ import annotations
+
 import datetime
 import time
+from collections.abc import Sequence
 from datetime import timedelta
 from decimal import Decimal
-from typing import Any, Dict, Sequence, Set
+from typing import Any
 
 _escape_table = [chr(x) for x in range(128)]
 _escape_table[0] = "\\0"
@@ -25,43 +28,44 @@ def _escape_unicode(value: str, mapping=None) -> str:
 escape_string = _escape_unicode
 
 
-def escape_item(val: Any, charset, mapping=None) -> str:
+def escape_item(val: Any, mapping=None) -> str:
+    if isinstance(val, str):
+        return f'"{val}"'
+
     if mapping is None:
         mapping = encoders
+
     encoder = mapping.get(type(val))
 
     # Fallback to default when no encoder found
     if not encoder:
         try:
             encoder = mapping[str]
-        except KeyError:
-            raise TypeError("no default type converter defined")
+        except KeyError as exc:
+            raise TypeError("no default type converter defined") from exc
 
-    if encoder in (escape_dict, escape_sequence):
-        val = encoder(val, charset, mapping)
-    else:
-        val = encoder(val, mapping)
+    val = encoder(val, mapping)
     return val
 
 
-def escape_dict(val: Dict, charset, mapping=None) -> dict:
+def escape_dict(val: dict, mapping=None) -> dict:
     n = {}
     for k, v in val.items():
-        quoted = escape_item(v, charset, mapping)
+        quoted = escape_item(v, mapping)
         n[k] = quoted
     return n
 
 
-def escape_sequence(val: Sequence, charset, mapping=None) -> str:
+def escape_sequence(val: Sequence, mapping=None) -> str:
     n = []
     for item in val:
-        quoted = escape_item(item, charset, mapping)
+        quoted = escape_item(item, mapping)
         n.append(quoted)
-    return "(" + ",".join(n) + ")"
+    return "'{" + ",".join(n) + "}'"
 
 
-def escape_set(val: Set, charset, mapping=None) -> str:
-    return ",".join([escape_item(x, charset, mapping) for x in val])
+def escape_set(val: set, mapping=None) -> str:
+    return ",".join([escape_item(x, mapping) for x in val])
 
 
 def escape_bool(value: bool, mapping=None) -> str:
@@ -77,15 +81,15 @@ def escape_int(value: int, mapping=None) -> str:
 
 
 def escape_float(value: float, mapping=None) -> str:
-    return "%.15g" % value
+    return f"{value:.15g}"
 
 
 def escape_unicode(value: str, mapping=None) -> str:
-    return "'%s'" % _escape_unicode(value)
+    return f"'{_escape_unicode(value)}'"
 
 
 def escape_str(value: str, mapping=None) -> str:
-    return "'%s'" % escape_string(str(value), mapping)
+    return f"'{escape_string(str(value), mapping)}'"
 
 
 def escape_None(value: None, mapping=None) -> str:

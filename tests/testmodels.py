@@ -9,17 +9,17 @@ import re
 import uuid
 from decimal import Decimal
 from enum import Enum, IntEnum
-from typing import List, Union
 
-import pytz
 from pydantic import BaseModel, ConfigDict
 
 from tortoise import fields
-from tortoise.exceptions import ValidationError
+from tortoise.exceptions import NoValuesFetched, ValidationError
 from tortoise.fields import NO_ACTION
+from tortoise.indexes import Index
 from tortoise.manager import Manager
 from tortoise.models import Model
 from tortoise.queryset import QuerySet
+from tortoise.timezone import UTC
 from tortoise.validators import (
     CommaSeparatedIntegerListValidator,
     MaxValueValidator,
@@ -49,9 +49,7 @@ class Author(Model):
 
 class Book(Model):
     name = fields.CharField(max_length=255)
-    author: fields.ForeignKeyRelation[Author] = fields.ForeignKeyField(
-        "models.Author", related_name="books"
-    )
+    author: fields.ForeignKeyRelation[Author] = fields.ForeignKeyField(Author, related_name="books")
     rating = fields.FloatField()
     subject = fields.CharField(max_length=255, null=True)
 
@@ -103,11 +101,11 @@ class Event(Model):
     #: The name
     name = fields.TextField()
     #: What tournaments is a happenin'
-    tournament: fields.ForeignKeyRelation["Tournament"] = fields.ForeignKeyField(
-        "models.Tournament", related_name="events"
+    tournament: fields.ForeignKeyRelation[Tournament] = fields.ForeignKeyField(
+        to="models.Tournament", related_name="events"
     )
     reporter: fields.ForeignKeyNullableRelation[Reporter] = fields.ForeignKeyField(
-        "models.Reporter", null=True
+        to=Reporter, null=True
     )
     participants: fields.ManyToManyRelation["Team"] = fields.ManyToManyField(
         "models.Team",
@@ -124,6 +122,27 @@ class Event(Model):
 
     def __str__(self):
         return self.name
+
+
+class ModelTestPydanticMetaBackwardRelations1(Model):
+    class PydanticMeta:
+        backward_relations = False
+
+
+class ModelTestPydanticMetaBackwardRelations2(Model): ...
+
+
+class ModelTestPydanticMetaBackwardRelations3(Model):
+    one: fields.ForeignKeyRelation[ModelTestPydanticMetaBackwardRelations1] = (
+        fields.ForeignKeyField(
+            "models.ModelTestPydanticMetaBackwardRelations1", related_name="threes"
+        )
+    )
+    two: fields.ForeignKeyRelation[ModelTestPydanticMetaBackwardRelations2] = (
+        fields.ForeignKeyField(
+            "models.ModelTestPydanticMetaBackwardRelations2", related_name="threes"
+        )
+    )
 
 
 class Node(Model):
@@ -153,7 +172,7 @@ class Address(Model):
 
 class M2mWithO2oPk(Model):
     name = fields.CharField(max_length=64)
-    address: fields.ManyToManyRelation["Address"] = fields.ManyToManyField("models.Address")
+    address: fields.ManyToManyRelation[Address] = fields.ManyToManyField("models.Address")
 
 
 class O2oPkModelWithM2m(Model):
@@ -162,7 +181,7 @@ class O2oPkModelWithM2m(Model):
         on_delete=fields.CASCADE,
         primary_key=True,
     )
-    nodes: fields.ManyToManyRelation["Node"] = fields.ManyToManyField("models.Node")
+    nodes: fields.ManyToManyRelation[Node] = fields.ManyToManyField("models.Node")
 
 
 class Dest_null(Model):
@@ -309,7 +328,7 @@ class FloatFields(Model):
     floatnum_null = fields.FloatField(null=True)
 
 
-def raise_if_not_dict_or_list(value: Union[dict, list]):
+def raise_if_not_dict_or_list(value: dict | list):
     if not isinstance(value, (dict, list)):
         raise ValidationError("Value must be a dict or list.")
 
@@ -321,13 +340,11 @@ class JSONFields(Model):
 
     id = fields.IntField(primary_key=True)
     data = fields.JSONField()  # type: ignore # Test cases where generics are not provided
-    data_null = fields.JSONField[Union[dict, list]](null=True)
+    data_null = fields.JSONField[dict | list](null=True)
     data_default = fields.JSONField[dict](default={"a": 1})
 
     # From Python 3.10 onwards, validator can be defined with staticmethod
-    data_validate = fields.JSONField[Union[dict, list]](
-        null=True, validators=[raise_if_not_dict_or_list]
-    )
+    data_validate = fields.JSONField[dict | list](null=True, validators=[raise_if_not_dict_or_list])
 
     # Test cases where generics are provided and the type is a pydantic base model
     data_pydantic = fields.JSONField[TestSchemaForJSONField](
@@ -606,7 +623,7 @@ class Employee(Model):
         """
         try:
             return len(self.team_members)
-        except AttributeError:
+        except (NoValuesFetched, AttributeError):
             return 0
 
     def not_annotated(self):
@@ -821,7 +838,7 @@ class DefaultModel(Model):
     char_default = fields.CharField(max_length=20, default="tortoise")
     date_default = fields.DateField(default=datetime.date(year=2020, month=5, day=21))
     datetime_default = fields.DatetimeField(
-        default=datetime.datetime(year=2020, month=5, day=20, tzinfo=pytz.utc)
+        default=datetime.datetime(year=2020, month=5, day=20, tzinfo=UTC)
     )
 
 
@@ -938,7 +955,7 @@ class OldStyleModel(Model):
 
 
 def camelize_var(var_name: str):
-    var_parts: List[str] = var_name.split("_")
+    var_parts: list[str] = var_name.split("_")
     return var_parts[0] + "".join([part.title() for part in var_parts[1:]])
 
 
@@ -977,3 +994,87 @@ class CallableDefault(Model):
     id = fields.IntField(primary_key=True)
     callable_default = fields.CharField(max_length=32, default=callable_default)
     async_default = fields.CharField(max_length=32, default=async_callable_default)
+
+
+class BenchmarkFewFields(Model):
+    timestamp = fields.DatetimeField(auto_now_add=True)
+    level = fields.SmallIntField(index=True)
+    text = fields.CharField(max_length=255)
+
+
+class BenchmarkManyFields(Model):
+    timestamp = fields.DatetimeField(auto_now_add=True)
+    level = fields.SmallIntField(index=True)
+    text = fields.CharField(max_length=255)
+
+    col_float1 = fields.FloatField(default=2.2)
+    col_smallint1 = fields.SmallIntField(default=2)
+    col_int1 = fields.IntField(default=2000000)
+    col_bigint1 = fields.BigIntField(default=99999999)
+    col_char1 = fields.CharField(max_length=255, default="value1")
+    col_text1 = fields.TextField(default="Moo,Foo,Baa,Waa,Moo,Foo,Baa,Waa,Moo,Foo,Baa,Waa")
+    col_decimal1 = fields.DecimalField(12, 8, default=Decimal("2.2"))
+    col_json1 = fields.JSONField[dict](
+        default={"a": 1, "b": "b", "c": [2], "d": {"e": 3}, "f": True}
+    )
+
+    col_float2 = fields.FloatField(null=True)
+    col_smallint2 = fields.SmallIntField(null=True)
+    col_int2 = fields.IntField(null=True)
+    col_bigint2 = fields.BigIntField(null=True)
+    col_char2 = fields.CharField(max_length=255, null=True)
+    col_text2 = fields.TextField(null=True)
+    col_decimal2 = fields.DecimalField(12, 8, null=True)
+    col_json2 = fields.JSONField[dict](null=True)
+
+    col_float3 = fields.FloatField(default=2.2)
+    col_smallint3 = fields.SmallIntField(default=2)
+    col_int3 = fields.IntField(default=2000000)
+    col_bigint3 = fields.BigIntField(default=99999999)
+    col_char3 = fields.CharField(max_length=255, default="value1")
+    col_text3 = fields.TextField(default="Moo,Foo,Baa,Waa,Moo,Foo,Baa,Waa,Moo,Foo,Baa,Waa")
+    col_decimal3 = fields.DecimalField(12, 8, default=Decimal("2.2"))
+    col_json3 = fields.JSONField[dict](
+        default={"a": 1, "b": "b", "c": [2], "d": {"e": 3}, "f": True}
+    )
+
+    col_float4 = fields.FloatField(null=True)
+    col_smallint4 = fields.SmallIntField(null=True)
+    col_int4 = fields.IntField(null=True)
+    col_bigint4 = fields.BigIntField(null=True)
+    col_char4 = fields.CharField(max_length=255, null=True)
+    col_text4 = fields.TextField(null=True)
+    col_decimal4 = fields.DecimalField(12, 8, null=True)
+    col_json4 = fields.JSONField[dict](null=True)
+
+
+class ModelWithIndexes(Model):
+    id = fields.IntField(primary_key=True)
+    indexed = fields.CharField(max_length=16, index=True)
+    unique_indexed = fields.CharField(max_length=16, unique=True)
+    f1 = fields.CharField(max_length=16)
+    f2 = fields.CharField(max_length=16)
+    f3 = fields.CharField(max_length=16)
+    u1 = fields.IntField()
+    u2 = fields.IntField()
+
+    class Meta:
+        indexes = [
+            Index(fields=["f1", "f2"]),
+            Index(fields=["f3"], name="model_with_indexes__f3"),
+        ]
+        unique_together = [("u1", "u2")]
+
+
+class Flavor(Model):
+    id = fields.IntField(pk=True)
+    name = fields.CharField(max_length=50)
+
+
+class Drink(Model):
+    id = fields.IntField(pk=True)
+    name = fields.CharField(max_length=100)
+    flavors = fields.ManyToManyField("models.Flavor", related_name="drinks", through="drink_flavor")
+    toppings = fields.ManyToManyField(
+        "models.Flavor", related_name="topping_drinks", through="drink_topping"
+    )

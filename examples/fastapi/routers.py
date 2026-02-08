@@ -1,5 +1,3 @@
-from typing import List
-
 from fastapi import APIRouter, HTTPException
 from models import Users
 from schemas import Status, User_Pydantic, UserIn_Pydantic
@@ -7,7 +5,7 @@ from schemas import Status, User_Pydantic, UserIn_Pydantic
 router = APIRouter()
 
 
-@router.get("/users", response_model=List[User_Pydantic])
+@router.get("/users", response_model=list[User_Pydantic])
 async def get_users():
     return await User_Pydantic.from_queryset(Users.all())
 
@@ -35,3 +33,14 @@ async def delete_user(user_id: int):
     if not deleted_count:
         raise HTTPException(status_code=404, detail=f"User {user_id} not found")
     return Status(message=f"Deleted user {user_id}")
+
+
+@router.get("/404")
+async def get_404():
+    await Users.get(id=0)
+
+
+@router.get("/422")
+async def get_422():
+    obj = await Users.create(username="foo")
+    await Users.create(username=obj.username)

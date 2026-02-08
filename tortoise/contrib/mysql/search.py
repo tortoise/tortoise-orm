@@ -1,10 +1,12 @@
-from enum import Enum
-from typing import Any, Optional
+from __future__ import annotations
 
-from pypika.enums import Comparator
-from pypika.terms import BasicCriterion
-from pypika.terms import Function as PypikaFunction
-from pypika.terms import Term
+from enum import Enum
+from typing import Any
+
+from pypika_tortoise import SqlContext
+from pypika_tortoise.enums import Comparator
+from pypika_tortoise.terms import BasicCriterion, Term
+from pypika_tortoise.terms import Function as PypikaFunction
 
 
 class Comp(Comparator):
@@ -20,15 +22,15 @@ class Mode(Enum):
 
 class Match(PypikaFunction):
     def __init__(self, *columns: Term) -> None:
-        super(Match, self).__init__("MATCH", *columns)
+        super().__init__("MATCH", *columns)
 
 
 class Against(PypikaFunction):
-    def __init__(self, expr: Term, mode: Optional[Mode] = None) -> None:
-        super(Against, self).__init__("AGAINST", expr)
+    def __init__(self, expr: Term, mode: Mode | None = None) -> None:
+        super().__init__("AGAINST", expr)
         self.mode = mode
 
-    def get_special_params_sql(self, **kwargs: Any) -> Any:
+    def get_special_params_sql(self, ctx: SqlContext) -> Any:
         if not self.mode:
             return ""
         return self.mode.value
@@ -39,5 +41,5 @@ class SearchCriterion(BasicCriterion):
     Only support for CharField, TextField with full search indexes.
     """
 
-    def __init__(self, *columns: Term, expr: Term, mode: Optional[Mode] = None) -> None:
+    def __init__(self, *columns: Term, expr: Term, mode: Mode | None = None) -> None:
         super().__init__(Comp.search, Match(*columns), Against(expr, mode))

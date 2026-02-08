@@ -1,18 +1,21 @@
+from __future__ import annotations
+
+from collections.abc import Iterable
 from types import ModuleType
-from typing import Dict, Iterable, Optional, Union
 
 from aiohttp import web  # pylint: disable=E0401
 
-from tortoise import Tortoise, connections
+from tortoise import Tortoise
+from tortoise.connection import get_connections
 from tortoise.log import logger
 
 
 def register_tortoise(
     app: web.Application,
-    config: Optional[dict] = None,
-    config_file: Optional[str] = None,
-    db_url: Optional[str] = None,
-    modules: Optional[Dict[str, Iterable[Union[str, ModuleType]]]] = None,
+    config: dict | None = None,
+    config_file: str | None = None,
+    db_url: str | None = None,
+    modules: dict[str, Iterable[str | ModuleType]] | None = None,
     generate_schemas: bool = False,
 ) -> None:
     """
@@ -79,13 +82,13 @@ def register_tortoise(
 
     async def init_orm(app):  # pylint: disable=W0612
         await Tortoise.init(config=config, config_file=config_file, db_url=db_url, modules=modules)
-        logger.info(f"Tortoise-ORM started, {connections._get_storage()}, {Tortoise.apps}")
+        logger.info(f"Tortoise-ORM started, {get_connections()._get_storage()}, {Tortoise.apps}")
         if generate_schemas:
             logger.info("Tortoise-ORM generating schema")
             await Tortoise.generate_schemas()
 
     async def close_orm(app):  # pylint: disable=W0612
-        await connections.close_all()
+        await Tortoise.close_connections()
         logger.info("Tortoise-ORM shutdown")
 
     app.on_startup.append(init_orm)

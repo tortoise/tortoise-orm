@@ -1,14 +1,15 @@
 # pylint: disable=E0611,E0401
 import os
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
-from typing import AsyncGenerator
 
 from fastapi import FastAPI
 from routers import router as users_router
 
 from examples.fastapi.config import register_orm
-from tortoise import Tortoise, generate_config
-from tortoise.contrib.fastapi import RegisterTortoise
+from tortoise import Tortoise
+from tortoise.backends.base.config_generator import generate_config
+from tortoise.contrib.fastapi import RegisterTortoise, tortoise_exception_handlers
 
 
 @asynccontextmanager
@@ -23,7 +24,6 @@ async def lifespan_test(app: FastAPI) -> AsyncGenerator[None, None]:
         app=app,
         config=config,
         generate_schemas=True,
-        add_exception_handlers=True,
         _create_db=True,
     ):
         # db connected
@@ -47,5 +47,9 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         # db connections closed
 
 
-app = FastAPI(title="Tortoise ORM FastAPI example", lifespan=lifespan)
+app = FastAPI(
+    title="Tortoise ORM FastAPI example",
+    lifespan=lifespan,
+    exception_handlers=tortoise_exception_handlers(),
+)
 app.include_router(users_router, prefix="")

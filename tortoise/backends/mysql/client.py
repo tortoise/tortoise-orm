@@ -1,36 +1,32 @@
+from __future__ import annotations
+
 import asyncio
+from collections.abc import Callable, Coroutine
 from functools import wraps
-from typing import (
-    Any,
-    Callable,
-    Coroutine,
-    List,
-    Optional,
-    SupportsInt,
-    Tuple,
-    TypeVar,
-    Union,
-)
+from itertools import count
+from typing import Any, SupportsInt, TypeVar
 
 try:
     import asyncmy as mysql
     from asyncmy import errors
     from asyncmy.charset import charset_by_name
+    from asyncmy.constants import COMMAND
 except ImportError:
     import aiomysql as mysql
-    from pymysql.charset import charset_by_name
     from pymysql import err as errors
+    from pymysql.charset import charset_by_name
+    from pymysql.constants import COMMAND
 
-from pypika import MySQLQuery
+from pypika_tortoise import MySQLQuery
 
 from tortoise import timezone
 from tortoise.backends.base.client import (
     BaseDBAsyncClient,
-    BaseTransactionWrapper,
     Capabilities,
     ConnectionWrapper,
-    NestedTransactionPooledContext,
+    NestedTransactionContext,
     PoolConnectionWrapper,
+    TransactionalDBClient,
     TransactionContext,
     TransactionContextPooled,
 )
@@ -42,6 +38,7 @@ from tortoise.exceptions import (
     OperationalError,
     TransactionManagementError,
 )
+from tortoise.timezone import get_use_tz
 
 T = TypeVar("T")
 FuncType = Callable[..., Coroutine[None, None, T]]
@@ -71,7 +68,12 @@ class MySQLClient(BaseDBAsyncClient):
     executor_class = MySQLExecutor
     schema_generator = MySQLSchemaGenerator
     capabilities = Capabilities(
-        "mysql", requires_limit=True, inline_comment=True, support_index_hint=True
+        "mysql",
+        requires_limit=True,
+        inline_comment=True,
+        support_index_hint=True,
+        support_for_posix_regex_queries=True,
+        support_json_attributes=True,
     )
 
     def __init__(
@@ -103,8 +105,9 @@ class MySQLClient(BaseDBAsyncClient):
         self.pool_maxsize = int(self.extra.pop("maxsize", 5))
 
         self._template: dict = {}
-        self._pool: Optional[mysql.Pool] = None
+        self._pool: mysql.Pool | None = None
         self._connection = None
+        self._pool_init_lock = asyncio.Lock()
 
     async def create_connection(self, with_db: bool) -> None:
         if charset_by_name(self.charset) is None:
@@ -132,9 +135,11 @@ class MySQLClient(BaseDBAsyncClient):
                             )
                             if self.storage_engine.lower() != "innodb":  # pragma: nobranch
                                 self.capabilities.__dict__["supports_transactions"] = False
-                        hours = timezone.now().utcoffset().seconds / 3600  # type: ignore
-                        tz = "{:+d}:{:02d}".format(int(hours), int((hours % 1) * 60))
-                        await cursor.execute(f"SET time_zone='{tz}';")
+                        # Only set session timezone when use_tz=True
+                        if get_use_tz():
+                            hours = timezone.now().utcoffset().seconds / 3600  # type: ignore
+                            tz = f"{int(hours):+d}:{int((hours % 1) * 60):02d}"
+                            await cursor.execute(f"SET time_zone='{tz}';")
             self.log.debug("Created connection %s pool with params: %s", self._pool, self._template)
         except errors.OperationalError:
             raise DBConnectionError(f"Can't connect to MySQL server: {self._template}")
@@ -168,11 +173,11 @@ class MySQLClient(BaseDBAsyncClient):
             pass
         await self.close()
 
-    def acquire_connection(self) -> Union["ConnectionWrapper", "PoolConnectionWrapper"]:
-        return PoolConnectionWrapper(self)
+    def acquire_connection(self) -> ConnectionWrapper | PoolConnectionWrapper:
+        return PoolConnectionWrapper(self, self._pool_init_lock)
 
-    def _in_transaction(self) -> "TransactionContext":
-        return TransactionContextPooled(TransactionWrapper(self))
+    def _in_transaction(self) -> TransactionContext:
+        return TransactionContextPooled(TransactionWrapper(self), self._pool_init_lock)
 
     @translate_exceptions
     async def execute_insert(self, query: str, values: list) -> int:
@@ -200,9 +205,7 @@ class MySQLClient(BaseDBAsyncClient):
                     await cursor.executemany(query, values)
 
     @translate_exceptions
-    async def execute_query(
-        self, query: str, values: Optional[list] = None
-    ) -> Tuple[int, List[dict]]:
+    async def execute_query(self, query: str, values: list | None = None) -> tuple[int, list[dict]]:
         async with self.acquire_connection() as connection:
             self.log.debug("%s: %s", query, values)
             async with connection.cursor() as cursor:
@@ -213,7 +216,7 @@ class MySQLClient(BaseDBAsyncClient):
                     return cursor.rowcount, [dict(zip(fields, row)) for row in rows]
                 return cursor.rowcount, []
 
-    async def execute_query_dict(self, query: str, values: Optional[list] = None) -> List[dict]:
+    async def execute_query_dict(self, query: str, values: list | None = None) -> list[dict]:
         return (await self.execute_query(query, values))[1]
 
     @translate_exceptions
@@ -224,19 +227,19 @@ class MySQLClient(BaseDBAsyncClient):
                 await cursor.execute(query)
 
 
-class TransactionWrapper(MySQLClient, BaseTransactionWrapper):
+class TransactionWrapper(MySQLClient, TransactionalDBClient):
     def __init__(self, connection: MySQLClient) -> None:
         self.connection_name = connection.connection_name
         self._connection: mysql.Connection = connection._connection
         self._lock = asyncio.Lock()
-        self._trxlock = asyncio.Lock()
+        self._savepoint: str | None = None
         self.log = connection.log
-        self._finalized: Optional[bool] = None
+        self._finalized: bool = False
         self.fetch_inserted = connection.fetch_inserted
         self._parent = connection
 
-    def _in_transaction(self) -> "TransactionContext":
-        return NestedTransactionPooledContext(self)
+    def _in_transaction(self) -> TransactionContext:
+        return NestedTransactionContext(TransactionWrapper(self))
 
     def acquire_connection(self) -> ConnectionWrapper[mysql.Connection]:
         return ConnectionWrapper(self._lock, self)
@@ -249,7 +252,7 @@ class TransactionWrapper(MySQLClient, BaseTransactionWrapper):
                 await cursor.executemany(query, values)
 
     @translate_exceptions
-    async def start(self) -> None:
+    async def begin(self) -> None:
         await self._connection.begin()
         self._finalized = False
 
@@ -259,8 +262,42 @@ class TransactionWrapper(MySQLClient, BaseTransactionWrapper):
         await self._connection.commit()
         self._finalized = True
 
+    @translate_exceptions
+    async def savepoint(self) -> None:
+        self._savepoint = _gen_savepoint_name()
+        await self._connection._execute_command(COMMAND.COM_QUERY, f"SAVEPOINT {self._savepoint}")
+        await self._connection._read_ok_packet()
+
     async def rollback(self) -> None:
         if self._finalized:
             raise TransactionManagementError("Transaction already finalised")
         await self._connection.rollback()
         self._finalized = True
+
+    async def savepoint_rollback(self) -> None:
+        if self._finalized:
+            raise TransactionManagementError("Transaction already finalised")
+        if self._savepoint is None:
+            raise TransactionManagementError("No savepoint to rollback to")
+        await self._connection._execute_command(
+            COMMAND.COM_QUERY, f"ROLLBACK TO SAVEPOINT {self._savepoint}"
+        )
+        await self._connection._read_ok_packet()
+        self._savepoint = None
+        self._finalized = True
+
+    async def release_savepoint(self) -> None:
+        if self._finalized:
+            raise TransactionManagementError("Transaction already finalised")
+        if self._savepoint is None:
+            raise TransactionManagementError("No savepoint to release")
+        await self._connection._execute_command(
+            COMMAND.COM_QUERY, f"RELEASE SAVEPOINT {self._savepoint}"
+        )
+        await self._connection._read_ok_packet()
+        self._savepoint = None
+        self._finalized = True
+
+
+def _gen_savepoint_name(_c=count()) -> str:
+    return f"tortoise_savepoint_{next(_c)}"

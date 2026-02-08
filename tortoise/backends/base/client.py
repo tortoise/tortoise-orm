@@ -1,24 +1,15 @@
 from __future__ import annotations
 
+import abc
 import asyncio
-from typing import (
-    Any,
-    Generic,
-    List,
-    Optional,
-    Sequence,
-    Tuple,
-    Type,
-    TypeVar,
-    Union,
-    cast,
-)
+from collections.abc import Sequence
+from typing import Any, Generic, TypeVar, cast
 
-from pypika import Query
+from pypika_tortoise import Query
 
 from tortoise.backends.base.executor import BaseExecutor
 from tortoise.backends.base.schema_generator import BaseSchemaGenerator
-from tortoise.connection import connections
+from tortoise.connection import get_connections
 from tortoise.exceptions import TransactionManagementError
 from tortoise.log import db_client_logger
 
@@ -43,8 +34,13 @@ class Capabilities:
         DDL statement, and not as a separate statement.
     :param supports_transactions: Indicates that this DB supports transactions.
     :param support_for_update: Indicates that this DB supports SELECT ... FOR UPDATE SQL statement.
+    :param support_for_update_no_key: Indicates that this DB supports SELECT ... FOR NO KEY UPDATE SQL statement.
     :param support_index_hint: Support force index or use index.
     :param support_update_limit_order_by: support update/delete with limit and order by.
+    :param support_for_posix_regex_queries: indicated if the db supports posix regex queries
+    :param support_json_attributes: indicated if the db supports accessing json attributes
+    :param can_rollback_ddl: Whether the database supports transactional DDL.
+        Used to determine if migrations can be run atomically.
     """
 
     def __init__(
@@ -58,10 +54,14 @@ class Capabilities:
         inline_comment: bool = False,
         supports_transactions: bool = True,
         support_for_update: bool = True,
+        support_for_no_key_update: bool = False,
         # Support force index or use index?
         support_index_hint: bool = False,
         # support update/delete with limit and order by
         support_update_limit_order_by: bool = True,
+        support_for_posix_regex_queries: bool = False,
+        support_json_attributes: bool = False,
+        can_rollback_ddl: bool = False,
     ) -> None:
         super().__setattr__("_mutable", True)
 
@@ -71,8 +71,12 @@ class Capabilities:
         self.inline_comment = inline_comment
         self.supports_transactions = supports_transactions
         self.support_for_update = support_for_update
+        self.support_for_no_key_update = support_for_no_key_update
         self.support_index_hint = support_index_hint
         self.support_update_limit_order_by = support_update_limit_order_by
+        self.support_for_posix_regex_queries = support_for_posix_regex_queries
+        self.support_json_attributes = support_json_attributes
+        self.can_rollback_ddl = can_rollback_ddl
         super().__setattr__("_mutable", False)
 
     def __setattr__(self, attr: str, value: Any) -> None:
@@ -84,24 +88,24 @@ class Capabilities:
         return str(self.__dict__)
 
 
-class BaseDBAsyncClient:
+class BaseDBAsyncClient(abc.ABC):
     """
     Base class for containing a DB connection.
 
     Parameters get passed as kwargs, and is mostly driver specific.
 
     .. attribute:: query_class
-        :annotation: Type[pypika.Query]
+        :annotation: type[pypika_tortoise.Query]
 
         The PyPika Query dialect (low level dialect)
 
     .. attribute:: executor_class
-        :annotation: Type[BaseExecutor]
+        :annotation: type[BaseExecutor]
 
         The executor dialect class (high level dialect)
 
     .. attribute:: schema_generator
-        :annotation: Type[BaseSchemaGenerator]
+        :annotation: type[BaseSchemaGenerator]
 
         The DDL schema generator
 
@@ -111,9 +115,13 @@ class BaseDBAsyncClient:
         Contains the connection capabilities
     """
 
-    query_class: Type[Query] = Query
-    executor_class: Type[BaseExecutor] = BaseExecutor
-    schema_generator: Type[BaseSchemaGenerator] = BaseSchemaGenerator
+    _connection: Any
+    _parent: BaseDBAsyncClient
+    _pool: Any
+    connection_name: str
+    query_class: type[Query] = Query
+    executor_class: type[BaseExecutor] = BaseExecutor
+    schema_generator: type[BaseSchemaGenerator] = BaseSchemaGenerator
     capabilities: Capabilities = Capabilities("")
 
     def __init__(self, connection_name: str, fetch_inserted: bool = True, **kwargs: Any) -> None:
@@ -156,14 +164,14 @@ class BaseDBAsyncClient:
         """
         raise NotImplementedError()  # pragma: nocoverage
 
-    def acquire_connection(self) -> Union["ConnectionWrapper", "PoolConnectionWrapper"]:
+    def acquire_connection(self) -> ConnectionWrapper | PoolConnectionWrapper:
         """
         Acquires a connection from the pool.
         Will return the current context connection if already in a transaction.
         """
         raise NotImplementedError()  # pragma: nocoverage
 
-    def _in_transaction(self) -> "TransactionContext":
+    def _in_transaction(self) -> TransactionContext:
         raise NotImplementedError()  # pragma: nocoverage
 
     async def execute_insert(self, query: str, values: list) -> Any:
@@ -178,8 +186,8 @@ class BaseDBAsyncClient:
         raise NotImplementedError()  # pragma: nocoverage
 
     async def execute_query(
-        self, query: str, values: Optional[list] = None
-    ) -> Tuple[int, Sequence[dict]]:
+        self, query: str, values: list | None = None
+    ) -> tuple[int, Sequence[dict]]:
         """
         Executes a RAW SQL query statement, and returns the resultset.
 
@@ -198,7 +206,7 @@ class BaseDBAsyncClient:
         """
         raise NotImplementedError()  # pragma: nocoverage
 
-    async def execute_many(self, query: str, values: List[list]) -> None:
+    async def execute_many(self, query: str, values: list[list]) -> None:
         """
         Executes a RAW bulk insert statement, like execute_insert, but returns no data.
 
@@ -207,22 +215,62 @@ class BaseDBAsyncClient:
         """
         raise NotImplementedError()  # pragma: nocoverage
 
-    async def execute_query_dict(self, query: str, values: Optional[list] = None) -> List[dict]:
+    async def execute_query_dict(self, query: str, values: list | None = None) -> list[dict]:
         """
         Executes a RAW SQL query statement, and returns the resultset as a list of dicts.
 
         :param query: The SQL string, pre-parametrized for the target DB dialect.
         :param values: A sequence of positional DB parameters.
         """
-        raise NotImplementedError()  # pragma: nocoverage
+        return (await self.execute_query_dict_with_affected(query, values))[0]
+
+    async def execute_query_dict_with_affected(
+        self, query: str, values: list | None = None
+    ) -> tuple[list[dict], int]:
+        """
+        Executes a RAW SQL query statement, and returns the resultset as a list of dicts
+        along with the rows affected if available.
+
+        :param query: The SQL string, pre-parametrized for the target DB dialect.
+        :param values: A sequence of positional DB parameters.
+        """
+        rowcount, rows = await self.execute_query(query, values)
+        normalized = [dict(row) for row in rows]
+        return normalized, rowcount
+
+
+class TransactionalDBClient(BaseDBAsyncClient, abc.ABC):
+    """An interface of the DB client that supports transactions."""
+
+    _finalized: bool = False
+
+    @abc.abstractmethod
+    async def begin(self) -> None: ...
+
+    @abc.abstractmethod
+    async def savepoint(self) -> None: ...
+
+    @abc.abstractmethod
+    async def rollback(self) -> None: ...
+
+    @abc.abstractmethod
+    async def savepoint_rollback(self) -> None: ...
+
+    @abc.abstractmethod
+    async def commit(self) -> None: ...
+
+    @abc.abstractmethod
+    async def release_savepoint(self) -> None: ...
 
 
 class ConnectionWrapper(Generic[T_conn]):
-    __slots__ = ("connection", "lock", "client")
+    """Wraps the connections with a lock to facilitate safe concurrent access when using
+    asyncio.gather, TaskGroup, or similar."""
 
-    def __init__(self, lock: asyncio.Lock, client: Any) -> None:
-        """Wraps the connections with a lock to facilitate safe concurrent access."""
-        self.lock: asyncio.Lock = lock
+    __slots__ = ("connection", "_lock", "client")
+
+    def __init__(self, lock: asyncio.Lock, client: BaseDBAsyncClient) -> None:
+        self._lock: asyncio.Lock = lock
         self.client = client
         self.connection: T_conn = client._connection
 
@@ -232,131 +280,114 @@ class ConnectionWrapper(Generic[T_conn]):
             self.connection = self.client._connection
 
     async def __aenter__(self) -> T_conn:
-        await self.lock.acquire()
+        await self._lock.acquire()
         await self.ensure_connection()
         return self.connection
 
     async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
-        self.lock.release()
+        self._lock.release()
 
 
 class TransactionContext(Generic[T_conn]):
-    __slots__ = ("connection", "connection_name", "token", "lock")
+    """A context manager interface for transactions. It is returned from in_transaction
+    and _in_transaction."""
 
-    def __init__(self, connection: Any) -> None:
-        self.connection = connection
-        self.connection_name = connection.connection_name
-        self.lock = getattr(connection, "_trxlock", None)
+    client: TransactionalDBClient
 
-    async def ensure_connection(self) -> None:
-        if not self.connection._connection:
-            await self.connection._parent.create_connection(with_db=True)
-            self.connection._connection = self.connection._parent._connection
+    @abc.abstractmethod
+    async def __aenter__(self) -> T_conn: ...
 
-    async def __aenter__(self) -> T_conn:
-        await self.ensure_connection()
-        await self.lock.acquire()  # type:ignore
-        self.token = connections.set(self.connection_name, self.connection)
-        await self.connection.start()
-        return self.connection
-
-    async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
-        if not self.connection._finalized:
-            if exc_type:
-                # Can't rollback a transaction that already failed.
-                if exc_type is not TransactionManagementError:
-                    await self.connection.rollback()
-            else:
-                await self.connection.commit()
-        connections.reset(self.token)
-        self.lock.release()  # type:ignore
+    @abc.abstractmethod
+    async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None: ...
 
 
 class TransactionContextPooled(TransactionContext):
-    __slots__ = ("conn_wrapper", "connection", "connection_name", "token")
+    "A version of TransactionContext that uses a pool to acquire connections."
+
+    __slots__ = ("client", "connection_name", "token", "_pool_init_lock")
+
+    def __init__(self, client: TransactionalDBClient, pool_init_lock: asyncio.Lock) -> None:
+        self.client = client
+        self.connection_name = client.connection_name
+        self._pool_init_lock = pool_init_lock
 
     async def ensure_connection(self) -> None:
-        if not self.connection._parent._pool:
-            await self.connection._parent.create_connection(with_db=True)
+        if not self.client._parent._pool:
+            # a safeguard against multiple concurrent tasks trying to initialize the pool
+            async with self._pool_init_lock:
+                if not self.client._parent._pool:
+                    await self.client._parent.create_connection(with_db=True)
 
-    async def __aenter__(self) -> T_conn:
+    async def __aenter__(self) -> TransactionalDBClient:
         await self.ensure_connection()
-        self.token = connections.set(self.connection_name, self.connection)
-        self.connection._connection = await self.connection._parent._pool.acquire()
-        await self.connection.start()
-        return self.connection
+        # Acquire connection first to avoid race condition where concurrent tasks
+        # see the wrapper via the context before it has a connection.
+        self.client._connection = await self.client._parent._pool.acquire()
+        # Set the context variable so the current task is always seeing a
+        # TransactionWrapper connection.
+        self.token = get_connections().set(self.connection_name, self.client)
+        await self.client.begin()
+        return self.client
 
     async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
-        if not self.connection._finalized:
-            if exc_type:
-                # Can't rollback a transaction that already failed.
-                if exc_type is not TransactionManagementError:
-                    await self.connection.rollback()
-            else:
-                await self.connection.commit()
-        if self.connection._parent._pool:
-            await self.connection._parent._pool.release(self.connection._connection)
-        connections.reset(self.token)
+        try:
+            if not self.client._finalized:
+                if exc_type:
+                    # Can't rollback a transaction that already failed.
+                    if exc_type is not TransactionManagementError:
+                        await self.client.rollback()
+                else:
+                    await self.client.commit()
+        finally:
+            if self.client._parent._pool:
+                await self.client._parent._pool.release(self.client._connection)
+            get_connections().reset(self.token)
 
 
 class NestedTransactionContext(TransactionContext):
-    async def __aenter__(self) -> T_conn:
-        return self.connection
+    __slots__ = ("client", "connection_name")
+
+    def __init__(self, client: TransactionalDBClient) -> None:
+        self.client = client
+        self.connection_name = client.connection_name
+
+    async def __aenter__(self) -> TransactionalDBClient:
+        await self.client.savepoint()
+        return self.client
 
     async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
-        if not self.connection._finalized:
+        if not self.client._finalized:
             if exc_type:
                 # Can't rollback a transaction that already failed.
                 if exc_type is not TransactionManagementError:
-                    await self.connection.rollback()
-
-
-class NestedTransactionPooledContext(TransactionContext):
-    async def __aenter__(self) -> T_conn:
-        await self.lock.acquire()  # type:ignore
-        return self.connection
-
-    async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
-        self.lock.release()  # type:ignore
-        if not self.connection._finalized:
-            if exc_type:
-                # Can't rollback a transaction that already failed.
-                if exc_type is not TransactionManagementError:
-                    await self.connection.rollback()
+                    await self.client.savepoint_rollback()
+            else:
+                await self.client.release_savepoint()
 
 
 class PoolConnectionWrapper(Generic[T_conn]):
-    def __init__(self, client: Any) -> None:
-        """Class to manage acquiring from and releasing connections to a pool."""
-        self.pool = client._pool
+    """Class to manage acquiring from and releasing connections to a pool."""
+
+    __slots__ = ("client", "connection", "_pool_init_lock")
+
+    def __init__(self, client: BaseDBAsyncClient, pool_init_lock: asyncio.Lock) -> None:
         self.client = client
-        self.connection: Optional[T_conn] = None
+        self.connection: T_conn | None = None
+        self._pool_init_lock = pool_init_lock
 
     async def ensure_connection(self) -> None:
-        if not self.pool:
-            await self.client.create_connection(with_db=True)
-            self.pool = self.client._pool
+        if not self.client._pool:
+            # a safeguard against multiple concurrent tasks trying to initialize the pool
+            async with self._pool_init_lock:
+                if not self.client._pool:
+                    await self.client.create_connection(with_db=True)
 
     async def __aenter__(self) -> T_conn:
         await self.ensure_connection()
-        # get first available connection
-        self.connection = await self.pool.acquire()
+        # get first available connection. If none available, wait until one is released
+        self.connection = await self.client._pool.acquire()
         return cast(T_conn, self.connection)
 
     async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
         # release the connection back to the pool
-        await self.pool.release(self.connection)
-
-
-class BaseTransactionWrapper:
-    async def start(self) -> None:
-        raise NotImplementedError()  # pragma: nocoverage
-
-    def release(self) -> None:
-        raise NotImplementedError()  # pragma: nocoverage
-
-    async def rollback(self) -> None:
-        raise NotImplementedError()  # pragma: nocoverage
-
-    async def commit(self) -> None:
-        raise NotImplementedError()  # pragma: nocoverage
+        await self.client._pool.release(self.connection)

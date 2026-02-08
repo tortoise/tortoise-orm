@@ -9,5 +9,6 @@ from tortoise.models import Model
 
 class One(Model):
     tournament: fields.OneToOneRelation[Two] = fields.OneToOneField(
-        "models.Two", on_delete="WABOOM"  # type:ignore
+        "models.Two",
+        on_delete="WABOOM",  # type:ignore
     )

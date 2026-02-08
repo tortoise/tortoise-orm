@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from pypika.terms import Function
+from pypika_tortoise.terms import Function
 
 
 class Rand(Function):

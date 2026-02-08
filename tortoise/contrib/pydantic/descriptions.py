@@ -1,6 +1,9 @@
+from __future__ import annotations
+
 import dataclasses
 import sys
-from typing import TYPE_CHECKING, Any, Callable, List, Optional, Tuple, Type
+from collections.abc import Callable
+from typing import TYPE_CHECKING, Any
 
 if sys.version_info >= (3, 11):
     from typing import Self
@@ -18,15 +21,15 @@ if TYPE_CHECKING:  # pragma: nocoverage
 @dataclasses.dataclass
 class ModelDescription:
     pk_field: Field
-    data_fields: List[Field] = dataclasses.field(default_factory=list)
-    fk_fields: List[Field] = dataclasses.field(default_factory=list)
-    backward_fk_fields: List[Field] = dataclasses.field(default_factory=list)
-    o2o_fields: List[Field] = dataclasses.field(default_factory=list)
-    backward_o2o_fields: List[Field] = dataclasses.field(default_factory=list)
-    m2m_fields: List[Field] = dataclasses.field(default_factory=list)
+    data_fields: list[Field] = dataclasses.field(default_factory=list)
+    fk_fields: list[Field] = dataclasses.field(default_factory=list)
+    backward_fk_fields: list[Field] = dataclasses.field(default_factory=list)
+    o2o_fields: list[Field] = dataclasses.field(default_factory=list)
+    backward_o2o_fields: list[Field] = dataclasses.field(default_factory=list)
+    m2m_fields: list[Field] = dataclasses.field(default_factory=list)
 
     @classmethod
-    def from_model(cls, model: Type["Model"]) -> Self:
+    def from_model(cls, model: type[Model]) -> Self:
         return cls(
             pk_field=model._meta.fields_map[model._meta.pk_attr],
             data_fields=[
@@ -65,21 +68,20 @@ class ModelDescription:
 
 @dataclasses.dataclass
 class ComputedFieldDescription:
-    field_type: Any
-    function: Callable[[], Any]
-    description: Optional[str]
+    function: Callable[..., Any]
+    description: str | None
 
 
 @dataclasses.dataclass
 class PydanticMetaData:
     #: If not empty, only fields this property contains will be in the pydantic model
-    include: Tuple[str, ...] = ()
+    include: tuple[str, ...] = ()
 
     #: Fields listed in this property will be excluded from pydantic model
-    exclude: Tuple[str, ...] = dataclasses.field(default_factory=lambda: ("Meta",))
+    exclude: tuple[str, ...] = dataclasses.field(default_factory=lambda: ("Meta",))
 
     #: Computed fields can be listed here to use in pydantic model
-    computed: Tuple[str, ...] = dataclasses.field(default_factory=tuple)
+    computed: tuple[str, ...] = dataclasses.field(default_factory=tuple)
 
     #: Use backward relations without annotations - not recommended, it can be huge data
     #: without control
@@ -100,7 +102,7 @@ class PydanticMetaData:
     sort_alphabetically: bool = False
 
     #: Allows user to specify custom config for generated model
-    model_config: Optional[ConfigDict] = None
+    model_config: ConfigDict | None = None
 
     @classmethod
     def from_pydantic_meta(cls, old_pydantic_meta: Any) -> Self:
@@ -113,7 +115,7 @@ class PydanticMetaData:
         exclude = tuple(get_param_from_pydantic_meta("exclude", default_meta.exclude))
         computed = tuple(get_param_from_pydantic_meta("computed", default_meta.computed))
         backward_relations = bool(
-            get_param_from_pydantic_meta("backward_relations_raw", default_meta.backward_relations)
+            get_param_from_pydantic_meta("backward_relations", default_meta.backward_relations)
         )
         max_recursion = int(
             get_param_from_pydantic_meta("max_recursion", default_meta.max_recursion)
@@ -139,14 +141,14 @@ class PydanticMetaData:
         )
         return pmd
 
-    def construct_pydantic_meta(self, meta_override: Type) -> "PydanticMetaData":
+    def construct_pydantic_meta(self, meta_override: type) -> PydanticMetaData:
         def get_param_from_meta_override(attr: str) -> Any:
             return getattr(meta_override, attr, getattr(self, attr))
 
-        default_include: Tuple[str, ...] = tuple(get_param_from_meta_override("include"))
-        default_exclude: Tuple[str, ...] = tuple(get_param_from_meta_override("exclude"))
-        default_computed: Tuple[str, ...] = tuple(get_param_from_meta_override("computed"))
-        default_config: Optional[ConfigDict] = self.model_config
+        default_include: tuple[str, ...] = tuple(get_param_from_meta_override("include"))
+        default_exclude: tuple[str, ...] = tuple(get_param_from_meta_override("exclude"))
+        default_computed: tuple[str, ...] = tuple(get_param_from_meta_override("computed"))
+        default_config: ConfigDict | None = self.model_config
 
         backward_relations: bool = bool(get_param_from_meta_override("backward_relations"))
 
@@ -170,13 +172,13 @@ class PydanticMetaData:
 
     def finalize_meta(
         self,
-        exclude: Tuple[str, ...] = (),
-        include: Tuple[str, ...] = (),
-        computed: Tuple[str, ...] = (),
-        allow_cycles: Optional[bool] = None,
-        sort_alphabetically: Optional[bool] = None,
-        model_config: Optional[ConfigDict] = None,
-    ) -> "PydanticMetaData":
+        exclude: tuple[str, ...] = (),
+        include: tuple[str, ...] = (),
+        computed: tuple[str, ...] = (),
+        allow_cycles: bool | None = None,
+        sort_alphabetically: bool | None = None,
+        model_config: ConfigDict | None = None,
+    ) -> PydanticMetaData:
         _sort_fields: bool = (
             self.sort_alphabetically if sort_alphabetically is None else sort_alphabetically
         )

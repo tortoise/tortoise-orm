@@ -1,13 +1,100 @@
 name: ci
 on:
   push:
-    branches-ignore:
+    branches:
+      - develop
       - main
   pull_request:
-    branches-ignore:
-      - main
+
 jobs:
-  test:
+  check:
+    runs-on: ubuntu-22.04
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.14"]
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+      - uses: astral-sh/setup-uv@v7
+      - uses: actions/cache@v5
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/uv.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+      - name: Install dependencies
+        run: make deps
+      - name: Run checks
+        run: make check
+
+  test-sqlite:
+    runs-on: ubuntu-22.04
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+      - uses: astral-sh/setup-uv@v7
+      - uses: actions/cache@v5
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/uv.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+      - name: Install dependencies
+        run: make deps
+      - name: Test SQLite
+        run: make test_sqlite
+        env:
+          PYTHONDEVMODE: 1
+      - name: Test SQLite with regexp functions
+        run: make test_sqlite_regexp
+        env:
+          PYTHONDEVMODE: 1
+      - name: Test FastAPI/Blacksheep/Sanic Examples
+        run: |
+          PYTHONPATH=$DEST_FASTAPI uv run --frozen pytest $PYTEST_ARGS $DEST_FASTAPI/_tests.py
+          PYTHONPATH=$DEST_BLACKSHEEP uv run --frozen pytest $PYTEST_ARGS $DEST_BLACKSHEEP/_tests.py
+          PYTHONPATH=$DEST_SANIC uv run --frozen pytest $PYTEST_ARGS $DEST_SANIC/_tests.py
+        env:
+          DEST_FASTAPI: examples/fastapi
+          DEST_BLACKSHEEP: examples/blacksheep
+          DEST_SANIC: examples/sanic
+          PYTHONDEVMODE: 1
+          PYTEST_ARGS: "-n auto --cov=tortoise --cov-append --cov-branch --tb=native -q"
+      - name: Test Comprehensive Migrations Example
+        run: |
+          cd examples/comprehensive_migrations_project
+          # Apply all migrations forward
+          uv run --frozen tortoise -c config.TORTOISE_ORM migrate
+          # Verify migration history
+          uv run --frozen tortoise -c config.TORTOISE_ORM history
+          # Rollback all migrations to zero (defaults to __first__)
+          uv run --frozen tortoise -c config.TORTOISE_ORM downgrade erp
+          # Verify we're back to zero
+          uv run --frozen tortoise -c config.TORTOISE_ORM history
+      - name: Test poetry add
+        if: matrix.python-version == '3.10'
+        run: |
+          uv run --no-sync pytest $PYTEST_ARGS tests/test_version.py::test_added_by_poetry_v2
+        env:
+          TORTOISE_TEST_POETRY_ADD: 1
+          PYTHONDEVMODE: 1
+          PYTEST_ARGS: "-n auto --cov=tortoise --cov-append --cov-branch --tb=native -q"
+      - name: Upload coverage artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-sqlite-${{ matrix.python-version }}
+          path: .coverage
+          if-no-files-found: error
+          include-hidden-files: true
+
+  test-postgres:
     runs-on: ubuntu-22.04
     services:
       postgres:
@@ -18,13 +105,95 @@ jobs:
           POSTGRES_PASSWORD: 123456
           POSTGRES_USER: postgres
         options: --health-cmd=pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
+    env:
+      TORTOISE_TEST_MODULES: tests.testmodels
+      TORTOISE_POSTGRES_PASS: 123456
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+      - uses: astral-sh/setup-uv@v7
+      - uses: actions/cache@v5
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/uv.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+      - name: Install dependencies
+        run: make deps
+      - name: Test PostgreSQL asyncpg
+        run: make test_postgres_asyncpg
+        env:
+          PYTHONDEVMODE: 1
+      - name: Test PostgreSQL psycopg
+        run: make test_postgres_psycopg
+        env:
+          PYTHONDEVMODE: 1
+      - name: Upload coverage artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-postgres-${{ matrix.python-version }}
+          path: .coverage
+          if-no-files-found: error
+          include-hidden-files: true
+
+  test-mysql:
+    runs-on: ubuntu-22.04
+    services:
       mysql:
-        image: mysql
+        image: mysql:8
         ports:
           - 3306:3306
         env:
           MYSQL_ROOT_PASSWORD: 123456
         options: --health-cmd="mysqladmin ping" --health-interval 10s --health-timeout 5s --health-retries 5
+    env:
+      TORTOISE_TEST_MODULES: tests.testmodels
+      TORTOISE_MYSQL_PASS: 123456
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+      - uses: astral-sh/setup-uv@v7
+      - uses: actions/cache@v5
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/uv.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+      - name: Install dependencies
+        run: make deps
+      - name: Test MySQL MyISAM
+        run: make test_mysql_myisam
+        env:
+          PYTHONDEVMODE: 1
+      - name: Test MySQL InnoDB
+        run: make test_mysql
+        env:
+          PYTHONDEVMODE: 1
+      - name: Test MySQL asyncmy
+        run: make test_mysql_asyncmy
+        env:
+          PYTHONDEVMODE: 1
+      - name: Upload coverage artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-mysql-${{ matrix.python-version }}
+          path: .coverage
+          if-no-files-found: error
+          include-hidden-files: true
+
+  test-mssql:
+    runs-on: ubuntu-22.04
+    services:
       mssql:
         image: mcr.microsoft.com/mssql/server:2022-CU15-ubuntu-22.04
         ports:
@@ -39,60 +208,64 @@ jobs:
           --health-retries 5
     env:
       TORTOISE_TEST_MODULES: tests.testmodels
-      TORTOISE_MYSQL_PASS: 123456
-      TORTOISE_POSTGRES_PASS: 123456
       TORTOISE_MSSQL_PASS: Abcd12345678
       TORTOISE_MSSQL_DRIVER: ODBC Driver 18 for SQL Server
     strategy:
       matrix:
-        python-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
+        python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
     steps:
-      - uses: actions/cache@v4
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('**/poetry.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: ${{ matrix.python-version }}
-      - name: Install and configure Poetry
-        run: |
-          pip install -U pip poetry
-          poetry config virtualenvs.create false
       - name: Install ODBC driver
         run: |
-          sudo curl https://packages.microsoft.com/keys/microsoft.asc | sudo apt-key add -
-          sudo curl https://packages.microsoft.com/config/ubuntu/$(lsb_release -rs)/prod.list -o /etc/apt/sources.list.d/mssql-release.list
+          curl -sSL -O https://packages.microsoft.com/config/ubuntu/$(grep VERSION_ID /etc/os-release | cut -d '"' -f 2)/packages-microsoft-prod.deb
+          sudo dpkg -i packages-microsoft-prod.deb
           sudo apt-get update
-          ACCEPT_EULA=Y sudo apt-get install -y msodbcsql18
-      - name: Run ci
-        run: make ci
-      - name: Test Examples
-        run: |
-          export DEST=examples/blacksheep && PYTHONPATH=$DEST pytest $PYTEST_ARGS $DEST/_tests.py
-          export DEST=examples/fastapi && PYTHONPATH=$DEST pytest $PYTEST_ARGS $DEST/_tests.py
+          sudo ACCEPT_EULA=Y apt-get install -y msodbcsql18
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+      - uses: astral-sh/setup-uv@v7
+      - uses: actions/cache@v5
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/uv.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+      - name: Install dependencies
+        run: make deps
+      - name: Test MSSQL
+        run: make test_mssql
         env:
           PYTHONDEVMODE: 1
-          PYTEST_ARGS: "-n auto --cov=tortoise --cov-append --tb=native -q"
-      - name: Upload Coverage
-        run: |
-          pip3 install --upgrade coveralls
-          coveralls --service=github
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          COVERALLS_FLAG_NAME: ${{ matrix.python-version }}
-          COVERALLS_PARALLEL: true
+      - name: Upload coverage artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-mssql-${{ matrix.python-version }}
+          path: .coverage
+          if-no-files-found: error
+          include-hidden-files: true
 
-  coveralls:
-    name: Finish Coveralls
-    needs: test
+  coverage:
+    needs: [test-sqlite, test-postgres, test-mysql, test-mssql]
     runs-on: ubuntu-22.04
     steps:
-      - name: Finished
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.14"
+      - uses: astral-sh/setup-uv@v7
+      - name: Install dependencies
+        run: make deps
+      - name: Download all coverage artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: coverage-*
+      - name: Combine coverage
         run: |
-          pip3 install --upgrade coveralls
-          coveralls --finish
+          uv run --frozen coverage combine coverage-*/.coverage
+      - name: Coverage report
+        run: uv run --frozen coverage report
+      - name: Upload to Coveralls
+        run: uvx coveralls --service=github
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

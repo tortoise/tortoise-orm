@@ -1,7 +1,10 @@
-from functools import wraps
-from typing import TYPE_CHECKING, Callable, Optional, TypeVar, cast
+from __future__ import annotations
 
-from tortoise import connections
+from collections.abc import Callable
+from functools import wraps
+from typing import TYPE_CHECKING, TypeVar, cast
+
+from tortoise.connection import get_connections
 from tortoise.exceptions import ParamsError
 
 if TYPE_CHECKING:  # pragma: nocoverage
@@ -12,21 +15,22 @@ FuncType = Callable[..., T]
 F = TypeVar("F", bound=FuncType)
 
 
-def _get_connection(connection_name: Optional[str]) -> "BaseDBAsyncClient":
+def _get_connection(connection_name: str | None) -> BaseDBAsyncClient:
+    conn_handler = get_connections()
     if connection_name:
-        connection = connections.get(connection_name)
-    elif len(connections.db_config) == 1:
-        connection_name = next(iter(connections.db_config.keys()))
-        connection = connections.get(connection_name)
+        connection = conn_handler.get(connection_name)
+    elif len(conn_handler.db_config) == 1:
+        connection_name = next(iter(conn_handler.db_config.keys()))
+        connection = conn_handler.get(connection_name)
     else:
         raise ParamsError(
             "You are running with multiple databases, so you should specify"
-            f" connection_name: {list(connections.db_config)}"
+            f" connection_name: {list(conn_handler.db_config)}"
         )
     return connection
 
 
-def in_transaction(connection_name: Optional[str] = None) -> "TransactionContext":
+def in_transaction(connection_name: str | None = None) -> TransactionContext:
     """
     Transaction context manager.
 
@@ -40,7 +44,7 @@ def in_transaction(connection_name: Optional[str] = None) -> "TransactionContext
     return connection._in_transaction()
 
 
-def atomic(connection_name: Optional[str] = None) -> Callable[[F], F]:
+def atomic(connection_name: str | None = None) -> Callable[[F], F]:
     """
     Transaction decorator.
 

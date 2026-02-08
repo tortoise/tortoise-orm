@@ -1,25 +1,29 @@
-from typing import TYPE_CHECKING, Any, List, Type
+from __future__ import annotations
+
+from collections.abc import Sequence
+from typing import TYPE_CHECKING, Any
 
 from tortoise.backends.base.schema_generator import BaseSchemaGenerator
 from tortoise.converters import encoders
+from tortoise.schema_quoting import MSSQLQuotingMixin
 
 if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.backends.mssql import MSSQLClient
     from tortoise.models import Model
 
 
-class MSSQLSchemaGenerator(BaseSchemaGenerator):
+class MSSQLSchemaGenerator(MSSQLQuotingMixin, BaseSchemaGenerator):
     DIALECT = "mssql"
-    TABLE_CREATE_TEMPLATE = "CREATE TABLE [{table_name}] ({fields}){extra};"
-    FIELD_TEMPLATE = "[{name}] {type} {nullable} {unique}{primary}{default}"
-    INDEX_CREATE_TEMPLATE = "CREATE INDEX [{index_name}] ON [{table_name}] ({fields});"
+    TABLE_CREATE_TEMPLATE = "CREATE TABLE {table_name} ({fields}){extra};"
+    FIELD_TEMPLATE = "[{name}] {type}{nullable}{unique}{primary}{default}"
+    INDEX_CREATE_TEMPLATE = "CREATE INDEX [{index_name}] ON {table_name} ({fields});"
     GENERATED_PK_TEMPLATE = "[{field_name}] {generated_sql}"
     FK_TEMPLATE = (
         "{constraint}FOREIGN KEY ([{db_column}])"
-        " REFERENCES [{table}] ([{field}]) ON DELETE {on_delete}"
+        " REFERENCES {table} ([{field}]) ON DELETE {on_delete}"
     )
     M2M_TABLE_TEMPLATE = (
-        "CREATE TABLE [{table_name}] (\n"
+        "CREATE TABLE {table_name} (\n"
         "    {backward_key} {backward_type} NOT NULL,\n"
         "    {forward_key} {forward_type} NOT NULL,\n"
         "    {backward_fk},\n"
@@ -27,13 +31,18 @@ class MSSQLSchemaGenerator(BaseSchemaGenerator):
         "){extra};"
     )
 
-    def __init__(self, client: "MSSQLClient") -> None:
+    def __init__(self, client: MSSQLClient) -> None:
         super().__init__(client)
-        self._field_indexes = []  # type: List[str]
-        self._foreign_keys = []  # type: List[str]
+        self._field_indexes = []  # type: list[str]
+        self._foreign_keys = []  # type: list[str]
 
-    def quote(self, val: str) -> str:
-        return f"[{val}]"
+    def _get_schema_create_sql(self, schema: str, safe: bool) -> str:
+        if safe:
+            return (
+                f"IF NOT EXISTS (SELECT * FROM sys.schemas WHERE name = N'{schema}')"  # nosec B608
+                f" EXEC(N'CREATE SCHEMA [{schema}]');"
+            )
+        return f"CREATE SCHEMA [{schema}];"
 
     def _table_comment_generator(self, table: str, comment: str) -> str:
         return ""
@@ -52,18 +61,28 @@ class MSSQLSchemaGenerator(BaseSchemaGenerator):
         default_str = " DEFAULT"
         if not (auto_now or auto_now_add):
             default_str += f" {default}"
-        if auto_now_add:
+        if auto_now_add or auto_now:
             default_str += " CURRENT_TIMESTAMP"
         return default_str
 
     def _escape_default_value(self, default: Any):
         return encoders.get(type(default))(default)  # type: ignore
 
-    def _get_index_sql(self, model: "Type[Model]", field_names: List[str], safe: bool) -> str:
-        return super(MSSQLSchemaGenerator, self)._get_index_sql(model, field_names, False)
+    def _get_index_sql(
+        self,
+        model: type[Model],
+        field_names: Sequence[str],
+        safe: bool,
+        index_name: str | None = None,
+        index_type: str | None = None,
+        extra: str | None = None,
+    ) -> str:
+        return super()._get_index_sql(
+            model, field_names, False, index_name=index_name, index_type=index_type, extra=extra
+        )
 
-    def _get_table_sql(self, model: "Type[Model]", safe: bool = True) -> dict:
-        return super(MSSQLSchemaGenerator, self)._get_table_sql(model, False)
+    def _get_table_sql(self, model: type[Model], safe: bool = True) -> dict:
+        return super()._get_table_sql(model, False)
 
     def _create_fk_string(
         self,
@@ -99,7 +118,7 @@ class MSSQLSchemaGenerator(BaseSchemaGenerator):
     ) -> str:
         if nullable == "":
             unique = ""
-        return super(MSSQLSchemaGenerator, self)._create_string(
+        return super()._create_string(
             db_column=db_column,
             field_type=field_type,
             nullable=nullable,
@@ -109,7 +128,7 @@ class MSSQLSchemaGenerator(BaseSchemaGenerator):
             default=default,
         )
 
-    def _get_inner_statements(self) -> List[str]:
+    def _get_inner_statements(self) -> list[str]:
         extra = self._foreign_keys + list(dict.fromkeys(self._field_indexes))
         self._field_indexes.clear()
         self._foreign_keys.clear()

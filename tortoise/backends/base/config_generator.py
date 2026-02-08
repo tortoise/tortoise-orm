@@ -1,7 +1,10 @@
+from __future__ import annotations
+
 import urllib.parse as urlparse
 import uuid
+from collections.abc import Iterable
 from types import ModuleType
-from typing import Any, Dict, Iterable, Optional, Union
+from typing import Any
 
 from tortoise.exceptions import ConfigurationError
 
@@ -12,7 +15,7 @@ urlparse.uses_netloc.append("sqlite")
 urlparse.uses_netloc.append("mysql")
 urlparse.uses_netloc.append("oracle")
 urlparse.uses_netloc.append("mssql")
-DB_LOOKUP: Dict[str, Dict[str, Any]] = {
+DB_LOOKUP: dict[str, dict[str, Any]] = {
     "psycopg": {
         "engine": "tortoise.backends.psycopg",
         "vmap": {
@@ -20,7 +23,7 @@ DB_LOOKUP: Dict[str, Dict[str, Any]] = {
             "hostname": "host",
             "port": "port",
             "username": "user",
-            "password": "password",
+            "password": "password",  # nosec:B105
         },
         "defaults": {"port": 5432},
         "cast": {
@@ -42,7 +45,7 @@ DB_LOOKUP: Dict[str, Dict[str, Any]] = {
             "hostname": "host",
             "port": "port",
             "username": "user",
-            "password": "password",
+            "password": "password",  # nosec:B105
         },
         "defaults": {"port": 5432},
         "cast": {
@@ -62,7 +65,10 @@ DB_LOOKUP: Dict[str, Dict[str, Any]] = {
         "skip_first_char": False,
         "vmap": {"path": "file_path"},
         "defaults": {"journal_mode": "WAL", "journal_size_limit": 16384},
-        "cast": {"journal_size_limit": int},
+        "cast": {
+            "journal_size_limit": int,
+            "install_regexp_functions": bool,
+        },
     },
     "mysql": {
         "engine": "tortoise.backends.mysql",
@@ -71,7 +77,7 @@ DB_LOOKUP: Dict[str, Dict[str, Any]] = {
             "hostname": "host",
             "port": "port",
             "username": "user",
-            "password": "password",
+            "password": "password",  # nosec:B105
         },
         "defaults": {"port": 3306, "charset": "utf8mb4", "sql_mode": "STRICT_TRANS_TABLES"},
         "cast": {
@@ -91,7 +97,7 @@ DB_LOOKUP: Dict[str, Dict[str, Any]] = {
             "hostname": "host",
             "port": "port",
             "username": "user",
-            "password": "password",
+            "password": "password",  # nosec:B105
         },
         "defaults": {"port": 1433},
         "cast": {
@@ -108,7 +114,7 @@ DB_LOOKUP: Dict[str, Dict[str, Any]] = {
             "hostname": "host",
             "port": "port",
             "username": "user",
-            "password": "password",
+            "password": "password",  # nosec:B105
         },
         "defaults": {"port": 1521},
         "cast": {
@@ -131,7 +137,7 @@ def expand_db_url(db_url: str, testing: bool = False) -> dict:
     db_backend = url.scheme
     db = DB_LOOKUP[db_backend]
     if db.get("skip_first_char", True):
-        path: Optional[str] = url.path[1:]
+        path: str | None = url.path[1:]
     else:
         path = url.netloc + url.path
 
@@ -179,8 +185,8 @@ def expand_db_url(db_url: str, testing: bool = False) -> dict:
 
 def generate_config(
     db_url: str,
-    app_modules: Dict[str, Iterable[Union[str, ModuleType]]],
-    connection_label: Optional[str] = None,
+    app_modules: dict[str, Iterable[str | ModuleType]],
+    connection_label: str | None = None,
     testing: bool = False,
 ) -> dict:
     _connection_label = connection_label or "default"

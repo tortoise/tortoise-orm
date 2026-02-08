@@ -1,5 +1,8 @@
+from __future__ import annotations
+
+from collections.abc import Callable
 from enum import Enum
-from typing import Callable, TypeVar
+from typing import TypeVar
 
 T = TypeVar("T")
 FuncType = Callable[[T], T]
