@@ -2,7 +2,7 @@ import re
 
 import pytest
 
-from tests.testmodels import CharPkModel, Event, IntFields
+from tests.testmodels import CharPkModel, Drink, Event, IntFields
 from tortoise import connections
 from tortoise.backends.psycopg.client import PsycopgClient
 from tortoise.expressions import F
@@ -268,3 +268,22 @@ async def test_bulk_create_specified_pk(sql_context):
     else:
         expected = 'INSERT INTO "intfields" ("id","intnum","intnum_null") VALUES (?,?,?)'
     assert sql == expected
+
+
+def test_m2m_filter_two_relations_same_target_produces_aliased_joins(sql_context):
+    """Filtering on two M2M relations to the same target table should produce distinct aliased JOINs."""
+    db, dialect, is_psycopg = sql_context
+    sql = Drink.filter(flavors__name="vanilla", toppings__name="mint").sql()
+
+    if dialect == "mysql":
+        # MySQL uses backtick quoting
+        assert "`drink_flavor`" in sql
+        assert "`drink_topping`" in sql
+        assert "`drink__flavors`" in sql
+        assert "`drink__toppings`" in sql
+    else:
+        # Postgres and SQLite use double-quote quoting
+        assert '"drink_flavor"' in sql
+        assert '"drink_topping"' in sql
+        assert '"drink__flavors"' in sql
+        assert '"drink__toppings"' in sql

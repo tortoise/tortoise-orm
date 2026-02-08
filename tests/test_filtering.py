@@ -5,7 +5,9 @@ import pytest
 from tests.testmodels import (
     DateFields,
     DatetimeFields,
+    Drink,
     Event,
+    Flavor,
     IntFields,
     Reporter,
     Team,
@@ -603,3 +605,33 @@ async def test_f_annotation_custom_filter_requiring_nested_joins(db):
         pname__startswith="Fir"
     )
     assert res == [tournament]
+
+
+@pytest.mark.asyncio
+async def test_m2m_filter_multiple_relations_to_same_table(db):
+    """Two M2M relations from same model to same target should produce correct results."""
+    vanilla = await Flavor.create(name="vanilla")
+    chocolate = await Flavor.create(name="chocolate")
+    mint = await Flavor.create(name="mint")
+
+    latte = await Drink.create(name="Latte")
+    await latte.flavors.add(vanilla, chocolate)
+    await latte.toppings.add(mint)
+
+    mocha = await Drink.create(name="Mocha")
+    await mocha.flavors.add(chocolate)
+    await mocha.toppings.add(chocolate, vanilla)
+
+    # Filter on both M2M relations — different values
+    result = await Drink.filter(flavors__name="vanilla", toppings__name="mint")
+    assert len(result) == 1
+    assert result[0].name == "Latte"
+
+    # Filter on both M2M relations — same value through different relations
+    result = await Drink.filter(flavors__name="chocolate", toppings__name="chocolate")
+    assert len(result) == 1
+    assert result[0].name == "Mocha"
+
+    # Filter that should return no results
+    result = await Drink.filter(flavors__name="mint", toppings__name="vanilla")
+    assert len(result) == 0

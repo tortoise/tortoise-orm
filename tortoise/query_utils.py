@@ -37,6 +37,7 @@ def get_joins_for_related_field(
     related_table: Table = related_field.related_model._meta.basetable
     if isinstance(related_field, ManyToManyFieldInstance):
         through_table = Table(related_field.through)
+        related_table = related_table.as_(f"{table.get_table_name()}__{related_field_name}")
         required_joins.append(
             (
                 through_table,
@@ -119,8 +120,7 @@ def resolve_nested_field(
 
         model = related_field.related_model
         related_table: Table = related_field.related_model._meta.basetable
-        if isinstance(related_field, ForeignKeyFieldInstance):
-            # Only FK's can be to same table, so we only auto-alias FK join tables
+        if isinstance(related_field, (ForeignKeyFieldInstance, ManyToManyFieldInstance)):
             related_table = related_table.as_(
                 f"{table.get_table_name()}__{iter_field.model_field_name}"
             )
@@ -141,6 +141,10 @@ def resolve_nested_field(
                 related_table = related_table.as_(
                     f"{table.get_table_name()}__{related_field.model_field_name}"
                 )
+        elif isinstance(related_field, ManyToManyFieldInstance):
+            related_table = related_table.as_(
+                f"{table.get_table_name()}__{related_field.model_field_name}"
+            )
 
         term = related_table[related_field_meta.db_pk_column]
     else:
