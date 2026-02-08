@@ -8,6 +8,11 @@ Introduction
 ============
 The design of timezone is inspired by `Django` but also has differences. There are two config items `use_tz` and `timezone` affect timezone in tortoise, which can be set when call `Tortoise.init`. And in different DBMS there also are different behaviors.
 
+.. note::
+
+    As of 1.0, ``pytz`` has been removed. Timezone handling uses Python's standard library
+    ``zoneinfo`` module. All timezone objects returned by Tortoise are ``ZoneInfo`` instances.
+
 use_tz
 ------
 ``use_tz`` defaults to ``True``. When enabled, all datetimes are stored as UTC in the database and ``tortoise.timezone.now()`` returns a timezone-aware datetime. ``MySQL`` uses ``DATETIME(6)``, ``PostgreSQL`` uses ``TIMESTAMPTZ``, and ``SQLite`` uses ``TIMESTAMP`` for schema generation.

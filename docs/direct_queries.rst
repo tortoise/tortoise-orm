@@ -42,9 +42,9 @@ If your application has multiple database connections configured, you must pass
 
 .. code-block:: python3
 
-   from tortoise.connection import connections
+   from tortoise.connection import get_connection
 
-   db = connections.get("analytics")
+   db = get_connection("analytics")
    result = await execute_pypika(query, using_db=db)
 
 Rows Affected Semantics

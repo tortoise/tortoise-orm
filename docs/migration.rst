@@ -112,6 +112,16 @@ List migration heads on disk.
 
     tortoise heads
 
+sqlmigrate
+----------
+
+Print the SQL for a migration without executing it.
+
+.. code-block:: shell
+
+    tortoise sqlmigrate models 0001_initial
+    tortoise sqlmigrate models 0001_initial --backward
+
 Migration files
 ===============
 

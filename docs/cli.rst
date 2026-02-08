@@ -104,6 +104,16 @@ List migration heads on disk.
     tortoise heads
     tortoise heads users
 
+sqlmigrate
+----------
+
+Print the SQL statements for a specific migration without executing them.
+
+.. code-block:: shell
+
+    tortoise sqlmigrate users 0001_initial
+    tortoise sqlmigrate users 0001_initial --backward
+
 shell
 -----
 

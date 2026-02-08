@@ -257,7 +257,7 @@ The ``Meta`` class
 In event model we got some more fields, that could be interesting for us.
 
 ``fields.ForeignKeyField('models.Tournament', related_name='events')``
-    Here we create foreign key reference to tournament. We create it by referring to model by it's literal, consisting of app name and model name. ``models`` is default app name, but you can change it in ``class Meta`` with ``app = 'other'``.
+    Here we create foreign key reference to tournament. You can refer to the model either by string literal (``"app_name.ModelName"``) or by passing the model class directly (e.g. ``fields.ForeignKeyField(Tournament)``). String references are required for forward references where the target model is not yet defined. ``models`` is default app name, but you can change it in ``class Meta`` with ``app = 'other'``.
 ``related_name``
     Is keyword argument, that defines field for related query on referenced models, so with that you could fetch all tournaments's events with like this:
 

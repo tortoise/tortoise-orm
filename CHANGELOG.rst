@@ -7,53 +7,61 @@ Changelog
 
 .. rst-class:: emphasize-children
 
-0.26
-====
+1.0
+===
 
-0.26.0 (unreleased)
--------------------
+1.0.0
+-----
 
 .. warning::
 
-    This release contains **breaking changes** as part of the context-first architecture migration.
+    This is a **major release** with breaking changes.
     Please read the :ref:`migration_guide` before upgrading.
 
 Breaking Changes
 ^^^^^^^^^^^^^^^^
+- **Minimum Python version raised to 3.10** (was 3.9). (#2062)
 - **``use_tz`` now defaults to ``True``** (was ``False``). Set ``use_tz=False`` explicitly if you need naive datetimes.
-- **Context-first architecture**: All ORM state now lives in ``TortoiseContext`` instances
-- **Removed** legacy test classes: ``test.TestCase``, ``test.IsolatedTestCase``, ``test.TruncationTestCase``, ``test.SimpleTestCase``
-- **Removed** legacy test helpers: ``initializer()``, ``finalizer()``, ``env_initializer()``, ``getDBConfig()``
-- **Changed** ``Tortoise.init()`` now returns ``TortoiseContext`` (previously returned ``None``)
-- **Changed** Multiple separate ``asyncio.run()`` calls in sequence require explicit context management due to ContextVar scoping (uncommon pattern, see migration guide). The typical single ``asyncio.run(main())`` pattern continues to work unchanged.
+- **Context-first architecture**: All ORM state now lives in ``TortoiseContext`` instances. ``Tortoise.init()`` returns a ``TortoiseContext`` (previously returned ``None``). Multiple separate ``asyncio.run()`` calls require explicit context management; the typical single ``asyncio.run(main())`` pattern works unchanged.
+- **Removed legacy test infrastructure**: ``test.TestCase``, ``test.IsolatedTestCase``, ``test.TruncationTestCase``, ``test.SimpleTestCase``, ``initializer()``, ``finalizer()``, ``env_initializer()``, ``getDBConfig()``. Use ``tortoise_test_context()`` with pytest instead.
+- **Removed ``pytz`` dependency**: Timezone handling now uses the standard library ``zoneinfo`` module. Tortoise APIs return ``ZoneInfo`` objects instead of ``pytz`` timezones. (#2023)
+- **``DatetimeField``/``TimeField`` with ``auto_now=True``** no longer implicitly sets ``auto_now_add=True``. In practice ``auto_now=True`` alone still sets the value on every save (including creation), so this is unlikely to affect most users. The internal flag coupling was removed for correctness.
+- **Shell extras required**: Interactive shell dependencies are now optional. Install with ``pip install tortoise-orm[ipython]`` or ``pip install tortoise-orm[ptpython]``.
 
 Added
 ^^^^^
-- ``TortoiseContext`` - explicit context manager for ORM state
-- ``tortoise_test_context()`` - modern pytest fixture helper for test isolation
-- ``get_connection(alias)`` - function to get connection by alias from current context
-- ``get_connections()`` - function to get the ConnectionHandler from current context
-- ``Tortoise.close_connections()`` - class method to close all connections
-- ``Tortoise.is_inited()`` - explicit method version of ``Tortoise._inited`` property
+- **Native migrations framework** with CLI commands: ``tortoise makemigrations``, ``tortoise migrate``, ``tortoise sqlmigrate``. Supports ``RunPython``, ``RunSQL``, reversible migrations, and multi-app projects. (#2061)
+- **Database schema support** for PostgreSQL and MSSQL (on MySQL maps to database name) — tables can live in non-default schemas (e.g., ``warehouse.inventory``), with cross-schema relations and migration support. (#2084)
+- **PostgreSQL full-text search**: ``TSVectorField``, ``SearchVector``, ``SearchQuery``, ``SearchRank``, ``SearchHeadline`` expressions, and GIN/GiST index support. (#2065)
+- **Query API** (``tortoise.query_api``) for building and executing custom pypika queries against models, with ``Model.get_table()`` classmethod. (#2064)
+- ``TortoiseContext`` — explicit context manager for ORM state with full isolation. (#2069)
+- ``tortoise_test_context()`` — modern pytest fixture helper for test isolation. (#2069)
+- ``get_connection(alias)`` / ``get_connections()`` — functions to access connections from current context.
+- ``Tortoise.close_connections()`` — restored (was deprecated in 0.19) as the canonical way to close connections, now context-aware.
+- ``Tortoise.is_inited()`` — explicit method version of ``Tortoise._inited`` property.
+- ``ForeignKeyField`` and ``ManyToManyField`` now accept a model class directly, not just string references. (#2027)
+- ``DateField`` now supports ``__year`` / ``__month`` / ``__day`` filters. (#2067)
 
 Changed
 ^^^^^^^
-- Framework integrations (FastAPI, Starlette, Sanic, etc.) now use ``Tortoise.close_connections()`` internally
-- ``ConnectionHandler`` now uses instance-based ContextVar storage (each context has isolated connections)
-- ``Tortoise.apps`` and ``Tortoise._inited`` now use ``classproperty`` descriptor (no metaclass)
-- **Shell command now uses optional dependencies**: Install with ``pip install tortoise-orm[ipython]`` (recommended) or ``pip install tortoise-orm[ptpython]`` to enable. IPython is preferred over ptpython. Both shells are supported.
-- **DatetimeField and TimeField behavior change**: Fields with ``auto_now=True`` no longer incorrectly set ``auto_now_add=True`` internally.
-- feat: foreignkey to model type (#2027)
-- refactor: remove `pytz` and use standard library `zoneinfo` (#2023)
+- Framework integrations (FastAPI, Starlette, Sanic, etc.) now use ``Tortoise.close_connections()`` internally.
+- ``ConnectionHandler`` uses per-instance ContextVar storage for context isolation.
+- ``Tortoise.apps`` and ``Tortoise._inited`` are now ``classproperty`` descriptors.
+- Performance optimizations for model hydration, object construction, and query building. (#2078)
+- Pydantic model creator internals cleaned up: removed legacy validator, improved computed field handling. (#2079)
 
 Deprecated
 ^^^^^^^^^^
-- ``from tortoise import connections`` - use ``get_connection()`` / ``get_connections()`` functions instead (still works but deprecated)
+- ``from tortoise import connections`` — use ``get_connection()`` / ``get_connections()`` instead (still works but deprecated).
 
 Fixed
 ^^^^^
-- ``use_tz=False`` now correctly preserves naive datetimes instead of silently making them timezone-aware (#631)
-- Fix annotations being selected in ValuesListQuery despite not specified in `.values_list` fields list (#2059)
+- ``use_tz=False`` now correctly preserves naive datetimes instead of silently making them timezone-aware. (#631)
+- Annotations incorrectly selected in ``ValuesListQuery`` when not specified in ``.values_list()`` fields. (#2059)
+- M2M filtering broken when two relations point to the same target model. (#2083)
+- Pydantic incorrectly marking fields with default values as ``Optional``. (#2082)
+- ``Model.in_bulk`` type annotation now supports any primary key type. (#2075)
+- Migration bug fixes: field serialization, operation ordering, and ``sqlmigrate`` command added. (#2076)
 
 0.25
 ====
