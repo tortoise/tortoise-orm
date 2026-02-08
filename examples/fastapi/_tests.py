@@ -14,6 +14,7 @@ from asgi_lifespan import LifespanManager
 from httpx import ASGITransport, AsyncClient
 
 from tortoise.contrib.test import MEMORY_SQLITE
+from tortoise.fields.data import JSON_LOADS
 from tortoise.timezone import UTC, localtime
 
 os.environ["DB_URL"] = MEMORY_SQLITE
@@ -85,12 +86,17 @@ class UserTester:
         data = response.json()
         assert isinstance(data, list)
         item = await User_Pydantic.from_tortoise_orm(user_obj)
-        # Verify user is in response by comparing non-datetime fields
-        # (Pydantic's model_dump_json() normalizes datetimes to UTC,
-        # while FastAPI preserves original timezone, causing string mismatch)
+        item_dict = JSON_LOADS(item.model_dump_json())
         api_item = next((x for x in data if x["id"] == user_obj.id), None)
         assert api_item is not None, f"User {user_obj.id} not found in response"
-        assert api_item["username"] == item.username
+        for key, value in item_dict.items():
+            assert key in api_item, f"Key {key!r} missing from API response"
+            if key in ("created_at", "modified_at"):
+                # Compare as datetime objects to handle timezone format differences
+                # (Pydantic normalizes to UTC, FastAPI preserves original timezone)
+                assert datetime.fromisoformat(api_item[key]) == datetime.fromisoformat(value)
+            else:
+                assert api_item[key] == value, f"Mismatch on {key!r}"
         return utc_now, user_obj, item
 
 
