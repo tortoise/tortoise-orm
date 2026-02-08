@@ -126,10 +126,7 @@ async def _reset_tortoise():
         ctx._apps = None
         ctx._inited = False
         ctx._default_connection = None
-    else:
-        # No context exists - create one for the test
-        ctx = TortoiseContext()
-        ctx.__enter__()
+    # If no context exists, Tortoise.init() will create one when needed
 
 
 async def _teardown_tortoise():
