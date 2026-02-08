@@ -135,6 +135,8 @@ async def _reset_tortoise():
 async def _teardown_tortoise():
     """Helper to teardown Tortoise state after each test."""
     await Tortoise._reset_apps()
+    # Properly close connections and exit context to prevent pollution
+    await Tortoise.close_connections()
 
 
 def _get_engine():
