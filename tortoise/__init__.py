@@ -470,25 +470,13 @@ class Tortoise:
     @classmethod
     async def close_connections(cls) -> None:
         """
-        Close all connections cleanly and properly clean up the context.
+        Close all connections cleanly.
 
         It is required for this to be called on exit,
         else your event loop may never complete
         as it is waiting for the connections to die.
         """
-        ctx = cls._get_context()
-        if ctx is not None:
-            # Close connections using the context's method (handles global context cleanup)
-            await ctx.close_connections()
-            # Clean up context state
-            ctx._apps = None
-            ctx._inited = False
-            # Exit the context to reset contextvar (only if it was entered)
-            if ctx._token is not None:
-                ctx.__exit__(None, None, None)
-        else:
-            # Fallback for when no context exists (shouldn't happen in normal use)
-            await get_connections().close_all()
+        await get_connections().close_all()
         logger.info("Tortoise-ORM shutdown")
 
     @classmethod
@@ -571,8 +559,9 @@ def run_async(coro: Coroutine) -> None:
         try:
             await coro
         finally:
-            # Use Tortoise.close_connections() for proper context cleanup
-            await Tortoise.close_connections()
+            ctx = get_current_context()
+            if ctx is not None:
+                await ctx.connections.close_all(discard=True)
 
     with from_thread.start_blocking_portal() as portal:
         portal.call(main)

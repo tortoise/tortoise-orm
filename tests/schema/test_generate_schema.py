@@ -126,17 +126,12 @@ async def _reset_tortoise():
         ctx._apps = None
         ctx._inited = False
         ctx._default_connection = None
-        # Exit the context to reset contextvar (only if it was entered)
-        if ctx._token is not None:
-            ctx.__exit__(None, None, None)
     # If no context exists, Tortoise.init() will create one when needed
 
 
 async def _teardown_tortoise():
     """Helper to teardown Tortoise state after each test."""
     await Tortoise._reset_apps()
-    # Properly close connections and exit context to prevent pollution
-    await Tortoise.close_connections()
 
 
 def _get_engine():

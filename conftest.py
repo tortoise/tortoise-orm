@@ -9,7 +9,7 @@ import os
 import pytest
 import pytest_asyncio
 
-from tortoise.context import tortoise_test_context
+from tortoise.context import _current_context, tortoise_test_context
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -84,28 +84,35 @@ async def db(db_module):
             assert obj.id is not None
             # Changes are rolled back after test
     """
-    # Get connection from the context using its default connection
-    conn = db_module.db()
+    # Ensure the module-scoped context is visible in this function's execution context.
+    # The module-scoped db_module fixture sets the contextvar in its own asyncio Task,
+    # which may not propagate to function-scoped fixtures/tests running in separate Tasks.
+    token = _current_context.set(db_module)
+    try:
+        # Get connection from the context using its default connection
+        conn = db_module.db()
 
-    # Check if the database supports transactions
-    if conn.capabilities.supports_transactions:
-        # Start a savepoint/transaction
-        transaction = conn._in_transaction()
-        await transaction.__aenter__()
+        # Check if the database supports transactions
+        if conn.capabilities.supports_transactions:
+            # Start a savepoint/transaction
+            transaction = conn._in_transaction()
+            await transaction.__aenter__()
 
-        try:
+            try:
+                yield db_module
+            finally:
+                # Rollback the transaction (discards all changes made during test)
+                class _RollbackException(Exception):
+                    pass
+
+                await transaction.__aexit__(_RollbackException, _RollbackException(), None)
+        else:
+            # For databases without transaction support (e.g., MyISAM),
+            # fall back to truncation cleanup
             yield db_module
-        finally:
-            # Rollback the transaction (discards all changes made during test)
-            class _RollbackException(Exception):
-                pass
-
-            await transaction.__aexit__(_RollbackException, _RollbackException(), None)
-    else:
-        # For databases without transaction support (e.g., MyISAM),
-        # fall back to truncation cleanup
-        yield db_module
-        await _truncate_all_tables(db_module)
+            await _truncate_all_tables(db_module)
+    finally:
+        _current_context.reset(token)
 
 
 @pytest_asyncio.fixture(scope="function")
@@ -123,7 +130,11 @@ async def db_simple(db_module):
             config = get_config()
             assert "host" in config
     """
-    yield db_module
+    token = _current_context.set(db_module)
+    try:
+        yield db_module
+    finally:
+        _current_context.reset(token)
 
 
 @pytest_asyncio.fixture(scope="function")
@@ -172,8 +183,12 @@ async def db_truncate(db_module):
                 await Model.create(name="test")
             # Table truncated after test
     """
-    yield db_module
-    await _truncate_all_tables(db_module)
+    token = _current_context.set(db_module)
+    try:
+        yield db_module
+        await _truncate_all_tables(db_module)
+    finally:
+        _current_context.reset(token)
 
 
 # ============================================================================
