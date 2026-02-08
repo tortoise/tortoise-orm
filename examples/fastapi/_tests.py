@@ -14,7 +14,6 @@ from asgi_lifespan import LifespanManager
 from httpx import ASGITransport, AsyncClient
 
 from tortoise.contrib.test import MEMORY_SQLITE
-from tortoise.fields.data import JSON_LOADS
 from tortoise.timezone import UTC, localtime
 
 os.environ["DB_URL"] = MEMORY_SQLITE
