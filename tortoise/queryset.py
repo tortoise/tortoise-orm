@@ -1280,6 +1280,20 @@ class CachedSql:
         }
 
     def make_filled_params(self, params: dict[str, Any]) -> list[Any]:
+        add_params = []
+        del_params = []
+        for param_name, value in params.items():
+            if not isinstance(value, (list, tuple, set)):
+                continue
+            for idx, item in enumerate(self.need_params[f"{param_name}[0]"][0].encode_container(value)):
+                add_params.append((f"{param_name}[{idx}]", item))
+            del_params.append(param_name)
+
+        for param_name, value in add_params:
+            params[param_name] = value
+        for param_name in del_params:
+            del params[param_name]
+
         if self.need_params.keys() != params.keys():
             raise ValueError("One of more parameters does not match prepared parameters")
 
@@ -1320,6 +1334,8 @@ class PreparedQuery(AwaitableQuery[MODEL]):
             if isinstance(param, Parameter)
         }
 
+        reset_params = []
+
         cache_key = "query"
         for param, value in params.items():
             if param not in need_params:
@@ -1327,10 +1343,14 @@ class PreparedQuery(AwaitableQuery[MODEL]):
             if isinstance(value, (tuple, list, set)):
                 cache_key += f"-{param}{len(value)}"
                 need_params[param].container_size = len(value)
+                reset_params.append(need_params[param])
 
         if cache_key not in self._cached_sql:
             sql, params = self._query.get_parameterized_sql()
             self._cached_sql[cache_key] = CachedSql(sql, params)
+
+        for param in reset_params:
+            param.container_size = None
 
         return self._cached_sql[cache_key]
 
