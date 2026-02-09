@@ -144,8 +144,8 @@ def _quote_url_userinfo(db_url: str) -> str:
     if scheme_end == -1:
         return db_url
 
-    scheme = db_url[:scheme_end + 3]  # Include "://"
-    rest = db_url[scheme_end + 3:]
+    scheme = db_url[: scheme_end + 3]  # Include "://"
+    rest = db_url[scheme_end + 3 :]
 
     # Find the userinfo section (everything before @)
     at_pos = rest.find("@")
@@ -165,7 +165,7 @@ def _quote_url_userinfo(db_url: str) -> str:
         return scheme + username + after_userinfo
     else:
         username = userinfo[:colon_pos]
-        password = userinfo[colon_pos + 1:]
+        password = userinfo[colon_pos + 1 :]
         # Quote username and password, but preserve already-encoded sequences
         # We keep % as safe so existing percent-encoded chars aren't double-encoded
         username_quoted = urlparse.quote(username, safe="%")
