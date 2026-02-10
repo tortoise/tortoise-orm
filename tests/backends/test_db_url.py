@@ -196,6 +196,40 @@ def test_postgres_params():
         }
 
 
+def test_mysql_special_chars_in_password():
+    db_url = "mysql://some_user:ADM[r$VIS]@test-rds.somedata.net:3306/mydb?charset=utf8mb4"
+    res = expand_db_url(db_url)
+    assert res == {
+        "engine": "tortoise.backends.mysql",
+        "credentials": {
+            "database": "mydb",
+            "host": "test-rds.somedata.net",
+            "password": "ADM[r$VIS]",
+            "port": 3306,
+            "user": "some_user",
+            "charset": "utf8mb4",
+            "sql_mode": "STRICT_TRANS_TABLES",
+        },
+    }
+
+
+def test_mysql_unbalanced_brackets_in_password():
+    db_url = "mysql://fail_user:DMK_15[ZWIN6@test-rds.somedata.net:3306/mydb2?charset=utf8mb4"
+    res = expand_db_url(db_url)
+    assert res == {
+        "engine": "tortoise.backends.mysql",
+        "credentials": {
+            "database": "mydb2",
+            "host": "test-rds.somedata.net",
+            "password": "DMK_15[ZWIN6",
+            "port": 3306,
+            "user": "fail_user",
+            "charset": "utf8mb4",
+            "sql_mode": "STRICT_TRANS_TABLES",
+        },
+    }
+
+
 def test_mysql_basic():
     res = expand_db_url("mysql://root:@127.0.0.1:33060/test")
     assert res == {
