@@ -27,7 +27,7 @@ from tortoise.fields.relational import (
     RelationalField,
 )
 from tortoise.filters import FilterInfoDict
-from tortoise.parameter import Parameter
+from tortoise.parameter import Parameter, CollectionParameter
 from tortoise.query_utils import (
     Prefetch,
     QueryModifier,
@@ -1273,33 +1273,34 @@ class CachedSql:
     def __init__(self, sql: str, params: list[Parameter | Any]) -> None:
         self.sql = sql
         self.params = params
-        self.need_params = {
-            param.name: (param, idx)
-            for idx, param in enumerate(params)
-            if isinstance(param, Parameter)
-        }
+        self.param_by_name: dict[str, Parameter] = {}
+        self.need_params: dict[str, int] = {}
+        self.need_collection_params: dict[str, list[int]] = defaultdict(list)
+        for idx, param in enumerate(params):
+            if not isinstance(param, Parameter):
+                continue
+
+            if param.name not in self.param_by_name:
+                self.param_by_name[param.name] = param
+
+            if isinstance(param, CollectionParameter):
+                self.need_collection_params[param.name].append(idx)
+            else:
+                self.need_params[param.name] = idx
 
     def make_filled_params(self, params: dict[str, Any]) -> list[Any]:
-        add_params = []
-        del_params = []
-        for param_name, value in params.items():
-            if not isinstance(value, (list, tuple, set)):
-                continue
-            for idx, item in enumerate(self.need_params[f"{param_name}[0]"][0].encode_container(value)):
-                add_params.append((f"{param_name}[{idx}]", item))
-            del_params.append(param_name)
-
-        for param_name, value in add_params:
-            params[param_name] = value
-        for param_name in del_params:
-            del params[param_name]
-
-        if self.need_params.keys() != params.keys():
-            raise ValueError("One of more parameters does not match prepared parameters")
+        # TODO: check for parameters mismatch
 
         filled_params = self.params.copy()
         for name, (param, idx) in self.need_params.items():
             filled_params[idx] = param.encode_value(params[name])
+
+        for name, indexes in self.need_collection_params.items():
+            param = self.param_by_name[name]
+            collection = param.encode_collection(params[name])
+            # TODO: check that len(value) mathes len(indexes)
+            for idx, value in zip(indexes, collection):
+                filled_params[idx] = param.encode_value(value)
 
         return filled_params
 
@@ -1342,7 +1343,7 @@ class PreparedQuery(AwaitableQuery[MODEL]):
                 continue
             if isinstance(value, (tuple, list, set)):
                 cache_key += f"-{param}{len(value)}"
-                need_params[param].container_size = len(value)
+                need_params[param].collection_size = len(value)
                 reset_params.append(need_params[param])
 
         if cache_key not in self._cached_sql:
@@ -1350,7 +1351,7 @@ class PreparedQuery(AwaitableQuery[MODEL]):
             self._cached_sql[cache_key] = CachedSql(sql, params)
 
         for param in reset_params:
-            param.container_size = None
+            param.collection_size = None
 
         return self._cached_sql[cache_key]
 

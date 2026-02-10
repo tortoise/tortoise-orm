@@ -22,7 +22,7 @@ from pypika_tortoise.terms import (
 from tortoise.contrib.postgres.fields import ArrayField, TSVectorField
 from tortoise.fields import Field, JSONField
 from tortoise.fields.relational import BackwardFKRelation, ManyToManyFieldInstance
-from tortoise.parameter import Parameter
+from tortoise.parameter import Parameter, CollectionParameter
 
 if sys.version_info >= (3, 11):  # pragma：nocoverage
     from typing import NotRequired
@@ -104,6 +104,8 @@ def array_encoder(value: Any | Sequence[Any], instance: Model, field: Field) -> 
 
 def is_in(field: Term, value: Any) -> Criterion:
     if value:
+        if isinstance(value, Parameter):
+            value = CollectionParameter.from_simple_param(value)
         return field.isin(value)
     # SQL has no False, so we return 1=0
     return BasicCriterion(
@@ -115,6 +117,8 @@ def is_in(field: Term, value: Any) -> Criterion:
 
 def not_in(field: Term, value: Any) -> Criterion:
     if value:
+        if isinstance(value, Parameter):
+            value = CollectionParameter.from_simple_param(value)
         return field.notin(value) | field.isnull()
     # SQL has no True, so we return 1=1
     return BasicCriterion(
