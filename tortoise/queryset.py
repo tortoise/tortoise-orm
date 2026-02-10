@@ -1298,7 +1298,12 @@ class CachedSql:
         for name, indexes in self.need_collection_params.items():
             param = self.param_by_name[name]
             collection = param.encode_collection(params[name])
-            # TODO: check that len(value) mathes len(indexes)
+            if len(collection) != len(indexes):
+                raise ValueError(
+                    f"Provided value length (len(collection)) "
+                    f"for parameter {name!r} does not match "
+                    f"parameter indexes length ({len(indexes)})"
+                )
             for idx, value in zip(indexes, collection):
                 filled_params[idx] = param.encode_value(value)
 
@@ -1328,6 +1333,7 @@ class PreparedQuery(AwaitableQuery[MODEL]):
         self._raise_does_not_exist = raise_does_not_exist
 
     def _get_or_create_cached_sql(self, params: dict[str, Any]) -> CachedSql:
+        # TODO: cache this
         _, sql_params = self._query.get_parameterized_sql()
         need_params = {
             param.name: param
