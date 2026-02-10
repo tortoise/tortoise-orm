@@ -554,6 +554,13 @@ class QuerySet(AwaitableQuery[MODEL]):
         or None.
         """
         if not isinstance(key, slice):
+            if isinstance(key, int):
+                raise ParamsError(
+                    "QuerySet indices must be slices, not integers. "
+                    "QuerySets are lazy and do not support random access. "
+                    "Use await queryset.first(), await queryset.offset(n).first(), "
+                    "or await queryset.all() and index the returned list."
+                )
             raise ParamsError("QuerySet indices must be slices.")
 
         if not (key.step is None or (isinstance(key.step, int) and key.step == 1)):
