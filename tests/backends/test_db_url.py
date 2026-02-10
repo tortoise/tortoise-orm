@@ -230,6 +230,21 @@ def test_mysql_unbalanced_brackets_in_password():
     }
 
 
+def test_mysql_literal_percent_in_password_is_corrupted():
+    # Known limitation: a literal '%' followed by valid hex (e.g. '%ba') gets
+    # decoded by unquote_plus, corrupting the password. Users must pre-encode
+    # '%' as '%25' in their URLs to avoid this.
+    db_url = "mysql://user:foo%bar@127.0.0.1:3306/mydb"
+    res = expand_db_url(db_url)
+    assert res["credentials"]["password"] != "foo%bar"
+
+
+def test_mysql_pre_encoded_percent_in_password():
+    db_url = "mysql://user:foo%25bar@127.0.0.1:3306/mydb"
+    res = expand_db_url(db_url)
+    assert res["credentials"]["password"] == "foo%bar"
+
+
 def test_mysql_basic():
     res = expand_db_url("mysql://root:@127.0.0.1:33060/test")
     assert res == {

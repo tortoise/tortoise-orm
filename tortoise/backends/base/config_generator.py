@@ -130,11 +130,11 @@ DB_LOOKUP["postgres"] = DB_LOOKUP["asyncpg"]
 
 
 def _quote_url_userinfo(db_url: str) -> str:
-    """Percent-encode the userinfo (username:password) section of a database URL.
+    """Encode characters in the userinfo section that break urlparse.
 
-    urlparse fails when passwords contain characters like '[' or ']' because it
-    tries to parse them as IPv6 addresses. This function encodes the userinfo part
-    before parsing, while preserving already-encoded sequences (% is kept as safe).
+    Specifically, '[' and ']' cause urlparse to fail with a ValueError because
+    it interprets them as IPv6 address brackets. This encodes only those characters,
+    leaving everything else (including '%') untouched.
     """
     scheme_end = db_url.find("://")
     if scheme_end == -1:
@@ -152,13 +152,13 @@ def _quote_url_userinfo(db_url: str) -> str:
 
     colon_pos = userinfo.find(":")
     if colon_pos == -1:
-        username = urlparse.quote(userinfo, safe="%")
+        username = userinfo.replace("[", "%5B").replace("]", "%5D")
         return scheme + username + after_userinfo
 
     username = userinfo[:colon_pos]
     password = userinfo[colon_pos + 1 :]
-    username_quoted = urlparse.quote(username, safe="%")
-    password_quoted = urlparse.quote(password, safe="%")
+    username_quoted = username.replace("[", "%5B").replace("]", "%5D")
+    password_quoted = password.replace("[", "%5B").replace("]", "%5D")
     return scheme + username_quoted + ":" + password_quoted + after_userinfo
 
 
