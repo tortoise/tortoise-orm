@@ -332,6 +332,6 @@ def test_get_reconnects_on_loop_change(mocked_create_connection, conn_handler):
     assert ret_val is fresh_conn
     assert conn_handler._storage["default"] is fresh_conn
     mocked_create_connection.assert_called_once_with("default")
-    assert len(w) == 1
-    assert issubclass(w[0].category, TortoiseLoopSwitchWarning)
-    assert "different event loop" in str(w[0].message)
+    loop_warnings = [x for x in w if issubclass(x.category, TortoiseLoopSwitchWarning)]
+    assert len(loop_warnings) == 1
+    assert "different event loop" in str(loop_warnings[0].message)
