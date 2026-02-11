@@ -84,6 +84,7 @@ class SqliteClient(BaseDBAsyncClient):
             for pragma, val in self.pragmas.items():
                 cursor = await self._connection.execute(f"PRAGMA {pragma}={val}")
                 await cursor.close()
+            await self._post_connect()
             self.log.debug(
                 "Created connection %s with params: filename=%s %s",
                 self._connection,

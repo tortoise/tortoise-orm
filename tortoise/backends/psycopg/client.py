@@ -104,6 +104,7 @@ class PsycopgClient(postgres_client.BasePostgresClient):
             # Immediately test the connection because the test suite expects it to check if the
             # connection is valid.
             await self._pool.open(wait=True, timeout=extra["timeout"])
+            await self._post_connect()
             self.log.debug("Created connection pool %s with params: %s", self._pool, self._template)
         except (psycopg.errors.InvalidCatalogName, psycopg_pool.PoolTimeout):
             raise exceptions.DBConnectionError(

@@ -573,23 +573,29 @@ async def tortoise_test_context(
     Yields:
         An initialized TortoiseContext ready for use.
     """
-    ctx = TortoiseContext()
-    async with ctx:
-        config = generate_config(
-            db_url,
-            app_modules={app_label: modules},
-            connection_label=connection_label,
-            testing=True,
-        )
-        await ctx.init(
-            config=config,
-            _create_db=True,
-            use_tz=use_tz,
-            timezone=timezone,
-            routers=routers,
-        )
-        await ctx.generate_schemas(safe=False)
-        yield ctx
+    import warnings
+
+    from tortoise.warnings import TortoiseLoopSwitchWarning
+
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", category=TortoiseLoopSwitchWarning)
+        ctx = TortoiseContext()
+        async with ctx:
+            config = generate_config(
+                db_url,
+                app_modules={app_label: modules},
+                connection_label=connection_label,
+                testing=True,
+            )
+            await ctx.init(
+                config=config,
+                _create_db=True,
+                use_tz=use_tz,
+                timezone=timezone,
+                routers=routers,
+            )
+            await ctx.generate_schemas(safe=False)
+            yield ctx
 
 
 __all__ = [

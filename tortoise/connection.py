@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import contextvars
 import importlib
+import warnings
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
@@ -156,6 +157,11 @@ class ConnectionHandler:
         """
         Return the connection object for the given alias, creating it if needed.
 
+        If the connection's event loop has changed (e.g., in a test with a new event loop),
+        the connection is transparently replaced with a fresh one and a
+        :class:`TortoiseLoopSwitchWarning<tortoise.warnings.TortoiseLoopSwitchWarning>`
+        is emitted.
+
         Used for accessing the low-level connection object
         (:class:`BaseDBAsyncClient<tortoise.backends.base.client.BaseDBAsyncClient>`) for the
         given alias.
@@ -166,7 +172,22 @@ class ConnectionHandler:
         """
         storage = self._get_storage()
         try:
-            return storage[conn_alias]
+            conn = storage[conn_alias]
+            if not conn._check_loop():
+                from tortoise.warnings import TortoiseLoopSwitchWarning
+
+                warnings.warn(
+                    f"Tortoise connection '{conn_alias}' was created on a different "
+                    f"event loop and will be reconnected. If this is expected (e.g., "
+                    f"in tests), use tortoise_test_context() or suppress with: "
+                    f"warnings.filterwarnings('ignore', "
+                    f"category=TortoiseLoopSwitchWarning)",
+                    TortoiseLoopSwitchWarning,
+                    stacklevel=2,
+                )
+                conn = self._create_connection(conn_alias)
+                storage[conn_alias] = conn
+            return conn
         except KeyError:
             connection: BaseDBAsyncClient = self._create_connection(conn_alias)
             storage[conn_alias] = connection

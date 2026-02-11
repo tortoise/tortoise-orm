@@ -123,6 +123,31 @@ For tests that require multiple database connections:
             await ctx.generate_schemas()
             yield ctx
 
+Event Loop Isolation
+====================
+
+Some backends (asyncpg, aiomysql) bind connection pools to the event loop that created
+them. ``tortoise_test_context()`` handles this transparently -- if the event loop changes
+between tests, connections are automatically recreated.
+
+This means you **don't** need ``loop_scope="session"`` or any special pytest-asyncio
+configuration. The simplest setup works:
+
+.. code-block:: toml
+
+    # pyproject.toml -- no loop_scope overrides needed
+    [tool.pytest.ini_options]
+    asyncio_mode = "auto"
+
+If you use ``TortoiseContext`` directly (without ``tortoise_test_context``), you may see
+a ``TortoiseLoopSwitchWarning`` when the loop changes. Suppress it with:
+
+.. code-block:: python
+
+    import warnings
+    from tortoise.warnings import TortoiseLoopSwitchWarning
+    warnings.filterwarnings("ignore", category=TortoiseLoopSwitchWarning)
+
 Testing Database Capabilities
 =============================
 

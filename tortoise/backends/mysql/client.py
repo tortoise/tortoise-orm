@@ -140,6 +140,7 @@ class MySQLClient(BaseDBAsyncClient):
                             hours = timezone.now().utcoffset().seconds / 3600  # type: ignore
                             tz = f"{int(hours):+d}:{int((hours % 1) * 60):02d}"
                             await cursor.execute(f"SET time_zone='{tz}';")
+            await self._post_connect()
             self.log.debug("Created connection %s pool with params: %s", self._pool, self._template)
         except errors.OperationalError:
             raise DBConnectionError(f"Can't connect to MySQL server: {self._template}")

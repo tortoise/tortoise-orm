@@ -118,6 +118,7 @@ class BaseDBAsyncClient(abc.ABC):
     _connection: Any
     _parent: BaseDBAsyncClient
     _pool: Any
+    _bound_loop: asyncio.AbstractEventLoop | None = None
     connection_name: str
     query_class: type[Query] = Query
     executor_class: type[BaseExecutor] = BaseExecutor
@@ -128,6 +129,20 @@ class BaseDBAsyncClient(abc.ABC):
         self.log = db_client_logger
         self.connection_name = connection_name
         self.fetch_inserted = fetch_inserted
+
+    def _check_loop(self) -> bool:
+        """Check if the current event loop matches the one this client was created on."""
+        try:
+            current = asyncio.get_running_loop()
+        except RuntimeError:
+            return True  # No running loop — can't validate
+        if self._bound_loop is None:
+            return True  # Not yet bound (pool not created yet)
+        return self._bound_loop is current
+
+    async def _post_connect(self) -> None:
+        """Called after pool/connection is created. Records the bound loop."""
+        self._bound_loop = asyncio.get_running_loop()
 
     async def create_connection(self, with_db: bool) -> None:
         """
