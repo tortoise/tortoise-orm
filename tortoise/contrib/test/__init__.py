@@ -98,11 +98,24 @@ async def truncate_all_models() -> None:
     else:
         # For other dialects, topologically sort by FK dependencies (children first)
         sorted_models = _topological_sort_models(models)
-        for model in sorted_models:
-            quote_char = model._meta.db.query_class.SQL_CONTEXT.quote_char
-            await model._meta.db.execute_script(
-                f"DELETE FROM {quote_char}{model._meta.db_table}{quote_char}"  # nosec
-            )
+
+        # Disable FK checks to handle self-referential and circular FK constraints
+        if dialect == "mysql":
+            await db.execute_script("SET FOREIGN_KEY_CHECKS = 0")
+        elif dialect == "sqlite":
+            await db.execute_script("PRAGMA foreign_keys = OFF")
+
+        try:
+            for model in sorted_models:
+                quote_char = model._meta.db.query_class.SQL_CONTEXT.quote_char
+                await model._meta.db.execute_script(
+                    f"DELETE FROM {quote_char}{model._meta.db_table}{quote_char}"  # nosec
+                )
+        finally:
+            if dialect == "mysql":
+                await db.execute_script("SET FOREIGN_KEY_CHECKS = 1")
+            elif dialect == "sqlite":
+                await db.execute_script("PRAGMA foreign_keys = ON")
 
 
 def _topological_sort_models(models: list[type[Model]]) -> list[type[Model]]:
