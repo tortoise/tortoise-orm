@@ -1006,15 +1006,16 @@ class Model(metaclass=ModelMeta):
                     and fk_field.to_field_instance is not None
                 ):
                     source_field = fk_field.source_field
-                    if value is not None:
-                        _setattr(
-                            self,
-                            source_field,
-                            getattr(value, fk_field.to_field_instance.model_field_name, None),
-                        )
-                    else:
-                        _setattr(self, source_field, None)
-                    populated_source_fields.add(source_field)
+                    if source_field is not None:
+                        if value is not None:
+                            _setattr(
+                                self,
+                                source_field,
+                                getattr(value, fk_field.to_field_instance.model_field_name, None),
+                            )
+                        else:
+                            _setattr(self, source_field, None)
+                        populated_source_fields.add(source_field)
             else:
                 # Data fields, source fields, or unknown fields: store directly
                 _setattr(self, key, value)
@@ -1025,8 +1026,8 @@ class Model(metaclass=ModelMeta):
                 continue
             if key in populated_source_fields:
                 continue
-            field_object = meta.fields_map[key]
-            field_default = field_object.default
+            default_field = meta.fields_map[key]
+            field_default = default_field.default
             if inspect.iscoroutinefunction(field_default):
                 # Async defaults are skipped in construct() since it is synchronous
                 _setattr(self, key, None)
