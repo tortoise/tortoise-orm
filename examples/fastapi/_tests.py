@@ -49,6 +49,7 @@ async def client_manager(app, base_url="http://test", **kw) -> ClientManagerType
 @pytest.fixture(scope="module")
 async def client() -> ClientManagerType:
     async with client_manager(app) as c:
+        await truncate_all_models()
         yield c
 
 

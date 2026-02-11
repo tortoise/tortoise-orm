@@ -59,7 +59,7 @@ jobs:
       - name: Test FastAPI/Blacksheep/Sanic Examples
         run: |
           PYTHONPATH=$DEST_FASTAPI uv run --frozen tortoise -c config.TORTOISE_ORM migrate
-          PYTHONPATH=$DEST_FASTAPI uv run --frozen pytest $PYTEST_ARGS $DEST_FASTAPI/_tests.py
+          PYTHONPATH=$DEST_FASTAPI uv run --frozen pytest $PYTEST_ARGS_SEQ $DEST_FASTAPI/_tests.py
           rm -f $DEST_FASTAPI/db.sqlite3
           PYTHONPATH=$DEST_BLACKSHEEP uv run --frozen pytest $PYTEST_ARGS $DEST_BLACKSHEEP/_tests.py
           PYTHONPATH=$DEST_SANIC uv run --frozen pytest $PYTEST_ARGS $DEST_SANIC/_tests.py
@@ -69,6 +69,7 @@ jobs:
           DEST_SANIC: examples/sanic
           PYTHONDEVMODE: 1
           PYTEST_ARGS: "-n auto --cov=tortoise --cov-append --cov-branch --tb=native -q"
+          PYTEST_ARGS_SEQ: "--cov=tortoise --cov-append --cov-branch --tb=native -q"
       - name: Test Comprehensive Migrations Example
         run: |
           cd examples/comprehensive_migrations_project
