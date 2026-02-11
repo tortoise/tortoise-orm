@@ -2,10 +2,10 @@
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
+from config import register_orm
 from fastapi import FastAPI
 from routers import router as users_router
 
-from config import register_orm
 from tortoise.contrib.fastapi import tortoise_exception_handlers
 
 
