@@ -148,6 +148,53 @@ a ``TortoiseLoopSwitchWarning`` when the loop changes. Suppress it with:
     from tortoise.warnings import TortoiseLoopSwitchWarning
     warnings.filterwarnings("ignore", category=TortoiseLoopSwitchWarning)
 
+Unit Testing Without a Database
+================================
+
+For testing pure business logic that reads model attributes and iterates relations
+without making queries, use ``Model.construct()`` to create model instances in memory:
+
+.. code-block:: python
+
+    from myapp.models import User, Organization, Membership
+
+    def test_user_has_active_membership():
+        org = Organization.construct(id=1, name="Corp")
+        membership = Membership.construct(
+            organization=org,
+            role="admin",
+            is_active=True,
+        )
+        user = User.construct(
+            id=1,
+            email="test@example.com",
+            memberships=[membership],
+        )
+
+        # Pure business logic -- no database needed
+        active = [m for m in user.memberships if m.is_active]
+        assert len(active) == 1
+        assert active[0].role == "admin"
+
+``construct()`` creates "detached" instances that behave like ORM-loaded objects:
+
+- Reverse FK fields (e.g., ``user.memberships``) accept lists and wrap them in
+  ``ReverseRelation``, so ``len()``, ``in``, iteration, and ``bool()`` all work.
+- M2M fields work the same way, wrapped in ``ManyToManyRelation``.
+- FK fields populate the source field automatically
+  (e.g., ``event.tournament_id`` is set from ``tournament.pk``).
+- No validation is performed -- null checks, type checks, and ``_saved_in_db``
+  guards are all skipped.
+
+.. note::
+
+    ``construct()`` requires Tortoise to be initialized (via ``tortoise_test_context``
+    or ``Tortoise.init()``) for relation fields to work, because relation metadata is
+    resolved during initialization. For simple data-only fields, it works without
+    initialization.
+
+See :meth:`tortoise.models.Model.construct` for the full API reference.
+
 Testing Database Capabilities
 =============================
 
