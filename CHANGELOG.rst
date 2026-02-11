@@ -10,12 +10,22 @@ Changelog
 1.0
 ===
 
-1.0.1 (unreleased)
-------------------
+1.1.0
+-----
+
+Added
+^^^^^
+- **``db_default`` parameter for fields** — set database-level ``DEFAULT`` clauses that propagate to schema generation and migrations. Unlike ``default`` (Python-only), ``db_default`` is persisted in the DB schema and applied even for rows inserted outside the ORM. (#2101)
+- ``Model.construct()`` classmethod for building model instances without field validation — useful in test factories and fixtures. (#2099)
+- ``truncate_all_models()`` now respects foreign key constraints using topological ordering (SQLite/MySQL) or ``TRUNCATE ... CASCADE`` (PostgreSQL). (#2100)
+- Auto-recreate database connection when event loop changes. Enables easier testing without session level fixtures (#2098)
+
 Fixed
 ^^^^^
-- Type checking of None assignment to nullable fields (#2089)
-- Fix set global fallback default in Sanic register_tortoise (#2090)
+- Type checking of ``None`` assignment to nullable fields. (#2089)
+- Fix ``set global fallback default`` in Sanic ``register_tortoise``. (#2090)
+- Escape ``[`` ``]`` for db url parsing. (#2081) (#2092)
+- Fix ``UnicodeEncodeError`` by using UTF-8 encoding for migration files. (#2096, #2097)
 
 
 1.0.0

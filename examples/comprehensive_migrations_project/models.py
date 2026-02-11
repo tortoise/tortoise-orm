@@ -116,6 +116,7 @@ class Product(models.Model):
     rating = fields.FloatField(null=True, description="Average customer rating 0.0-5.0")
     processing_time = fields.TimeDeltaField(null=True, description="Average time to fulfill")
     is_active = fields.BooleanField(default=True)
+    stock_quantity = fields.IntField(db_default=10)
     created_at = fields.DatetimeField(auto_now_add=True)
 
     def __str__(self) -> str:

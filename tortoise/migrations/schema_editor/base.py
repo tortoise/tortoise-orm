@@ -38,6 +38,8 @@ class BaseSchemaEditor(SchemaQuotingMixin):
     RENAME_FIELD_TEMPLATE = 'ALTER TABLE {table} RENAME COLUMN "{old_column}" TO "{new_column}"'
     ALTER_FIELD_NULL_TEMPLATE = 'ALTER COLUMN "{column}" DROP NOT NULL'
     ALTER_FIELD_NOT_NULL_TEMPLATE = 'ALTER COLUMN "{column}" SET NOT NULL'
+    ALTER_FIELD_SET_DEFAULT_TEMPLATE = 'ALTER COLUMN "{column}" SET DEFAULT {default}'
+    ALTER_FIELD_DROP_DEFAULT_TEMPLATE = 'ALTER COLUMN "{column}" DROP DEFAULT'
 
     DELETE_FIELD_TEMPLATE = 'ALTER TABLE {table} DROP COLUMN "{column}" CASCADE'
 
@@ -135,6 +137,14 @@ class BaseSchemaEditor(SchemaQuotingMixin):
 
     def _escape_comment(self, comment: str) -> str:
         return comment.translate(self._get_escape_translation_table())
+
+    def _escape_default_value(self, default: object) -> str:
+        from tortoise.converters import encoders
+
+        encoder = encoders.get(type(default))
+        if encoder:
+            return str(encoder(default))  # type: ignore[operator]
+        return repr(default)
 
     @staticmethod
     def _make_hash(*args: str, length: int) -> str:
@@ -511,6 +521,11 @@ class BaseSchemaEditor(SchemaQuotingMixin):
                 comment=comment,
             )
 
+        if field.has_db_default():
+            db_val = field.to_db_value(field.db_default, model)
+            escaped = self._escape_default_value(db_val)
+            field_definition += f" DEFAULT {escaped}"
+
         await self._run_sql(
             self.ADD_FIELD_TEMPLATE.format(
                 table=self._qualify_table_name(model._meta.db_table, model._meta.schema),
@@ -609,6 +624,23 @@ class BaseSchemaEditor(SchemaQuotingMixin):
         if old_field.description != new_field.description:
             # TODO description management
             pass
+
+        old_has_db_default = old_field.has_db_default()
+        new_has_db_default = new_field.has_db_default()
+        if old_has_db_default != new_has_db_default or (
+            old_has_db_default
+            and new_has_db_default
+            and old_field.db_default != new_field.db_default
+        ):
+            if new_has_db_default:
+                db_val = new_field.to_db_value(new_field.db_default, model)
+                escaped = self._escape_default_value(db_val)
+                changes = self.ALTER_FIELD_SET_DEFAULT_TEMPLATE.format(
+                    column=new_db_field, default=escaped
+                )
+            else:
+                changes = self.ALTER_FIELD_DROP_DEFAULT_TEMPLATE.format(column=new_db_field)
+            actions.append(self.ALTER_FIELD_TEMPLATE.format(table=qualified_table, changes=changes))
 
         if old_db_field != new_db_field:
             actions.append(

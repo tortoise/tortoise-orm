@@ -399,6 +399,20 @@ class BaseSchemaGenerator(SchemaQuotingMixin):
     def _get_field_default(
         self, field_object: Field, table_name: str, column_name: str, model: type[Model]
     ) -> str:
+        if field_object.has_db_default():
+            db_default = field_object.db_default
+            db_default = field_object.to_db_value(db_default, model)
+            try:
+                return self._column_default_generator(
+                    table_name,
+                    column_name,
+                    self._escape_default_value(db_default),
+                    False,
+                    False,
+                )
+            except NotImplementedError:
+                pass
+
         auto_now_add = getattr(field_object, "auto_now_add", False)
         auto_now = getattr(field_object, "auto_now", False)
         default = field_object.default

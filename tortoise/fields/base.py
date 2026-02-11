@@ -28,6 +28,19 @@ else:  # pragma: no cover
 VALUE = TypeVar("VALUE")
 
 
+class _DB_DEFAULT_NOT_SET:
+    """Sentinel indicating db_default was not provided."""
+
+    def __repr__(self) -> str:
+        return "NOT_PROVIDED"
+
+    def __bool__(self) -> bool:
+        return False
+
+
+DB_DEFAULT_NOT_SET = _DB_DEFAULT_NOT_SET()
+
+
 class OnDelete(StrEnum):
     CASCADE = "CASCADE"
     RESTRICT = "RESTRICT"
@@ -175,6 +188,7 @@ class Field(Generic[VALUE], metaclass=_FieldMeta):
         primary_key: bool | None = None,
         null: bool = False,
         default: Any = None,
+        db_default: Any = DB_DEFAULT_NOT_SET,
         unique: bool = False,
         db_index: bool | None = None,
         description: str | None = None,
@@ -224,6 +238,11 @@ class Field(Generic[VALUE], metaclass=_FieldMeta):
         self.generated = generated
         self.pk = bool(primary_key)
         self.default = default
+        self.db_default = db_default
+        if self.has_db_default() and callable(self.db_default):
+            raise ConfigurationError(
+                f"{self.__class__.__name__}: db_default must be a static value, not a callable"
+            )
         self.null = null
         self.unique = unique
         self.index = bool(db_index)
@@ -288,6 +307,9 @@ class Field(Generic[VALUE], metaclass=_FieldMeta):
                     v(value)
             except ValidationError as exc:
                 raise ValidationError(f"{self.model_field_name}: {exc}")
+
+    def has_db_default(self) -> bool:
+        return not isinstance(self.db_default, _DB_DEFAULT_NOT_SET)
 
     @property
     def required(self) -> bool:
@@ -452,6 +474,12 @@ class Field(Generic[VALUE], metaclass=_FieldMeta):
             return str(default)
 
         field_type = getattr(self, "related_model", self.field_type)
+
+        if self.has_db_default():
+            db_default_val = default_name(self.db_default) if serializable else self.db_default
+        else:
+            db_default_val = "__NOT_SET__" if serializable else DB_DEFAULT_NOT_SET
+
         desc = {
             "name": self.model_field_name,
             "field_type": self.__class__.__name__ if serializable else self.__class__,
@@ -462,6 +490,7 @@ class Field(Generic[VALUE], metaclass=_FieldMeta):
             "unique": self.unique,
             "indexed": self.index or self.unique,
             "default": default_name(self.default) if serializable else self.default,
+            "db_default": db_default_val,
             "description": self.description,
             "docstring": self.docstring,
             "constraints": self.constraints,
@@ -495,10 +524,12 @@ class Field(Generic[VALUE], metaclass=_FieldMeta):
             kwargs["db_constraint"] = getattr(self, "db_constraint")
         if hasattr(self, "to_field") and getattr(self, "to_field") is not None:
             kwargs["to_field"] = getattr(self, "to_field")
+        if self.has_db_default():
+            kwargs["db_default"] = self.db_default
 
         signature = inspect.signature(self.__class__.__init__)
         for name, param in signature.parameters.items():
-            if name in ("self", "args", "kwargs", "model", "validators"):
+            if name in ("self", "args", "kwargs", "model", "validators", "db_default"):
                 continue
             if name == "field_type" and self.__class__.__name__ == "ManyToManyFieldInstance":
                 continue
