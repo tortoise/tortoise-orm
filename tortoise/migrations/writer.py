@@ -263,7 +263,7 @@ class MigrationWriter:
 
     def write(self) -> Path:
         path = self.path()
-        path.write_text(self.as_string(), encoding="ascii")
+        path.write_text(self.as_string())
         return path
 
     def as_string(self) -> str:
