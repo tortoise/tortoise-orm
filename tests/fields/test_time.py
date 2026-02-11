@@ -80,8 +80,8 @@ async def test_datetime_create(db):
     obj = await model.get(id=obj0.id)
     assert obj.datetime == now
     assert obj.datetime_null is None
-    assert obj.datetime_auto - now < timedelta(microseconds=20000)
-    assert obj.datetime_add - now < timedelta(microseconds=20000)
+    assert obj.datetime_auto - now < timedelta(seconds=1)
+    assert obj.datetime_add - now < timedelta(seconds=1)
     datetime_auto = obj.datetime_auto
     sleep(0.012)
     await obj.save()

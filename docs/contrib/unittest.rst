@@ -246,7 +246,12 @@ Utility Functions
 truncate_all_models
 -------------------
 
-Truncate all model tables in the current context:
+Truncate all model tables in the current context. The function handles foreign key
+constraints automatically:
+
+- **PostgreSQL**: Uses a single ``TRUNCATE ... CASCADE`` statement (fast, single round-trip).
+- **Other databases**: Deletes in topological order — child tables are emptied before the
+  parent tables they reference, avoiding FK constraint violations.
 
 .. code-block:: python
 
@@ -257,7 +262,7 @@ Truncate all model tables in the current context:
         # Create some data
         await User.create(name="Test")
 
-        # Truncate all tables
+        # Truncate all tables (FK-safe)
         await truncate_all_models()
 
         # Tables are now empty
