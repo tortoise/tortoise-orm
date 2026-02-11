@@ -58,7 +58,9 @@ jobs:
           PYTHONDEVMODE: 1
       - name: Test FastAPI/Blacksheep/Sanic Examples
         run: |
+          PYTHONPATH=$DEST_FASTAPI uv run --frozen tortoise -c config.TORTOISE_ORM migrate
           PYTHONPATH=$DEST_FASTAPI uv run --frozen pytest $PYTEST_ARGS $DEST_FASTAPI/_tests.py
+          rm -f $DEST_FASTAPI/db.sqlite3
           PYTHONPATH=$DEST_BLACKSHEEP uv run --frozen pytest $PYTEST_ARGS $DEST_BLACKSHEEP/_tests.py
           PYTHONPATH=$DEST_SANIC uv run --frozen pytest $PYTEST_ARGS $DEST_SANIC/_tests.py
         env:

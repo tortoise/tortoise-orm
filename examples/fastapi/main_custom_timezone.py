@@ -9,9 +9,6 @@ from routers import router as users_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
-    # app startup
-    # Disable global fallback since this is the secondary app in tests
-    # (main app already uses global fallback). Context is stored in app.state.
     async with register_orm(
         app,
         use_tz=True,
