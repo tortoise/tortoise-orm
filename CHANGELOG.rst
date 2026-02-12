@@ -8,6 +8,19 @@ Changelog
 1.1
 ===
 
+1.1.1
+-----
+
+Added
+^^^^^
+- **``SqlDefault`` and ``Now`` expressions for ``db_default``** — use ``db_default=SqlDefault("...")`` to emit raw SQL expressions (e.g. ``CURRENT_TIMESTAMP``) as database defaults. ``Now()`` is a convenience shorthand for ``SqlDefault("CURRENT_TIMESTAMP")``. (#2104)
+
+
+Changed
+^^^^^^^
+- ``Field(default=...)`` and ``auto_now`` / ``auto_now_add`` no longer emits a ``DEFAULT`` clause in ``generate_schemas()``. The ``default`` parameter is Python-only; use ``db_default`` for database-level defaults. This aligns ``generate_schemas()`` with migrations, which don't emitted ``DEFAULT`` for ``default=``. (#2104)
+
+
 1.1.0
 -----
 

@@ -127,9 +127,12 @@ class SqliteSchemaEditor(SqliteQuotingMixin, BaseSchemaEditor):
             unique_field = field.unique and not field.pk
 
         if field.has_db_default():
-            db_val = field.to_db_value(field.db_default, model)
-            escaped = self._escape_default_value(db_val)
-            field_definition += f" DEFAULT {escaped}"
+            if hasattr(field.db_default, "get_sql"):
+                field_definition += f" DEFAULT {field.db_default.get_sql(dialect=self.DIALECT)}"
+            else:
+                db_val = field.to_db_value(field.db_default, model)
+                escaped = self._escape_default_value(db_val)
+                field_definition += f" DEFAULT {escaped}"
 
         await self._run_sql(
             self.ADD_FIELD_TEMPLATE.format(table=qualified_table, definition=field_definition)
@@ -319,9 +322,12 @@ class SqliteSchemaEditor(SqliteQuotingMixin, BaseSchemaEditor):
                 )
 
             if actual_field.has_db_default():
-                db_val = actual_field.to_db_value(actual_field.db_default, model)
-                escaped = self._escape_default_value(db_val)
-                field_def += f" DEFAULT {escaped}"
+                if hasattr(actual_field.db_default, "get_sql"):
+                    field_def += f" DEFAULT {actual_field.db_default.get_sql(dialect=self.DIALECT)}"
+                else:
+                    db_val = actual_field.to_db_value(actual_field.db_default, model)
+                    escaped = self._escape_default_value(db_val)
+                    field_def += f" DEFAULT {escaped}"
 
             field_definitions.append(field_def)
 

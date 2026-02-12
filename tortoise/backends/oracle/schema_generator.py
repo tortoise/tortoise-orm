@@ -72,15 +72,8 @@ class OracleSchemaGenerator(BaseSchemaGenerator):
         table: str,
         column: str,
         default: Any,
-        auto_now_add: bool = False,
-        auto_now: bool = False,
     ) -> str:
-        default_str = " DEFAULT"
-        if not (auto_now or auto_now_add):
-            default_str += f" {default}"
-        if auto_now_add or auto_now:
-            default_str += " CURRENT_TIMESTAMP"
-        return default_str
+        return f" DEFAULT {default}"
 
     def _escape_default_value(self, default: Any):
         return encoders.get(type(default))(default)  # type: ignore

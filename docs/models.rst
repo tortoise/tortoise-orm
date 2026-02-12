@@ -71,7 +71,18 @@ Every model should be derived from ``Model`` or its subclasses. Custom ``Model``
 This model will not affect the schema, but it will be available for inheritance.
 
 
-Further we have field ``fields.DatetimeField(auto_now=True)``. Options ``auto_now`` and ``auto_now_add`` work like Django's options.
+Further we have field ``fields.DatetimeField(auto_now=True)``. Options ``auto_now`` and ``auto_now_add`` work like Django's options — they are handled purely in Python and do **not** add a ``DEFAULT`` clause to the database schema. If you need a database-level default timestamp, use ``db_default``:
+
+.. code-block:: python3
+
+    from tortoise.fields import DatetimeField, Now
+
+    class MyModel(Model):
+        # Python-only: value set by ORM on save, no DB DEFAULT
+        modified = DatetimeField(auto_now=True)
+
+        # DB-level: emits DEFAULT CURRENT_TIMESTAMP in the schema
+        created_at = DatetimeField(db_default=Now())
 
 Use of ``__models__``
 ---------------------

@@ -522,9 +522,12 @@ class BaseSchemaEditor(SchemaQuotingMixin):
             )
 
         if field.has_db_default():
-            db_val = field.to_db_value(field.db_default, model)
-            escaped = self._escape_default_value(db_val)
-            field_definition += f" DEFAULT {escaped}"
+            if hasattr(field.db_default, "get_sql"):
+                field_definition += f" DEFAULT {field.db_default.get_sql(dialect=self.DIALECT)}"
+            else:
+                db_val = field.to_db_value(field.db_default, model)
+                escaped = self._escape_default_value(db_val)
+                field_definition += f" DEFAULT {escaped}"
 
         await self._run_sql(
             self.ADD_FIELD_TEMPLATE.format(
@@ -633,10 +636,13 @@ class BaseSchemaEditor(SchemaQuotingMixin):
             and old_field.db_default != new_field.db_default
         ):
             if new_has_db_default:
-                db_val = new_field.to_db_value(new_field.db_default, model)
-                escaped = self._escape_default_value(db_val)
+                if hasattr(new_field.db_default, "get_sql"):
+                    default_sql = new_field.db_default.get_sql(dialect=self.DIALECT)
+                else:
+                    db_val = new_field.to_db_value(new_field.db_default, model)
+                    default_sql = self._escape_default_value(db_val)
                 changes = self.ALTER_FIELD_SET_DEFAULT_TEMPLATE.format(
-                    column=new_db_field, default=escaped
+                    column=new_db_field, default=default_sql
                 )
             else:
                 changes = self.ALTER_FIELD_DROP_DEFAULT_TEMPLATE.format(column=new_db_field)

@@ -26,6 +26,7 @@ from tortoise.fields.data import (
     TimeField,
     UUIDField,
 )
+from tortoise.fields.db_defaults import Now, SqlDefault
 from tortoise.fields.relational import (
     BackwardFKRelation,
     BackwardOneToOneRelation,
@@ -48,6 +49,8 @@ __all__ = [
     "NO_ACTION",
     "OnDelete",
     "Field",
+    "Now",
+    "SqlDefault",
     "BigIntField",
     "BinaryField",
     "BooleanField",

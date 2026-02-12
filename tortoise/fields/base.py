@@ -241,7 +241,7 @@ class Field(Generic[VALUE], metaclass=_FieldMeta):
         self.db_default = db_default
         if self.has_db_default() and callable(self.db_default):
             raise ConfigurationError(
-                f"{self.__class__.__name__}: db_default must be a static value, not a callable"
+                f"{self.__class__.__name__}: db_default must be a static value or SqlDefault(...), not a callable"
             )
         self.null = null
         self.unique = unique

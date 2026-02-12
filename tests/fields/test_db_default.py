@@ -534,3 +534,266 @@ async def test_add_field_without_db_default_no_default_clause():
     sql = client.executed[0]
     assert "ADD COLUMN" in sql
     assert "DEFAULT" not in sql
+
+
+# ============================================================================
+# SqlDefault and Now expression tests
+# ============================================================================
+
+
+def test_sql_default_construction_and_get_sql():
+    """SqlDefault construction and get_sql."""
+    from tortoise.fields.db_defaults import SqlDefault
+
+    sd = SqlDefault("CURRENT_TIMESTAMP")
+    assert sd.get_sql() == "CURRENT_TIMESTAMP"
+    assert sd.get_sql("some_context") == "CURRENT_TIMESTAMP"
+
+
+def test_now_construction():
+    """Now construction."""
+    from tortoise.fields.db_defaults import Now
+
+    n = Now()
+    assert n.get_sql() == "CURRENT_TIMESTAMP"
+
+
+def test_now_dialect_mysql():
+    """Now emits CURRENT_TIMESTAMP(6) for MySQL."""
+    from tortoise.fields.db_defaults import Now
+
+    n = Now()
+    assert n.get_sql(dialect="mysql") == "CURRENT_TIMESTAMP(6)"
+
+
+def test_now_dialect_other():
+    """Now emits plain CURRENT_TIMESTAMP for non-MySQL dialects."""
+    from tortoise.fields.db_defaults import Now
+
+    n = Now()
+    for dialect in ("sqlite", "postgres", "mssql", "oracle", "sql"):
+        assert n.get_sql(dialect=dialect) == "CURRENT_TIMESTAMP"
+
+
+def test_sql_default_equality_and_hashing():
+    """SqlDefault equality and hashing."""
+    from tortoise.fields.db_defaults import SqlDefault
+
+    a = SqlDefault("X")
+    b = SqlDefault("X")
+    c = SqlDefault("Y")
+    assert a == b
+    assert a != c
+    assert hash(a) == hash(b)
+    # Can be used in sets/dicts
+    s = {a, b, c}
+    assert len(s) == 2
+
+
+def test_sql_default_repr():
+    """SqlDefault repr."""
+    from tortoise.fields.db_defaults import SqlDefault
+
+    assert repr(SqlDefault("CURRENT_TIMESTAMP")) == "SqlDefault('CURRENT_TIMESTAMP')"
+
+
+def test_now_repr():
+    """Now repr."""
+    from tortoise.fields.db_defaults import Now
+
+    assert repr(Now()) == "Now()"
+
+
+def test_sql_default_passes_field_validation():
+    """SqlDefault is not callable -- passes field validation."""
+    from tortoise.fields.db_defaults import SqlDefault
+
+    # Should not raise
+    f = fields.DatetimeField(db_default=SqlDefault("CURRENT_TIMESTAMP"))
+    assert f.has_db_default() is True
+
+
+def test_callable_still_raises_with_updated_message():
+    """Callable still raises with SqlDefault in message."""
+    with pytest.raises(ConfigurationError, match="SqlDefault"):
+        fields.IntField(db_default=lambda: 1)
+
+
+# ============================================================================
+# Schema generation with SqlDefault / Now
+# ============================================================================
+
+
+def test_schema_generation_with_sql_default():
+    """Schema generation with SqlDefault."""
+    from tortoise.fields.db_defaults import SqlDefault
+
+    f = fields.DatetimeField(db_default=SqlDefault("CURRENT_TIMESTAMP"))
+    sql = _get_sqlite_default_sql(f)
+    assert sql == " DEFAULT CURRENT_TIMESTAMP"
+
+
+def test_schema_generation_with_now():
+    """Schema generation with Now()."""
+    from tortoise.fields.db_defaults import Now
+
+    f = fields.DatetimeField(db_default=Now())
+    sql = _get_sqlite_default_sql(f)
+    assert sql == " DEFAULT CURRENT_TIMESTAMP"
+
+
+def test_schema_generation_with_custom_sql_expression():
+    """Schema generation with custom SQL expression."""
+    from tortoise.fields.db_defaults import SqlDefault
+
+    f = fields.CharField(max_length=100, db_default=SqlDefault("'unknown'"))
+    sql = _get_sqlite_default_sql(f)
+    assert sql == " DEFAULT 'unknown'"
+
+
+def test_schema_generation_literal_db_default_still_works():
+    """Literal db_default still works (no regression)."""
+    f = fields.IntField(db_default=42)
+    sql = _get_sqlite_default_sql(f)
+    assert "DEFAULT" in sql
+    assert "42" in sql
+
+
+# ============================================================================
+# Migration editor with SqlDefault / Now
+# ============================================================================
+
+
+@pytest.mark.asyncio
+async def test_add_field_with_sql_default():
+    """Migration add_field with SqlDefault."""
+    from tortoise.fields.db_defaults import Now
+
+    WidgetModel = _make_model(
+        "Widget",
+        "widget",
+        id=fields.IntField(pk=True),
+        created=fields.DatetimeField(db_default=Now()),
+    )
+
+    editor, client = _make_test_editor()
+    await editor.add_field(WidgetModel, "created")
+
+    assert len(client.executed) == 1
+    sql = client.executed[0]
+    assert "DEFAULT CURRENT_TIMESTAMP" in sql
+
+
+@pytest.mark.asyncio
+async def test_alter_field_set_default_with_sql_default():
+    """Migration alter_field SET DEFAULT with SqlDefault."""
+    from tortoise.fields.db_defaults import Now
+
+    OldModel = _make_model(
+        "Widget",
+        "widget",
+        id=fields.IntField(pk=True),
+        created=fields.DatetimeField(),
+    )
+    NewModel = _make_model(
+        "Widget",
+        "widget",
+        id=fields.IntField(pk=True),
+        created=fields.DatetimeField(db_default=Now()),
+    )
+
+    editor, client = _make_test_editor()
+    await editor.alter_field(OldModel, NewModel, "created")
+
+    assert len(client.executed) == 1
+    sql = client.executed[0]
+    assert "SET DEFAULT" in sql
+    assert "CURRENT_TIMESTAMP" in sql
+
+
+@pytest.mark.asyncio
+async def test_alter_field_change_from_literal_to_sql_default():
+    """Migration alter_field change from literal to SqlDefault."""
+    from tortoise.fields.db_defaults import SqlDefault
+
+    OldModel = _make_model(
+        "Widget",
+        "widget",
+        id=fields.IntField(pk=True),
+        score=fields.IntField(db_default=42),
+    )
+    NewModel = _make_model(
+        "Widget",
+        "widget",
+        id=fields.IntField(pk=True),
+        score=fields.IntField(db_default=SqlDefault("NOW()")),
+    )
+
+    editor, client = _make_test_editor()
+    await editor.alter_field(OldModel, NewModel, "score")
+
+    assert len(client.executed) == 1
+    sql = client.executed[0]
+    assert "SET DEFAULT" in sql
+    assert "NOW()" in sql
+
+
+# ============================================================================
+# describe() and deconstruct() with SqlDefault / Now
+# ============================================================================
+
+
+def test_describe_serializable_with_now():
+    """describe(serializable=True) with Now."""
+    from tortoise.fields.db_defaults import Now
+
+    f = fields.DatetimeField(db_default=Now())
+    f.model_field_name = "created"
+    desc = f.describe(serializable=True)
+    assert desc["db_default"] == "Now()"
+
+
+def test_describe_non_serializable_with_now():
+    """describe(serializable=False) with Now."""
+    from tortoise.fields.db_defaults import Now
+
+    n = Now()
+    f = fields.DatetimeField(db_default=n)
+    f.model_field_name = "created"
+    desc = f.describe(serializable=False)
+    assert desc["db_default"] is n
+
+
+def test_deconstruct_with_now():
+    """deconstruct() preserves Now instance."""
+    from tortoise.fields.db_defaults import Now
+
+    n = Now()
+    f = fields.DatetimeField(db_default=n)
+    f.model_field_name = "created"
+    path, args, kwargs = f.deconstruct()
+    assert kwargs["db_default"] is n
+
+
+def test_render_value_with_now():
+    """render_value() preserves Now() in migration files."""
+    from tortoise.fields.db_defaults import Now
+    from tortoise.migrations.writer import ImportManager, render_value
+
+    imports = ImportManager()
+    n = Now()
+    result = render_value(n, imports)
+    assert result == "Now()"
+    assert "Now" in str(imports)
+
+
+def test_render_value_with_sql_default():
+    """render_value() preserves SqlDefault in migration files."""
+    from tortoise.fields.db_defaults import SqlDefault
+    from tortoise.migrations.writer import ImportManager, render_value
+
+    imports = ImportManager()
+    sd = SqlDefault("gen_random_uuid()")
+    result = render_value(sd, imports)
+    assert result == "SqlDefault('gen_random_uuid()')"
+    assert "SqlDefault" in str(imports)

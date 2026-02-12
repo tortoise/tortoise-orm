@@ -831,14 +831,14 @@ class DefaultUpdate(Model):
 
 
 class DefaultModel(Model):
-    int_default = fields.IntField(default=1)
-    float_default = fields.FloatField(default=1.5)
-    decimal_default = fields.DecimalField(max_digits=8, decimal_places=2, default=Decimal(1))
-    bool_default = fields.BooleanField(default=True)
-    char_default = fields.CharField(max_length=20, default="tortoise")
-    date_default = fields.DateField(default=datetime.date(year=2020, month=5, day=21))
+    int_default = fields.IntField(db_default=1)
+    float_default = fields.FloatField(db_default=1.5)
+    decimal_default = fields.DecimalField(max_digits=8, decimal_places=2, db_default=Decimal(1))
+    bool_default = fields.BooleanField(db_default=True)
+    char_default = fields.CharField(max_length=20, db_default="tortoise")
+    date_default = fields.DateField(db_default=datetime.date(year=2020, month=5, day=21))
     datetime_default = fields.DatetimeField(
-        default=datetime.datetime(year=2020, month=5, day=20, tzinfo=UTC)
+        db_default=datetime.datetime(year=2020, month=5, day=20, tzinfo=UTC)
     )
 
 

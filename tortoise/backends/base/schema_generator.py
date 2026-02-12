@@ -6,7 +6,6 @@ from hashlib import sha256
 from typing import TYPE_CHECKING, Any, cast
 
 from tortoise.exceptions import ConfigurationError
-from tortoise.fields import JSONField, TextField, UUIDField
 from tortoise.fields.relational import OneToOneFieldInstance
 from tortoise.indexes import Index
 from tortoise.schema_quoting import SchemaQuotingMixin
@@ -89,8 +88,6 @@ class BaseSchemaGenerator(SchemaQuotingMixin):
         table: str,
         column: str,
         default: Any,
-        auto_now_add: bool = False,
-        auto_now: bool = False,
     ) -> str:
         # Databases have their own way of supporting default for column level
         # needs to be implemented for each supported client
@@ -401,36 +398,24 @@ class BaseSchemaGenerator(SchemaQuotingMixin):
     ) -> str:
         if field_object.has_db_default():
             db_default = field_object.db_default
-            db_default = field_object.to_db_value(db_default, model)
-            try:
-                return self._column_default_generator(
-                    table_name,
-                    column_name,
-                    self._escape_default_value(db_default),
-                    False,
-                    False,
-                )
-            except NotImplementedError:
-                pass
-
-        auto_now_add = getattr(field_object, "auto_now_add", False)
-        auto_now = getattr(field_object, "auto_now", False)
-        default = field_object.default
-        if default is not None or auto_now or auto_now_add:
-            if not callable(default) and not isinstance(
-                field_object, (UUIDField, TextField, JSONField)
-            ):
-                default = field_object.to_db_value(default, model)
+            if hasattr(db_default, "get_sql"):
+                try:
+                    return self._column_default_generator(
+                        table_name, column_name, db_default.get_sql(dialect=self.DIALECT)
+                    )
+                except NotImplementedError:
+                    pass
+            else:
+                db_default = field_object.to_db_value(db_default, model)
                 try:
                     return self._column_default_generator(
                         table_name,
                         column_name,
-                        self._escape_default_value(default),
-                        auto_now_add,
-                        auto_now,
+                        self._escape_default_value(db_default),
                     )
                 except NotImplementedError:
                     pass
+
         return ""
 
     def _get_table_sql(self, model: type[Model], safe: bool = True) -> dict:

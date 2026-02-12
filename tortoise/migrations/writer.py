@@ -130,6 +130,14 @@ def render_value(value: Any, imports: ImportManager) -> str:
         return repr(value)
     if isinstance(value, bytes):
         return repr(value)
+    from tortoise.fields.db_defaults import Now, SqlDefault
+
+    if isinstance(value, Now):
+        imports.add_from("tortoise.fields.db_defaults", "Now")
+        return "Now()"
+    if isinstance(value, SqlDefault):
+        imports.add_from("tortoise.fields.db_defaults", "SqlDefault")
+        return f"SqlDefault({value.sql!r})"
     if hasattr(value, "get_sql") and callable(value.get_sql):
         sql = value.get_sql(DEFAULT_SQL_CONTEXT)
         imports.add_from("tortoise.migrations.expressions", "RawSQLTerm")

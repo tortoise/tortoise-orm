@@ -11,6 +11,7 @@ from decimal import Decimal
 from enum import Enum, IntEnum
 
 from tortoise import fields, models
+from tortoise.fields import Now, SqlDefault
 
 
 class OrderStatus(IntEnum):
@@ -117,7 +118,12 @@ class Product(models.Model):
     processing_time = fields.TimeDeltaField(null=True, description="Average time to fulfill")
     is_active = fields.BooleanField(default=True)
     stock_quantity = fields.IntField(db_default=10)
-    created_at = fields.DatetimeField(auto_now_add=True)
+    tracking_id = fields.CharField(
+        max_length=36,
+        null=True,
+        db_default=SqlDefault("(lower(hex(randomblob(16))))"),
+    )
+    created_at = fields.DatetimeField(db_default=Now())
 
     def __str__(self) -> str:
         return f"{self.product_code}: {self.name}"
