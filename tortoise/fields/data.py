@@ -81,10 +81,8 @@ try:
     # Use orjson as an optional accelerator
     import orjson
 
-
     def _orjson_dumps(obj: Any) -> str:
         return orjson.dumps(obj).decode()
-
 
     JSON_DUMPS = _orjson_dumps
     JSON_LOADS = orjson.loads
@@ -105,20 +103,20 @@ class IntField(Field[T_INT], int):
 
     @overload
     def __init__(
-            self: IntField[int],
-            primary_key: bool | None = None,
-            *,
-            null: Literal[False] = False,
-            **kwargs: Any,
+        self: IntField[int],
+        primary_key: bool | None = None,
+        *,
+        null: Literal[False] = False,
+        **kwargs: Any,
     ) -> None: ...
 
     @overload
     def __init__(
-            self: IntField[int | None],
-            primary_key: bool | None = None,
-            *,
-            null: Literal[True],
-            **kwargs: Any,
+        self: IntField[int | None],
+        primary_key: bool | None = None,
+        *,
+        null: Literal[True],
+        **kwargs: Any,
     ) -> None: ...
 
     def __init__(self, primary_key: bool | None = None, **kwargs: Any) -> None:
@@ -224,12 +222,12 @@ class CharField(Field[T_STR]):
 
     @overload
     def __init__(
-            self: CharField[str], max_length: int, *, null: Literal[False] = False, **kwargs: Any
+        self: CharField[str], max_length: int, *, null: Literal[False] = False, **kwargs: Any
     ) -> None: ...
 
     @overload
     def __init__(
-            self: CharField[str | None], max_length: int, *, null: Literal[True], **kwargs: Any
+        self: CharField[str | None], max_length: int, *, null: Literal[True], **kwargs: Any
     ) -> None: ...
 
     def __init__(self, max_length: int, **kwargs: Any) -> None:
@@ -267,11 +265,11 @@ class TextField(Field[str], str):  # type: ignore
     SQL_TYPE = "TEXT"
 
     def __init__(
-            self,
-            primary_key: bool | None = None,
-            unique: bool = False,
-            db_index: bool = False,
-            **kwargs: Any,
+        self,
+        primary_key: bool | None = None,
+        unique: bool = False,
+        db_index: bool = False,
+        **kwargs: Any,
     ) -> None:
         if primary_key or kwargs.get("pk"):
             warnings.warn(
@@ -317,12 +315,12 @@ class BooleanField(Field[T_BOOL]):
 
     @overload
     def __init__(
-            self: BooleanField[bool], *, null: Literal[False] = False, **kwargs: Any
+        self: BooleanField[bool], *, null: Literal[False] = False, **kwargs: Any
     ) -> None: ...
 
     @overload
     def __init__(
-            self: BooleanField[bool | None], *, null: Literal[True], **kwargs: Any
+        self: BooleanField[bool | None], *, null: Literal[True], **kwargs: Any
     ) -> None: ...
 
     def __init__(self, **kwargs: Any) -> None:
@@ -354,25 +352,23 @@ class DecimalField(Field[T_DECIMAL], Decimal):  # type: ignore
 
     @overload
     def __init__(
-            self: DecimalField[Decimal],
-            max_digits: int,
-            decimal_places: int,
-            *,
-            null: Literal[False] = False,
-            **kwargs: Any,
-    ) -> None:
-        ...
+        self: DecimalField[Decimal],
+        max_digits: int,
+        decimal_places: int,
+        *,
+        null: Literal[False] = False,
+        **kwargs: Any,
+    ) -> None: ...
 
     @overload
     def __init__(
-            self: DecimalField[Decimal | None],
-            max_digits: int,
-            decimal_places: int,
-            *,
-            null: Literal[True],
-            **kwargs: Any,
-    ) -> None:
-        ...
+        self: DecimalField[Decimal | None],
+        max_digits: int,
+        decimal_places: int,
+        *,
+        null: Literal[True],
+        **kwargs: Any,
+    ) -> None: ...
 
     def __init__(self, max_digits: int, decimal_places: int, **kwargs: Any) -> None:
         if int(max_digits) < 1:
@@ -439,25 +435,23 @@ class DatetimeField(Field[T_DATETIME], datetime.datetime):
 
     @overload
     def __init__(
-            self: DatetimeField[datetime.datetime],
-            auto_now: bool = False,
-            auto_now_add: bool = False,
-            *,
-            null: Literal[False] = False,
-            **kwargs: Any,
-    ) -> None:
-        ...
+        self: DatetimeField[datetime.datetime],
+        auto_now: bool = False,
+        auto_now_add: bool = False,
+        *,
+        null: Literal[False] = False,
+        **kwargs: Any,
+    ) -> None: ...
 
     @overload
     def __init__(
-            self: DatetimeField[datetime.datetime | None],
-            auto_now: bool = False,
-            auto_now_add: bool = False,
-            *,
-            null: Literal[True],
-            **kwargs: Any,
-    ) -> None:
-        ...
+        self: DatetimeField[datetime.datetime | None],
+        auto_now: bool = False,
+        auto_now_add: bool = False,
+        *,
+        null: Literal[True],
+        **kwargs: Any,
+    ) -> None: ...
 
     def __init__(self, auto_now: bool = False, auto_now_add: bool = False, **kwargs: Any) -> None:
         if auto_now_add and auto_now:
@@ -488,12 +482,12 @@ class DatetimeField(Field[T_DATETIME], datetime.datetime):
         return value
 
     def to_db_value(
-            self, value: DatetimeFieldQueryValueType | None, instance: type[Model] | Model
+        self, value: DatetimeFieldQueryValueType | None, instance: type[Model] | Model
     ) -> DatetimeFieldQueryValueType | None:
         # Only do this if it is a Model instance, not class. Test for guaranteed instance var
         if hasattr(instance, "_saved_in_db") and (
-                self.auto_now
-                or (self.auto_now_add and getattr(instance, self.model_field_name) is None)
+            self.auto_now
+            or (self.auto_now_add and getattr(instance, self.model_field_name) is None)
         ):
             now = timezone.now()
             # Convert to match what would be read from DB (apply timezone conversion)
@@ -536,15 +530,13 @@ class DateField(Field[T_DATE], datetime.date):
 
     @overload
     def __init__(
-            self: DateField[datetime.date], *, null: Literal[False] = False, **kwargs: Any
-    ) -> None:
-        ...
+        self: DateField[datetime.date], *, null: Literal[False] = False, **kwargs: Any
+    ) -> None: ...
 
     @overload
     def __init__(
-            self: DateField[datetime.date | None], *, null: Literal[True], **kwargs: Any
-    ) -> None:
-        ...
+        self: DateField[datetime.date | None], *, null: Literal[True], **kwargs: Any
+    ) -> None: ...
 
     def __init__(self, **kwargs: Any) -> None:
         super().__init__(**kwargs)
@@ -555,7 +547,7 @@ class DateField(Field[T_DATE], datetime.date):
         return value
 
     def to_db_value(
-            self, value: DateFieldQueryValueType | None, instance: type[Model] | Model
+        self, value: DateFieldQueryValueType | None, instance: type[Model] | Model
     ) -> DateFieldQueryValueType | None:
         if value is not None and isinstance(value, str) and len(value) > 4:
             with contextlib.suppress(ValueError):
@@ -577,25 +569,23 @@ class TimeField(Field[T_TIME], datetime.time):
 
     @overload
     def __init__(
-            self: TimeField[datetime.time],
-            auto_now: bool = False,
-            auto_now_add: bool = False,
-            *,
-            null: Literal[False] = False,
-            **kwargs: Any,
-    ) -> None:
-        ...
+        self: TimeField[datetime.time],
+        auto_now: bool = False,
+        auto_now_add: bool = False,
+        *,
+        null: Literal[False] = False,
+        **kwargs: Any,
+    ) -> None: ...
 
     @overload
     def __init__(
-            self: TimeField[datetime.time | None],
-            auto_now: bool = False,
-            auto_now_add: bool = False,
-            *,
-            null: Literal[True],
-            **kwargs: Any,
-    ) -> None:
-        ...
+        self: TimeField[datetime.time | None],
+        auto_now: bool = False,
+        auto_now_add: bool = False,
+        *,
+        null: Literal[True],
+        **kwargs: Any,
+    ) -> None: ...
 
     def __init__(self, auto_now: bool = False, auto_now_add: bool = False, **kwargs: Any) -> None:
         if auto_now_add and auto_now:
@@ -619,14 +609,14 @@ class TimeField(Field[T_TIME], datetime.time):
         return value
 
     def to_db_value(
-            self,
-            value: datetime.time | datetime.timedelta | None,
-            instance: type[Model] | Model,
+        self,
+        value: datetime.time | datetime.timedelta | None,
+        instance: type[Model] | Model,
     ) -> datetime.time | datetime.timedelta | None:
         # Only do this if it is a Model instance, not class. Test for guaranteed instance var
         if hasattr(instance, "_saved_in_db") and (
-                self.auto_now
-                or (self.auto_now_add and getattr(instance, self.model_field_name) is None)
+            self.auto_now
+            or (self.auto_now_add and getattr(instance, self.model_field_name) is None)
         ):
             now = timezone.now().time()
             # Convert to match what would be read from DB (apply timezone conversion)
@@ -664,15 +654,13 @@ class TimeDeltaField(Field[T_TIMEDELTA]):
 
     @overload
     def __init__(
-            self: TimeDeltaField[datetime.timedelta], *, null: Literal[False] = False, **kwargs: Any
-    ) -> None:
-        ...
+        self: TimeDeltaField[datetime.timedelta], *, null: Literal[False] = False, **kwargs: Any
+    ) -> None: ...
 
     @overload
     def __init__(
-            self: TimeDeltaField[datetime.timedelta | None], *, null: Literal[True], **kwargs: Any
-    ) -> None:
-        ...
+        self: TimeDeltaField[datetime.timedelta | None], *, null: Literal[True], **kwargs: Any
+    ) -> None: ...
 
     def __init__(self, **kwargs: Any) -> None:
         super().__init__(**kwargs)
@@ -686,7 +674,7 @@ class TimeDeltaField(Field[T_TIMEDELTA]):
         return datetime.timedelta(microseconds=value)
 
     def to_db_value(
-            self, value: datetime.timedelta | None, instance: type[Model] | Model
+        self, value: datetime.timedelta | None, instance: type[Model] | Model
     ) -> int | None:
         self.validate(value)
 
@@ -704,7 +692,7 @@ class FloatField(Field[T_FLOAT], float):
 
     @overload
     def __init__(
-            self: FloatField[float], *, null: Literal[False] = False, **kwargs: Any
+        self: FloatField[float], *, null: Literal[False] = False, **kwargs: Any
     ) -> None: ...
 
     @overload
@@ -757,10 +745,10 @@ class JSONField(Field[T], dict, list):  # type: ignore
         SQL_TYPE = "NCLOB"
 
     def __init__(
-            self,
-            encoder: JsonDumpsFunc = JSON_DUMPS,
-            decoder: JsonLoadsFunc = JSON_LOADS,
-            **kwargs: Any,
+        self,
+        encoder: JsonDumpsFunc = JSON_DUMPS,
+        decoder: JsonLoadsFunc = JSON_LOADS,
+        **kwargs: Any,
     ) -> None:
         super().__init__(**kwargs)
         self.encoder = encoder
@@ -769,9 +757,9 @@ class JSONField(Field[T], dict, list):  # type: ignore
             self.field_type = field_type
 
     def to_db_value(
-            self,
-            value: T | dict | list | str | bytes | None,
-            instance: type[Model] | Model,
+        self,
+        value: T | dict | list | str | bytes | None,
+        instance: type[Model] | Model,
     ) -> str | None:
         self.validate(value)
         if value is None:
@@ -792,7 +780,7 @@ class JSONField(Field[T], dict, list):  # type: ignore
         return self.encoder(value)
 
     def to_python_value(
-            self, value: T | str | bytes | dict | list | None
+        self, value: T | str | bytes | dict | list | None
     ) -> T | dict | list | None:
         if isinstance(value, (str, bytes)):
             try:
@@ -803,9 +791,9 @@ class JSONField(Field[T], dict, list):  # type: ignore
                 )
 
             if (
-                    _PydanticModelMetaclass is not None
-                    and isinstance(self.field_type, _PydanticModelMetaclass)
-                    and not isinstance(data, list)
+                _PydanticModelMetaclass is not None
+                and isinstance(self.field_type, _PydanticModelMetaclass)
+                and not isinstance(data, list)
             ):
                 return self.field_type(**data)
 
@@ -829,12 +817,10 @@ class UUIDField(Field[T_UUID], UUID):
         SQL_TYPE = "UUID"
 
     @overload
-    def __init__(self: UUIDField[UUID], *, null: Literal[False] = False, **kwargs: Any) -> None:
-        ...
+    def __init__(self: UUIDField[UUID], *, null: Literal[False] = False, **kwargs: Any) -> None: ...
 
     @overload
-    def __init__(self: UUIDField[UUID | None], *, null: Literal[True], **kwargs: Any) -> None:
-        ...
+    def __init__(self: UUIDField[UUID | None], *, null: Literal[True], **kwargs: Any) -> None: ...
 
     def __init__(self, **kwargs: Any) -> None:
         if (kwargs.get("primary_key") or kwargs.get("pk", False)) and "default" not in kwargs:
@@ -863,12 +849,12 @@ class BinaryField(Field[T_BINARY], bytes):  # type: ignore
 
     @overload
     def __init__(
-            self: BinaryField[bytes], *, null: Literal[False] = False, **kwargs: Any
+        self: BinaryField[bytes], *, null: Literal[False] = False, **kwargs: Any
     ) -> None: ...
 
     @overload
     def __init__(
-            self: BinaryField[bytes | None], *, null: Literal[True], **kwargs: Any
+        self: BinaryField[bytes | None], *, null: Literal[True], **kwargs: Any
     ) -> None: ...
 
     def __init__(self, **kwargs: Any) -> None:
@@ -886,11 +872,11 @@ class BinaryField(Field[T_BINARY], bytes):  # type: ignore
 
 class IntEnumFieldInstance(SmallIntField):
     def __init__(
-            self,
-            enum_type: type[IntEnum],
-            description: str | None = None,
-            generated: bool = False,
-            **kwargs: Any,
+        self,
+        enum_type: type[IntEnum],
+        description: str | None = None,
+        generated: bool = False,
+        **kwargs: Any,
     ) -> None:
         # Validate values
         minimum = 1 if generated else -32768
@@ -928,9 +914,9 @@ IntEnumType = TypeVar("IntEnumType", bound=IntEnum)
 
 
 def IntEnumField(
-        enum_type: type[IntEnumType],
-        description: str | None = None,
-        **kwargs: Any,
+    enum_type: type[IntEnumType],
+    description: str | None = None,
+    **kwargs: Any,
 ) -> IntEnumType:
     """
     Enum Field
@@ -954,11 +940,11 @@ def IntEnumField(
 
 class CharEnumFieldInstance(CharField):
     def __init__(
-            self,
-            enum_type: type[Enum],
-            description: str | None = None,
-            max_length: int = 0,
-            **kwargs: Any,
+        self,
+        enum_type: type[Enum],
+        description: str | None = None,
+        max_length: int = 0,
+        **kwargs: Any,
     ) -> None:
         # Automatic description for the field if not specified by the user
         if description is None:
@@ -990,10 +976,10 @@ CharEnumType = TypeVar("CharEnumType", bound=Enum)
 
 
 def CharEnumField(
-        enum_type: type[CharEnumType],
-        description: str | None = None,
-        max_length: int = 0,
-        **kwargs: Any,
+    enum_type: type[CharEnumType],
+    description: str | None = None,
+    max_length: int = 0,
+    **kwargs: Any,
 ) -> CharEnumType:
     """
     Char Enum Field
