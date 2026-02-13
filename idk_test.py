@@ -1,5 +1,10 @@
+import random
+import time
+
 from tortoise import fields, run_async
 from tortoise.contrib.test import init_memory_sqlite
+from tortoise.expressions import Q
+from tortoise.functions import Min, Max
 from tortoise.models import Model
 from tortoise.parameter import Parameter
 
@@ -90,12 +95,56 @@ async def t4_in(some1: SomeModel, some2: SomeModel, some3: SomeModel) -> None:
         print(actual2 == expected2)
 
 
+async def t5_compare_prepared_non_prepared(*_) -> None:
+    ITERS = 1000
+
+    prefix = f"{time.time()}-"
+    await SomeModel.bulk_create([
+        SomeModel(name=f"{prefix}{num}")
+        for num in range(1000)
+    ])
+
+    min_id, max_id = await SomeModel.filter(name__startswith=prefix).annotate(max_id=Max("id"), min_id=Min("id")).first().values_list("min_id", "max_id")
+    random_id = random.randint(min_id, max_id)
+
+    random_ids = await SomeModel.filter(name__startswith=prefix).values_list("id", flat=True)
+    random.shuffle(random_ids)
+    random_ids = random_ids[:2]
+
+    start_time = time.perf_counter()
+    for _ in range(ITERS):
+        await SomeModel.filter(Q(id__lte=random_id * 2, id__in=random_ids, join_type=Q.OR), id__gte=random_id)
+    end_time = time.perf_counter()
+    non_prepared_millis = (end_time - start_time) * 1000
+    print(f"Non-prepared: {non_prepared_millis:.2f}ms")
+
+    start_time = time.perf_counter()
+    query = SomeModel.filter(Q(id__lte=Parameter("id_lte"), id__in=Parameter("id_in"), join_type=Q.OR), id__gte=Parameter("id_gte")).prepare()
+    for _ in range(ITERS):
+        await query.execute(id_lte=random_id * 2, id_gte=random_id, id_in=random_ids)
+    end_time = time.perf_counter()
+    prepared_millis = (end_time - start_time) * 1000
+    print(f"Prepared: {prepared_millis:.2f}ms")
+
+    if non_prepared_millis > prepared_millis:
+        ratio = non_prepared_millis / prepared_millis
+        result = "faster"
+    else:
+        ratio = prepared_millis / non_prepared_millis
+        result = "slower"
+
+    print(f"Prepared is {(ratio - 1) * 100:.2f}% {result} than non-prepared")
+
+    await SomeModel.filter(name__startswith=prefix).delete()
+
+
 TESTS = [
     # t0_sanity_check,
     # t1_simple_gte,
     # t2_simple_string_param,
     # t3_startswith,
-    t4_in,
+    # t4_in,
+    t5_compare_prepared_non_prepared,
 ]
 
 

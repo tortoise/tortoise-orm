@@ -1292,15 +1292,16 @@ class CachedSql:
         # TODO: check for parameters mismatch
 
         filled_params = self.params.copy()
-        for name, (param, idx) in self.need_params.items():
+        for name, idx in self.need_params.items():
+            param = self.param_by_name[name]
             filled_params[idx] = param.encode_value(params[name])
 
         for name, indexes in self.need_collection_params.items():
-            param = self.param_by_name[name]
+            param = cast(CollectionParameter, self.param_by_name[name])
             collection = param.encode_collection(params[name])
             if len(collection) != len(indexes):
                 raise ValueError(
-                    f"Provided value length (len(collection)) "
+                    f"Provided value length ({len(collection)}) "
                     f"for parameter {name!r} does not match "
                     f"parameter indexes length ({len(indexes)})"
                 )
@@ -1331,26 +1332,25 @@ class PreparedQuery(AwaitableQuery[MODEL]):
         self._custom_fields = custom_fields
         self._single = single
         self._raise_does_not_exist = raise_does_not_exist
-
-    def _get_or_create_cached_sql(self, params: dict[str, Any]) -> CachedSql:
-        # TODO: cache this
-        _, sql_params = self._query.get_parameterized_sql()
-        need_params = {
+        _, params = self._query.get_parameterized_sql()
+        self._dynamic_params = {
             param.name: param
-            for param in sql_params
-            if isinstance(param, Parameter)
+            for param in params
+            if isinstance(param, CollectionParameter)
         }
 
+    def _get_or_create_cached_sql(self, params: dict[str, Any]) -> CachedSql:
         reset_params = []
 
         cache_key = "query"
-        for param, value in params.items():
-            if param not in need_params:
+        for name, value in params.items():
+            if name not in self._dynamic_params or not isinstance(value, (tuple, list, set)):
                 continue
-            if isinstance(value, (tuple, list, set)):
-                cache_key += f"-{param}{len(value)}"
-                need_params[param].collection_size = len(value)
-                reset_params.append(need_params[param])
+
+            param = self._dynamic_params[name]
+            cache_key += f"-{name}{len(value)}"
+            param.collection_size = len(value)
+            reset_params.append(param)
 
         if cache_key not in self._cached_sql:
             sql, params = self._query.get_parameterized_sql()
