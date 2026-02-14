@@ -27,7 +27,7 @@ from tortoise.fields.relational import (
     RelationalField,
 )
 from tortoise.filters import FilterInfoDict
-from tortoise.parameter import Parameter, CollectionParameter
+from tortoise.parameter import Parameter, CollectionParameter, TortoiseSqlContext
 from tortoise.query_utils import (
     Prefetch,
     QueryModifier,
@@ -1353,7 +1353,9 @@ class PreparedQuery(AwaitableQuery[MODEL]):
             reset_params.append(param)
 
         if cache_key not in self._cached_sql:
-            sql, params = self._query.get_parameterized_sql()
+            # TODO: probably could be done in a better way?
+            ctx = TortoiseSqlContext.copy(self.query.QUERY_CLS.SQL_CONTEXT, dynamic_params=self._dynamic_params)
+            sql, params = self._query.get_parameterized_sql(ctx)
             self._cached_sql[cache_key] = CachedSql(sql, params)
 
         for param in reset_params:

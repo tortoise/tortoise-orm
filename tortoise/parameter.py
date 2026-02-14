@@ -1,7 +1,33 @@
+from __future__ import annotations
+
+from dataclasses import dataclass
 from typing import Self
 
 from tortoise.fields import Field
 from pypika_tortoise import SqlContext
+
+
+@dataclass(frozen=True)
+class TortoiseSqlContext(SqlContext):
+    dynamic_params: dict[str, CollectionParameter] | None = None
+
+    def copy(self: SqlContext, **kwargs) -> SqlContext:
+        existing_dynamic_params = self.dynamic_params if isinstance(self, TortoiseSqlContext) else None
+        return TortoiseSqlContext(
+            quote_char=kwargs.get("quote_char", self.quote_char),
+            secondary_quote_char=kwargs.get("secondary_quote_char", self.secondary_quote_char),
+            alias_quote_char=kwargs.get("alias_quote_char", self.alias_quote_char),
+            dialect=kwargs.get("dialect", self.dialect),
+            as_keyword=kwargs.get("as_keyword", self.as_keyword),
+            subquery=kwargs.get("subquery", self.subquery),
+            with_alias=kwargs.get("with_alias", self.with_alias),
+            with_namespace=kwargs.get("with_namespace", self.with_namespace),
+            subcriterion=kwargs.get("subcriterion", self.subcriterion),
+            parameterizer=kwargs.get("parameterizer", self.parameterizer),
+            groupby_alias=kwargs.get("groupby_alias", self.groupby_alias),
+            orderby_alias=kwargs.get("orderby_alias", self.orderby_alias),
+            dynamic_params=kwargs.get("dynamic_params", existing_dynamic_params),
+        )
 
 
 class Parameter:
@@ -65,15 +91,19 @@ class CollectionParameter(Parameter):
             return self.collection_encoder(value, self.model)
 
     def get_sql(self, ctx: SqlContext) -> str:
-        if self.collection_size is None:
+        param = self
+        if isinstance(ctx, TortoiseSqlContext):
+            param = ctx.dynamic_params.get(self.name, self)
+
+        if param.collection_size is None:
             if ctx.parameterizer is not None:
-                ctx.parameterizer.create_param(self)
+                ctx.parameterizer.create_param(param)
             return "?"
         else:
             if ctx.parameterizer is not None:
-                for idx in range(self.collection_size):
-                    new_param = self.clone()
+                for idx in range(param.collection_size):
+                    new_param = param.clone()
                     new_param.collection_encoder = new_param.value_encoder
                     new_param.value_encoder = None
                     ctx.parameterizer.create_param(new_param)
-            return f"({','.join(['?' for _ in range(self.collection_size)])})"
+            return f"({','.join(['?' for _ in range(param.collection_size)])})"

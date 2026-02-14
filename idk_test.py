@@ -3,7 +3,7 @@ import time
 
 from tortoise import fields, run_async
 from tortoise.contrib.test import init_memory_sqlite
-from tortoise.expressions import Q
+from tortoise.expressions import Q, Subquery
 from tortoise.functions import Min, Max
 from tortoise.models import Model
 from tortoise.parameter import Parameter
@@ -15,6 +15,12 @@ CHECK_ACTUAL = True
 class SomeModel(Model):
     id: int = fields.BigIntField(pk=True)
     name: str = fields.TextField()
+
+
+class SomeForeignKeyModel(Model):
+    id: int = fields.BigIntField(pk=True)
+    info: str = fields.CharField(max_length=128, default="")
+    some: SomeModel = fields.ForeignKeyField("models.SomeModel")
 
 
 async def t0_sanity_check(some1: SomeModel, some2: SomeModel, some3: SomeModel) -> None:
@@ -138,13 +144,49 @@ async def t5_compare_prepared_non_prepared(*_) -> None:
     await SomeModel.filter(name__startswith=prefix).delete()
 
 
+async def t6_subqueries(some1: SomeModel, some2: SomeModel, some3: SomeModel) -> None:
+    query = SomeModel.filter(id__in=Subquery(SomeModel.filter(Q(id=Parameter("idk1")) | Q(id=Parameter("idk2"))).values("id")))
+    prepared = query.prepare()
+    actual1 = await prepared.execute(idk1=some2.id, idk2=some1.id)
+    print(actual1)
+    actual2 = await prepared.execute(idk1=some3.id, idk2=some3.id * 2)
+    print(actual2)
+
+    if CHECK_ACTUAL:
+        expected1 = await SomeModel.filter(id__in=Subquery(SomeModel.filter(Q(id=some2.id) | Q(id=some1.id)).values("id")))
+        expected2 = await SomeModel.filter(id__in=Subquery(SomeModel.filter(Q(id=some3.id) | Q(id=some3.id * 2)).values("id")))
+        print(expected1)
+        print(expected2)
+        print(actual1 == expected1)
+        print(actual2 == expected2)
+
+
+async def t7_subqueries_in(some1: SomeModel, some2: SomeModel, some3: SomeModel) -> None:
+    query = SomeModel.filter(id__in=Subquery(SomeModel.filter(id__in=Parameter("idk")).values("id")))
+    prepared = query.prepare()
+    actual1 = await prepared.execute(idk=[some2.id, some1.id])
+    print(actual1)
+    actual2 = await prepared.execute(idk=[some3.id, some3.id * 2, some3.id * 10])
+    print(actual2)
+
+    if CHECK_ACTUAL:
+        expected1 = await SomeModel.filter(id__in=Subquery(SomeModel.filter(id__in=[some2.id, some1.id]).values("id")))
+        expected2 = await SomeModel.filter(id__in=Subquery(SomeModel.filter(id__in=[some3.id, some3.id * 2, some3.id * 10]).values("id")))
+        print(expected1)
+        print(expected2)
+        print(actual1 == expected1)
+        print(actual2 == expected2)
+
+
 TESTS = [
-    # t0_sanity_check,
-    # t1_simple_gte,
-    # t2_simple_string_param,
-    # t3_startswith,
-    # t4_in,
+    t0_sanity_check,
+    t1_simple_gte,
+    t2_simple_string_param,
+    t3_startswith,
+    t4_in,
     t5_compare_prepared_non_prepared,
+    t6_subqueries,
+    t7_subqueries_in,
 ]
 
 
