@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from tortoise.fields.base import CASCADE
+from copy import copy
+
+from tortoise.fields.base import CASCADE, Field
 from tortoise.fields.relational import ManyToManyFieldInstance
 from tortoise.migrations.schema_editor.base import BaseSchemaEditor
 from tortoise.models import Model
@@ -30,6 +32,10 @@ class MySQLSchemaEditor(MySQLQuotingMixin, BaseSchemaEditor):
     DELETE_TABLE_TEMPLATE = "DROP TABLE {table}"
     ADD_FIELD_TEMPLATE = "ALTER TABLE {table} ADD COLUMN {definition}"
     ALTER_FIELD_TEMPLATE = "ALTER TABLE {table} {changes}"
+    ALTER_FIELD_NULL_TEMPLATE = "ALTER COLUMN `{column}` DROP NOT NULL"
+    ALTER_FIELD_NOT_NULL_TEMPLATE = "ALTER COLUMN `{column}` SET NOT NULL"
+    ALTER_FIELD_SET_DEFAULT_TEMPLATE = "ALTER COLUMN `{column}` SET DEFAULT {default}"
+    ALTER_FIELD_DROP_DEFAULT_TEMPLATE = "ALTER COLUMN `{column}` DROP DEFAULT"
     RENAME_FIELD_TEMPLATE = "ALTER TABLE {table} RENAME COLUMN `{old_column}` TO `{new_column}`"
     DELETE_FIELD_TEMPLATE = "ALTER TABLE {table} DROP COLUMN `{column}`"
     DROP_INDEX_TEMPLATE = "DROP INDEX `{name}` ON {table}"
@@ -171,16 +177,58 @@ class MySQLSchemaEditor(MySQLQuotingMixin, BaseSchemaEditor):
                     m2m_create_string = "\n".join(lines)
         return m2m_create_string
 
+    async def _alter_field(self, model: type[Model], old_field: Field, new_field: Field) -> None:
+        # MySQL does not support ALTER COLUMN ... SET/DROP NOT NULL.
+        # It requires MODIFY COLUMN with the full column type specification.
+        if old_field.null != new_field.null:
+            db_field = new_field.source_field or new_field.model_field_name
+            qualified_table = self._qualify_table_name(model._meta.db_table, model._meta.schema)
+            col_type = new_field.get_for_dialect(self.DIALECT, "SQL_TYPE")
+            nullable = "NULL" if new_field.null else "NOT NULL"
+            await self._run_sql(
+                f"ALTER TABLE {qualified_table} MODIFY COLUMN"
+                f" {self.quote(db_field)} {col_type} {nullable}"
+            )
+            # Patch old_field copy so base skips the null change
+            old_field = copy(old_field)
+            old_field.null = new_field.null
+
+        await super()._alter_field(model, old_field, new_field)
+
     async def add_constraint(self, model, constraint) -> None:
-        unique_index_sql = self._get_unique_index_sql(
-            model._meta.db_table, list(constraint.fields), schema=model._meta.schema
+        table = self._qualify_table_name(model._meta.db_table, model._meta.schema)
+        index_name = self._generate_index_name_for_table(
+            "uidx", model._meta.db_table, list(constraint.fields)
         )
-        await self._run_sql(unique_index_sql)
+        columns = ", ".join([self.quote(f) for f in constraint.fields])
+        await self._run_sql(f"ALTER TABLE {table} ADD UNIQUE KEY `{index_name}` ({columns})")
+
+    async def _get_unique_constraint_names_from_db(
+        self, table_name: str, column_name: str, schema: str | None = None
+    ) -> list[str]:
+        """Query information_schema for unique constraint names on a specific column."""
+        query = (
+            "SELECT tc.CONSTRAINT_NAME "
+            "FROM information_schema.table_constraints tc "
+            "JOIN information_schema.key_column_usage kcu "
+            "ON tc.CONSTRAINT_NAME = kcu.CONSTRAINT_NAME "
+            "AND tc.TABLE_SCHEMA = kcu.TABLE_SCHEMA "
+            "AND tc.TABLE_NAME = kcu.TABLE_NAME "
+            f"WHERE tc.TABLE_NAME = '{table_name}' "  # nosec B608
+            "AND tc.TABLE_SCHEMA = DATABASE() "
+            "AND tc.CONSTRAINT_TYPE = 'UNIQUE' "
+            f"AND kcu.COLUMN_NAME = '{column_name}' "
+            "GROUP BY tc.CONSTRAINT_NAME "
+            "HAVING COUNT(kcu.COLUMN_NAME) = 1"
+        )
+        _, rows = await self.client.execute_query(query)
+        return [row["CONSTRAINT_NAME"] for row in rows]
 
     async def remove_constraint(self, model, constraint) -> None:
+        constraint_name = await self._resolve_constraint_name(model, constraint)
         await self._run_sql(
             self.DROP_INDEX_TEMPLATE.format(
                 table=self._qualify_table_name(model._meta.db_table, model._meta.schema),
-                name=self._constraint_name_for_model(model, constraint),
+                name=constraint_name,
             )
         )

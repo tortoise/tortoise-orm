@@ -26,7 +26,7 @@ from tortoise.fields.data import (
     TimeField,
     UUIDField,
 )
-from tortoise.fields.db_defaults import Now, SqlDefault
+from tortoise.fields.db_defaults import Now, RandomHex, SqlDefault
 from tortoise.fields.relational import (
     BackwardFKRelation,
     BackwardOneToOneRelation,
@@ -50,6 +50,7 @@ __all__ = [
     "OnDelete",
     "Field",
     "Now",
+    "RandomHex",
     "SqlDefault",
     "BigIntField",
     "BinaryField",

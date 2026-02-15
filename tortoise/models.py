@@ -201,6 +201,7 @@ class MetaInfo:
         "basetable",
         "_filters",
         "unique_together",
+        "constraints",
         "manager",
         "indexes",
         "pk_attr",
@@ -223,6 +224,7 @@ class MetaInfo:
         self.schema: str | None = getattr(meta, "schema", None)
         self.app: str | None = getattr(meta, "app", None)
         self.unique_together: tuple[tuple[str, ...], ...] = get_together(meta, "unique_together")
+        self.constraints: tuple = tuple(getattr(meta, "constraints", ()))
         self.indexes: tuple[tuple[str, ...] | Index, ...] = get_together(meta, "indexes")
         self._default_ordering: tuple[tuple[str, Order], ...] = prepare_default_ordering(meta)
         self._ordering_validated: bool = False

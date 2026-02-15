@@ -1,10 +1,11 @@
 from __future__ import annotations
 
+import re
 from typing import Any
 
 import pytest
 
-from tests.utils.fake_client import FakeClient
+from tests.utils.fake_client import FakeClient, MockIntrospectionClient
 from tortoise import fields
 from tortoise.fields.base import Field
 from tortoise.indexes import Index
@@ -22,6 +23,8 @@ from tortoise.migrations.operations import (
     RunPython,
 )
 from tortoise.migrations.schema_editor.base import BaseSchemaEditor
+from tortoise.migrations.schema_editor.base_postgres import BasePostgresSchemaEditor
+from tortoise.migrations.schema_editor.mysql import MySQLSchemaEditor
 from tortoise.migrations.schema_generator.state import ModelState, State
 from tortoise.migrations.schema_generator.state_apps import StateApps
 from tortoise.models import Model
@@ -256,3 +259,170 @@ async def test_rename_constraint_backward_runs_sql() -> None:
 
     assert client.executed
     assert 'RENAME CONSTRAINT "uniq_new" TO "uniq_old"' in client.executed[0]
+
+
+@pytest.mark.asyncio
+async def test_create_model_uses_inline_unique() -> None:
+    """CREATE TABLE should use inline UNIQUE for unique fields."""
+    OldModel = make_model(
+        "CryptoWallet",
+        meta_options={"table": "crypto_wallets"},
+        id=fields.IntField(pk=True),
+        wallet_address=fields.CharField(max_length=255, unique=True, index=True),
+    )
+
+    create_client = FakeClient("sql")
+    create_editor = TestSchemaEditor(create_client)
+    await create_editor.create_model(OldModel)
+    create_sql = create_client.executed[0]
+    assert " UNIQUE" in create_sql, f"Expected inline UNIQUE in CREATE SQL: {create_sql}"
+
+
+@pytest.mark.asyncio
+async def test_alter_field_unique_to_nonunique_generates_drop_constraint() -> None:
+    """Changing unique=True to unique=False should produce a DROP CONSTRAINT."""
+    OldModel = make_model(
+        "CryptoWallet",
+        meta_options={"table": "crypto_wallets"},
+        id=fields.IntField(pk=True),
+        wallet_address=fields.CharField(max_length=255, unique=True, index=True),
+    )
+    NewModel = make_model(
+        "CryptoWallet",
+        meta_options={"table": "crypto_wallets"},
+        id=fields.IntField(pk=True),
+        wallet_address=fields.CharField(max_length=255, unique=False, index=True),
+    )
+
+    old_state = build_state("models", OldModel)
+    new_state = build_state("models", NewModel)
+
+    alter_client = FakeClient("sql")
+    alter_editor = TestSchemaEditor(alter_client)
+    op = AlterField(
+        model_name="CryptoWallet",
+        name="wallet_address",
+        field=fields.CharField(max_length=255, index=True),
+    )
+    await op.database_forward("models", old_state, new_state, state_editor=alter_editor)
+
+    drop_sqls = [sql for sql in alter_client.executed if "DROP CONSTRAINT" in sql]
+    assert drop_sqls, f"Expected DROP CONSTRAINT SQL, got: {alter_client.executed}"
+
+
+# ---------------------------------------------------------------------------
+# Integration tests: AlterField with introspection-based constraint removal
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_postgres_alter_field_uses_introspected_legacy_name() -> None:
+    """PostgreSQL AlterField unique=True->False should use the introspected constraint name."""
+    OldModel = make_model(
+        "CryptoWallet",
+        meta_options={"table": "crypto_wallets"},
+        id=fields.IntField(pk=True),
+        wallet_address=fields.CharField(max_length=255, unique=True, index=True),
+    )
+    NewModel = make_model(
+        "CryptoWallet",
+        meta_options={"table": "crypto_wallets"},
+        id=fields.IntField(pk=True),
+        wallet_address=fields.CharField(max_length=255, unique=False, index=True),
+    )
+
+    old_state = build_state("models", OldModel)
+    new_state = build_state("models", NewModel)
+
+    client = MockIntrospectionClient(
+        "postgres",
+        constraint_names=[{"conname": "crypto_wallets_wallet_address_key"}],
+        inline_comment=False,
+    )
+    editor = BasePostgresSchemaEditor(client)
+    op = AlterField(
+        model_name="CryptoWallet",
+        name="wallet_address",
+        field=fields.CharField(max_length=255, index=True),
+    )
+    await op.database_forward("models", old_state, new_state, state_editor=editor)
+
+    drop_sqls = [sql for sql in client.executed if "DROP CONSTRAINT" in sql]
+    assert drop_sqls, f"Expected DROP CONSTRAINT SQL, got: {client.executed}"
+    assert '"crypto_wallets_wallet_address_key"' in drop_sqls[0]
+    assert "uid_" not in drop_sqls[0]
+
+
+@pytest.mark.asyncio
+async def test_mysql_alter_field_uses_introspected_legacy_name() -> None:
+    """MySQL AlterField unique=True->False should use the introspected index name."""
+    OldModel = make_model(
+        "CryptoWallet",
+        meta_options={"table": "crypto_wallets"},
+        id=fields.IntField(pk=True),
+        wallet_address=fields.CharField(max_length=255, unique=True, index=True),
+    )
+    NewModel = make_model(
+        "CryptoWallet",
+        meta_options={"table": "crypto_wallets"},
+        id=fields.IntField(pk=True),
+        wallet_address=fields.CharField(max_length=255, unique=False, index=True),
+    )
+
+    old_state = build_state("models", OldModel)
+    new_state = build_state("models", NewModel)
+
+    client = MockIntrospectionClient(
+        "mysql",
+        constraint_names=[{"CONSTRAINT_NAME": "wallet_address"}],
+    )
+    editor = MySQLSchemaEditor(client)
+    op = AlterField(
+        model_name="CryptoWallet",
+        name="wallet_address",
+        field=fields.CharField(max_length=255, index=True),
+    )
+    await op.database_forward("models", old_state, new_state, state_editor=editor)
+
+    drop_sqls = [sql for sql in client.executed if "DROP INDEX" in sql]
+    assert drop_sqls, f"Expected DROP INDEX SQL, got: {client.executed}"
+    assert "`wallet_address`" in drop_sqls[0]
+    assert "uid_" not in drop_sqls[0]
+
+
+@pytest.mark.asyncio
+async def test_postgres_alter_field_empty_introspection_uses_deterministic_name() -> None:
+    """PostgreSQL with empty introspection result falls back to deterministic uid_ name."""
+    OldModel = make_model(
+        "CryptoWallet",
+        meta_options={"table": "crypto_wallets"},
+        id=fields.IntField(pk=True),
+        wallet_address=fields.CharField(max_length=255, unique=True, index=True),
+    )
+    NewModel = make_model(
+        "CryptoWallet",
+        meta_options={"table": "crypto_wallets"},
+        id=fields.IntField(pk=True),
+        wallet_address=fields.CharField(max_length=255, unique=False, index=True),
+    )
+
+    old_state = build_state("models", OldModel)
+    new_state = build_state("models", NewModel)
+
+    client = MockIntrospectionClient(
+        "postgres",
+        constraint_names=[],
+        inline_comment=False,
+    )
+    editor = BasePostgresSchemaEditor(client)
+    op = AlterField(
+        model_name="CryptoWallet",
+        name="wallet_address",
+        field=fields.CharField(max_length=255, index=True),
+    )
+    await op.database_forward("models", old_state, new_state, state_editor=editor)
+
+    drop_sqls = [sql for sql in client.executed if "DROP CONSTRAINT" in sql]
+    assert drop_sqls, f"Expected DROP CONSTRAINT SQL, got: {client.executed}"
+    drop_match = re.search(r'"(uid_[^"]+)"', drop_sqls[0])
+    assert drop_match, f"Expected uid_ in DROP CONSTRAINT. SQL: {drop_sqls[0]}"

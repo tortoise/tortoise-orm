@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from tortoise.fields.base import CASCADE
+from copy import copy
+
+from tortoise.fields.base import CASCADE, Field
 from tortoise.fields.relational import ManyToManyFieldInstance
 from tortoise.migrations.schema_editor.base import BaseSchemaEditor
 from tortoise.models import Model
@@ -37,12 +39,16 @@ class MSSQLSchemaEditor(MSSQLQuotingMixin, BaseSchemaEditor):
     RENAME_FIELD_TEMPLATE = "EXEC sp_rename '{table}.{old_column}', '{new_column}', 'COLUMN'"
     DELETE_FIELD_TEMPLATE = "ALTER TABLE {table} DROP COLUMN [{column}]"
     DROP_INDEX_TEMPLATE = "DROP INDEX [{name}] ON {table}"
+    DELETE_CONSTRAINT_TEMPLATE = "ALTER TABLE {table} DROP CONSTRAINT [{name}]"
+    DELETE_FK_TEMPLATE = DELETE_CONSTRAINT_TEMPLATE
+    UNIQUE_CONSTRAINT_CREATE_TEMPLATE = "CONSTRAINT [{index_name}] UNIQUE ({fields})"
     RENAME_INDEX_TEMPLATE = "EXEC sp_rename '{table}.{old_name}', '{new_name}', 'INDEX'"
     RENAME_CONSTRAINT_TEMPLATE = "EXEC sp_rename '{table}.{old_name}', '{new_name}', 'OBJECT'"
 
     def __init__(self, connection, atomic: bool = True, collect_sql: bool = False) -> None:
         super().__init__(connection, atomic, collect_sql=collect_sql)
         self._foreign_keys: list[str] = []
+        self._current_model_table: tuple[str, str | None] | None = None
 
     async def create_schema(self, schema_name: str) -> None:
         await self._run_sql(
@@ -70,6 +76,15 @@ class MSSQLSchemaEditor(MSSQLQuotingMixin, BaseSchemaEditor):
     def _get_column_comment_sql(self, table: str, column: str, comment: str) -> str:
         return ""
 
+    def _get_fk_field_definition(self, model: type[Model], key_field_name: str) -> str:
+        # Track the current model table so _get_fk_reference_string can detect
+        # self-referencing FKs and downgrade CASCADE to NO ACTION (MSSQL error 1785).
+        self._current_model_table = (model._meta.db_table, model._meta.schema)
+        try:
+            return super()._get_fk_field_definition(model, key_field_name)
+        finally:
+            self._current_model_table = None
+
     def _get_fk_reference_string(
         self,
         constraint_name: str,
@@ -79,6 +94,15 @@ class MSSQLSchemaEditor(MSSQLQuotingMixin, BaseSchemaEditor):
         on_delete: str,
         comment: str,
     ) -> str:
+        # MSSQL error 1785: self-referencing FK with CASCADE is not allowed.
+        # Silently downgrade to NO ACTION for self-referencing FKs.
+        current = getattr(self, "_current_model_table", None)
+        if current and on_delete == CASCADE:
+            source_table, source_schema = current
+            source_qualified = self._qualify_table_name(source_table, source_schema)
+            if table == source_qualified:
+                on_delete = "NO ACTION"
+
         constraint = f"CONSTRAINT [{constraint_name}] " if constraint_name else ""
         fk = self.FK_TEMPLATE.format(
             constraint=constraint,
@@ -96,6 +120,65 @@ class MSSQLSchemaEditor(MSSQLQuotingMixin, BaseSchemaEditor):
         extra = list(dict.fromkeys(self._foreign_keys))
         self._foreign_keys.clear()
         return extra
+
+    async def _alter_field(self, model: type[Model], old_field: Field, new_field: Field) -> None:
+        db_field = new_field.source_field or new_field.model_field_name
+        qualified_table = self._qualify_table_name(model._meta.db_table, model._meta.schema)
+
+        # MSSQL requires ALTER COLUMN with full type for nullability changes
+        if old_field.null != new_field.null:
+            col_type = new_field.get_for_dialect(self.DIALECT, "SQL_TYPE")
+            nullable = "NULL" if new_field.null else "NOT NULL"
+            await self._run_sql(
+                f"ALTER TABLE {qualified_table} ALTER COLUMN [{db_field}] {col_type} {nullable}"
+            )
+            old_field = copy(old_field)
+            old_field.null = new_field.null
+
+        # MSSQL uses named default constraints instead of ALTER COLUMN SET/DROP DEFAULT
+        old_has_default = old_field.has_db_default()
+        new_has_default = new_field.has_db_default()
+        default_changed = old_has_default != new_has_default or (
+            old_has_default and new_has_default and old_field.db_default != new_field.db_default
+        )
+        if default_changed:
+            if old_has_default:
+                await self._drop_default_constraint(
+                    model._meta.db_table, db_field, model._meta.schema
+                )
+            if new_has_default:
+                if hasattr(new_field.db_default, "get_sql"):
+                    default_sql = new_field.db_default.get_sql(dialect=self.DIALECT)
+                else:
+                    db_val = new_field.to_db_value(new_field.db_default, model)
+                    default_sql = self._escape_default_value(db_val)
+                await self._run_sql(
+                    f"ALTER TABLE {qualified_table} ADD DEFAULT {default_sql} FOR [{db_field}]"
+                )
+            # Patch so super() skips the default change
+            old_field = copy(old_field)
+            old_field.db_default = new_field.db_default
+
+        # Let base handle index, unique, description, and rename
+        await super()._alter_field(model, old_field, new_field)
+
+    async def _drop_default_constraint(
+        self, table_name: str, column_name: str, schema: str | None = None
+    ) -> None:
+        schema_filter = f" AND s.name = '{schema}'" if schema else ""
+        drop_sql = (  # nosec B608
+            "DECLARE @sql NVARCHAR(MAX) = N'';\n"
+            "SELECT @sql = N'ALTER TABLE [' + s.name + '].[' + t.name + ']"
+            " DROP CONSTRAINT [' + dc.name + ']'\n"
+            "FROM sys.default_constraints dc\n"
+            "JOIN sys.columns c ON dc.parent_object_id = c.object_id"
+            " AND dc.parent_column_id = c.column_id\n"
+            "JOIN sys.tables t ON dc.parent_object_id = t.object_id\n"
+            "JOIN sys.schemas s ON t.schema_id = s.schema_id\n"
+            f"WHERE t.name = '{table_name}' AND c.name = '{column_name}'{schema_filter};\n"
+            "IF @sql <> N'' EXEC sp_executesql @sql;"
+        )
+        await self._run_sql(drop_sql)
 
     def _format_m2m_fk(self, table: str, column: str, target_table: str, target_field: str) -> str:
         return self.FK_TEMPLATE.format(
@@ -160,11 +243,31 @@ class MSSQLSchemaEditor(MSSQLQuotingMixin, BaseSchemaEditor):
                     m2m_create_string = "\n".join(lines)
         return m2m_create_string
 
+    async def _get_unique_constraint_names_from_db(
+        self, table_name: str, column_name: str, schema: str | None = None
+    ) -> list[str]:
+        """Query sys.key_constraints for unique constraint names on a specific column."""
+        schema_filter = f" AND s.name = '{schema}'" if schema else ""
+        query = (  # nosec B608
+            "SELECT kc.name "
+            "FROM sys.key_constraints kc "
+            "JOIN sys.tables t ON kc.parent_object_id = t.object_id "
+            "JOIN sys.schemas s ON t.schema_id = s.schema_id "
+            "JOIN sys.index_columns ic ON kc.parent_object_id = ic.object_id "
+            "AND kc.unique_index_id = ic.index_id "
+            "JOIN sys.columns c ON ic.object_id = c.object_id AND ic.column_id = c.column_id "
+            f"WHERE t.name = '{table_name}' AND c.name = '{column_name}' "
+            f"AND kc.type = 'UQ'{schema_filter}"
+        )
+        _, rows = await self.client.execute_query(query)
+        return [row["name"] for row in rows]
+
     async def remove_constraint(self, model, constraint) -> None:
+        constraint_name = await self._resolve_constraint_name(model, constraint)
         await self._run_sql(
             self.DELETE_CONSTRAINT_TEMPLATE.format(
                 table=self._qualify_table_name(model._meta.db_table, model._meta.schema),
-                name=self._constraint_name_for_model(model, constraint),
+                name=constraint_name,
             )
         )
 

@@ -8,6 +8,22 @@ Changelog
 1.1
 ===
 
+1.1.3
+-----
+
+Added
+^^^^^
+- ``RandomHex`` dialect-aware ``SqlDefault`` subclass for generating random hex strings across all backends. (#2108)
+- ``Meta.constraints`` support on models — named ``UniqueConstraint`` objects are now captured by the migration autodetector, enabling ``AddConstraint``/``RemoveConstraint`` generation via ``makemigrations``. (#2108)
+- MySQL schema editor: ``_alter_field`` override using ``MODIFY COLUMN`` for NULL/NOT NULL changes; backtick-quoted ``ALTER_FIELD_*`` templates. (#2108)
+- MSSQL schema editor: ``_alter_field`` override with ``ALTER COLUMN`` for nullability, named default constraint management via ``sys.default_constraints``, bracket-quoted templates, and self-referencing FK CASCADE → NO ACTION downgrade. (#2108)
+
+Fixed
+^^^^^
+- MySQL migrations: ``ALTER COLUMN ... SET NOT NULL`` / ``DROP NOT NULL`` now correctly emits ``MODIFY COLUMN col type NOT NULL/NULL``. (#2108)
+- MSSQL migrations: ``DELETE_CONSTRAINT_TEMPLATE`` and ``UNIQUE_CONSTRAINT_CREATE_TEMPLATE`` now use bracket quoting ``[name]`` instead of double quotes. (#2108)
+- MSSQL migrations: self-referencing foreign keys with ``CASCADE`` no longer fail with error 1785; automatically downgraded to ``NO ACTION``. (#2108)
+
 1.1.2
 -----
 

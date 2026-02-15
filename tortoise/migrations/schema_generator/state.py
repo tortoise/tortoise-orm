@@ -83,6 +83,8 @@ class ModelState(BaseEntityState):
             options["app"] = model._meta.app
         if model._meta.unique_together:
             options["unique_together"] = model._meta.unique_together
+        if model._meta.constraints:
+            options["constraints"] = model._meta.constraints
         if model._meta.indexes:
             options["indexes"] = model._meta.indexes
         if model._meta.pk_attr:

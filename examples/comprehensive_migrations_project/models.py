@@ -11,7 +11,7 @@ from decimal import Decimal
 from enum import Enum, IntEnum
 
 from tortoise import fields, models
-from tortoise.fields import Now, SqlDefault
+from tortoise.fields import Now, RandomHex
 
 
 class OrderStatus(IntEnum):
@@ -121,7 +121,7 @@ class Product(models.Model):
     tracking_id = fields.CharField(
         max_length=36,
         null=True,
-        db_default=SqlDefault("(lower(hex(randomblob(16))))"),
+        db_default=RandomHex(),
     )
     created_at = fields.DatetimeField(db_default=Now())
 

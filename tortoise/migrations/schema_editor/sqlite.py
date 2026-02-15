@@ -151,8 +151,24 @@ class SqliteSchemaEditor(SqliteQuotingMixin, BaseSchemaEditor):
         )
         await self._run_sql(index_sql)
 
+    async def _get_unique_constraint_names_from_db(
+        self, table_name: str, column_name: str, schema: str | None = None
+    ) -> list[str]:
+        """Use PRAGMA index_list + PRAGMA index_info to find unique index names."""
+        _, indexes = await self.client.execute_query(f'PRAGMA index_list("{table_name}")')
+        result: list[str] = []
+        for idx in indexes:
+            if not idx.get("unique"):
+                continue
+            idx_name = idx.get("name", "")
+            _, columns = await self.client.execute_query(f'PRAGMA index_info("{idx_name}")')
+            col_names = [col.get("name") for col in columns]
+            if col_names == [column_name]:
+                result.append(idx_name)
+        return result
+
     async def remove_constraint(self, model, constraint) -> None:
-        constraint_name = self._constraint_name_for_model(model, constraint)
+        constraint_name = await self._resolve_constraint_name(model, constraint)
         await self.remove_index(
             model,
             Index(fields=constraint.fields, name=constraint_name),

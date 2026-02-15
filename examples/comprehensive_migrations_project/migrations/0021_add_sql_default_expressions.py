@@ -1,5 +1,5 @@
 from tortoise import fields, migrations
-from tortoise.fields.db_defaults import Now, SqlDefault
+from tortoise.fields.db_defaults import Now, RandomHex
 from tortoise.migrations import operations as ops
 
 
@@ -17,8 +17,6 @@ class Migration(migrations.Migration):
         ops.AddField(
             model_name="Product",
             name="tracking_id",
-            field=fields.CharField(
-                null=True, db_default=SqlDefault("(lower(hex(randomblob(16))))"), max_length=36
-            ),
+            field=fields.CharField(null=True, db_default=RandomHex(), max_length=36),
         ),
     ]

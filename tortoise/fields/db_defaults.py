@@ -56,3 +56,39 @@ class Now(SqlDefault):
 
     def __repr__(self) -> str:
         return "Now()"
+
+
+class RandomHex(SqlDefault):
+    """Convenience subclass of :class:`SqlDefault` that emits a dialect-specific
+    expression for generating a random 32-character hex string.
+
+    Example::
+
+        class MyModel(Model):
+            tracking_id = fields.CharField(max_length=36, db_default=RandomHex())
+    """
+
+    _DIALECT_SQL: dict[str, str] = {
+        "sqlite": "(lower(hex(randomblob(16))))",
+        "postgres": "md5(random()::text)",
+        "mysql": "(LOWER(HEX(RANDOM_BYTES(16))))",
+        "mssql": "(LOWER(CONVERT(VARCHAR(32), HASHBYTES('MD5', NEWID()), 2)))",
+        "oracle": "LOWER(RAWTOHEX(SYS_GUID()))",
+    }
+
+    def __init__(self) -> None:
+        super().__init__(self._DIALECT_SQL["sqlite"])
+
+    def get_sql(self, _context=None, dialect: str | None = None) -> str:
+        if dialect and dialect in self._DIALECT_SQL:
+            return self._DIALECT_SQL[dialect]
+        return self.sql
+
+    def __repr__(self) -> str:
+        return "RandomHex()"
+
+    def __eq__(self, other: object) -> bool:
+        return isinstance(other, RandomHex)
+
+    def __hash__(self) -> int:
+        return hash("RandomHex")

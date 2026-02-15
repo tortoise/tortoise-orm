@@ -583,7 +583,7 @@ def run_async(coro: Coroutine) -> None:
         portal.call(main)
 
 
-__version__ = "1.1.2"
+__version__ = "1.1.3"
 
 __all__ = [
     "BackwardFKRelation",

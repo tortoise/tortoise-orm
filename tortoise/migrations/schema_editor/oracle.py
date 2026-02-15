@@ -135,3 +135,34 @@ class OracleSchemaEditor(BaseSchemaEditor):
                     lines.insert(-1, indent + unique_index_sql)
                     m2m_create_string = "\n".join(lines)
         return m2m_create_string
+
+    async def _get_unique_constraint_names_from_db(
+        self, table_name: str, column_name: str, schema: str | None = None
+    ) -> list[str]:
+        """Query USER_CONSTRAINTS/ALL_CONSTRAINTS for unique constraint names on a column."""
+        upper_table = table_name.upper()
+        upper_column = column_name.upper()
+        if schema:
+            query = (
+                "SELECT ac.CONSTRAINT_NAME "
+                "FROM ALL_CONSTRAINTS ac "
+                "JOIN ALL_CONS_COLUMNS acc "
+                "ON ac.CONSTRAINT_NAME = acc.CONSTRAINT_NAME "
+                "AND ac.OWNER = acc.OWNER "
+                f"WHERE ac.TABLE_NAME = '{upper_table}' "  # nosec B608
+                f"AND acc.COLUMN_NAME = '{upper_column}' "
+                "AND ac.CONSTRAINT_TYPE = 'U' "
+                f"AND ac.OWNER = '{schema.upper()}'"
+            )
+        else:
+            query = (
+                "SELECT uc.CONSTRAINT_NAME "
+                "FROM USER_CONSTRAINTS uc "
+                "JOIN USER_CONS_COLUMNS ucc "
+                "ON uc.CONSTRAINT_NAME = ucc.CONSTRAINT_NAME "
+                f"WHERE uc.TABLE_NAME = '{upper_table}' "  # nosec B608
+                f"AND ucc.COLUMN_NAME = '{upper_column}' "
+                "AND uc.CONSTRAINT_TYPE = 'U'"
+            )
+        _, rows = await self.client.execute_query(query)
+        return [row["CONSTRAINT_NAME"] for row in rows]

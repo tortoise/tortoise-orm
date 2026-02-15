@@ -721,6 +721,42 @@ class BaseSchemaEditor(SchemaQuotingMixin):
             return constraint.name
         return self._get_unique_constraint_name(model, list(constraint.fields))
 
+    async def _get_unique_constraint_names_from_db(
+        self, table_name: str, column_name: str, schema: str | None = None
+    ) -> list[str]:
+        """Query the database for actual unique constraint/index names on a column.
+
+        Returns a list of constraint names enforcing uniqueness on the given column.
+        The base implementation returns an empty list. Backend-specific subclasses
+        override this method with introspection queries.
+        """
+        return []
+
+    async def _resolve_constraint_name(
+        self, model: type[Model], constraint: UniqueConstraint
+    ) -> str:
+        """Resolve the actual constraint name via introspection, falling back to deterministic name.
+
+        Tries database introspection first to discover the real constraint name
+        (handles legacy databases with auto-generated names). Falls back to the
+        deterministic uid_ name when introspection is unavailable (FakeClient,
+        collect_sql mode, or empty results).
+        """
+        deterministic_name = self._constraint_name_for_model(model, constraint)
+        if not self.collect_sql:
+            try:
+                column_name = constraint.fields[0]
+                introspected = await self._get_unique_constraint_names_from_db(
+                    model._meta.db_table, column_name, model._meta.schema
+                )
+                if introspected:
+                    return introspected[0]
+            except Exception:  # nosec B110
+                # Introspection unavailable (FakeClient, no connection, etc.)
+                # Fall back to deterministic name
+                pass
+        return deterministic_name
+
     async def add_index(self, model: type[Model], index: Index) -> None:
         index.resolve_expressions(model)
         index_sql = self._get_index_sql(
@@ -773,7 +809,7 @@ class BaseSchemaEditor(SchemaQuotingMixin):
         )
 
     async def remove_constraint(self, model: type[Model], constraint: UniqueConstraint) -> None:
-        constraint_name = self._constraint_name_for_model(model, constraint)
+        constraint_name = await self._resolve_constraint_name(model, constraint)
         await self._run_sql(
             self.DELETE_CONSTRAINT_TEMPLATE.format(
                 table=self._qualify_table_name(model._meta.db_table, model._meta.schema),

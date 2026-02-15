@@ -72,6 +72,11 @@ class BasePostgresSchemaEditor(BaseSchemaEditor):
             extra=extra,
         )
 
+    def _escape_default_value(self, default: object) -> str:
+        if isinstance(default, bool):
+            return "TRUE" if default else "FALSE"
+        return super()._escape_default_value(default)
+
     def _get_unique_index_sql(
         self, table_name: str, field_names: list[str], schema: str | None = None
     ) -> str:
@@ -82,3 +87,24 @@ class BasePostgresSchemaEditor(BaseSchemaEditor):
             fields=", ".join([self.quote(f) for f in field_names]),
             extra="",
         )
+
+    async def _get_unique_constraint_names_from_db(
+        self, table_name: str, column_name: str, schema: str | None = None
+    ) -> list[str]:
+        """Query pg_constraint for unique constraint names on a specific column."""
+        nsp = schema or "public"
+        query = (
+            "SELECT con.conname "
+            "FROM pg_constraint con "
+            "JOIN pg_class rel ON rel.oid = con.conrelid "
+            "JOIN pg_namespace nsp ON nsp.oid = rel.relnamespace "
+            "JOIN pg_attribute att ON att.attrelid = con.conrelid "
+            "AND att.attnum = ANY(con.conkey) "
+            f"WHERE rel.relname = '{table_name}' "  # nosec B608
+            f"AND att.attname = '{column_name}' "
+            "AND con.contype = 'u' "
+            "AND array_length(con.conkey, 1) = 1 "
+            f"AND nsp.nspname = '{nsp}'"
+        )
+        _, rows = await self.client.execute_query(query)
+        return [row["conname"] for row in rows]
