@@ -1,10 +1,11 @@
 from __future__ import annotations
 
+import functools
 import types
 from collections import defaultdict
 from collections.abc import AsyncIterator, Callable, Collection, Generator, Iterable
 from copy import copy
-from typing import TYPE_CHECKING, Any, Generic, Literal, Protocol, TypeVar, cast, overload
+from typing import TYPE_CHECKING, Any, Generic, Literal, Protocol, TypeVar, cast, overload, NoReturn
 
 from pypika_tortoise import JoinType, Order, Table
 from pypika_tortoise.analytics import Count
@@ -1252,21 +1253,332 @@ class QuerySet(AwaitableQuery[MODEL]):
             raise MultipleObjectsReturned(self.model)
         return instance_list
 
-    def prepare(self) -> PreparedQuery[MODEL]:
-        if self._db is None:
-            self._db = self._choose_db(self._select_for_update)
-        self._make_query()
-        return PreparedQuery(
-            query=self.query,
-            db=self._db,
-            model=self.model,
-            prefetch_map=self._prefetch_map,
-            prefetch_queries=self._prefetch_queries,
-            select_related_idx=self._select_related_idx,
-            custom_fields=list(self._annotations.keys()),
-            single=self._single,
-            raise_does_not_exist=self._raise_does_not_exist,
+    def prepare_sql(self, key: str) -> PreparedQuerySet[MODEL]:
+        """
+        Cache generated sql of this query set.
+        If query set is already in cache, return cached version with already generated sql.
+        """
+        if key in self.model._meta.query_cache:
+            return self.model._meta.query_cache[key]
+
+        # TODO: add some arg to _clone to override class?
+        #  to be able to to something like self._clone(PreparedQuerySet)
+        queryset = PreparedQuerySet(self.model)
+        queryset.fields = self.fields
+        queryset.model = self.model
+        queryset.query = self.query
+        queryset.capabilities = self.capabilities
+        queryset._prefetch_map = copy(self._prefetch_map)
+        queryset._prefetch_queries = copy(self._prefetch_queries)
+        queryset._single = self._single
+        queryset._raise_does_not_exist = self._raise_does_not_exist
+        queryset._db = self._db
+        queryset._limit = self._limit
+        queryset._offset = self._offset
+        queryset._fields_for_select = self._fields_for_select
+        queryset._filter_kwargs = copy(self._filter_kwargs)
+        queryset._orderings = copy(self._orderings)
+        queryset._joined_tables = copy(self._joined_tables)
+        queryset._q_objects = copy(self._q_objects)
+        queryset._distinct = self._distinct
+        queryset._annotations = copy(self._annotations)
+        queryset._having = copy(self._having)
+        queryset._custom_filters = copy(self._custom_filters)
+        queryset._group_bys = copy(self._group_bys)
+        queryset._select_for_update = self._select_for_update
+        queryset._select_for_update_nowait = self._select_for_update_nowait
+        queryset._select_for_update_skip_locked = self._select_for_update_skip_locked
+        queryset._select_for_update_of = self._select_for_update_of
+        queryset._select_for_update_no_key = self._select_for_update_no_key
+        queryset._select_related = self._select_related
+        queryset._select_related_idx = self._select_related_idx
+        queryset._force_indexes = self._force_indexes
+        queryset._use_indexes = self._use_indexes
+        queryset._cache_key = key
+
+        return queryset
+
+
+class PreparedQuerySet(QuerySet[MODEL]):
+    __slots__ = (
+        "_cache_key",
+        "_prepared",
+        "_custom_fields",
+        "_sql_cache",
+        "_executor",
+        "_dynamic_params",
+        "_dynamic_params_names",
+    )
+
+    def __init__(self, model: type[MODEL]) -> None:
+        super().__init__(model)
+        self._cache_key: str | None = None
+        self._prepared: bool = False
+
+        self._custom_fields = None
+        self._sql_cache = None
+        self._executor = None
+        self._dynamic_params = None
+        self._dynamic_params_names = None
+
+    def _clone(self) -> PreparedQuerySet[MODEL]:
+        queryset = super()._clone()
+        queryset._cache_key = self._cache_key
+        queryset._prepared = self._prepared
+        return cast(PreparedQuerySet, queryset)
+
+    def prepare_sql(self, key: str) -> NoReturn:
+        raise NotImplementedError
+
+    def prepared(self) -> PreparedQuerySet[MODEL]:
+        if self._cache_key is None:
+            raise ValueError("QuerySet.prepare_sql() must be called before QuerySet.prepared()")
+
+        if self._cache_key in self.model._meta.query_cache:
+            return self.model._meta.query_cache[self._cache_key]
+
+        queryset = self._clone()
+
+        queryset._choose_db_if_not_chosen(queryset._select_for_update)
+        queryset._make_query()
+
+        queryset._custom_fields = list(self._annotations.keys())
+        queryset._sql_cache = {}
+        queryset._executor = queryset._db.executor_class(
+            model=queryset.model,
+            db=queryset._db,
+            prefetch_map=queryset._prefetch_map,
+            prefetch_queries=queryset._prefetch_queries,
+            select_related_idx=queryset._select_related_idx,
         )
+        _, params = queryset.query.get_parameterized_sql()
+        queryset._dynamic_params = {
+            param.name: param
+            for param in params
+            if isinstance(param, CollectionParameter)
+        }
+        queryset._dynamic_params_names = sorted(queryset._dynamic_params.keys())
+
+        queryset._prepared = True
+
+        self.model._meta.query_cache[self._cache_key] = queryset
+
+        return queryset
+
+    def _get_or_create_cached_sql(self, params: dict[str, Any]) -> CachedSql:
+        reset_params = []
+
+        # TODO: cache also by database dialect
+        cache_key = "query"
+        for name in self._dynamic_params_names:
+            value = params[name]
+            if not isinstance(value, (tuple, list, set)):
+                # TODO: raise exception?
+                continue
+
+            param = self._dynamic_params[name]
+            cache_key += f"-{name}{len(value)}"
+            param.collection_size = len(value)
+            reset_params.append(param)
+
+        if cache_key not in self._sql_cache:
+            # TODO: probably could be done in a better way?
+            ctx = TortoiseSqlContext.copy(self.query.QUERY_CLS.SQL_CONTEXT, dynamic_params=self._dynamic_params)
+            sql, params = self.query.get_parameterized_sql(ctx)
+            self._sql_cache[cache_key] = CachedSql(sql, params)
+
+        for param in reset_params:
+            param.collection_size = None
+
+        return self._sql_cache[cache_key]
+
+    async def execute(self, **params) -> list[MODEL]:
+        cached_query = self._get_or_create_cached_sql(params)
+        filled_params = cached_query.make_filled_params(params)
+
+        # TODO: re-create executor when database changes
+        instance_list = await self._executor.execute_select(
+            cached_query.sql, filled_params,
+            custom_fields=self._custom_fields,
+        )
+        if self._single:
+            if len(instance_list) == 1:
+                return instance_list[0]
+            if not instance_list:
+                if self._raise_does_not_exist:
+                    raise DoesNotExist(self.model)
+                return None  # type: ignore
+            raise MultipleObjectsReturned(self.model)
+        return instance_list
+
+    def filter(self, *args: Q, **kwargs: Any) -> PreparedQuerySet[MODEL]:
+        if self._prepared:
+            raise ValueError("Cannot call filter on already prepared queryset.")
+        return cast(PreparedQuerySet, super().filter(*args, **kwargs))
+
+    def exclude(self, *args: Q, **kwargs: Any) -> PreparedQuerySet[MODEL]:
+        if self._prepared:
+            raise ValueError("Cannot call exclude on already prepared queryset.")
+        return cast(PreparedQuerySet, super().exclude(*args, **kwargs))
+
+    def order_by(self, *orderings: str) -> PreparedQuerySet[MODEL]:
+        if self._prepared:
+            raise ValueError("Cannot call order_by on already prepared queryset.")
+        return cast(PreparedQuerySet, super().order_by(*orderings))
+
+    def latest(self, *orderings: str) -> QuerySetSingle[MODEL | None]:
+        if self._prepared:
+            raise ValueError("Cannot call latest on already prepared queryset.")
+        # TODO: fix typing
+        return cast(PreparedQuerySet, super().latest(*orderings))
+
+    def earliest(self, *orderings: str) -> QuerySetSingle[MODEL | None]:
+        if self._prepared:
+            raise ValueError("Cannot call earliest on already prepared queryset.")
+        # TODO: fix typing
+        return cast(PreparedQuerySet, super().earliest(*orderings))
+
+    def limit(self, limit: int) -> PreparedQuerySet[MODEL]:
+        if self._prepared:
+            raise ValueError("Cannot call limit on already prepared queryset.")
+        return cast(PreparedQuerySet, super().limit(limit))
+
+    def offset(self, offset: int) -> PreparedQuerySet[MODEL]:
+        if self._prepared:
+            raise ValueError("Cannot call offset on already prepared queryset.")
+        return cast(PreparedQuerySet, super().offset(offset))
+
+    def __getitem__(self, key: slice) -> PreparedQuerySet[MODEL]:
+        if self._prepared:
+            raise ValueError("Cannot call __getitem__ on already prepared queryset.")
+        return cast(PreparedQuerySet, super().__getitem__(key))
+
+    def distinct(self) -> PreparedQuerySet[MODEL]:
+        if self._prepared:
+            raise ValueError("Cannot call distinct on already prepared queryset.")
+        return cast(PreparedQuerySet, super().distinct())
+
+    def select_for_update(
+        self,
+        nowait: bool = False,
+        skip_locked: bool = False,
+        of: tuple[str, ...] = (),
+        no_key: bool = False,
+    ) -> PreparedQuerySet[MODEL]:
+        if self._prepared:
+            raise ValueError("Cannot call select_for_update on already prepared queryset.")
+        return cast(PreparedQuerySet, super().select_for_update(
+            nowait, skip_locked, of, no_key
+        ))
+
+    def annotate(self, **kwargs: Expression | Term) -> PreparedQuerySet[MODEL]:
+        if self._prepared:
+            raise ValueError("Cannot call annotate on already prepared queryset.")
+        return cast(PreparedQuerySet, super().annotate(*kwargs))
+
+    def group_by(self, *fields: str) -> PreparedQuerySet[MODEL]:
+        if self._prepared:
+            raise ValueError("Cannot call group_by on already prepared queryset.")
+        return cast(PreparedQuerySet, super().group_by(*fields))
+
+    def values_list(self, *fields_: str, flat: bool = False) -> ValuesListQuery[Literal[False]]:
+        # TODO: implementation for PreparedQuerySet.delete()
+        raise NotImplementedError
+
+    def values(self, *args: str, **kwargs: str) -> ValuesQuery[Literal[False]]:
+        # TODO: implementation for PreparedQuerySet.delete()
+        raise NotImplementedError
+
+    def delete(self) -> DeleteQuery:
+        # TODO: implementation for PreparedQuerySet.delete()
+        raise NotImplementedError
+
+    def update(self, **kwargs: Any) -> UpdateQuery:
+        # TODO: implementation for PreparedQuerySet.update()
+        raise NotImplementedError
+
+    def count(self) -> CountQuery:
+        # TODO: implementation for PreparedQuerySet.count()
+        raise NotImplementedError
+
+    def exists(self) -> ExistsQuery:
+        # TODO: implementation for PreparedQuerySet.exists()
+        raise NotImplementedError
+
+    def all(self) -> PreparedQuerySet[MODEL]:
+        if self._prepared:
+            raise ValueError("Cannot call all on already prepared queryset.")
+        return cast(PreparedQuerySet, super().all())
+
+    def first(self) -> QuerySetSingle[MODEL | None]:
+        if self._prepared:
+            raise ValueError("Cannot call first on already prepared queryset.")
+        # TODO: fix typing
+        return cast(PreparedQuerySet, super().first())
+
+    def last(self) -> QuerySetSingle[MODEL | None]:
+        if self._prepared:
+            raise ValueError("Cannot call last on already prepared queryset.")
+        # TODO: fix typing
+        return cast(PreparedQuerySet, super().last())
+
+    def get(self, *args: Q, **kwargs: Any) -> QuerySetSingle[MODEL]:
+        if self._prepared:
+            raise ValueError("Cannot call get on already prepared queryset.")
+        # TODO: fix typing
+        return cast(PreparedQuerySet, super().get(*args, **kwargs))
+
+    async def in_bulk(self, id_list: Iterable[str | int], field_name: str) -> dict[str, MODEL]:
+        raise NotImplementedError("Prepared queries don't support in_bulk.")
+
+    def bulk_create(
+        self,
+        objects: Iterable[MODEL],
+        batch_size: int | None = None,
+        ignore_conflicts: bool = False,
+        update_fields: Iterable[str] | None = None,
+        on_conflict: Iterable[str] | None = None,
+    ) -> BulkCreateQuery[MODEL]:
+        raise NotImplementedError("Prepared queries don't support bulk_create.")
+
+    def bulk_update(
+        self,
+        objects: Iterable[MODEL],
+        fields: Iterable[str],
+        batch_size: int | None = None,
+    ) -> BulkUpdateQuery[MODEL]:
+        raise NotImplementedError("Prepared queries don't support bulk_update.")
+
+    def get_or_none(self, *args: Q, **kwargs: Any) -> QuerySetSingle[MODEL | None]:
+        if self._prepared:
+            raise ValueError("Cannot call get_or_none on already prepared queryset.")
+        # TODO: fix typing
+        return cast(PreparedQuerySet, super().get_or_none(*args, **kwargs))
+
+    def only(self, *fields_for_select: str) -> PreparedQuerySet[MODEL]:
+        if self._prepared:
+            raise ValueError("Cannot call only on already prepared queryset.")
+        return cast(PreparedQuerySet, super().only(*fields_for_select))
+
+    def select_related(self, *fields: str) -> PreparedQuerySet[MODEL]:
+        if self._prepared:
+            raise ValueError("Cannot call select_related on already prepared queryset.")
+        return cast(PreparedQuerySet, super().select_related(*fields))
+
+    def force_index(self, *index_names: str) -> PreparedQuerySet[MODEL]:
+        if self._prepared:
+            raise ValueError("Cannot call force_index on already prepared queryset.")
+        return cast(PreparedQuerySet, super().force_index(*index_names))
+
+    def use_index(self, *index_names: str) -> PreparedQuerySet[MODEL]:
+        if self._prepared:
+            raise ValueError("Cannot call use_index on already prepared queryset.")
+        return cast(PreparedQuerySet, super().use_index(*index_names))
+
+    def prefetch_related(self, *args: str | Prefetch) -> PreparedQuerySet[MODEL]:
+        if self._prepared:
+            raise ValueError("Cannot call prefetch_related on already prepared queryset.")
+        return cast(PreparedQuerySet, super().prefetch_related(*args))
 
 
 class CachedSql:
@@ -1309,77 +1621,6 @@ class CachedSql:
                 filled_params[idx] = param.encode_value(value)
 
         return filled_params
-
-
-class PreparedQuery(AwaitableQuery[MODEL]):
-    def __init__(
-            self, query: QueryBuilder, db: BaseDBAsyncClient, model: type[MODEL], prefetch_map: ...,
-            prefetch_queries: ..., select_related_idx: ..., custom_fields: list[...], single: bool,
-            raise_does_not_exist: bool,
-    ) -> None:
-        super().__init__(model)
-
-        self._query = query
-        self._cached_sql = {}
-        self._executor = db.executor_class(
-            model=model,
-            db=db,
-            prefetch_map=prefetch_map,
-            prefetch_queries=prefetch_queries,
-            select_related_idx=select_related_idx,
-        )
-        self._model = model
-        self._custom_fields = custom_fields
-        self._single = single
-        self._raise_does_not_exist = raise_does_not_exist
-        _, params = self._query.get_parameterized_sql()
-        self._dynamic_params = {
-            param.name: param
-            for param in params
-            if isinstance(param, CollectionParameter)
-        }
-
-    def _get_or_create_cached_sql(self, params: dict[str, Any]) -> CachedSql:
-        reset_params = []
-
-        cache_key = "query"
-        for name, value in params.items():
-            if name not in self._dynamic_params or not isinstance(value, (tuple, list, set)):
-                continue
-
-            param = self._dynamic_params[name]
-            cache_key += f"-{name}{len(value)}"
-            param.collection_size = len(value)
-            reset_params.append(param)
-
-        if cache_key not in self._cached_sql:
-            # TODO: probably could be done in a better way?
-            ctx = TortoiseSqlContext.copy(self.query.QUERY_CLS.SQL_CONTEXT, dynamic_params=self._dynamic_params)
-            sql, params = self._query.get_parameterized_sql(ctx)
-            self._cached_sql[cache_key] = CachedSql(sql, params)
-
-        for param in reset_params:
-            param.collection_size = None
-
-        return self._cached_sql[cache_key]
-
-    async def execute(self, **params) -> list[MODEL]:
-        cached_query = self._get_or_create_cached_sql(params)
-        filled_params = cached_query.make_filled_params(params)
-
-        instance_list = await self._executor.execute_select(
-            cached_query.sql, filled_params,
-            custom_fields=self._custom_fields,
-        )
-        if self._single:
-            if len(instance_list) == 1:
-                return instance_list[0]
-            if not instance_list:
-                if self._raise_does_not_exist:
-                    raise DoesNotExist(self.model)
-                return None  # type: ignore
-            raise MultipleObjectsReturned(self.model)
-        return instance_list
 
 
 class UpdateQuery(AwaitableQuery):

@@ -29,8 +29,7 @@ async def t0_sanity_check(some1: SomeModel, some2: SomeModel, some3: SomeModel) 
 
 
 async def t1_simple_gte(some1: SomeModel, some2: SomeModel, some3: SomeModel) -> None:
-    query = SomeModel.filter(id__gte=Parameter("idk"))
-    prepared = query.prepare()
+    prepared = SomeModel.prepare_sql("some_query1").filter(id__gte=Parameter("idk")).prepared()
     actual = await prepared.execute(idk=some2.id)
     print(actual)
 
@@ -41,8 +40,7 @@ async def t1_simple_gte(some1: SomeModel, some2: SomeModel, some3: SomeModel) ->
 
 
 async def t2_simple_string_param(some1: SomeModel, some2: SomeModel, some3: SomeModel) -> None:
-    query = SomeModel.filter(name=Parameter("idk"))
-    prepared = query.prepare()
+    prepared = SomeModel.prepare_sql("some_query2").filter(name=Parameter("idk")).prepared()
     actual1 = await prepared.execute(idk=some2.id)
     print(actual1)
     actual2 = await prepared.execute(idk=some2.name)
@@ -58,8 +56,7 @@ async def t2_simple_string_param(some1: SomeModel, some2: SomeModel, some3: Some
 
 
 async def t3_startswith(some1: SomeModel, some2: SomeModel, some3: SomeModel) -> None:
-    query = SomeModel.filter(name__startswith=Parameter("idk"))
-    prepared = query.prepare()
+    prepared = SomeModel.prepare_sql("some_query3").filter(name__startswith=Parameter("idk")).prepared()
     actual1 = await prepared.execute(idk=some2.id)
     print(actual1)
     actual2 = await prepared.execute(idk=some2.name)
@@ -85,8 +82,7 @@ async def t3_startswith(some1: SomeModel, some2: SomeModel, some3: SomeModel) ->
 
 
 async def t4_in(some1: SomeModel, some2: SomeModel, some3: SomeModel) -> None:
-    query = SomeModel.filter(id__in=Parameter("idk"))
-    prepared = query.prepare()
+    prepared = SomeModel.prepare_sql("some_query4").filter(id__in=Parameter("idk")).prepared()
     actual1 = await prepared.execute(idk=[some2.id, some1.id])
     print(actual1)
     actual2 = await prepared.execute(idk=[some3.id, some3.id * 2, some3.id * 10])
@@ -125,7 +121,7 @@ async def t5_compare_prepared_non_prepared(*_) -> None:
     print(f"Non-prepared: {non_prepared_millis:.2f}ms")
 
     start_time = time.perf_counter()
-    query = SomeModel.filter(Q(id__lte=Parameter("id_lte"), id__in=Parameter("id_in"), join_type=Q.OR), id__gte=Parameter("id_gte")).prepare()
+    query = SomeModel.prepare_sql("some_query5").filter(Q(id__lte=Parameter("id_lte"), id__in=Parameter("id_in"), join_type=Q.OR), id__gte=Parameter("id_gte")).prepared()
     for _ in range(ITERS):
         await query.execute(id_lte=random_id * 2, id_gte=random_id, id_in=random_ids)
     end_time = time.perf_counter()
@@ -145,8 +141,7 @@ async def t5_compare_prepared_non_prepared(*_) -> None:
 
 
 async def t6_subqueries(some1: SomeModel, some2: SomeModel, some3: SomeModel) -> None:
-    query = SomeModel.filter(id__in=Subquery(SomeModel.filter(Q(id=Parameter("idk1")) | Q(id=Parameter("idk2"))).values("id")))
-    prepared = query.prepare()
+    prepared = SomeModel.prepare_sql("some_query6").filter(id__in=Subquery(SomeModel.filter(Q(id=Parameter("idk1")) | Q(id=Parameter("idk2"))).values("id"))).prepared()
     actual1 = await prepared.execute(idk1=some2.id, idk2=some1.id)
     print(actual1)
     actual2 = await prepared.execute(idk1=some3.id, idk2=some3.id * 2)
@@ -162,8 +157,7 @@ async def t6_subqueries(some1: SomeModel, some2: SomeModel, some3: SomeModel) ->
 
 
 async def t7_subqueries_in(some1: SomeModel, some2: SomeModel, some3: SomeModel) -> None:
-    query = SomeModel.filter(id__in=Subquery(SomeModel.filter(id__in=Parameter("idk")).values("id")))
-    prepared = query.prepare()
+    prepared = SomeModel.prepare_sql("some_query7").filter(id__in=Subquery(SomeModel.filter(id__in=Parameter("idk")).values("id"))).prepared()
     actual1 = await prepared.execute(idk=[some2.id, some1.id])
     print(actual1)
     actual2 = await prepared.execute(idk=[some3.id, some3.id * 2, some3.id * 10])
