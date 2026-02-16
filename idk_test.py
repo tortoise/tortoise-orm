@@ -27,6 +27,16 @@ async def t0_sanity_check(some1: SomeModel, some2: SomeModel, some3: SomeModel) 
     idk = await SomeModel.filter(id=some2.id)
     print(idk)
 
+    cache_key = "_some_query"
+    prepared = SomeModel.prepare_sql(cache_key).filter(id=Parameter("idk")).prepared()
+    assert SomeModel.prepare_sql(cache_key) is prepared
+    try:
+        prepared.filter(id=1)
+    except ValueError:
+        ...
+    else:
+        raise RuntimeError("PreparedQuerySet.filter on prepared query should raise")
+
 
 async def t1_simple_gte(some1: SomeModel, some2: SomeModel, some3: SomeModel) -> None:
     prepared = SomeModel.prepare_sql("some_query1").filter(id__gte=Parameter("idk")).prepared()

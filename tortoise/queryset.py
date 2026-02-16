@@ -5,7 +5,7 @@ import types
 from collections import defaultdict
 from collections.abc import AsyncIterator, Callable, Collection, Generator, Iterable
 from copy import copy
-from typing import TYPE_CHECKING, Any, Generic, Literal, Protocol, TypeVar, cast, overload, NoReturn
+from typing import TYPE_CHECKING, Any, Generic, Literal, Protocol, TypeVar, cast, overload, NoReturn, ParamSpec
 
 from pypika_tortoise import JoinType, Order, Table
 from pypika_tortoise.analytics import Count
@@ -1299,6 +1299,20 @@ class QuerySet(AwaitableQuery[MODEL]):
         return queryset
 
 
+P = ParamSpec("P")
+T = TypeVar("T")
+
+
+def _disallow_queryset_methods_on_prepared_query(func: Callable[P, T]) -> Callable[P, T]:
+    @functools.wraps(func)
+    def decorated(self: PreparedQuerySet, *args: P.args, **kwargs: P.kwargs) -> T:
+        if self._prepared:
+            raise ValueError(f"Cannot call \"{func.__name__}\" on already prepared queryset.")
+        return func(self, *args, **kwargs)
+
+    return decorated
+
+
 class PreparedQuerySet(QuerySet[MODEL]):
     __slots__ = (
         "_cache_key",
@@ -1411,53 +1425,45 @@ class PreparedQuerySet(QuerySet[MODEL]):
             raise MultipleObjectsReturned(self.model)
         return instance_list
 
+    @_disallow_queryset_methods_on_prepared_query
     def filter(self, *args: Q, **kwargs: Any) -> PreparedQuerySet[MODEL]:
-        if self._prepared:
-            raise ValueError("Cannot call filter on already prepared queryset.")
         return cast(PreparedQuerySet, super().filter(*args, **kwargs))
 
+    @_disallow_queryset_methods_on_prepared_query
     def exclude(self, *args: Q, **kwargs: Any) -> PreparedQuerySet[MODEL]:
-        if self._prepared:
-            raise ValueError("Cannot call exclude on already prepared queryset.")
         return cast(PreparedQuerySet, super().exclude(*args, **kwargs))
 
+    @_disallow_queryset_methods_on_prepared_query
     def order_by(self, *orderings: str) -> PreparedQuerySet[MODEL]:
-        if self._prepared:
-            raise ValueError("Cannot call order_by on already prepared queryset.")
         return cast(PreparedQuerySet, super().order_by(*orderings))
 
+    @_disallow_queryset_methods_on_prepared_query
     def latest(self, *orderings: str) -> QuerySetSingle[MODEL | None]:
-        if self._prepared:
-            raise ValueError("Cannot call latest on already prepared queryset.")
         # TODO: fix typing
         return cast(PreparedQuerySet, super().latest(*orderings))
 
+    @_disallow_queryset_methods_on_prepared_query
     def earliest(self, *orderings: str) -> QuerySetSingle[MODEL | None]:
-        if self._prepared:
-            raise ValueError("Cannot call earliest on already prepared queryset.")
         # TODO: fix typing
         return cast(PreparedQuerySet, super().earliest(*orderings))
 
+    @_disallow_queryset_methods_on_prepared_query
     def limit(self, limit: int) -> PreparedQuerySet[MODEL]:
-        if self._prepared:
-            raise ValueError("Cannot call limit on already prepared queryset.")
         return cast(PreparedQuerySet, super().limit(limit))
 
+    @_disallow_queryset_methods_on_prepared_query
     def offset(self, offset: int) -> PreparedQuerySet[MODEL]:
-        if self._prepared:
-            raise ValueError("Cannot call offset on already prepared queryset.")
         return cast(PreparedQuerySet, super().offset(offset))
 
+    @_disallow_queryset_methods_on_prepared_query
     def __getitem__(self, key: slice) -> PreparedQuerySet[MODEL]:
-        if self._prepared:
-            raise ValueError("Cannot call __getitem__ on already prepared queryset.")
         return cast(PreparedQuerySet, super().__getitem__(key))
 
+    @_disallow_queryset_methods_on_prepared_query
     def distinct(self) -> PreparedQuerySet[MODEL]:
-        if self._prepared:
-            raise ValueError("Cannot call distinct on already prepared queryset.")
         return cast(PreparedQuerySet, super().distinct())
 
+    @_disallow_queryset_methods_on_prepared_query
     def select_for_update(
         self,
         nowait: bool = False,
@@ -1465,66 +1471,64 @@ class PreparedQuerySet(QuerySet[MODEL]):
         of: tuple[str, ...] = (),
         no_key: bool = False,
     ) -> PreparedQuerySet[MODEL]:
-        if self._prepared:
-            raise ValueError("Cannot call select_for_update on already prepared queryset.")
         return cast(PreparedQuerySet, super().select_for_update(
             nowait, skip_locked, of, no_key
         ))
 
+    @_disallow_queryset_methods_on_prepared_query
     def annotate(self, **kwargs: Expression | Term) -> PreparedQuerySet[MODEL]:
-        if self._prepared:
-            raise ValueError("Cannot call annotate on already prepared queryset.")
         return cast(PreparedQuerySet, super().annotate(*kwargs))
 
+    @_disallow_queryset_methods_on_prepared_query
     def group_by(self, *fields: str) -> PreparedQuerySet[MODEL]:
-        if self._prepared:
-            raise ValueError("Cannot call group_by on already prepared queryset.")
         return cast(PreparedQuerySet, super().group_by(*fields))
 
+    @_disallow_queryset_methods_on_prepared_query
     def values_list(self, *fields_: str, flat: bool = False) -> ValuesListQuery[Literal[False]]:
         # TODO: implementation for PreparedQuerySet.delete()
         raise NotImplementedError
 
+    @_disallow_queryset_methods_on_prepared_query
     def values(self, *args: str, **kwargs: str) -> ValuesQuery[Literal[False]]:
         # TODO: implementation for PreparedQuerySet.delete()
         raise NotImplementedError
 
+    @_disallow_queryset_methods_on_prepared_query
     def delete(self) -> DeleteQuery:
         # TODO: implementation for PreparedQuerySet.delete()
         raise NotImplementedError
 
+    @_disallow_queryset_methods_on_prepared_query
     def update(self, **kwargs: Any) -> UpdateQuery:
         # TODO: implementation for PreparedQuerySet.update()
         raise NotImplementedError
 
+    @_disallow_queryset_methods_on_prepared_query
     def count(self) -> CountQuery:
         # TODO: implementation for PreparedQuerySet.count()
         raise NotImplementedError
 
+    @_disallow_queryset_methods_on_prepared_query
     def exists(self) -> ExistsQuery:
         # TODO: implementation for PreparedQuerySet.exists()
         raise NotImplementedError
 
+    @_disallow_queryset_methods_on_prepared_query
     def all(self) -> PreparedQuerySet[MODEL]:
-        if self._prepared:
-            raise ValueError("Cannot call all on already prepared queryset.")
         return cast(PreparedQuerySet, super().all())
 
+    @_disallow_queryset_methods_on_prepared_query
     def first(self) -> QuerySetSingle[MODEL | None]:
-        if self._prepared:
-            raise ValueError("Cannot call first on already prepared queryset.")
         # TODO: fix typing
         return cast(PreparedQuerySet, super().first())
 
+    @_disallow_queryset_methods_on_prepared_query
     def last(self) -> QuerySetSingle[MODEL | None]:
-        if self._prepared:
-            raise ValueError("Cannot call last on already prepared queryset.")
         # TODO: fix typing
         return cast(PreparedQuerySet, super().last())
 
+    @_disallow_queryset_methods_on_prepared_query
     def get(self, *args: Q, **kwargs: Any) -> QuerySetSingle[MODEL]:
-        if self._prepared:
-            raise ValueError("Cannot call get on already prepared queryset.")
         # TODO: fix typing
         return cast(PreparedQuerySet, super().get(*args, **kwargs))
 
@@ -1549,35 +1553,29 @@ class PreparedQuerySet(QuerySet[MODEL]):
     ) -> BulkUpdateQuery[MODEL]:
         raise NotImplementedError("Prepared queries don't support bulk_update.")
 
+    @_disallow_queryset_methods_on_prepared_query
     def get_or_none(self, *args: Q, **kwargs: Any) -> QuerySetSingle[MODEL | None]:
-        if self._prepared:
-            raise ValueError("Cannot call get_or_none on already prepared queryset.")
         # TODO: fix typing
         return cast(PreparedQuerySet, super().get_or_none(*args, **kwargs))
 
+    @_disallow_queryset_methods_on_prepared_query
     def only(self, *fields_for_select: str) -> PreparedQuerySet[MODEL]:
-        if self._prepared:
-            raise ValueError("Cannot call only on already prepared queryset.")
         return cast(PreparedQuerySet, super().only(*fields_for_select))
 
+    @_disallow_queryset_methods_on_prepared_query
     def select_related(self, *fields: str) -> PreparedQuerySet[MODEL]:
-        if self._prepared:
-            raise ValueError("Cannot call select_related on already prepared queryset.")
         return cast(PreparedQuerySet, super().select_related(*fields))
 
+    @_disallow_queryset_methods_on_prepared_query
     def force_index(self, *index_names: str) -> PreparedQuerySet[MODEL]:
-        if self._prepared:
-            raise ValueError("Cannot call force_index on already prepared queryset.")
         return cast(PreparedQuerySet, super().force_index(*index_names))
 
+    @_disallow_queryset_methods_on_prepared_query
     def use_index(self, *index_names: str) -> PreparedQuerySet[MODEL]:
-        if self._prepared:
-            raise ValueError("Cannot call use_index on already prepared queryset.")
         return cast(PreparedQuerySet, super().use_index(*index_names))
 
+    @_disallow_queryset_methods_on_prepared_query
     def prefetch_related(self, *args: str | Prefetch) -> PreparedQuerySet[MODEL]:
-        if self._prepared:
-            raise ValueError("Cannot call prefetch_related on already prepared queryset.")
         return cast(PreparedQuerySet, super().prefetch_related(*args))
 
 
