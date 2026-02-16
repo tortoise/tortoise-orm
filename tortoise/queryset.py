@@ -1447,13 +1447,41 @@ class PreparedQuerySet(QuerySet[MODEL]):
         # TODO: fix typing
         return cast(PreparedQuerySet, super().earliest(*orderings))
 
+    @staticmethod
+    def _validate_limit(value: int) -> int:
+        if value < 0:
+            raise ParamsError("Limit should be non-negative number")
+        return value
+
     @_disallow_queryset_methods_on_prepared_query
-    def limit(self, limit: int) -> PreparedQuerySet[MODEL]:
-        return cast(PreparedQuerySet, super().limit(limit))
+    def limit(self, limit: int | Parameter) -> PreparedQuerySet[MODEL]:
+        if isinstance(limit, int) and limit < 0:
+            raise ParamsError("Limit should be non-negative number")
+        elif isinstance(limit, Parameter):
+            limit.encode = self._validate_limit
+
+        queryset = self._clone()
+        queryset._limit = limit # type: ignore
+        return queryset
+
+    @staticmethod
+    def _validate_offset(value: int) -> int:
+        if value < 0:
+            raise ParamsError("Offset should be non-negative number")
+        return value
 
     @_disallow_queryset_methods_on_prepared_query
     def offset(self, offset: int) -> PreparedQuerySet[MODEL]:
-        return cast(PreparedQuerySet, super().offset(offset))
+        if isinstance(offset, int) and offset < 0:
+            raise ParamsError("Offset should be non-negative number")
+        elif isinstance(offset, Parameter):
+            offset.encode = self._validate_offset
+
+        queryset = self._clone()
+        queryset._offset = offset
+        if self.capabilities.requires_limit and queryset._limit is None:
+            queryset._limit = 1000000
+        return queryset
 
     @_disallow_queryset_methods_on_prepared_query
     def __getitem__(self, key: slice) -> PreparedQuerySet[MODEL]:
@@ -1521,9 +1549,19 @@ class PreparedQuerySet(QuerySet[MODEL]):
         )
 
     @_disallow_queryset_methods_on_prepared_query
-    def count(self) -> CountQuery:
-        # TODO: implementation for PreparedQuerySet.count()
-        raise NotImplementedError
+    def count(self) -> PreparedCountQuery:
+        return PreparedCountQuery(
+            model=self.model,
+            db=self._db,
+            q_objects=self._q_objects,
+            annotations=self._annotations,
+            custom_filters=self._custom_filters,
+            limit=self._limit,
+            offset=self._offset,
+            force_indexes=self._force_indexes,
+            use_indexes=self._use_indexes,
+            cache_key=self._cache_key,
+        )
 
     @_disallow_queryset_methods_on_prepared_query
     def exists(self) -> PreparedExistsQuery:
@@ -2223,6 +2261,129 @@ class CountQuery(AwaitableQuery):
 
     async def _execute(self) -> int:
         _, result = await self._db.execute_query(*self.query.get_parameterized_sql())
+        if not result:
+            return 0
+        count = list(dict(result[0]).values())[0] - self._offset
+        if self._limit and count > self._limit:
+            return self._limit
+        return count
+
+
+class PreparedCountQuery(CountQuery):
+    __slots__ = (
+        "_cache_key",
+        "_prepared",
+        "_sql_cache",
+        "_dynamic_params",
+        "_dynamic_params_names",
+    )
+
+    def __init__(
+            self,
+            model: type[MODEL],
+            db: BaseDBAsyncClient,
+            q_objects: list[Q],
+            annotations: dict[str, Any],
+            custom_filters: dict[str, FilterInfoDict],
+            limit: int | None,
+            offset: int | None,
+            force_indexes: set[str],
+            use_indexes: set[str],
+            cache_key: str,
+    ) -> None:
+        super().__init__(
+            model, db, q_objects, annotations, custom_filters, limit, offset, force_indexes, use_indexes,
+        )
+
+        self._cache_key: str = cache_key
+        self._prepared: bool = False
+
+        self._sql_cache = None
+        self._dynamic_params = None
+        self._dynamic_params_names = None
+
+    def _clone(self) -> PreparedCountQuery:
+        query = self.__class__(
+            model=self.model,
+            db=self._db,
+            q_objects=self._q_objects,
+            annotations=self._annotations,
+            custom_filters=self._custom_filters,
+            limit=self._limit,
+            offset=self._offset,
+            force_indexes=self._force_indexes,
+            use_indexes=self._use_indexes,
+            cache_key=self._cache_key,
+        )
+        query._prepared = self._prepared
+        return query
+
+    def prepare_sql(self, key: str) -> NoReturn:
+        raise NotImplementedError
+
+    # TODO: big part of this method is duplicated with PreparedQuerySet
+    #  (and almost 1:1 with PreparedUpdateQuery), de-duplicate it
+    def prepared(self) -> PreparedCountQuery:
+        if self._cache_key is None:
+            raise ValueError("QuerySet.prepare_sql() must be called before QuerySet.prepared()")
+
+        if self._cache_key in self.model._meta.query_cache:
+            return self.model._meta.query_cache[self._cache_key]
+
+        queryset = self._clone()
+
+        queryset._choose_db_if_not_chosen(False)
+        queryset._make_query()
+
+        queryset._sql_cache = {}
+        _, params = queryset.query.get_parameterized_sql()
+        queryset._dynamic_params = {
+            param.name: param
+            for param in params
+            if isinstance(param, CollectionParameter)
+        }
+        queryset._dynamic_params_names = sorted(queryset._dynamic_params.keys())
+
+        queryset._prepared = True
+
+        self.model._meta.query_cache[self._cache_key] = queryset
+
+        return queryset
+
+    # TODO: this is a copy of PreparedQuerySet._get_or_create_cached_sql,
+    #  move into separate class maybe
+    def _get_or_create_cached_sql(self, params: dict[str, Any]) -> CachedSql:
+        reset_params = []
+
+        # TODO: cache also by database dialect
+        cache_key = "query"
+        for name in self._dynamic_params_names:
+            value = params[name]
+            if not isinstance(value, (tuple, list, set)):
+                # TODO: raise exception?
+                continue
+
+            param = self._dynamic_params[name]
+            cache_key += f"-{name}{len(value)}"
+            param.collection_size = len(value)
+            reset_params.append(param)
+
+        if cache_key not in self._sql_cache:
+            # TODO: probably could be done in a better way?
+            ctx = TortoiseSqlContext.copy(self.query.QUERY_CLS.SQL_CONTEXT, dynamic_params=self._dynamic_params)
+            sql, params = self.query.get_parameterized_sql(ctx)
+            self._sql_cache[cache_key] = CachedSql(sql, params)
+
+        for param in reset_params:
+            param.collection_size = None
+
+        return self._sql_cache[cache_key]
+
+    async def execute(self, **params) -> int:
+        cached_query = self._get_or_create_cached_sql(params)
+        filled_params = cached_query.make_filled_params(params)
+
+        _, result = await self._db.execute_query(cached_query.sql, filled_params)
         if not result:
             return 0
         count = list(dict(result[0]).values())[0] - self._offset

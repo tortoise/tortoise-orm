@@ -2,6 +2,7 @@ from tests.testmodels import (
     Author,
 )
 from tortoise.contrib import test
+from tortoise.exceptions import ParamsError
 from tortoise.expressions import Subquery, Q
 from tortoise.parameter import Parameter
 
@@ -150,13 +151,56 @@ class TestQuerysetPrepared(test.TestCase):
         self.assertEqual(set(existing), {author2.pk, author3.pk})
 
     async def test_exists(self):
-        author1 = await Author.create(name="1")
-        author2 = await Author.create(name="2")
-        author3 = await Author.create(name="3")
+        author = await Author.create(name="1")
 
         prepared = Author.prepare_sql("test_exists").filter(
             id__in=Parameter("ids"),
         ).exists().prepared()
 
-        self.assertTrue(await prepared.execute(ids=[author1.pk]))
-        self.assertFalse(await prepared.execute(ids=[author3.pk * 2]))
+        self.assertTrue(await prepared.execute(ids=[author.pk]))
+        self.assertFalse(await prepared.execute(ids=[author.pk * 2]))
+
+    async def test_count(self):
+        author1 = await Author.create(name="1")
+        author2 = await Author.create(name="2")
+        author3 = await Author.create(name="3")
+
+        prepared = Author.prepare_sql("test_count").filter(
+            id__gte=Parameter("idgte"),
+        ).count().prepared()
+
+        self.assertEqual(await prepared.execute(idgte=author1.pk), 3)
+        self.assertEqual(await prepared.execute(idgte=author2.pk), 2)
+        self.assertEqual(await prepared.execute(idgte=author3.pk), 1)
+        self.assertEqual(await prepared.execute(idgte=author3.pk * 2), 0)
+
+    async def test_parameter_in_limit(self):
+        author1 = await Author.create(name="1")
+        author2 = await Author.create(name="2")
+        author3 = await Author.create(name="3")
+
+        prepared = Author.prepare_sql("test_parameter_in_limit").all().limit(Parameter("lim")).order_by("id").prepared()
+
+        self.assertEqual(len(await prepared.execute(lim=1)), 1)
+        self.assertEqual(len(await prepared.execute(lim=2)), 2)
+        self.assertEqual(len(await prepared.execute(lim=3)), 3)
+        self.assertEqual(len(await prepared.execute(lim=4)), 3)
+
+        with self.assertRaises(ParamsError):
+            await prepared.execute(lim=-1)
+
+    async def test_parameter_in_offset(self):
+        author1 = await Author.create(name="1")
+        author2 = await Author.create(name="2")
+        author3 = await Author.create(name="3")
+
+        prepared = Author.prepare_sql("test_parameter_in_offset").all().offset(Parameter("off")).order_by("id").prepared()
+
+        self.assertEqual(len(await prepared.execute(off=1)), 2)
+        self.assertEqual(len(await prepared.execute(off=2)), 1)
+        self.assertEqual(len(await prepared.execute(off=3)), 0)
+        self.assertEqual(len(await prepared.execute(off=4)), 0)
+
+        with self.assertRaises(ParamsError):
+            await prepared.execute(off=-1)
+
