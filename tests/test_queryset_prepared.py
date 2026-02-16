@@ -133,3 +133,30 @@ class TestQuerysetPrepared(test.TestCase):
         await prepared.execute(search_id=author1.pk, replace_name=original_name1)
         await author1.refresh_from_db(["name"])
         self.assertEqual(author1.name, original_name1)
+
+    async def test_delete(self):
+        author1 = await Author.create(name="1")
+        author2 = await Author.create(name="2")
+        author3 = await Author.create(name="3")
+
+        prepared = Author.prepare_sql("test_delete").filter(
+            id__in=Parameter("ids"),
+        ).delete().prepared()
+
+        affected = await prepared.execute(ids=[author1.pk])
+        self.assertEqual(affected, 1)
+        self.assertEqual(await Author.all().count(), 2)
+        existing = await Author.all().values_list("id", flat=True)
+        self.assertEqual(set(existing), {author2.pk, author3.pk})
+
+    async def test_exists(self):
+        author1 = await Author.create(name="1")
+        author2 = await Author.create(name="2")
+        author3 = await Author.create(name="3")
+
+        prepared = Author.prepare_sql("test_exists").filter(
+            id__in=Parameter("ids"),
+        ).exists().prepared()
+
+        self.assertTrue(await prepared.execute(ids=[author1.pk]))
+        self.assertFalse(await prepared.execute(ids=[author3.pk * 2]))
