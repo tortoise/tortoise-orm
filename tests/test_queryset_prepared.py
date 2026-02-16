@@ -204,3 +204,63 @@ class TestQuerysetPrepared(test.TestCase):
         with self.assertRaises(ParamsError):
             await prepared.execute(off=-1)
 
+    async def test_values(self):
+        author = await Author.create(name="1")
+
+        prepared = Author.prepare_sql("test_values").filter(
+            id=Parameter("id"),
+        ).values().prepared()
+
+        self.assertEqual(
+            await prepared.execute(id=author.pk),
+            [{"id": author.pk, "name": author.name}],
+        )
+        self.assertEqual(
+            await prepared.execute(id=author.pk * 2),
+            [],
+        )
+
+    async def test_values_list_all_fields(self):
+        author = await Author.create(name="1")
+
+        prepared_all = Author.prepare_sql("test_values_list_all_fields").filter(
+            id=Parameter("id"),
+        ).values_list().prepared()
+        self.assertEqual(
+            await prepared_all.execute(id=author.pk),
+            [(author.pk, author.name)],
+        )
+        self.assertEqual(
+            await prepared_all.execute(id=author.pk * 2),
+            [],
+        )
+
+    async def test_values_list_only_id_field(self):
+        author = await Author.create(name="1")
+
+        prepared_ids = Author.prepare_sql("test_values_list_only_id_field").filter(
+            id=Parameter("id"),
+        ).values_list("id").prepared()
+        self.assertEqual(
+            await prepared_ids.execute(id=author.pk),
+            [(author.pk,)],
+        )
+        self.assertEqual(
+            await prepared_ids.execute(id=author.pk * 2),
+            [],
+        )
+
+    async def test_values_list_only_id_field_flat(self):
+        author = await Author.create(name="1")
+
+        prepared_ids_flat = Author.prepare_sql("test_values_list_only_id_field_flat").filter(
+            id=Parameter("id"),
+        ).values_list("id", flat=True).prepared()
+        self.assertEqual(
+            await prepared_ids_flat.execute(id=author.pk),
+            [author.pk],
+        )
+        self.assertEqual(
+            await prepared_ids_flat.execute(id=author.pk * 2),
+            [],
+        )
