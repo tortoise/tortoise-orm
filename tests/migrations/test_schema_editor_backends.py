@@ -54,8 +54,11 @@ async def test_postgres_bool_db_default_true() -> None:
     editor = BasePostgresSchemaEditor(client)
     await editor.add_field(Widget, "is_active")
 
-    assert client.executed
-    assert "DEFAULT TRUE" in client.executed[0]
+    assert len(client.executed) == 1
+    assert (
+        client.executed[0]
+        == 'ALTER TABLE "widget" ADD COLUMN "is_active" BOOL NOT NULL DEFAULT TRUE'
+    )
 
 
 @pytest.mark.asyncio
@@ -74,8 +77,11 @@ async def test_postgres_bool_db_default_false() -> None:
     editor = BasePostgresSchemaEditor(client)
     await editor.add_field(Widget, "is_active")
 
-    assert client.executed
-    assert "DEFAULT FALSE" in client.executed[0]
+    assert len(client.executed) == 1
+    assert (
+        client.executed[0]
+        == 'ALTER TABLE "widget" ADD COLUMN "is_active" BOOL NOT NULL DEFAULT FALSE'
+    )
 
 
 @pytest.mark.asyncio
@@ -94,8 +100,10 @@ async def test_base_editor_bool_db_default_still_uses_integer() -> None:
     editor = TestSchemaEditor(client)
     await editor.add_field(Widget, "is_active")
 
-    assert client.executed
-    assert "DEFAULT 1" in client.executed[0]
+    assert len(client.executed) == 1
+    assert (
+        client.executed[0] == 'ALTER TABLE "widget" ADD COLUMN "is_active" BOOL NOT NULL DEFAULT 1'
+    )
 
 
 @pytest.mark.asyncio
@@ -114,8 +122,8 @@ async def test_postgres_int_db_default_unaffected() -> None:
     editor = BasePostgresSchemaEditor(client)
     await editor.add_field(Widget, "stock")
 
-    assert client.executed
-    assert "DEFAULT 0" in client.executed[0]
+    assert len(client.executed) == 1
+    assert client.executed[0] == 'ALTER TABLE "widget" ADD COLUMN "stock" INT NOT NULL DEFAULT 0'
 
 
 @pytest.mark.asyncio
@@ -134,8 +142,8 @@ async def test_mssql_bool_db_default_still_uses_integer() -> None:
     editor = MSSQLSchemaEditor(client)
     await editor.add_field(Widget, "is_active")
 
-    assert client.executed
-    assert "DEFAULT 1" in client.executed[0]
+    assert len(client.executed) == 1
+    assert client.executed[0] == "ALTER TABLE [widget] ADD [is_active] BIT NOT NULL DEFAULT 1"
 
 
 @pytest.mark.asyncio
@@ -162,10 +170,8 @@ async def test_postgres_alter_field_bool_db_default() -> None:
     editor = BasePostgresSchemaEditor(client)
     await editor.alter_field(OldWidget, NewWidget, "is_active")
 
-    assert client.executed
-    set_default_sqls = [sql for sql in client.executed if "DEFAULT" in sql]
-    assert set_default_sqls, f"Expected SET DEFAULT SQL, got: {client.executed}"
-    assert "TRUE" in set_default_sqls[0]
+    assert len(client.executed) == 1
+    assert client.executed[0] == 'ALTER TABLE "widget" ALTER COLUMN "is_active" SET DEFAULT TRUE'
 
 
 # ---------------------------------------------------------------------------
@@ -197,11 +203,11 @@ async def test_mysql_alter_field_null_to_not_null() -> None:
     editor = MySQLSchemaEditor(client)
     await editor.alter_field(OldWidget, NewWidget, "budget")
 
-    assert client.executed
-    sql = client.executed[0]
-    assert "MODIFY COLUMN" in sql
-    assert "`budget`" in sql
-    assert "NOT NULL" in sql
+    assert len(client.executed) == 1
+    assert (
+        client.executed[0]
+        == "ALTER TABLE `department` MODIFY COLUMN `budget` DECIMAL(12,2) NOT NULL"
+    )
 
 
 @pytest.mark.asyncio
@@ -228,12 +234,10 @@ async def test_mysql_alter_field_not_null_to_null() -> None:
     editor = MySQLSchemaEditor(client)
     await editor.alter_field(OldWidget, NewWidget, "budget")
 
-    assert client.executed
-    sql = client.executed[0]
-    assert "MODIFY COLUMN" in sql
-    assert "`budget`" in sql
-    assert "NULL" in sql
-    assert "NOT NULL" not in sql
+    assert len(client.executed) == 1
+    assert (
+        client.executed[0] == "ALTER TABLE `department` MODIFY COLUMN `budget` DECIMAL(12,2) NULL"
+    )
 
 
 @pytest.mark.asyncio
@@ -260,10 +264,8 @@ async def test_mysql_alter_field_set_default() -> None:
     editor = MySQLSchemaEditor(client)
     await editor.alter_field(OldWidget, NewWidget, "stock")
 
-    assert client.executed
-    sql = client.executed[0]
-    assert "ALTER COLUMN `stock` SET DEFAULT" in sql
-    assert '"stock"' not in sql  # No double-quote quoting
+    assert len(client.executed) == 1
+    assert client.executed[0] == "ALTER TABLE `product` ALTER COLUMN `stock` SET DEFAULT (10)"
 
 
 # ---------------------------------------------------------------------------
@@ -295,11 +297,11 @@ async def test_mssql_alter_field_null_to_not_null() -> None:
     editor = MSSQLSchemaEditor(client)
     await editor.alter_field(OldWidget, NewWidget, "budget")
 
-    assert client.executed
-    sql = client.executed[0]
-    assert "ALTER COLUMN [budget]" in sql
-    assert "NOT NULL" in sql
-    assert "SET NOT NULL" not in sql  # MSSQL doesn't use SET NOT NULL
+    assert len(client.executed) == 1
+    assert (
+        client.executed[0]
+        == "ALTER TABLE [department] ALTER COLUMN [budget] DECIMAL(12,2) NOT NULL"
+    )
 
 
 @pytest.mark.asyncio
@@ -326,10 +328,8 @@ async def test_mssql_alter_field_set_default() -> None:
     editor = MSSQLSchemaEditor(client)
     await editor.alter_field(OldWidget, NewWidget, "stock")
 
-    assert client.executed
-    sql = client.executed[0]
-    assert "ADD DEFAULT" in sql
-    assert "FOR [stock]" in sql
+    assert len(client.executed) == 1
+    assert client.executed[0] == "ALTER TABLE [product] ADD DEFAULT 10 FOR [stock]"
 
 
 @pytest.mark.asyncio
@@ -356,10 +356,19 @@ async def test_mssql_alter_field_drop_default() -> None:
     editor = MSSQLSchemaEditor(client)
     await editor.alter_field(OldWidget, NewWidget, "stock")
 
-    assert client.executed
-    sql = client.executed[0]
-    assert "sys.default_constraints" in sql
-    assert "DROP CONSTRAINT" in sql
+    assert len(client.executed) == 1
+    assert client.executed[0] == (
+        "DECLARE @sql NVARCHAR(MAX) = N'';\n"
+        "SELECT @sql = N'ALTER TABLE [' + s.name + '].[' + t.name + ']"
+        " DROP CONSTRAINT [' + dc.name + ']'\n"
+        "FROM sys.default_constraints dc\n"
+        "JOIN sys.columns c ON dc.parent_object_id = c.object_id"
+        " AND dc.parent_column_id = c.column_id\n"
+        "JOIN sys.tables t ON dc.parent_object_id = t.object_id\n"
+        "JOIN sys.schemas s ON t.schema_id = s.schema_id\n"
+        "WHERE t.name = 'product' AND c.name = 'stock';\n"
+        "IF @sql <> N'' EXEC sp_executesql @sql;"
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -391,10 +400,16 @@ async def test_mssql_self_referencing_fk_downgrades_cascade() -> None:
     editor = MSSQLSchemaEditor(client)
     await editor.create_model(Department)
 
-    assert client.executed
-    sql = client.executed[0]
-    assert "NO ACTION" in sql
-    assert "ON DELETE CASCADE" not in sql
+    assert len(client.executed) == 1
+    assert client.executed[0] == (
+        "CREATE TABLE [department] (\n"
+        "    [id] INT IDENTITY(1,1) NOT NULL PRIMARY KEY,\n"
+        "    [name] VARCHAR(150) NOT NULL,\n"
+        "    [parent_id] INT,\n"
+        "    CONSTRAINT [fk_departme_departme_ba94d121] FOREIGN KEY ([parent_id])"
+        " REFERENCES [department] ([id]) ON DELETE NO ACTION\n"
+        ");"
+    )
 
 
 @pytest.mark.asyncio
@@ -428,9 +443,16 @@ async def test_mssql_non_self_referencing_fk_keeps_cascade() -> None:
     editor = MSSQLSchemaEditor(client)
     await editor.create_model(Department)
 
-    assert client.executed
-    sql = client.executed[0]
-    assert "ON DELETE CASCADE" in sql
+    assert len(client.executed) == 1
+    assert client.executed[0] == (
+        "CREATE TABLE [department] (\n"
+        "    [id] INT IDENTITY(1,1) NOT NULL PRIMARY KEY,\n"
+        "    [name] VARCHAR(150) NOT NULL,\n"
+        "    [company_id] INT NOT NULL,\n"
+        "    CONSTRAINT [fk_departme_company_0e6b7be6] FOREIGN KEY ([company_id])"
+        " REFERENCES [company] ([id]) ON DELETE CASCADE\n"
+        ");"
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -455,11 +477,8 @@ async def test_mssql_delete_constraint_uses_brackets() -> None:
     constraint = UniqueConstraint(fields=("email",))
     await editor.remove_constraint(Widget, constraint)
 
-    assert client.executed
-    sql = client.executed[0]
-    # Should use brackets, not double quotes
-    assert "DROP CONSTRAINT [" in sql
-    assert 'DROP CONSTRAINT "' not in sql
+    assert len(client.executed) == 1
+    assert client.executed[0] == "ALTER TABLE [widget] DROP CONSTRAINT [uid_widget_email_3d71d7]"
 
 
 @pytest.mark.asyncio
@@ -479,10 +498,11 @@ async def test_mssql_unique_constraint_create_uses_brackets() -> None:
     constraint = UniqueConstraint(fields=("email",))
     await editor.add_constraint(Widget, constraint)
 
-    assert client.executed
-    sql = client.executed[0]
-    assert "CONSTRAINT [" in sql
-    assert 'CONSTRAINT "' not in sql
+    assert len(client.executed) == 1
+    assert (
+        client.executed[0]
+        == "ALTER TABLE [widget] ADD CONSTRAINT [uid_widget_email_3d71d7] UNIQUE ([email])"
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -496,8 +516,209 @@ async def test_random_hex_produces_dialect_specific_sql() -> None:
     from tortoise.fields.db_defaults import RandomHex
 
     rh = RandomHex()
-    assert "randomblob" in rh.get_sql(dialect="sqlite")
-    assert "md5(random" in rh.get_sql(dialect="postgres")
-    assert "RANDOM_BYTES" in rh.get_sql(dialect="mysql")
-    assert "HASHBYTES" in rh.get_sql(dialect="mssql")
-    assert "SYS_GUID" in rh.get_sql(dialect="oracle")
+    assert rh.get_sql(dialect="sqlite") == "(lower(hex(randomblob(16))))"
+    assert rh.get_sql(dialect="postgres") == "md5(random()::text)"
+    assert rh.get_sql(dialect="mysql") == "(LOWER(HEX(RANDOM_BYTES(16))))"
+    assert rh.get_sql(dialect="mssql") == (
+        "(LOWER(CONVERT(VARCHAR(32), HASHBYTES('MD5', CAST(NEWID() AS NVARCHAR(36))), 2)))"
+    )
+    assert rh.get_sql(dialect="oracle") == "LOWER(RAWTOHEX(SYS_GUID()))"
+
+
+# ---------------------------------------------------------------------------
+# MySQL add_field with SqlDefault expression
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_mysql_add_field_with_sql_default_expression() -> None:
+    """MySQL add_field with SqlDefault should split into ADD COLUMN + ALTER SET DEFAULT."""
+    from tortoise.fields.db_defaults import Now
+
+    class Widget(Model):
+        id = fields.IntField(pk=True)
+        created_at = fields.DatetimeField(db_default=Now())
+
+        class Meta:
+            table = "widget"
+            app = "models"
+
+    client = FakeClient("mysql")
+    editor = MySQLSchemaEditor(client)
+    await editor.add_field(Widget, "created_at")
+
+    assert len(client.executed) == 2
+    assert client.executed[0] == "ALTER TABLE `widget` ADD COLUMN `created_at` DATETIME(6) NOT NULL"
+    assert client.executed[1] == (
+        "ALTER TABLE `widget` ALTER COLUMN `created_at` SET DEFAULT (CURRENT_TIMESTAMP(6))"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Oracle FK references in CREATE TABLE
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_oracle_create_table_includes_fk_constraints() -> None:
+    """Oracle CREATE TABLE should include FK constraints via _get_inner_statements."""
+    from tortoise.migrations.schema_editor.oracle import OracleSchemaEditor
+
+    class Company(Model):
+        id = fields.IntField(pk=True)
+        name = fields.CharField(max_length=300)
+
+        class Meta:
+            table = "company"
+            app = "models"
+
+    class Employee(Model):
+        id = fields.IntField(pk=True)
+        company: ForeignKeyFieldInstance[Any] = fields.ForeignKeyField(
+            "models.Company",
+            source_field="company_id",
+            related_name="employees",
+        )
+
+        class Meta:
+            table = "employee"
+            app = "models"
+
+    init_apps(Company, Employee)
+
+    client = FakeClient("oracle", inline_comment=False)
+    editor = OracleSchemaEditor(client)
+    await editor.create_model(Employee)
+
+    assert len(client.executed) == 1
+    assert client.executed[0] == (
+        'CREATE TABLE "employee" (\n'
+        '    "id" INT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY NOT NULL,\n'
+        '    "company_id" INT NOT NULL,\n'
+        '    CONSTRAINT "fk_employee_company_b3e5bff3" FOREIGN KEY ("company_id")'
+        ' REFERENCES "company" ("id") ON DELETE CASCADE\n'
+        ");"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Oracle ALTER field (MODIFY syntax)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_oracle_alter_field_null_to_not_null() -> None:
+    """Oracle should use MODIFY with type for null->not-null change."""
+    from tortoise.migrations.schema_editor.oracle import OracleSchemaEditor
+
+    class OldWidget(Model):
+        id = fields.IntField(pk=True)
+        budget = fields.DecimalField(null=True, max_digits=12, decimal_places=2)
+
+        class Meta:
+            table = "department"
+            app = "models"
+
+    class NewWidget(Model):
+        id = fields.IntField(pk=True)
+        budget = fields.DecimalField(max_digits=12, decimal_places=2)
+
+        class Meta:
+            table = "department"
+            app = "models"
+
+    client = FakeClient("oracle", inline_comment=False)
+    editor = OracleSchemaEditor(client)
+    await editor.alter_field(OldWidget, NewWidget, "budget")
+
+    assert len(client.executed) == 1
+    assert client.executed[0] == (
+        'ALTER TABLE "department" MODIFY ("budget" DECIMAL(12,2) NOT NULL)'
+    )
+
+
+@pytest.mark.asyncio
+async def test_oracle_alter_field_not_null_to_null() -> None:
+    """Oracle should use MODIFY with type for not-null->null change."""
+    from tortoise.migrations.schema_editor.oracle import OracleSchemaEditor
+
+    class OldWidget(Model):
+        id = fields.IntField(pk=True)
+        budget = fields.DecimalField(max_digits=12, decimal_places=2)
+
+        class Meta:
+            table = "department"
+            app = "models"
+
+    class NewWidget(Model):
+        id = fields.IntField(pk=True)
+        budget = fields.DecimalField(null=True, max_digits=12, decimal_places=2)
+
+        class Meta:
+            table = "department"
+            app = "models"
+
+    client = FakeClient("oracle", inline_comment=False)
+    editor = OracleSchemaEditor(client)
+    await editor.alter_field(OldWidget, NewWidget, "budget")
+
+    assert len(client.executed) == 1
+    assert client.executed[0] == ('ALTER TABLE "department" MODIFY ("budget" DECIMAL(12,2) NULL)')
+
+
+@pytest.mark.asyncio
+async def test_oracle_alter_field_set_default() -> None:
+    """Oracle should use MODIFY with DEFAULT for setting a default."""
+    from tortoise.migrations.schema_editor.oracle import OracleSchemaEditor
+
+    class OldWidget(Model):
+        id = fields.IntField(pk=True)
+        stock = fields.IntField()
+
+        class Meta:
+            table = "product"
+            app = "models"
+
+    class NewWidget(Model):
+        id = fields.IntField(pk=True)
+        stock = fields.IntField(db_default=42)
+
+        class Meta:
+            table = "product"
+            app = "models"
+
+    client = FakeClient("oracle", inline_comment=False)
+    editor = OracleSchemaEditor(client)
+    await editor.alter_field(OldWidget, NewWidget, "stock")
+
+    assert len(client.executed) == 1
+    assert client.executed[0] == 'ALTER TABLE "product" MODIFY ("stock" DEFAULT 42)'
+
+
+@pytest.mark.asyncio
+async def test_oracle_alter_field_drop_default() -> None:
+    """Oracle should use MODIFY with DEFAULT NULL to drop a default."""
+    from tortoise.migrations.schema_editor.oracle import OracleSchemaEditor
+
+    class OldWidget(Model):
+        id = fields.IntField(pk=True)
+        stock = fields.IntField(db_default=42)
+
+        class Meta:
+            table = "product"
+            app = "models"
+
+    class NewWidget(Model):
+        id = fields.IntField(pk=True)
+        stock = fields.IntField()
+
+        class Meta:
+            table = "product"
+            app = "models"
+
+    client = FakeClient("oracle", inline_comment=False)
+    editor = OracleSchemaEditor(client)
+    await editor.alter_field(OldWidget, NewWidget, "stock")
+
+    assert len(client.executed) == 1
+    assert client.executed[0] == 'ALTER TABLE "product" MODIFY ("stock" DEFAULT NULL)'

@@ -280,45 +280,38 @@ def _get_sqlite_default_sql(field_obj, model_class=None):
 def test_schema_db_default_int():
     f = fields.IntField(db_default=42)
     sql = _get_sqlite_default_sql(f)
-    assert "DEFAULT" in sql
-    assert "42" in sql
+    assert sql == " DEFAULT 42"
 
 
 def test_schema_db_default_str():
     f = fields.CharField(max_length=100, db_default="hello")
     sql = _get_sqlite_default_sql(f)
-    assert "DEFAULT" in sql
-    assert "hello" in sql
+    assert sql == " DEFAULT 'hello'"
 
 
 def test_schema_db_default_bool_true():
     f = fields.BooleanField(db_default=True)
     sql = _get_sqlite_default_sql(f)
-    assert "DEFAULT" in sql
-    assert "1" in sql
+    assert sql == " DEFAULT 1"
 
 
 def test_schema_db_default_bool_false():
     f = fields.BooleanField(db_default=False)
     sql = _get_sqlite_default_sql(f)
-    assert "DEFAULT" in sql
-    assert "0" in sql
+    assert sql == " DEFAULT 0"
 
 
 def test_schema_db_default_none():
     f = fields.IntField(null=True, db_default=None)
     sql = _get_sqlite_default_sql(f)
-    assert "DEFAULT" in sql
-    assert "NULL" in sql
+    assert sql == " DEFAULT NULL"
 
 
 def test_schema_db_default_overrides_default():
     """When both default and db_default are set, db_default controls the SQL."""
     f = fields.IntField(default=1, db_default=2)
     sql = _get_sqlite_default_sql(f)
-    assert "DEFAULT" in sql
-    assert "2" in sql
-    assert "1" not in sql
+    assert sql == " DEFAULT 2"
 
 
 def test_schema_no_db_default_no_default():
@@ -330,8 +323,7 @@ def test_schema_no_db_default_no_default():
 def test_schema_db_default_float():
     f = fields.FloatField(db_default=3.14)
     sql = _get_sqlite_default_sql(f)
-    assert "DEFAULT" in sql
-    assert "3.14" in sql
+    assert sql == " DEFAULT 3.14"
 
 
 # ============================================================================
@@ -655,8 +647,7 @@ def test_schema_generation_literal_db_default_still_works():
     """Literal db_default still works (no regression)."""
     f = fields.IntField(db_default=42)
     sql = _get_sqlite_default_sql(f)
-    assert "DEFAULT" in sql
-    assert "42" in sql
+    assert sql == " DEFAULT 42"
 
 
 # ============================================================================
@@ -681,7 +672,10 @@ async def test_add_field_with_sql_default():
 
     assert len(client.executed) == 1
     sql = client.executed[0]
-    assert "DEFAULT CURRENT_TIMESTAMP" in sql
+    assert (
+        sql
+        == 'ALTER TABLE "widget" ADD COLUMN "created" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP'
+    )
 
 
 @pytest.mark.asyncio
@@ -707,8 +701,7 @@ async def test_alter_field_set_default_with_sql_default():
 
     assert len(client.executed) == 1
     sql = client.executed[0]
-    assert "SET DEFAULT" in sql
-    assert "CURRENT_TIMESTAMP" in sql
+    assert sql == 'ALTER TABLE "widget" ALTER COLUMN "created" SET DEFAULT CURRENT_TIMESTAMP'
 
 
 @pytest.mark.asyncio
@@ -734,8 +727,7 @@ async def test_alter_field_change_from_literal_to_sql_default():
 
     assert len(client.executed) == 1
     sql = client.executed[0]
-    assert "SET DEFAULT" in sql
-    assert "NOW()" in sql
+    assert sql == 'ALTER TABLE "widget" ALTER COLUMN "score" SET DEFAULT NOW()'
 
 
 # ============================================================================
@@ -797,3 +789,42 @@ def test_render_value_with_sql_default():
     result = render_value(sd, imports)
     assert result == "SqlDefault('gen_random_uuid()')"
     assert "SqlDefault" in str(imports)
+
+
+def test_render_value_random_hex():
+    """render_value() serializes RandomHex as RandomHex(), not as SqlDefault(...)."""
+    from tortoise.fields.db_defaults import RandomHex
+    from tortoise.migrations.writer import ImportManager, render_value
+
+    imports = ImportManager()
+    rh = RandomHex()
+    result = render_value(rh, imports)
+    assert result == "RandomHex()"
+    assert "tortoise.fields.db_defaults" in imports.imports
+    assert "RandomHex" in imports.imports["tortoise.fields.db_defaults"]
+
+
+def test_render_value_sql_default_still_works():
+    """render_value() still serializes plain SqlDefault correctly (regression check)."""
+    from tortoise.fields.db_defaults import SqlDefault
+    from tortoise.migrations.writer import ImportManager, render_value
+
+    imports = ImportManager()
+    sd = SqlDefault("custom")
+    result = render_value(sd, imports)
+    assert result == "SqlDefault('custom')"
+    assert "tortoise.fields.db_defaults" in imports.imports
+    assert "SqlDefault" in imports.imports["tortoise.fields.db_defaults"]
+
+
+def test_render_value_now_still_works():
+    """render_value() still serializes Now correctly (regression check)."""
+    from tortoise.fields.db_defaults import Now
+    from tortoise.migrations.writer import ImportManager, render_value
+
+    imports = ImportManager()
+    n = Now()
+    result = render_value(n, imports)
+    assert result == "Now()"
+    assert "tortoise.fields.db_defaults" in imports.imports
+    assert "Now" in imports.imports["tortoise.fields.db_defaults"]

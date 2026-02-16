@@ -273,25 +273,6 @@ class MSSQLSchemaEditor(MSSQLQuotingMixin, BaseSchemaEditor):
         _, rows = await self.client.execute_query(query)
         return [row["name"] for row in rows]
 
-    async def remove_constraint(self, model, constraint) -> None:
-        from tortoise.migrations.constraints import CheckConstraint
-
-        if isinstance(constraint, CheckConstraint):
-            await self._run_sql(
-                self.DELETE_CONSTRAINT_TEMPLATE.format(
-                    table=self._qualify_table_name(model._meta.db_table, model._meta.schema),
-                    name=constraint.name,
-                )
-            )
-            return
-        constraint_name = await self._resolve_constraint_name(model, constraint)
-        await self._run_sql(
-            self.DELETE_CONSTRAINT_TEMPLATE.format(
-                table=self._qualify_table_name(model._meta.db_table, model._meta.schema),
-                name=constraint_name,
-            )
-        )
-
     async def remove_field(self, model: type[Model], field) -> None:
         if isinstance(field, ManyToManyFieldInstance):
             await self._run_sql(

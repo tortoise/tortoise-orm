@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from copy import copy
 
-from tortoise.fields.base import CASCADE, Field
+from tortoise.fields.base import CASCADE, DB_DEFAULT_NOT_SET, Field
 from tortoise.fields.relational import ForeignKeyFieldInstance, ManyToManyFieldInstance
 from tortoise.migrations.schema_editor.base import BaseSchemaEditor
 from tortoise.models import Model
@@ -33,8 +33,6 @@ class MySQLSchemaEditor(MySQLQuotingMixin, BaseSchemaEditor):
     DELETE_TABLE_TEMPLATE = "DROP TABLE {table}"
     ADD_FIELD_TEMPLATE = "ALTER TABLE {table} ADD COLUMN {definition}"
     ALTER_FIELD_TEMPLATE = "ALTER TABLE {table} {changes}"
-    ALTER_FIELD_NULL_TEMPLATE = "ALTER COLUMN `{column}` DROP NOT NULL"
-    ALTER_FIELD_NOT_NULL_TEMPLATE = "ALTER COLUMN `{column}` SET NOT NULL"
     ALTER_FIELD_SET_DEFAULT_TEMPLATE = "ALTER COLUMN `{column}` SET DEFAULT ({default})"
     ALTER_FIELD_DROP_DEFAULT_TEMPLATE = "ALTER COLUMN `{column}` DROP DEFAULT"
     RENAME_FIELD_TEMPLATE = "ALTER TABLE {table} RENAME COLUMN `{old_column}` TO `{new_column}`"
@@ -196,7 +194,7 @@ class MySQLSchemaEditor(MySQLQuotingMixin, BaseSchemaEditor):
             # Swap in a copy without db_default so the base add_field skips it,
             # avoiding temporary mutation of the shared field object.
             temp_field = copy(field)
-            temp_field.db_default = None
+            temp_field.db_default = DB_DEFAULT_NOT_SET
             model._meta.fields_map[field_name] = temp_field
             try:
                 await super().add_field(model, field_name)

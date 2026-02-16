@@ -63,12 +63,17 @@ init_apps(Organization, Membership)
 
 # Each backend's introspection returns a different dict key for the constraint name.
 # SQLite uses PRAGMA-based introspection (tested separately below).
+#
+# Fields: editor_cls, client_kwargs, mock_row, expected_name,
+#         expected_drop_sql (introspected name), expected_fallback_sql (uid_ name)
 INTROSPECTION_BACKENDS = [
     pytest.param(
         BasePostgresSchemaEditor,
         {"dialect": "postgres", "inline_comment": False},
         {"conname": "legacy_auto_name"},
         "legacy_auto_name",
+        'ALTER TABLE "widget" DROP CONSTRAINT "legacy_auto_name"',
+        'ALTER TABLE "widget" DROP CONSTRAINT "uid_widget_email_3d71d7"',
         id="postgres",
     ),
     pytest.param(
@@ -76,6 +81,8 @@ INTROSPECTION_BACKENDS = [
         {"dialect": "mysql"},
         {"CONSTRAINT_NAME": "old_auto_name"},
         "old_auto_name",
+        "DROP INDEX `old_auto_name` ON `widget`",
+        "DROP INDEX `uid_widget_email_3d71d7` ON `widget`",
         id="mysql",
     ),
     pytest.param(
@@ -83,6 +90,8 @@ INTROSPECTION_BACKENDS = [
         {"dialect": "mssql", "inline_comment": False},
         {"name": "UQ__widget__email_legacy"},
         "UQ__widget__email_legacy",
+        "ALTER TABLE [widget] DROP CONSTRAINT [UQ__widget__email_legacy]",
+        "ALTER TABLE [widget] DROP CONSTRAINT [uid_widget_email_3d71d7]",
         id="mssql",
     ),
     pytest.param(
@@ -90,6 +99,8 @@ INTROSPECTION_BACKENDS = [
         {"dialect": "oracle", "inline_comment": False},
         {"CONSTRAINT_NAME": "SYS_C0012345"},
         "SYS_C0012345",
+        'ALTER TABLE "widget" DROP CONSTRAINT "SYS_C0012345"',
+        'ALTER TABLE "widget" DROP CONSTRAINT "uid_widget_email_3d71d7"',
         id="oracle",
     ),
 ]
@@ -102,11 +113,12 @@ async def test_base_get_unique_constraint_names_from_db_returns_empty() -> None:
     editor = TestSchemaEditor(client)
     result = await editor._get_unique_constraint_names_from_db("widget", ["name"], None)
     assert result == []
+    assert len(client.executed) == 0
 
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
-    ("editor_cls", "client_kwargs", "mock_row", "expected_name"),
+    ("editor_cls", "client_kwargs", "mock_row", "expected_name", "_drop", "_fallback"),
     INTROSPECTION_BACKENDS,
 )
 async def test_introspection_returns_constraint_names(
@@ -114,17 +126,20 @@ async def test_introspection_returns_constraint_names(
     client_kwargs: dict,
     mock_row: dict,
     expected_name: str,
+    _drop: str,
+    _fallback: str,
 ) -> None:
     """Backend introspection returns the constraint name from mock results."""
     client = MockIntrospectionClient(constraint_names=[mock_row], **client_kwargs)
     editor = editor_cls(client)
     result = await editor._get_unique_constraint_names_from_db("widget", ["email"], None)
     assert result == [expected_name]
+    assert len(client.executed) == 0
 
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
-    ("editor_cls", "client_kwargs", "mock_row", "expected_name"),
+    ("editor_cls", "client_kwargs", "mock_row", "expected_name", "expected_drop_sql", "_fallback"),
     INTROSPECTION_BACKENDS,
 )
 async def test_remove_constraint_uses_introspected_name(
@@ -132,6 +147,8 @@ async def test_remove_constraint_uses_introspected_name(
     client_kwargs: dict,
     mock_row: dict,
     expected_name: str,
+    expected_drop_sql: str,
+    _fallback: str,
 ) -> None:
     """remove_constraint should use the introspected name instead of uid_."""
 
@@ -149,22 +166,29 @@ async def test_remove_constraint_uses_introspected_name(
     constraint = UniqueConstraint(fields=("email",))
     await editor.remove_constraint(Widget, constraint)
 
-    assert client.executed
-    drop_sql = client.executed[0]
-    assert expected_name in drop_sql
-    assert "uid_" not in drop_sql
+    assert len(client.executed) == 1
+    assert client.executed[0] == expected_drop_sql
 
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
-    ("editor_cls", "client_kwargs", "mock_row", "expected_name"),
+    (
+        "editor_cls",
+        "client_kwargs",
+        "_mock_row",
+        "_expected_name",
+        "_drop",
+        "expected_fallback_sql",
+    ),
     INTROSPECTION_BACKENDS,
 )
 async def test_remove_constraint_fallback_with_fakeclient(
     editor_cls: type[BaseSchemaEditor],
     client_kwargs: dict,
-    mock_row: dict,
-    expected_name: str,
+    _mock_row: dict,
+    _expected_name: str,
+    _drop: str,
+    expected_fallback_sql: str,
 ) -> None:
     """With FakeClient (no introspection) falls back to deterministic uid_ name."""
 
@@ -182,9 +206,8 @@ async def test_remove_constraint_fallback_with_fakeclient(
     constraint = UniqueConstraint(fields=("email",))
     await editor.remove_constraint(Widget, constraint)
 
-    assert client.executed
-    drop_sql = client.executed[0]
-    assert "uid_" in drop_sql
+    assert len(client.executed) == 1
+    assert client.executed[0] == expected_fallback_sql
 
 
 # ---------------------------------------------------------------------------
@@ -199,6 +222,7 @@ async def test_sqlite_introspection_raises_with_fakeclient() -> None:
     editor = SqliteSchemaEditor(client)
     with pytest.raises(NotImplementedError):
         await editor._get_unique_constraint_names_from_db("widget", ["name"], None)
+    assert len(client.executed) == 0
 
 
 @pytest.mark.asyncio
@@ -222,6 +246,7 @@ async def test_sqlite_introspection_finds_unique_index() -> None:
     editor = SqliteSchemaEditor(client)
     result = await editor._get_unique_constraint_names_from_db("widget", ["email"], None)
     assert result == ["sqlite_autoindex_widget_1"]
+    assert len(client.executed) == 0
 
 
 @pytest.mark.asyncio
@@ -242,9 +267,8 @@ async def test_sqlite_remove_constraint_fallback_with_fakeclient() -> None:
     constraint = UniqueConstraint(fields=("email",))
     await editor.remove_constraint(Widget, constraint)
 
-    assert client.executed
-    drop_sql = client.executed[0]
-    assert '"uid_' in drop_sql
+    assert len(client.executed) == 1
+    assert client.executed[0] == 'DROP INDEX "uid_widget_email_3d71d7"'
 
 
 # ---------------------------------------------------------------------------
@@ -255,36 +279,31 @@ ADD_CONSTRAINT_BACKENDS = [
     pytest.param(
         TestSchemaEditor,
         {"dialect": "sql"},
-        "organization_id",
-        "user_email",
+        'ALTER TABLE "membership" ADD CONSTRAINT "uid_membership_organiz_04ef0e" UNIQUE ("organization_id", "user_email")',
         id="base",
     ),
     pytest.param(
         BasePostgresSchemaEditor,
         {"dialect": "postgres", "inline_comment": False},
-        "organization_id",
-        "user_email",
+        'ALTER TABLE "membership" ADD CONSTRAINT "uid_membership_organiz_04ef0e" UNIQUE ("organization_id", "user_email")',
         id="postgres",
     ),
     pytest.param(
         MySQLSchemaEditor,
         {"dialect": "mysql"},
-        "organization_id",
-        "user_email",
+        "ALTER TABLE `membership` ADD UNIQUE KEY `uidx_membership_organiz_04ef0e` (`organization_id`, `user_email`)",
         id="mysql",
     ),
     pytest.param(
         SqliteSchemaEditor,
         {"dialect": "sqlite"},
-        "organization_id",
-        "user_email",
+        'CREATE UNIQUE INDEX "uid_membership_organiz_04ef0e" ON "membership" ("organization_id", "user_email");',
         id="sqlite",
     ),
     pytest.param(
         MSSQLSchemaEditor,
         {"dialect": "mssql", "inline_comment": False},
-        "organization_id",
-        "user_email",
+        "ALTER TABLE [membership] ADD CONSTRAINT [uid_membership_organiz_04ef0e] UNIQUE ([organization_id], [user_email])",
         id="mssql",
     ),
 ]
@@ -292,14 +311,13 @@ ADD_CONSTRAINT_BACKENDS = [
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
-    ("editor_cls", "client_kwargs", "expected_fk_col", "expected_regular_col"),
+    ("editor_cls", "client_kwargs", "expected_sql"),
     ADD_CONSTRAINT_BACKENDS,
 )
 async def test_add_constraint_resolves_fk_fields(
     editor_cls: type[BaseSchemaEditor],
     client_kwargs: dict,
-    expected_fk_col: str,
-    expected_regular_col: str,
+    expected_sql: str,
 ) -> None:
     """add_constraint with FK field name must resolve to DB column name (organization_id)."""
     client = FakeClient(**client_kwargs)
@@ -308,14 +326,8 @@ async def test_add_constraint_resolves_fk_fields(
     constraint = UniqueConstraint(fields=("organization", "user_email"))
     await editor.add_constraint(Membership, constraint)
 
-    assert client.executed
-    sql = client.executed[0]
-    assert expected_fk_col in sql, f"Expected '{expected_fk_col}' in SQL: {sql}"
-    assert expected_regular_col in sql, f"Expected '{expected_regular_col}' in SQL: {sql}"
-    # Must NOT contain the raw model field name 'organization' as a quoted column
-    assert (
-        '"organization"' not in sql and "`organization`" not in sql and "[organization]" not in sql
-    ), f"SQL should not contain raw model field name 'organization': {sql}"
+    assert len(client.executed) == 1
+    assert client.executed[0] == expected_sql
 
 
 @pytest.mark.asyncio
@@ -327,10 +339,11 @@ async def test_add_constraint_idempotent_for_resolved_names() -> None:
     constraint = UniqueConstraint(fields=("organization_id", "user_email"))
     await editor.add_constraint(Membership, constraint)
 
-    assert client.executed
-    sql = client.executed[0]
-    assert "organization_id" in sql
-    assert "user_email" in sql
+    assert len(client.executed) == 1
+    assert (
+        client.executed[0]
+        == 'ALTER TABLE "membership" ADD CONSTRAINT "uid_membership_organiz_04ef0e" UNIQUE ("organization_id", "user_email")'
+    )
 
 
 REMOVE_CONSTRAINT_FK_BACKENDS = [
@@ -338,24 +351,31 @@ REMOVE_CONSTRAINT_FK_BACKENDS = [
         BasePostgresSchemaEditor,
         {"dialect": "postgres", "inline_comment": False},
         {"conname": "test_constraint"},
+        ['ALTER TABLE "membership" DROP CONSTRAINT "test_constraint"'],
         id="postgres",
     ),
     pytest.param(
         MySQLSchemaEditor,
         {"dialect": "mysql"},
         {"CONSTRAINT_NAME": "test_constraint"},
+        [
+            "CREATE INDEX `fkidx_membership_organiz_ae9a44` ON `membership` (`organization_id`);",
+            "DROP INDEX `test_constraint` ON `membership`",
+        ],
         id="mysql",
     ),
     pytest.param(
         MSSQLSchemaEditor,
         {"dialect": "mssql", "inline_comment": False},
         {"name": "test_constraint"},
+        ["ALTER TABLE [membership] DROP CONSTRAINT [test_constraint]"],
         id="mssql",
     ),
     pytest.param(
         OracleSchemaEditor,
         {"dialect": "oracle", "inline_comment": False},
         {"CONSTRAINT_NAME": "test_constraint"},
+        ['ALTER TABLE "membership" DROP CONSTRAINT "test_constraint"'],
         id="oracle",
     ),
 ]
@@ -363,13 +383,14 @@ REMOVE_CONSTRAINT_FK_BACKENDS = [
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
-    ("editor_cls", "client_kwargs", "mock_row"),
+    ("editor_cls", "client_kwargs", "mock_row", "expected_sqls"),
     REMOVE_CONSTRAINT_FK_BACKENDS,
 )
 async def test_remove_constraint_resolves_fk_for_introspection(
     editor_cls: type[BaseSchemaEditor],
     client_kwargs: dict,
     mock_row: dict,
+    expected_sqls: list[str],
 ) -> None:
     """remove_constraint with FK field name resolves to DB column for introspection query."""
     client = MockIntrospectionClient(constraint_names=[mock_row], **client_kwargs)
@@ -378,9 +399,8 @@ async def test_remove_constraint_resolves_fk_for_introspection(
     constraint = UniqueConstraint(fields=("organization", "user_email"))
     await editor.remove_constraint(Membership, constraint)
 
-    assert client.executed
-    drop_sql = client.executed[-1]
-    assert "test_constraint" in drop_sql
+    assert len(client.executed) == len(expected_sqls)
+    assert client.executed == expected_sqls
 
 
 @pytest.mark.asyncio
@@ -393,10 +413,10 @@ async def test_rename_constraint_resolves_fk_fields() -> None:
     new_constraint = UniqueConstraint(fields=("organization", "user_email"), name="new_name")
     await editor.rename_constraint(Membership, old_constraint, new_constraint)
 
-    assert client.executed
-    sql = client.executed[0]
-    assert "old_name" in sql
-    assert "new_name" in sql
+    assert len(client.executed) == 1
+    assert (
+        client.executed[0] == 'ALTER TABLE "membership" RENAME CONSTRAINT "old_name" TO "new_name"'
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -407,25 +427,25 @@ CHECK_CONSTRAINT_BACKENDS = [
     pytest.param(
         TestSchemaEditor,
         {"dialect": "sql"},
-        'CONSTRAINT "ck_price" CHECK (price > 0)',
+        'ALTER TABLE "product" ADD CONSTRAINT "ck_price" CHECK (price > 0)',
         id="base",
     ),
     pytest.param(
         BasePostgresSchemaEditor,
         {"dialect": "postgres", "inline_comment": False},
-        'CONSTRAINT "ck_price" CHECK (price > 0)',
+        'ALTER TABLE "product" ADD CONSTRAINT "ck_price" CHECK (price > 0)',
         id="postgres",
     ),
     pytest.param(
         MySQLSchemaEditor,
         {"dialect": "mysql"},
-        "CONSTRAINT `ck_price` CHECK (price > 0)",
+        "ALTER TABLE `product` ADD CONSTRAINT `ck_price` CHECK (price > 0)",
         id="mysql",
     ),
     pytest.param(
         MSSQLSchemaEditor,
         {"dialect": "mssql", "inline_comment": False},
-        "CONSTRAINT [ck_price] CHECK (price > 0)",
+        "ALTER TABLE [product] ADD CONSTRAINT [ck_price] CHECK (price > 0)",
         id="mssql",
     ),
 ]
@@ -433,13 +453,13 @@ CHECK_CONSTRAINT_BACKENDS = [
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
-    ("editor_cls", "client_kwargs", "expected_fragment"),
+    ("editor_cls", "client_kwargs", "expected_sql"),
     CHECK_CONSTRAINT_BACKENDS,
 )
 async def test_add_check_constraint_generates_sql(
     editor_cls: type[BaseSchemaEditor],
     client_kwargs: dict,
-    expected_fragment: str,
+    expected_sql: str,
 ) -> None:
     """add_constraint with CheckConstraint generates correct SQL per backend."""
 
@@ -457,9 +477,8 @@ async def test_add_check_constraint_generates_sql(
     constraint = CheckConstraint(check="price > 0", name="ck_price")
     await editor.add_constraint(Product, constraint)
 
-    assert client.executed
-    sql = client.executed[0]
-    assert expected_fragment in sql, f"Expected '{expected_fragment}' in SQL: {sql}"
+    assert len(client.executed) == 1
+    assert client.executed[0] == expected_sql
 
 
 @pytest.mark.asyncio
@@ -480,9 +499,8 @@ async def test_remove_check_constraint_generates_sql() -> None:
     constraint = CheckConstraint(check="price > 0", name="ck_price")
     await editor.remove_constraint(Product, constraint)
 
-    assert client.executed
-    sql = client.executed[0]
-    assert 'DROP CONSTRAINT "ck_price"' in sql
+    assert len(client.executed) == 1
+    assert client.executed[0] == 'ALTER TABLE "product" DROP CONSTRAINT "ck_price"'
 
 
 @pytest.mark.asyncio
@@ -504,10 +522,20 @@ async def test_sqlite_add_check_constraint_rebuilds_table() -> None:
     constraint = CheckConstraint(check="price > 0", name="ck_price")
     await editor.add_constraint(Product, constraint)
 
-    assert client.executed
-    create_sql = client.executed[0]
-    assert "new__product" in create_sql, f"Expected table rebuild in SQL: {create_sql}"
-    assert "CHECK (price > 0)" in create_sql, f"Expected CHECK constraint in SQL: {create_sql}"
+    assert len(client.executed) == 4
+    assert client.executed[0] == (
+        'CREATE TABLE "new__product" ('
+        '"id" INT NOT NULL  PRIMARY KEY, '
+        '"price" VARCHAR(40) NOT NULL, '
+        'CONSTRAINT "ck_price" CHECK (price > 0))'
+    )
+    assert client.executed[1] == (
+        'INSERT INTO "new__product" ("id", "price")\n'
+        '                SELECT "id", "price"\n'
+        '                FROM "product"'
+    )
+    assert client.executed[2] == 'DROP TABLE "product"'
+    assert client.executed[3] == 'ALTER TABLE "new__product" RENAME TO "product"'
 
 
 # ---------------------------------------------------------------------------
@@ -536,10 +564,11 @@ async def test_postgres_add_constraint_with_condition_generates_partial_index() 
     )
     await editor.add_constraint(UserAccount, constraint)
 
-    assert client.executed
-    sql = client.executed[0]
-    assert 'CREATE UNIQUE INDEX "uq_active_email"' in sql
-    assert "WHERE is_active = true" in sql
+    assert len(client.executed) == 1
+    assert (
+        client.executed[0]
+        == 'CREATE UNIQUE INDEX "uq_active_email" ON "user_account" ("email") WHERE is_active = true;'
+    )
 
 
 @pytest.mark.asyncio
@@ -563,3 +592,4 @@ async def test_base_add_constraint_with_condition_raises() -> None:
     )
     with pytest.raises(NotImplementedError, match="Partial unique indexes"):
         await editor.add_constraint(UserAccount, constraint)
+    assert len(client.executed) == 0

@@ -460,7 +460,7 @@ class RemoveField(TortoiseOperation):
         field = model_state.fields.pop(self.name, None)
         if not field:
             raise IncompatibleStateError(
-                f"Field {field} is not present on model {app_label}.{self.model_name}"
+                f"Field {self.name} is not present on model {app_label}.{self.model_name}"
             )
 
         models_to_reload = {(app_label, self.model_name)}

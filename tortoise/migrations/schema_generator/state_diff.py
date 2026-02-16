@@ -30,6 +30,35 @@ if TYPE_CHECKING:
     from tortoise.migrations.schema_generator.state import ModelState
 
 
+# ---------------------------------------------------------------------------
+# Shared normalisation helpers
+# ---------------------------------------------------------------------------
+
+
+def _normalize_indexes(value: object) -> list[Index]:
+    """Normalise raw index tuples/Index objects into a flat list of Index instances."""
+    if not value or not isinstance(value, Iterable):
+        return []
+    return [item if isinstance(item, Index) else Index(fields=tuple(item)) for item in value]
+
+
+def _index_signature(index: Index) -> tuple:
+    """Return a hashable identity tuple for an Index (ignoring its name)."""
+    return (tuple(index.field_names), index.INDEX_TYPE, index.extra)
+
+
+def _normalize_unique_together(value: object) -> list[tuple[str, ...]]:
+    if not value or not isinstance(value, Iterable):
+        return []
+    return [tuple(fields) for fields in value]
+
+
+def _normalize_constraints(value: object) -> list[UniqueConstraint | CheckConstraint]:
+    if not value or not isinstance(value, Iterable):
+        return []
+    return [c for c in value if isinstance(c, (UniqueConstraint, CheckConstraint))]
+
+
 RELATION_FIELDS = (ForeignKeyFieldInstance, OneToOneFieldInstance, ManyToManyFieldInstance)
 
 
@@ -101,25 +130,24 @@ class StateModelDiff:
         operations.extend(StateFieldDiff(self.old_state, self.new_state).generate_operations())
         return operations
 
-    def _normalize_indexes(self, value: object) -> list[tuple[Index, bool]]:
+    @staticmethod
+    def _normalize_indexes_with_explicit(value: object) -> list[tuple[Index, bool]]:
+        """Like _normalize_indexes but tracks whether each item was an explicit Index."""
         if not value or not isinstance(value, Iterable):
             return []
-        indexes = []
-        raw = list(value)
-        for item in raw:
-            if isinstance(item, Index):
-                indexes.append((item, True))
-            else:
-                indexes.append((Index(fields=tuple(item)), False))
-        return indexes
-
-    def _index_signature(self, index: Index) -> tuple:
-        return (tuple(index.field_names), index.INDEX_TYPE, index.extra)
+        return [
+            (item, True) if isinstance(item, Index) else (Index(fields=tuple(item)), False)
+            for item in value
+        ]
 
     def _generate_index_operations(self) -> list[TortoiseOperation]:
         operations: list[TortoiseOperation] = []
-        old_indexes = self._normalize_indexes(self.old_state.options.get("indexes", ()))
-        new_indexes = self._normalize_indexes(self.new_state.options.get("indexes", ()))
+        old_indexes = self._normalize_indexes_with_explicit(
+            self.old_state.options.get("indexes", ())
+        )
+        new_indexes = self._normalize_indexes_with_explicit(
+            self.new_state.options.get("indexes", ())
+        )
 
         matched_old_indexes: set[int] = set()
         matched_new_indexes: set[int] = set()
@@ -127,11 +155,11 @@ class StateModelDiff:
         for new_idx, (new_index, new_explicit) in enumerate(new_indexes):
             if not new_explicit or not new_index.name:
                 continue
-            new_sig = self._index_signature(new_index)
+            new_sig = _index_signature(new_index)
             for old_idx, (old_index, old_explicit) in enumerate(old_indexes):
                 if old_idx in matched_old_indexes or not old_explicit or not old_index.name:
                     continue
-                if new_sig == self._index_signature(old_index) and new_index.name != old_index.name:
+                if new_sig == _index_signature(old_index) and new_index.name != old_index.name:
                     operations.append(
                         RenameIndex(
                             model_name=self.new_state.name,
@@ -147,7 +175,7 @@ class StateModelDiff:
             if old_idx in matched_old_indexes:
                 continue
             if any(
-                self._index_signature(old_index) == self._index_signature(new_index)
+                _index_signature(old_index) == _index_signature(new_index)
                 for new_index, _ in new_indexes
             ):
                 continue
@@ -163,7 +191,7 @@ class StateModelDiff:
             if new_idx in matched_new_indexes:
                 continue
             if any(
-                self._index_signature(new_index) == self._index_signature(old_index)
+                _index_signature(new_index) == _index_signature(old_index)
                 for old_index, _ in old_indexes
             ):
                 continue
@@ -171,30 +199,10 @@ class StateModelDiff:
 
         return operations
 
-    def _normalize_unique_together(self, value: object) -> list[tuple[str, ...]]:
-        if not value or not isinstance(value, Iterable):
-            return []
-        raw = list(value)
-        return [tuple(fields) for fields in raw]
-
-    def _normalize_constraints(self, value: object) -> list[UniqueConstraint | CheckConstraint]:
-        if not value or not isinstance(value, Iterable):
-            return []
-        raw = list(value)
-        return [
-            constraint
-            for constraint in raw
-            if isinstance(constraint, (UniqueConstraint, CheckConstraint))
-        ]
-
     def _generate_constraint_operations(self) -> list[TortoiseOperation]:
         operations: list[TortoiseOperation] = []
-        old_unique = self._normalize_unique_together(
-            self.old_state.options.get("unique_together", ())
-        )
-        new_unique = self._normalize_unique_together(
-            self.new_state.options.get("unique_together", ())
-        )
+        old_unique = _normalize_unique_together(self.old_state.options.get("unique_together", ()))
+        new_unique = _normalize_unique_together(self.new_state.options.get("unique_together", ()))
 
         for fields in old_unique:
             if fields not in new_unique:
@@ -214,8 +222,8 @@ class StateModelDiff:
                     )
                 )
 
-        old_constraints = self._normalize_constraints(self.old_state.options.get("constraints", ()))
-        new_constraints = self._normalize_constraints(self.new_state.options.get("constraints", ()))
+        old_constraints = _normalize_constraints(self.old_state.options.get("constraints", ()))
+        new_constraints = _normalize_constraints(self.new_state.options.get("constraints", ()))
 
         # Rename detection for UniqueConstraint (by matching fields)
         old_by_fields = {
@@ -306,38 +314,6 @@ class StateFieldDiff:
         self.old_state = old_state
         self.new_state = new_state
 
-    @staticmethod
-    def _normalize_indexes(value: object) -> list[Index]:
-        if not value or not isinstance(value, Iterable):
-            return []
-        indexes = []
-        for item in list(value):
-            if isinstance(item, Index):
-                indexes.append(item)
-            else:
-                indexes.append(Index(fields=tuple(item)))
-        return indexes
-
-    @staticmethod
-    def _index_signature(index: Index) -> tuple:
-        return (tuple(index.field_names), index.INDEX_TYPE, index.extra)
-
-    @staticmethod
-    def _normalize_unique_together(value: object) -> list[tuple[str, ...]]:
-        if not value or not isinstance(value, Iterable):
-            return []
-        return [tuple(fields) for fields in list(value)]
-
-    @staticmethod
-    def _normalize_constraints(value: object) -> list[UniqueConstraint | CheckConstraint]:
-        if not value or not isinstance(value, Iterable):
-            return []
-        return [
-            constraint
-            for constraint in list(value)
-            if isinstance(constraint, (UniqueConstraint, CheckConstraint))
-        ]
-
     def _generated_field_recreate_ops(
         self, field_name: str, field: Field
     ) -> list[TortoiseOperation]:
@@ -347,20 +323,20 @@ class StateFieldDiff:
                 AddIndex(model_name=self.new_state.name, index=Index(fields=(field_name,)))
             )
 
-        old_indexes = self._normalize_indexes(self.old_state.options.get("indexes", ()))
-        new_indexes = self._normalize_indexes(self.new_state.options.get("indexes", ()))
-        old_index_sigs = {self._index_signature(index) for index in old_indexes}
+        old_indexes = _normalize_indexes(self.old_state.options.get("indexes", ()))
+        new_indexes = _normalize_indexes(self.new_state.options.get("indexes", ()))
+        old_index_sigs = {_index_signature(index) for index in old_indexes}
         for index in new_indexes:
-            if self._index_signature(index) not in old_index_sigs:
+            if _index_signature(index) not in old_index_sigs:
                 continue
             if index.fields and field_name in index.fields:
                 operations.append(AddIndex(model_name=self.new_state.name, index=index))
 
         old_unique = set(
-            self._normalize_unique_together(self.old_state.options.get("unique_together", ()))
+            _normalize_unique_together(self.old_state.options.get("unique_together", ()))
         )
         new_unique = set(
-            self._normalize_unique_together(self.new_state.options.get("unique_together", ()))
+            _normalize_unique_together(self.new_state.options.get("unique_together", ()))
         )
         for fields in new_unique & old_unique:
             if field_name not in fields:
@@ -372,8 +348,8 @@ class StateFieldDiff:
                 )
             )
 
-        old_constraints = self._normalize_constraints(self.old_state.options.get("constraints", ()))
-        new_constraints = self._normalize_constraints(self.new_state.options.get("constraints", ()))
+        old_constraints = _normalize_constraints(self.old_state.options.get("constraints", ()))
+        new_constraints = _normalize_constraints(self.new_state.options.get("constraints", ()))
         old_constraints_set = set(old_constraints)
         for constraint in new_constraints:
             if constraint not in old_constraints_set:

@@ -117,3 +117,8 @@ class OracleSchemaGenerator(BaseSchemaGenerator):
             self._foreign_keys.append(fk)
             return ""
         return fk
+
+    def _get_inner_statements(self) -> list[str]:
+        extra = list(self._foreign_keys)
+        self._foreign_keys.clear()
+        return extra
