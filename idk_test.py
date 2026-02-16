@@ -182,6 +182,26 @@ async def t7_subqueries_in(some1: SomeModel, some2: SomeModel, some3: SomeModel)
         print(actual2 == expected2)
 
 
+async def t8_update(some1: SomeModel, some2: SomeModel, some3: SomeModel) -> None:
+    original_name = some1.name
+
+    prepared = SomeModel.prepare_sql("some_query8").filter(id=Parameter("search_id")).update(name=Parameter("replace_name")).prepared()
+    await prepared.execute(search_id=some1.id, replace_name=some1.name + "_test")
+    await some1.refresh_from_db(["name"])
+    print(f"{original_name!r} -> {some1.name!r}")
+    await prepared.execute(search_id=some1.id, replace_name=original_name)
+    await some1.refresh_from_db(["name"])
+    print(f"back to {original_name!r}: {some1.name!r}")
+
+    if CHECK_ACTUAL:
+        await SomeModel.filter(id=some1.id).update(name=some1.name + "_test")
+        await some1.refresh_from_db(["name"])
+        print(f"{original_name!r} -> {some1.name!r}")
+        await SomeModel.filter(id=some1.id).update(name=original_name)
+        await some1.refresh_from_db(["name"])
+        print(f"back to {original_name!r}: {some1.name!r}")
+
+
 TESTS = [
     t0_sanity_check,
     t1_simple_gte,
@@ -191,6 +211,7 @@ TESTS = [
     t5_compare_prepared_non_prepared,
     t6_subqueries,
     t7_subqueries_in,
+    t8_update,
 ]
 
 
