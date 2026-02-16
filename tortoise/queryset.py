@@ -1485,18 +1485,26 @@ class PreparedQuerySet(QuerySet[MODEL]):
 
     @_disallow_queryset_methods_on_prepared_query
     def values_list(self, *fields_: str, flat: bool = False) -> ValuesListQuery[Literal[False]]:
-        # TODO: implementation for PreparedQuerySet.delete()
+        # TODO: implementation for PreparedQuerySet.values_list()
         raise NotImplementedError
 
     @_disallow_queryset_methods_on_prepared_query
     def values(self, *args: str, **kwargs: str) -> ValuesQuery[Literal[False]]:
-        # TODO: implementation for PreparedQuerySet.delete()
+        # TODO: implementation for PreparedQuerySet.values()
         raise NotImplementedError
 
     @_disallow_queryset_methods_on_prepared_query
     def delete(self) -> DeleteQuery:
-        # TODO: implementation for PreparedQuerySet.delete()
-        raise NotImplementedError
+        return PreparedDeleteQuery(
+            model=self.model,
+            db=self._db,
+            q_objects=self._q_objects,
+            annotations=self._annotations,
+            custom_filters=self._custom_filters,
+            limit=self._limit,
+            orderings=self._orderings,
+            cache_key=self._cache_key,
+        )
 
     @_disallow_queryset_methods_on_prepared_query
     def update(self, **kwargs: Any) -> UpdateQuery:
@@ -1721,7 +1729,6 @@ class PreparedUpdateQuery(UpdateQuery):
         "_cache_key",
         "_prepared",
         "_sql_cache",
-        "_executor",
         "_dynamic_params",
         "_dynamic_params_names",
     )
@@ -1746,7 +1753,6 @@ class PreparedUpdateQuery(UpdateQuery):
         self._prepared: bool = False
 
         self._sql_cache = None
-        self._executor = None
         self._dynamic_params = None
         self._dynamic_params_names = None
 
@@ -1878,6 +1884,118 @@ class DeleteQuery(AwaitableQuery):
 
     async def _execute(self) -> int:
         return (await self._db.execute_query(*self.query.get_parameterized_sql()))[0]
+
+
+class PreparedDeleteQuery(DeleteQuery):
+    __slots__ = (
+        "_cache_key",
+        "_prepared",
+        "_sql_cache",
+        "_dynamic_params",
+        "_dynamic_params_names",
+    )
+
+    def __init__(
+            self,
+            model: type[MODEL],
+            db: BaseDBAsyncClient,
+            q_objects: list[Q],
+            annotations: dict[str, Any],
+            custom_filters: dict[str, FilterInfoDict],
+            limit: int | None,
+            orderings: list[tuple[str, str]],
+            cache_key: str,
+    ) -> None:
+        super().__init__(
+            model, db, q_objects, annotations, custom_filters, limit, orderings,
+        )
+
+        self._cache_key: str | None = cache_key
+        self._prepared: bool = False
+
+        self._sql_cache = None
+        self._dynamic_params = None
+        self._dynamic_params_names = None
+
+    def _clone(self) -> PreparedDeleteQuery[MODEL]:
+        query = self.__class__(
+            model=self.model,
+            db=self._db,
+            q_objects=self._q_objects,
+            annotations=self._annotations,
+            custom_filters=self._custom_filters,
+            limit=self._limit,
+            orderings=self._orderings,
+            cache_key=self._cache_key,
+        )
+        query._prepared = self._prepared
+        return query
+
+    def prepare_sql(self, key: str) -> NoReturn:
+        raise NotImplementedError
+
+    # TODO: big part of this method is duplicated with PreparedQuerySet
+    #  (and literally 1:1 with PreparedUpdateQuery), de-duplicate it
+    def prepared(self) -> PreparedDeleteQuery[MODEL]:
+        if self._cache_key is None:
+            raise ValueError("QuerySet.prepare_sql() must be called before QuerySet.prepared()")
+
+        if self._cache_key in self.model._meta.query_cache:
+            return self.model._meta.query_cache[self._cache_key]
+
+        queryset = self._clone()
+
+        queryset._choose_db_if_not_chosen(True)
+        queryset._make_query()
+
+        queryset._sql_cache = {}
+        _, params = queryset.query.get_parameterized_sql()
+        queryset._dynamic_params = {
+            param.name: param
+            for param in params
+            if isinstance(param, CollectionParameter)
+        }
+        queryset._dynamic_params_names = sorted(queryset._dynamic_params.keys())
+
+        queryset._prepared = True
+
+        self.model._meta.query_cache[self._cache_key] = queryset
+
+        return queryset
+
+    # TODO: this is a copy of PreparedQuerySet._get_or_create_cached_sql,
+    #  move into separate class maybe
+    def _get_or_create_cached_sql(self, params: dict[str, Any]) -> CachedSql:
+        reset_params = []
+
+        # TODO: cache also by database dialect
+        cache_key = "query"
+        for name in self._dynamic_params_names:
+            value = params[name]
+            if not isinstance(value, (tuple, list, set)):
+                # TODO: raise exception?
+                continue
+
+            param = self._dynamic_params[name]
+            cache_key += f"-{name}{len(value)}"
+            param.collection_size = len(value)
+            reset_params.append(param)
+
+        if cache_key not in self._sql_cache:
+            # TODO: probably could be done in a better way?
+            ctx = TortoiseSqlContext.copy(self.query.QUERY_CLS.SQL_CONTEXT, dynamic_params=self._dynamic_params)
+            sql, params = self.query.get_parameterized_sql(ctx)
+            self._sql_cache[cache_key] = CachedSql(sql, params)
+
+        for param in reset_params:
+            param.collection_size = None
+
+        return self._sql_cache[cache_key]
+
+    async def execute(self, **params) -> int:
+        cached_query = self._get_or_create_cached_sql(params)
+        filled_params = cached_query.make_filled_params(params)
+        return (await self._db.execute_query(cached_query.sql, filled_params))[0]
 
 
 class ExistsQuery(AwaitableQuery):
