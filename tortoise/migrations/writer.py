@@ -16,7 +16,7 @@ from typing import Any
 
 from pypika_tortoise.context import DEFAULT_SQL_CONTEXT
 
-from tortoise.migrations.constraints import UniqueConstraint
+from tortoise.migrations.constraints import CheckConstraint, UniqueConstraint
 from tortoise.migrations.operations import (
     AddConstraint,
     AddField,
@@ -66,7 +66,7 @@ class ImportManager:
     modules: set[str] = dataclass_field(default_factory=set)
     uses_fields_module: bool = False
     uses_indexes: set[str] = dataclass_field(default_factory=set)
-    uses_constraints: bool = False
+    uses_constraints: set[str] = dataclass_field(default_factory=set)
 
     def add_from(self, module: str, name: str) -> None:
         self.imports.setdefault(module, set()).add(name)
@@ -80,8 +80,8 @@ class ImportManager:
     def add_index_class(self, name: str) -> None:
         self.uses_indexes.add(name)
 
-    def add_constraints(self) -> None:
-        self.uses_constraints = True
+    def add_constraint_class(self, name: str) -> None:
+        self.uses_constraints.add(name)
 
     def render(self) -> list[str]:
         lines: list[str] = []
@@ -95,7 +95,8 @@ class ImportManager:
             index_names = ", ".join(sorted(self.uses_indexes))
             lines.append(f"from tortoise.indexes import {index_names}")
         if self.uses_constraints:
-            lines.append("from tortoise.migrations.constraints import UniqueConstraint")
+            constraint_names = ", ".join(sorted(self.uses_constraints))
+            lines.append(f"from tortoise.migrations.constraints import {constraint_names}")
         return lines
 
 
@@ -230,8 +231,11 @@ def _render_call(path: str, args: list[Any], kwargs: dict[str, Any], imports: Im
         imports.add_index_class(class_name)
         callee = class_name
     elif path == "tortoise.migrations.constraints.UniqueConstraint":
-        imports.add_constraints()
+        imports.add_constraint_class("UniqueConstraint")
         callee = "UniqueConstraint"
+    elif path == "tortoise.migrations.constraints.CheckConstraint":
+        imports.add_constraint_class("CheckConstraint")
+        callee = "CheckConstraint"
     else:
         module, name = path.rsplit(".", 1)
         imports.add_from(module, name)
@@ -438,7 +442,9 @@ class MigrationWriter:
         path, args, kwargs = index.deconstruct()
         return _render_call(path, args, kwargs, imports)
 
-    def _render_constraint(self, constraint: UniqueConstraint, imports: ImportManager) -> str:
+    def _render_constraint(
+        self, constraint: UniqueConstraint | CheckConstraint, imports: ImportManager
+    ) -> str:
         path, args, kwargs = constraint.deconstruct()
         return _render_call(path, args, kwargs, imports)
 

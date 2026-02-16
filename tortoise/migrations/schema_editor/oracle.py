@@ -137,11 +137,12 @@ class OracleSchemaEditor(BaseSchemaEditor):
         return m2m_create_string
 
     async def _get_unique_constraint_names_from_db(
-        self, table_name: str, column_name: str, schema: str | None = None
+        self, table_name: str, column_names: list[str], schema: str | None = None
     ) -> list[str]:
-        """Query USER_CONSTRAINTS/ALL_CONSTRAINTS for unique constraint names on a column."""
+        """Query USER_CONSTRAINTS/ALL_CONSTRAINTS for unique constraint names matching exact columns."""
         upper_table = table_name.upper()
-        upper_column = column_name.upper()
+        col_count = len(column_names)
+        col_list = ",".join(f"'{c.upper()}'" for c in column_names)
         if schema:
             query = (
                 "SELECT ac.CONSTRAINT_NAME "
@@ -150,9 +151,16 @@ class OracleSchemaEditor(BaseSchemaEditor):
                 "ON ac.CONSTRAINT_NAME = acc.CONSTRAINT_NAME "
                 "AND ac.OWNER = acc.OWNER "
                 f"WHERE ac.TABLE_NAME = '{upper_table}' "  # nosec B608
-                f"AND acc.COLUMN_NAME = '{upper_column}' "
+                f"AND acc.COLUMN_NAME IN ({col_list}) "
                 "AND ac.CONSTRAINT_TYPE = 'U' "
-                f"AND ac.OWNER = '{schema.upper()}'"
+                f"AND ac.OWNER = '{schema.upper()}' "
+                "GROUP BY ac.CONSTRAINT_NAME "
+                f"HAVING COUNT(DISTINCT acc.COLUMN_NAME) = {col_count} "
+                "AND COUNT(DISTINCT acc.COLUMN_NAME) = ("
+                "  SELECT COUNT(*) FROM ALL_CONS_COLUMNS acc2 "
+                "  WHERE acc2.CONSTRAINT_NAME = ac.CONSTRAINT_NAME "
+                "  AND acc2.OWNER = ac.OWNER"
+                ")"
             )
         else:
             query = (
@@ -161,8 +169,14 @@ class OracleSchemaEditor(BaseSchemaEditor):
                 "JOIN USER_CONS_COLUMNS ucc "
                 "ON uc.CONSTRAINT_NAME = ucc.CONSTRAINT_NAME "
                 f"WHERE uc.TABLE_NAME = '{upper_table}' "  # nosec B608
-                f"AND ucc.COLUMN_NAME = '{upper_column}' "
-                "AND uc.CONSTRAINT_TYPE = 'U'"
+                f"AND ucc.COLUMN_NAME IN ({col_list}) "
+                "AND uc.CONSTRAINT_TYPE = 'U' "
+                "GROUP BY uc.CONSTRAINT_NAME "
+                f"HAVING COUNT(DISTINCT ucc.COLUMN_NAME) = {col_count} "
+                "AND COUNT(DISTINCT ucc.COLUMN_NAME) = ("
+                "  SELECT COUNT(*) FROM USER_CONS_COLUMNS ucc2 "
+                "  WHERE ucc2.CONSTRAINT_NAME = uc.CONSTRAINT_NAME"
+                ")"
             )
         _, rows = await self.client.execute_query(query)
         return [row["CONSTRAINT_NAME"] for row in rows]

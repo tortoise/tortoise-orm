@@ -3,7 +3,7 @@ from __future__ import annotations
 from copy import copy
 
 from tortoise.fields.base import CASCADE, Field
-from tortoise.fields.relational import ManyToManyFieldInstance
+from tortoise.fields.relational import ForeignKeyFieldInstance, ManyToManyFieldInstance
 from tortoise.migrations.schema_editor.base import BaseSchemaEditor
 from tortoise.models import Model
 from tortoise.schema_quoting import MySQLQuotingMixin
@@ -15,6 +15,7 @@ class MySQLSchemaEditor(MySQLQuotingMixin, BaseSchemaEditor):
     FIELD_TEMPLATE = "`{name}` {type} {nullable} {unique}{primary}{comment}"
     INDEX_CREATE_TEMPLATE = "{index_type}KEY `{index_name}` ({fields}){extra}"
     UNIQUE_CONSTRAINT_CREATE_TEMPLATE = "UNIQUE KEY `{index_name}` ({fields})"
+    CHECK_CONSTRAINT_CREATE_TEMPLATE = "CONSTRAINT `{name}` CHECK ({check})"
     GENERATED_PK_TEMPLATE = "`{field_name}` {generated_sql}{comment}"
     FK_TEMPLATE = (
         "{constraint}FOREIGN KEY (`{db_column}`)"
@@ -34,7 +35,7 @@ class MySQLSchemaEditor(MySQLQuotingMixin, BaseSchemaEditor):
     ALTER_FIELD_TEMPLATE = "ALTER TABLE {table} {changes}"
     ALTER_FIELD_NULL_TEMPLATE = "ALTER COLUMN `{column}` DROP NOT NULL"
     ALTER_FIELD_NOT_NULL_TEMPLATE = "ALTER COLUMN `{column}` SET NOT NULL"
-    ALTER_FIELD_SET_DEFAULT_TEMPLATE = "ALTER COLUMN `{column}` SET DEFAULT {default}"
+    ALTER_FIELD_SET_DEFAULT_TEMPLATE = "ALTER COLUMN `{column}` SET DEFAULT ({default})"
     ALTER_FIELD_DROP_DEFAULT_TEMPLATE = "ALTER COLUMN `{column}` DROP DEFAULT"
     RENAME_FIELD_TEMPLATE = "ALTER TABLE {table} RENAME COLUMN `{old_column}` TO `{new_column}`"
     DELETE_FIELD_TEMPLATE = "ALTER TABLE {table} DROP COLUMN `{column}`"
@@ -177,6 +178,117 @@ class MySQLSchemaEditor(MySQLQuotingMixin, BaseSchemaEditor):
                     m2m_create_string = "\n".join(lines)
         return m2m_create_string
 
+    async def add_field(self, model, field_name) -> None:
+        """Override to work around MySQL error 1674.
+
+        MySQL rejects ``ALTER TABLE ADD COLUMN ... DEFAULT (expr)`` when
+        the expression is non-deterministic (e.g. ``RANDOM_BYTES``).
+        We split the operation into two statements: ADD COLUMN without the
+        default, then ALTER COLUMN SET DEFAULT.
+        """
+        from copy import copy
+
+        from tortoise.fields.db_defaults import SqlDefault
+
+        field = model._meta.fields_map[field_name]
+        if field.has_db_default() and isinstance(field.db_default, SqlDefault):
+            default_sql = field.db_default.get_sql(dialect=self.DIALECT)
+            # Swap in a copy without db_default so the base add_field skips it,
+            # avoiding temporary mutation of the shared field object.
+            temp_field = copy(field)
+            temp_field.db_default = None
+            model._meta.fields_map[field_name] = temp_field
+            try:
+                await super().add_field(model, field_name)
+            finally:
+                model._meta.fields_map[field_name] = field
+            # Now set the expression default separately
+            db_field = field.source_field or field_name
+            table = self._qualify_table_name(model._meta.db_table, model._meta.schema)
+            await self._run_sql(
+                self.ALTER_FIELD_TEMPLATE.format(
+                    table=table,
+                    changes=self.ALTER_FIELD_SET_DEFAULT_TEMPLATE.format(
+                        column=db_field, default=default_sql
+                    ),
+                )
+            )
+            return
+        await super().add_field(model, field_name)
+
+    async def add_index(self, model, index) -> None:
+        # MySQL's _get_index_sql stores SQL in _field_indexes for inline CREATE TABLE
+        # and returns "".  For standalone ADD INDEX we need an explicit CREATE INDEX.
+        index.resolve_expressions(model)
+        index_name = self._index_name_for_model(model, index)
+        table = self._qualify_table_name(model._meta.db_table, model._meta.schema)
+        fields_sql = ", ".join([self.quote(f) for f in index.field_names])
+        index_type = f"{index.INDEX_TYPE} " if index.INDEX_TYPE else ""
+        await self._run_sql(f"CREATE {index_type}INDEX `{index_name}` ON {table} ({fields_sql});")
+
+    async def _create_missing_fk_index(self, model: type[Model], field_names: list[str]) -> None:
+        """Create a simple index on a FK column if dropping the only index that covers it.
+
+        MySQL requires at least one index whose leading column matches a FK column.
+        When a composite index (e.g. (category_id, is_active)) is the only index
+        covering the FK column and we need to drop it, MySQL refuses with error 1553.
+        Following Django's approach, we create a simple replacement index first.
+        """
+        if not field_names:
+            return
+        # Ensure we're working with DB column names, not model field names
+        resolved = self._resolve_fields_to_columns(model, field_names)
+        first_col = resolved[0]
+        # Check if first_col corresponds to a FK field on the model
+        is_fk = False
+        for field_obj in model._meta.fields_map.values():
+            if isinstance(field_obj, ForeignKeyFieldInstance):
+                fk_col = field_obj.source_field or field_obj.model_field_name
+                if fk_col == first_col:
+                    is_fk = True
+                    break
+        if not is_fk:
+            return
+        # Count indexes whose first column is this FK column
+        table_name = model._meta.db_table
+        query = (
+            "SELECT INDEX_NAME FROM information_schema.statistics "
+            f"WHERE TABLE_NAME = '{table_name}' "  # nosec B608
+            "AND TABLE_SCHEMA = DATABASE() "
+            f"AND COLUMN_NAME = '{first_col}' "  # nosec B608
+            "AND SEQ_IN_INDEX = 1"
+        )
+        _, rows = await self.client.execute_query(query)
+        if len(rows) <= 1:
+            # The only covering index is the one being dropped; create a replacement.
+            # Use "_fk_idx" prefix to avoid name collision with the index being dropped.
+            table = self._qualify_table_name(model._meta.db_table, model._meta.schema)
+            idx_name = self._generate_index_name_for_table("fkidx", table_name, [first_col])
+            await self._run_sql(f"CREATE INDEX `{idx_name}` ON {table} ({self.quote(first_col)});")
+
+    async def remove_index(self, model, index) -> None:
+        index.resolve_expressions(model)
+        await self._create_missing_fk_index(model, index.field_names)
+        await super().remove_index(model, index)
+
+    async def remove_constraint(self, model, constraint) -> None:
+        from tortoise.migrations.constraints import CheckConstraint, UniqueConstraint
+
+        if isinstance(constraint, CheckConstraint):
+            table = self._qualify_table_name(model._meta.db_table, model._meta.schema)
+            await self._run_sql(f"ALTER TABLE {table} DROP CHECK `{constraint.name}`")
+            return
+        if isinstance(constraint, UniqueConstraint) and constraint.fields:
+            resolved_fields = self._resolve_fields_to_columns(model, constraint.fields)
+            await self._create_missing_fk_index(model, resolved_fields)
+        constraint_name = await self._resolve_constraint_name(model, constraint)
+        await self._run_sql(
+            self.DROP_INDEX_TEMPLATE.format(
+                table=self._qualify_table_name(model._meta.db_table, model._meta.schema),
+                name=constraint_name,
+            )
+        )
+
     async def _alter_field(self, model: type[Model], old_field: Field, new_field: Field) -> None:
         # MySQL does not support ALTER COLUMN ... SET/DROP NOT NULL.
         # It requires MODIFY COLUMN with the full column type specification.
@@ -196,17 +308,37 @@ class MySQLSchemaEditor(MySQLQuotingMixin, BaseSchemaEditor):
         await super()._alter_field(model, old_field, new_field)
 
     async def add_constraint(self, model, constraint) -> None:
+        from tortoise.migrations.constraints import CheckConstraint
+
+        if isinstance(constraint, CheckConstraint):
+            table = self._qualify_table_name(model._meta.db_table, model._meta.schema)
+            constraint_sql = self.CHECK_CONSTRAINT_CREATE_TEMPLATE.format(
+                name=constraint.name,
+                check=constraint.check,
+            )
+            await self._run_sql(
+                self.ADD_CONSTRAINT_TEMPLATE.format(table=table, constraint=constraint_sql)
+            )
+            return
+        if hasattr(constraint, "condition") and constraint.condition:
+            raise NotImplementedError(
+                f"Partial unique indexes (condition) are not supported on {self.DIALECT}. "
+                "Use PostgreSQL for conditional unique constraints."
+            )
+        resolved_fields = self._resolve_fields_to_columns(model, constraint.fields)
         table = self._qualify_table_name(model._meta.db_table, model._meta.schema)
         index_name = self._generate_index_name_for_table(
-            "uidx", model._meta.db_table, list(constraint.fields)
+            "uidx", model._meta.db_table, resolved_fields
         )
-        columns = ", ".join([self.quote(f) for f in constraint.fields])
+        columns = ", ".join([self.quote(f) for f in resolved_fields])
         await self._run_sql(f"ALTER TABLE {table} ADD UNIQUE KEY `{index_name}` ({columns})")
 
     async def _get_unique_constraint_names_from_db(
-        self, table_name: str, column_name: str, schema: str | None = None
+        self, table_name: str, column_names: list[str], schema: str | None = None
     ) -> list[str]:
-        """Query information_schema for unique constraint names on a specific column."""
+        """Query information_schema for unique constraint names matching exact column set."""
+        col_count = len(column_names)
+        col_list = ",".join(f"'{c}'" for c in column_names)
         query = (
             "SELECT tc.CONSTRAINT_NAME "
             "FROM information_schema.table_constraints tc "
@@ -217,18 +349,15 @@ class MySQLSchemaEditor(MySQLQuotingMixin, BaseSchemaEditor):
             f"WHERE tc.TABLE_NAME = '{table_name}' "  # nosec B608
             "AND tc.TABLE_SCHEMA = DATABASE() "
             "AND tc.CONSTRAINT_TYPE = 'UNIQUE' "
-            f"AND kcu.COLUMN_NAME = '{column_name}' "
+            f"AND kcu.COLUMN_NAME IN ({col_list}) "
             "GROUP BY tc.CONSTRAINT_NAME "
-            "HAVING COUNT(kcu.COLUMN_NAME) = 1"
+            f"HAVING COUNT(DISTINCT kcu.COLUMN_NAME) = {col_count} "
+            "AND COUNT(DISTINCT kcu.COLUMN_NAME) = ("
+            "  SELECT COUNT(*) FROM information_schema.key_column_usage kcu2 "
+            "  WHERE kcu2.CONSTRAINT_NAME = tc.CONSTRAINT_NAME "
+            "  AND kcu2.TABLE_SCHEMA = tc.TABLE_SCHEMA "
+            "  AND kcu2.TABLE_NAME = tc.TABLE_NAME"
+            ")"
         )
         _, rows = await self.client.execute_query(query)
         return [row["CONSTRAINT_NAME"] for row in rows]
-
-    async def remove_constraint(self, model, constraint) -> None:
-        constraint_name = await self._resolve_constraint_name(model, constraint)
-        await self._run_sql(
-            self.DROP_INDEX_TEMPLATE.format(
-                table=self._qualify_table_name(model._meta.db_table, model._meta.schema),
-                name=constraint_name,
-            )
-        )

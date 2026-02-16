@@ -217,7 +217,9 @@ def test_generate_recreate_generated_field_restores_indexes_constraints() -> Non
     assert any(isinstance(op, AddField) for op in operations)
     assert any(isinstance(op, AddIndex) and op.index.INDEX_TYPE == "GIN" for op in operations)
     assert any(
-        isinstance(op, AddConstraint) and op.constraint.fields == ("title", "search_vector")
+        isinstance(op, AddConstraint)
+        and isinstance(op.constraint, UniqueConstraint)
+        and op.constraint.fields == ("title", "search_vector")
         for op in operations
     )
 

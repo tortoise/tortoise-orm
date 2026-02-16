@@ -8,6 +8,24 @@ Changelog
 1.1
 ===
 
+1.1.4
+-----
+
+Added
+^^^^^
+- ``CheckConstraint`` support in ``Meta.constraints`` — named check constraints are now captured by the migration autodetector, enabling ``AddConstraint``/``RemoveConstraint``/``RenameConstraint`` generation via ``makemigrations``.
+- ``UniqueConstraint.condition`` parameter for partial unique indexes on PostgreSQL (emitted as ``CREATE UNIQUE INDEX ... WHERE``).
+
+Fixed
+^^^^^
+- FK field-to-column resolution in constraint operations — FK fields like ``organization`` are now correctly resolved to their DB column (e.g. ``organization_id``) in ``add_constraint``, ``remove_constraint``, and ``rename_constraint`` across all backends.
+- MSSQL ``HASHBYTES`` expression default — ``RandomHex`` now wraps ``NEWID()`` with ``CAST(... AS NVARCHAR(36))`` to avoid implicit conversion error.
+- MySQL ``ALTER COLUMN SET DEFAULT`` template now wraps expression defaults in parentheses.
+- ``RenameConstraint`` operation now preserves constraint type and fields during forward/backward migrations.
+- MySQL schema editor: FK index protection (``_create_missing_fk_index``) prevents MySQL error 1553 when dropping the only index covering a foreign key column.
+- MySQL schema editor: expression default two-step workaround for ``ADD COLUMN`` with non-deterministic ``SqlDefault`` expressions (e.g. ``RANDOM_BYTES``).
+- Multi-column constraint introspection — constraint name resolution now matches on the exact set of columns across all backends (PostgreSQL, MySQL, MSSQL, SQLite, Oracle).
+
 1.1.3
 -----
 

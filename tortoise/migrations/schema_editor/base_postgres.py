@@ -88,23 +88,62 @@ class BasePostgresSchemaEditor(BaseSchemaEditor):
             extra="",
         )
 
+    async def add_constraint(self, model, constraint) -> None:
+        from tortoise.migrations.constraints import UniqueConstraint
+
+        if isinstance(constraint, UniqueConstraint) and constraint.condition:
+            resolved_fields = self._resolve_fields_to_columns(model, constraint.fields)
+            resolved_constraint = UniqueConstraint(
+                fields=tuple(resolved_fields),
+                name=constraint.name,
+                condition=constraint.condition,
+            )
+            index_name = self._constraint_name_for_model(model, resolved_constraint)
+            index_sql = (
+                f'CREATE UNIQUE INDEX "{index_name}" '
+                f"ON {self._qualify_table_name(model._meta.db_table, model._meta.schema)} "
+                f"({', '.join([self.quote(f) for f in resolved_fields])}) "
+                f"WHERE {constraint.condition}"
+            )
+            await self._run_sql(index_sql + ";")
+            return
+        await super().add_constraint(model, constraint)
+
+    async def remove_constraint(self, model, constraint) -> None:
+        from tortoise.migrations.constraints import UniqueConstraint
+
+        if isinstance(constraint, UniqueConstraint) and constraint.condition:
+            resolved_fields = self._resolve_fields_to_columns(model, constraint.fields)
+            resolved_constraint = UniqueConstraint(
+                fields=tuple(resolved_fields),
+                name=constraint.name,
+                condition=constraint.condition,
+            )
+            constraint_name = self._constraint_name_for_model(model, resolved_constraint)
+            await self._run_sql(self.DROP_INDEX_TEMPLATE.format(name=constraint_name))
+            return
+        await super().remove_constraint(model, constraint)
+
     async def _get_unique_constraint_names_from_db(
-        self, table_name: str, column_name: str, schema: str | None = None
+        self, table_name: str, column_names: list[str], schema: str | None = None
     ) -> list[str]:
-        """Query pg_constraint for unique constraint names on a specific column."""
+        """Query pg_constraint for unique constraint names matching exact column set."""
         nsp = schema or "public"
+        col_array = "ARRAY[" + ",".join(f"'{c}'" for c in column_names) + "]"
         query = (
             "SELECT con.conname "
             "FROM pg_constraint con "
             "JOIN pg_class rel ON rel.oid = con.conrelid "
             "JOIN pg_namespace nsp ON nsp.oid = rel.relnamespace "
-            "JOIN pg_attribute att ON att.attrelid = con.conrelid "
-            "AND att.attnum = ANY(con.conkey) "
             f"WHERE rel.relname = '{table_name}' "  # nosec B608
-            f"AND att.attname = '{column_name}' "
             "AND con.contype = 'u' "
-            "AND array_length(con.conkey, 1) = 1 "
-            f"AND nsp.nspname = '{nsp}'"
+            f"AND nsp.nspname = '{nsp}' "
+            "AND ARRAY("
+            "  SELECT att.attname::text"
+            "  FROM unnest(con.conkey) WITH ORDINALITY AS k(attnum, ord)"
+            "  JOIN pg_attribute att ON att.attrelid = con.conrelid AND att.attnum = k.attnum"
+            "  ORDER BY k.ord"
+            f") = {col_array}::text[]"
         )
         _, rows = await self.client.execute_query(query)
         return [row["conname"] for row in rows]

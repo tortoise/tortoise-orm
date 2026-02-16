@@ -12,7 +12,7 @@ from tortoise.fields.relational import (
     OneToOneFieldInstance,
 )
 from tortoise.indexes import Index
-from tortoise.migrations.constraints import UniqueConstraint
+from tortoise.migrations.constraints import CheckConstraint, UniqueConstraint
 from tortoise.migrations.exceptions import IncompatibleStateError
 from tortoise.migrations.schema_editor.base import BaseSchemaEditor
 from tortoise.migrations.schema_generator.state import ModelState, State
@@ -844,7 +844,7 @@ class RenameIndex(TortoiseOperation):
 
 
 class AddConstraint(TortoiseOperation):
-    def __init__(self, model_name: str, constraint: UniqueConstraint) -> None:
+    def __init__(self, model_name: str, constraint: UniqueConstraint | CheckConstraint) -> None:
         self.model_name = model_name
         self.constraint = constraint
 
@@ -853,7 +853,11 @@ class AddConstraint(TortoiseOperation):
 
     def state_forward(self, app_label: str, state: State) -> None:
         model_state = self.get_model_state(state, app_label, self.model_name)
-        if self.constraint.name:
+        if isinstance(self.constraint, CheckConstraint):
+            constraints = _get_option_list(model_state, "constraints")
+            constraints.append(self.constraint)
+            _set_option_list(model_state, "constraints", constraints)
+        elif self.constraint.name:
             constraints = _get_option_list(model_state, "constraints")
             constraints.append(self.constraint)
             _set_option_list(model_state, "constraints", constraints)
@@ -899,10 +903,12 @@ class RemoveConstraint(TortoiseOperation):
     def describe(self) -> str:
         return f"Remove constraint from {self.model_name}"
 
-    def _resolve_constraint(self, model_state: ModelState) -> UniqueConstraint:
+    def _resolve_constraint(self, model_state: ModelState) -> UniqueConstraint | CheckConstraint:
         if self.name:
             for constraint in _get_option_list(model_state, "constraints"):
                 if isinstance(constraint, UniqueConstraint) and constraint.name == self.name:
+                    return constraint
+                if isinstance(constraint, CheckConstraint) and constraint.name == self.name:
                     return constraint
         if self.fields:
             for fields in _get_option_list(model_state, "unique_together"):
@@ -919,7 +925,10 @@ class RemoveConstraint(TortoiseOperation):
             constraints = [
                 constraint
                 for constraint in constraints
-                if not (isinstance(constraint, UniqueConstraint) and constraint.name == self.name)
+                if not (
+                    (isinstance(constraint, UniqueConstraint) and constraint.name == self.name)
+                    or (isinstance(constraint, CheckConstraint) and constraint.name == self.name)
+                )
             ]
             _set_option_list(model_state, "constraints", constraints)
         if self.fields:
@@ -974,13 +983,43 @@ class RenameConstraint(TortoiseOperation):
         for constraint in constraints:
             if isinstance(constraint, UniqueConstraint) and constraint.name == self.old_name:
                 constraints.remove(constraint)
-                constraints.append(UniqueConstraint(fields=constraint.fields, name=self.new_name))
+                constraints.append(
+                    UniqueConstraint(
+                        fields=constraint.fields,
+                        name=self.new_name,
+                        condition=constraint.condition,
+                    )
+                )
+                _set_option_list(model_state, "constraints", constraints)
+                state.reload_model(app_label, self.model_name)
+                return
+            if isinstance(constraint, CheckConstraint) and constraint.name == self.old_name:
+                constraints.remove(constraint)
+                constraints.append(
+                    CheckConstraint(
+                        check=constraint.check,
+                        name=self.new_name,
+                    )
+                )
                 _set_option_list(model_state, "constraints", constraints)
                 state.reload_model(app_label, self.model_name)
                 return
         raise IncompatibleStateError(
             f"Constraint {self.old_name} is not present on {self.model_name}"
         )
+
+    def _find_constraint_by_name(
+        self, model_state: ModelState, name: str
+    ) -> UniqueConstraint | CheckConstraint:
+        """Look up a constraint by name from the model state's constraints list."""
+        for constraint in _get_option_list(model_state, "constraints"):
+            if (
+                isinstance(constraint, (UniqueConstraint, CheckConstraint))
+                and constraint.name == name
+            ):
+                return constraint
+        # Fallback for unnamed unique_together constraints that were given a name
+        return UniqueConstraint(fields=(), name=name)
 
     async def database_forward(
         self,
@@ -992,8 +1031,21 @@ class RenameConstraint(TortoiseOperation):
         if not state_editor:
             return
         model = new_state.apps.get_model(f"{app_label}.{self.model_name}")
-        old_constraint = UniqueConstraint(fields=(), name=self.old_name)
-        new_constraint = UniqueConstraint(fields=(), name=self.new_name)
+        # Look up actual constraint from old state to get the real type and fields
+        old_model_state = old_state.models.get((app_label, self.model_name))
+        if old_model_state:
+            old_constraint = self._find_constraint_by_name(old_model_state, self.old_name)
+        else:
+            old_constraint = UniqueConstraint(fields=(), name=self.old_name)
+        # Build new constraint with same type but new name
+        if isinstance(old_constraint, CheckConstraint):
+            new_constraint: UniqueConstraint | CheckConstraint = CheckConstraint(
+                check=old_constraint.check, name=self.new_name
+            )
+        else:
+            new_constraint = UniqueConstraint(
+                fields=old_constraint.fields, name=self.new_name, condition=old_constraint.condition
+            )
         await state_editor.rename_constraint(model, old_constraint, new_constraint)
 
     async def database_backward(
@@ -1006,9 +1058,22 @@ class RenameConstraint(TortoiseOperation):
         if not state_editor:
             return
         model = new_state.apps.get_model(f"{app_label}.{self.model_name}")
-        old_constraint = UniqueConstraint(fields=(), name=self.new_name)
-        new_constraint = UniqueConstraint(fields=(), name=self.old_name)
-        await state_editor.rename_constraint(model, old_constraint, new_constraint)
+        # Look up actual constraint from new state (which has the new_name)
+        new_model_state = new_state.models.get((app_label, self.model_name))
+        if new_model_state:
+            new_constraint = self._find_constraint_by_name(new_model_state, self.new_name)
+        else:
+            new_constraint = UniqueConstraint(fields=(), name=self.new_name)
+        # Build old constraint with same type but old name
+        if isinstance(new_constraint, CheckConstraint):
+            old_constraint: UniqueConstraint | CheckConstraint = CheckConstraint(
+                check=new_constraint.check, name=self.old_name
+            )
+        else:
+            old_constraint = UniqueConstraint(
+                fields=new_constraint.fields, name=self.old_name, condition=new_constraint.condition
+            )
+        await state_editor.rename_constraint(model, new_constraint, old_constraint)
 
 
 class RunPython(TortoiseOperation):

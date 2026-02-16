@@ -7,7 +7,7 @@ from tortoise.backends.base.client import BaseDBAsyncClient
 from tortoise.fields.base import Field
 from tortoise.fields.relational import ForeignKeyFieldInstance, ManyToManyFieldInstance
 from tortoise.indexes import Index
-from tortoise.migrations.constraints import UniqueConstraint
+from tortoise.migrations.constraints import CheckConstraint, UniqueConstraint
 from tortoise.migrations.schema_editor.data import ModelSqlData
 from tortoise.models import Model
 from tortoise.schema_quoting import SchemaQuotingMixin
@@ -20,6 +20,7 @@ class BaseSchemaEditor(SchemaQuotingMixin):
     INDEX_CREATE_TEMPLATE = 'CREATE INDEX "{index_name}" ON {table_name} ({fields}){extra};'
     UNIQUE_INDEX_CREATE_TEMPLATE = INDEX_CREATE_TEMPLATE.replace("INDEX", "UNIQUE INDEX")
     UNIQUE_CONSTRAINT_CREATE_TEMPLATE = 'CONSTRAINT "{index_name}" UNIQUE ({fields})'
+    CHECK_CONSTRAINT_CREATE_TEMPLATE = 'CONSTRAINT "{name}" CHECK ({check})'
     GENERATED_PK_TEMPLATE = '"{field_name}" {generated_sql}{comment}'
     FK_TEMPLATE = ' REFERENCES {table} ("{field}") ON DELETE {on_delete}{comment}'
     M2M_TABLE_TEMPLATE = (
@@ -721,14 +722,33 @@ class BaseSchemaEditor(SchemaQuotingMixin):
             return constraint.name
         return self._get_unique_constraint_name(model, list(constraint.fields))
 
-    async def _get_unique_constraint_names_from_db(
-        self, table_name: str, column_name: str, schema: str | None = None
+    def _resolve_fields_to_columns(
+        self, model: type[Model], field_names: tuple[str, ...] | list[str]
     ) -> list[str]:
-        """Query the database for actual unique constraint/index names on a column.
+        """Resolve model field names to database column names.
 
-        Returns a list of constraint names enforcing uniqueness on the given column.
-        The base implementation returns an empty list. Backend-specific subclasses
-        override this method with introspection queries.
+        For FK fields like 'organization', returns the DB column 'organization_id'.
+        For regular fields, returns the field name or its source_field.
+        Falls back to the original name if the field is not found in the model's fields_map.
+        """
+        resolved = []
+        for field_name in field_names:
+            field_object = model._meta.fields_map.get(field_name)
+            if field_object is not None:
+                resolved.append(field_object.source_field or field_name)
+            else:
+                # Field not in fields_map -- may already be a DB column name
+                resolved.append(field_name)
+        return resolved
+
+    async def _get_unique_constraint_names_from_db(
+        self, table_name: str, column_names: list[str], schema: str | None = None
+    ) -> list[str]:
+        """Query the database for unique constraint names on an exact set of columns.
+
+        Returns constraint names whose column set matches ``column_names`` exactly
+        (same columns, same order).  The base implementation returns an empty list.
+        Backend-specific subclasses override this with introspection queries.
         """
         return []
 
@@ -742,12 +762,13 @@ class BaseSchemaEditor(SchemaQuotingMixin):
         deterministic uid_ name when introspection is unavailable (FakeClient,
         collect_sql mode, or empty results).
         """
-        deterministic_name = self._constraint_name_for_model(model, constraint)
+        resolved_fields = self._resolve_fields_to_columns(model, constraint.fields)
+        resolved_constraint = UniqueConstraint(fields=tuple(resolved_fields), name=constraint.name)
+        deterministic_name = self._constraint_name_for_model(model, resolved_constraint)
         if not self.collect_sql:
             try:
-                column_name = constraint.fields[0]
                 introspected = await self._get_unique_constraint_names_from_db(
-                    model._meta.db_table, column_name, model._meta.schema
+                    model._meta.db_table, resolved_fields, model._meta.schema
                 )
                 if introspected:
                     return introspected[0]
@@ -795,11 +816,33 @@ class BaseSchemaEditor(SchemaQuotingMixin):
         await self.remove_index(model, old_index)
         await self.add_index(model, new_index)
 
-    async def add_constraint(self, model: type[Model], constraint: UniqueConstraint) -> None:
-        constraint_name = self._constraint_name_for_model(model, constraint)
+    async def add_constraint(
+        self, model: type[Model], constraint: UniqueConstraint | CheckConstraint
+    ) -> None:
+        if isinstance(constraint, CheckConstraint):
+            constraint_sql = self.CHECK_CONSTRAINT_CREATE_TEMPLATE.format(
+                name=constraint.name,
+                check=constraint.check,
+            )
+            await self._run_sql(
+                self.ADD_CONSTRAINT_TEMPLATE.format(
+                    table=self._qualify_table_name(model._meta.db_table, model._meta.schema),
+                    constraint=constraint_sql,
+                )
+            )
+            return
+        if isinstance(constraint, UniqueConstraint) and constraint.condition:
+            raise NotImplementedError(
+                f"Partial unique indexes (condition) are not supported on {self.DIALECT}. "
+                "Use PostgreSQL for conditional unique constraints."
+            )
+        resolved_fields = self._resolve_fields_to_columns(model, constraint.fields)
+        constraint_name = self._constraint_name_for_model(
+            model, UniqueConstraint(fields=tuple(resolved_fields), name=constraint.name)
+        )
         constraint_sql = self.UNIQUE_CONSTRAINT_CREATE_TEMPLATE.format(
             index_name=constraint_name,
-            fields=", ".join([self.quote(f) for f in constraint.fields]),
+            fields=", ".join([self.quote(f) for f in resolved_fields]),
         )
         await self._run_sql(
             self.ADD_CONSTRAINT_TEMPLATE.format(
@@ -808,7 +851,17 @@ class BaseSchemaEditor(SchemaQuotingMixin):
             )
         )
 
-    async def remove_constraint(self, model: type[Model], constraint: UniqueConstraint) -> None:
+    async def remove_constraint(
+        self, model: type[Model], constraint: UniqueConstraint | CheckConstraint
+    ) -> None:
+        if isinstance(constraint, CheckConstraint):
+            await self._run_sql(
+                self.DELETE_CONSTRAINT_TEMPLATE.format(
+                    table=self._qualify_table_name(model._meta.db_table, model._meta.schema),
+                    name=constraint.name,
+                )
+            )
+            return
         constraint_name = await self._resolve_constraint_name(model, constraint)
         await self._run_sql(
             self.DELETE_CONSTRAINT_TEMPLATE.format(
@@ -818,10 +871,31 @@ class BaseSchemaEditor(SchemaQuotingMixin):
         )
 
     async def rename_constraint(
-        self, model: type[Model], old_constraint: UniqueConstraint, new_constraint: UniqueConstraint
+        self,
+        model: type[Model],
+        old_constraint: UniqueConstraint | CheckConstraint,
+        new_constraint: UniqueConstraint | CheckConstraint,
     ) -> None:
-        old_name = self._constraint_name_for_model(model, old_constraint)
-        new_name = self._constraint_name_for_model(model, new_constraint)
+        # For CheckConstraint or any named constraint, use names directly
+        if isinstance(old_constraint, CheckConstraint):
+            if not isinstance(new_constraint, CheckConstraint):
+                raise TypeError(f"Cannot rename CheckConstraint to {type(new_constraint).__name__}")
+            old_name = old_constraint.name
+            new_name = new_constraint.name
+        else:
+            if not isinstance(new_constraint, UniqueConstraint):
+                raise TypeError(
+                    f"Cannot rename UniqueConstraint to {type(new_constraint).__name__}"
+                )
+            old_resolved = self._resolve_fields_to_columns(model, old_constraint.fields)
+            new_resolved = self._resolve_fields_to_columns(model, new_constraint.fields)
+            old_c = UniqueConstraint(fields=tuple(old_resolved), name=old_constraint.name)
+            new_c = UniqueConstraint(
+                fields=tuple(new_resolved),
+                name=new_constraint.name,
+            )
+            old_name = self._constraint_name_for_model(model, old_c)
+            new_name = self._constraint_name_for_model(model, new_c)
         if old_name == new_name:
             return
         if self.RENAME_CONSTRAINT_TEMPLATE:

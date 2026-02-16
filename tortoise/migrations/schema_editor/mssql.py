@@ -42,6 +42,7 @@ class MSSQLSchemaEditor(MSSQLQuotingMixin, BaseSchemaEditor):
     DELETE_CONSTRAINT_TEMPLATE = "ALTER TABLE {table} DROP CONSTRAINT [{name}]"
     DELETE_FK_TEMPLATE = DELETE_CONSTRAINT_TEMPLATE
     UNIQUE_CONSTRAINT_CREATE_TEMPLATE = "CONSTRAINT [{index_name}] UNIQUE ({fields})"
+    CHECK_CONSTRAINT_CREATE_TEMPLATE = "CONSTRAINT [{name}] CHECK ({check})"
     RENAME_INDEX_TEMPLATE = "EXEC sp_rename '{table}.{old_name}', '{new_name}', 'INDEX'"
     RENAME_CONSTRAINT_TEMPLATE = "EXEC sp_rename '{table}.{old_name}', '{new_name}', 'OBJECT'"
 
@@ -244,10 +245,12 @@ class MSSQLSchemaEditor(MSSQLQuotingMixin, BaseSchemaEditor):
         return m2m_create_string
 
     async def _get_unique_constraint_names_from_db(
-        self, table_name: str, column_name: str, schema: str | None = None
+        self, table_name: str, column_names: list[str], schema: str | None = None
     ) -> list[str]:
-        """Query sys.key_constraints for unique constraint names on a specific column."""
+        """Query sys.key_constraints for unique constraint names matching exact column set."""
         schema_filter = f" AND s.name = '{schema}'" if schema else ""
+        col_count = len(column_names)
+        col_list = ",".join(f"'{c}'" for c in column_names)
         query = (  # nosec B608
             "SELECT kc.name "
             "FROM sys.key_constraints kc "
@@ -256,13 +259,31 @@ class MSSQLSchemaEditor(MSSQLQuotingMixin, BaseSchemaEditor):
             "JOIN sys.index_columns ic ON kc.parent_object_id = ic.object_id "
             "AND kc.unique_index_id = ic.index_id "
             "JOIN sys.columns c ON ic.object_id = c.object_id AND ic.column_id = c.column_id "
-            f"WHERE t.name = '{table_name}' AND c.name = '{column_name}' "
-            f"AND kc.type = 'UQ'{schema_filter}"
+            f"WHERE t.name = '{table_name}' AND c.name IN ({col_list}) "
+            f"AND kc.type = 'UQ'{schema_filter} "
+            "GROUP BY kc.name "
+            f"HAVING COUNT(DISTINCT c.name) = {col_count} "
+            "AND COUNT(DISTINCT c.name) = ("
+            "  SELECT COUNT(*) FROM sys.index_columns ic2 "
+            "  JOIN sys.key_constraints kc2 ON ic2.object_id = kc2.parent_object_id "
+            "  AND ic2.index_id = kc2.unique_index_id "
+            "  WHERE kc2.name = kc.name"
+            ")"
         )
         _, rows = await self.client.execute_query(query)
         return [row["name"] for row in rows]
 
     async def remove_constraint(self, model, constraint) -> None:
+        from tortoise.migrations.constraints import CheckConstraint
+
+        if isinstance(constraint, CheckConstraint):
+            await self._run_sql(
+                self.DELETE_CONSTRAINT_TEMPLATE.format(
+                    table=self._qualify_table_name(model._meta.db_table, model._meta.schema),
+                    name=constraint.name,
+                )
+            )
+            return
         constraint_name = await self._resolve_constraint_name(model, constraint)
         await self._run_sql(
             self.DELETE_CONSTRAINT_TEMPLATE.format(

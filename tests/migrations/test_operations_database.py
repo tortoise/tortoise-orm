@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import re
 from typing import Any
 
 import pytest
@@ -9,7 +8,7 @@ from tests.utils.fake_client import FakeClient, MockIntrospectionClient
 from tortoise import fields
 from tortoise.fields.base import Field
 from tortoise.indexes import Index
-from tortoise.migrations.constraints import UniqueConstraint
+from tortoise.migrations.constraints import CheckConstraint, UniqueConstraint
 from tortoise.migrations.operations import (
     AddConstraint,
     AddField,
@@ -390,39 +389,72 @@ async def test_mysql_alter_field_uses_introspected_legacy_name() -> None:
     assert "uid_" not in drop_sqls[0]
 
 
+# ---------------------------------------------------------------------------
+# FK resolution operation tests
+# ---------------------------------------------------------------------------
+
+
 @pytest.mark.asyncio
-async def test_postgres_alter_field_empty_introspection_uses_deterministic_name() -> None:
-    """PostgreSQL with empty introspection result falls back to deterministic uid_ name."""
-    OldModel = make_model(
-        "CryptoWallet",
-        meta_options={"table": "crypto_wallets"},
-        id=fields.IntField(pk=True),
-        wallet_address=fields.CharField(max_length=255, unique=True, index=True),
-    )
-    NewModel = make_model(
-        "CryptoWallet",
-        meta_options={"table": "crypto_wallets"},
-        id=fields.IntField(pk=True),
-        wallet_address=fields.CharField(max_length=255, unique=False, index=True),
+async def test_add_constraint_operation_resolves_fk_fields() -> None:
+    """AddConstraint with FK field name should resolve to DB column (organization_id) in SQL."""
+    client = FakeClient("sql")
+    editor = TestSchemaEditor(client)
+    state = State(models={}, apps=StateApps())
+
+    # Create Organization model first (FK target)
+    CreateModel(
+        name="Organization",
+        fields=[
+            ("id", fields.IntField(pk=True)),
+            ("name", fields.CharField(max_length=200)),
+        ],
+        options={"table": "organization"},
+    ).state_forward("models", state)
+
+    # Create Membership model with FK to Organization
+    CreateModel(
+        name="Membership",
+        fields=[
+            ("id", fields.IntField(pk=True)),
+            (
+                "organization",
+                fields.ForeignKeyField("models.Organization", related_name="memberships"),
+            ),
+            ("user_email", fields.CharField(max_length=255)),
+        ],
+        options={"table": "membership"},
+    ).state_forward("models", state)
+
+    op = AddConstraint(
+        model_name="Membership",
+        constraint=UniqueConstraint(fields=("organization", "user_email"), name="uq_membership"),
     )
 
-    old_state = build_state("models", OldModel)
-    new_state = build_state("models", NewModel)
+    await op.run("models", state, dry_run=False, state_editor=editor)
 
-    client = MockIntrospectionClient(
-        "postgres",
-        constraint_names=[],
-        inline_comment=False,
-    )
-    editor = BasePostgresSchemaEditor(client)
-    op = AlterField(
-        model_name="CryptoWallet",
-        name="wallet_address",
-        field=fields.CharField(max_length=255, index=True),
-    )
-    await op.database_forward("models", old_state, new_state, state_editor=editor)
+    assert client.executed
+    sql = client.executed[0]
+    assert "organization_id" in sql, f"Expected 'organization_id' in SQL: {sql}"
+    assert '"organization"' not in sql, f"SQL should not contain raw FK field name: {sql}"
 
-    drop_sqls = [sql for sql in client.executed if "DROP CONSTRAINT" in sql]
-    assert drop_sqls, f"Expected DROP CONSTRAINT SQL, got: {client.executed}"
-    drop_match = re.search(r'"(uid_[^"]+)"', drop_sqls[0])
-    assert drop_match, f"Expected uid_ in DROP CONSTRAINT. SQL: {drop_sqls[0]}"
+
+@pytest.mark.asyncio
+async def test_add_check_constraint_operation_runs_sql() -> None:
+    """AddConstraint with CheckConstraint generates correct SQL."""
+    client = FakeClient("sql")
+    editor = TestSchemaEditor(client)
+    state = State(models={}, apps=StateApps())
+    CreateModel(name="Widget", fields=[("id", fields.IntField(pk=True))]).state_forward(
+        "models", state
+    )
+
+    op = AddConstraint(
+        model_name="Widget",
+        constraint=CheckConstraint(check="id > 0", name="ck_widget_id"),
+    )
+
+    await op.run("models", state, dry_run=False, state_editor=editor)
+
+    assert client.executed
+    sql = client.executed[0]
+    assert 'CONSTRAINT "ck_widget_id" CHECK (id > 0)' in sql

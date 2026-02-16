@@ -72,7 +72,7 @@ class RandomHex(SqlDefault):
         "sqlite": "(lower(hex(randomblob(16))))",
         "postgres": "md5(random()::text)",
         "mysql": "(LOWER(HEX(RANDOM_BYTES(16))))",
-        "mssql": "(LOWER(CONVERT(VARCHAR(32), HASHBYTES('MD5', NEWID()), 2)))",
+        "mssql": "(LOWER(CONVERT(VARCHAR(32), HASHBYTES('MD5', CAST(NEWID() AS NVARCHAR(36))), 2)))",
         "oracle": "LOWER(RAWTOHEX(SYS_GUID()))",
     }
 

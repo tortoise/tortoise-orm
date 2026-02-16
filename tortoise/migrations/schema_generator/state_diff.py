@@ -9,7 +9,7 @@ from tortoise.fields.relational import (
     OneToOneFieldInstance,
 )
 from tortoise.indexes import Index
-from tortoise.migrations.constraints import UniqueConstraint
+from tortoise.migrations.constraints import CheckConstraint, UniqueConstraint
 from tortoise.migrations.operations import (
     AddConstraint,
     AddField,
@@ -177,11 +177,15 @@ class StateModelDiff:
         raw = list(value)
         return [tuple(fields) for fields in raw]
 
-    def _normalize_constraints(self, value: object) -> list[UniqueConstraint]:
+    def _normalize_constraints(self, value: object) -> list[UniqueConstraint | CheckConstraint]:
         if not value or not isinstance(value, Iterable):
             return []
         raw = list(value)
-        return [constraint for constraint in raw if isinstance(constraint, UniqueConstraint)]
+        return [
+            constraint
+            for constraint in raw
+            if isinstance(constraint, (UniqueConstraint, CheckConstraint))
+        ]
 
     def _generate_constraint_operations(self) -> list[TortoiseOperation]:
         operations: list[TortoiseOperation] = []
@@ -213,15 +217,16 @@ class StateModelDiff:
         old_constraints = self._normalize_constraints(self.old_state.options.get("constraints", ()))
         new_constraints = self._normalize_constraints(self.new_state.options.get("constraints", ()))
 
+        # Rename detection for UniqueConstraint (by matching fields)
         old_by_fields = {
             tuple(constraint.fields): constraint
             for constraint in old_constraints
-            if constraint.name
+            if isinstance(constraint, UniqueConstraint) and constraint.name
         }
         new_by_fields = {
             tuple(constraint.fields): constraint
             for constraint in new_constraints
-            if constraint.name
+            if isinstance(constraint, UniqueConstraint) and constraint.name
         }
 
         for fields, new_constraint in new_by_fields.items():
@@ -237,6 +242,29 @@ class StateModelDiff:
                         model_name=self.new_state.name,
                         old_name=old_constraint.name,
                         new_name=new_constraint.name,
+                    )
+                )
+
+        # Rename detection for CheckConstraint (by matching check expression)
+        old_by_check: dict[str, CheckConstraint] = {
+            constraint.check: constraint
+            for constraint in old_constraints
+            if isinstance(constraint, CheckConstraint)
+        }
+        new_by_check: dict[str, CheckConstraint] = {
+            constraint.check: constraint
+            for constraint in new_constraints
+            if isinstance(constraint, CheckConstraint)
+        }
+
+        for check_expr, new_ck in new_by_check.items():
+            old_ck = old_by_check.get(check_expr)
+            if old_ck and old_ck.name != new_ck.name:
+                operations.append(
+                    RenameConstraint(
+                        model_name=self.new_state.name,
+                        old_name=old_ck.name,
+                        new_name=new_ck.name,
                     )
                 )
 
@@ -301,11 +329,13 @@ class StateFieldDiff:
         return [tuple(fields) for fields in list(value)]
 
     @staticmethod
-    def _normalize_constraints(value: object) -> list[UniqueConstraint]:
+    def _normalize_constraints(value: object) -> list[UniqueConstraint | CheckConstraint]:
         if not value or not isinstance(value, Iterable):
             return []
         return [
-            constraint for constraint in list(value) if isinstance(constraint, UniqueConstraint)
+            constraint
+            for constraint in list(value)
+            if isinstance(constraint, (UniqueConstraint, CheckConstraint))
         ]
 
     def _generated_field_recreate_ops(
@@ -348,7 +378,7 @@ class StateFieldDiff:
         for constraint in new_constraints:
             if constraint not in old_constraints_set:
                 continue
-            if field_name in constraint.fields:
+            if isinstance(constraint, UniqueConstraint) and field_name in constraint.fields:
                 operations.append(
                     AddConstraint(model_name=self.new_state.name, constraint=constraint)
                 )

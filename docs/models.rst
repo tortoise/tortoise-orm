@@ -234,6 +234,47 @@ The ``Meta`` class
             indexes=(("field_a", "field_b"), )
             indexes=(("field_a", "field_b"), ("field_c", "field_d", "field_e"))
 
+    .. attribute:: constraints
+        :annotation: = None
+
+        Specify ``constraints`` to add named database constraints to the model.
+        Supports ``UniqueConstraint`` and ``CheckConstraint`` objects, which are
+        tracked by the migration autodetector and generate ``AddConstraint``,
+        ``RemoveConstraint``, and ``RenameConstraint`` operations automatically.
+
+        .. code-block:: python3
+
+            from tortoise.migrations.constraints import CheckConstraint, UniqueConstraint
+
+            class MyModel(Model):
+                name = fields.CharField(max_length=100)
+                category = fields.CharField(max_length=50)
+                score = fields.IntField()
+
+                class Meta:
+                    constraints = [
+                        UniqueConstraint(fields=("name", "category"), name="uid_name_category"),
+                        CheckConstraint(check="score >= 0", name="chk_score_positive"),
+                    ]
+
+        ``UniqueConstraint`` accepts:
+
+        - ``fields`` — tuple of field names (resolved to DB column names, including FK fields).
+        - ``name`` — explicit constraint name. Required for migration tracking.
+        - ``condition`` — *(PostgreSQL only)* a SQL ``WHERE`` clause for partial unique indexes.
+
+        ``CheckConstraint`` accepts:
+
+        - ``check`` — a raw SQL expression for the ``CHECK (...)`` clause.
+        - ``name`` — explicit constraint name. Required.
+
+        .. note::
+
+            ``unique_together`` is the legacy way to define compound unique indexes.
+            ``constraints`` with ``UniqueConstraint`` objects is preferred for new code,
+            as it supports explicit naming, partial indexes (PostgreSQL), and
+            is handled by the migration framework.
+
     .. attribute:: ordering
         :annotation: = None
 
