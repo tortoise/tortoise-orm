@@ -525,7 +525,7 @@ async def test_sqlite_add_check_constraint_rebuilds_table() -> None:
     assert len(client.executed) == 4
     assert client.executed[0] == (
         'CREATE TABLE "new__product" ('
-        '"id" INT NOT NULL  PRIMARY KEY, '
+        '"id" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, '
         '"price" VARCHAR(40) NOT NULL, '
         'CONSTRAINT "ck_price" CHECK (price > 0))'
     )

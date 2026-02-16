@@ -350,6 +350,23 @@ class SqliteSchemaEditor(SqliteQuotingMixin, BaseSchemaEditor):
                     on_delete=fk_field.on_delete,
                     comment="",
                 )
+            elif actual_field.pk and actual_field.generated:
+                generated_sql = actual_field.get_for_dialect(self.DIALECT, "GENERATED_SQL")
+                if generated_sql:
+                    field_def = self.GENERATED_PK_TEMPLATE.format(
+                        field_name=db_field,
+                        generated_sql=generated_sql,
+                        comment="",
+                    )
+                else:
+                    field_def = self._get_field_sql(
+                        db_field=db_field,
+                        field_type=actual_field.get_for_dialect(self.DIALECT, "SQL_TYPE"),
+                        nullable=actual_field.null,
+                        unique=False,
+                        is_pk=True,
+                        comment="",
+                    )
             else:
                 field_def = self._get_field_sql(
                     db_field=db_field,

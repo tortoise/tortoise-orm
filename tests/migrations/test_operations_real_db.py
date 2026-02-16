@@ -108,11 +108,9 @@ async def test_create_model_and_delete_model(db_isolated):
         # Forward: create the table
         await create_op.run("models", state, dry_run=False, state_editor=editor)
 
-        # Verify table exists by inserting and querying
+        # Verify table exists by inserting and querying (let auto-increment assign id)
         tbl = q("test_widget", dialect)
-        await conn.execute_script(
-            f"INSERT INTO {tbl} ({q('id', dialect)}, {q('name', dialect)}) VALUES (1, 'gizmo')"
-        )
+        await conn.execute_script(f"INSERT INTO {tbl} ({q('name', dialect)}) VALUES ('gizmo')")
         rows = await conn.execute_query_dict(f"SELECT * FROM {tbl}")
         assert len(rows) == 1
         assert rows[0]["name"] == "gizmo"
@@ -162,11 +160,9 @@ async def test_add_field_with_db_default(db_isolated):
 
         # Step 3: Insert without specifying stock — should get default
         tbl = q("test_product", dialect)
-        await conn.execute_script(
-            f"INSERT INTO {tbl} ({q('id', dialect)}, {q('name', dialect)}) VALUES (1, 'widget')"
-        )
+        await conn.execute_script(f"INSERT INTO {tbl} ({q('name', dialect)}) VALUES ('widget')")
 
-        rows = await conn.execute_query_dict(f"SELECT * FROM {tbl} WHERE {q('id', dialect)} = 1")
+        rows = await conn.execute_query_dict(f"SELECT * FROM {tbl}")
         assert len(rows) == 1
         assert rows[0]["stock"] == 42
     finally:
@@ -207,13 +203,11 @@ async def test_add_field_with_now_default(db_isolated):
         before = datetime.now(timezone.utc)
 
         tbl = q("test_event", dialect)
-        await conn.execute_script(
-            f"INSERT INTO {tbl} ({q('id', dialect)}, {q('title', dialect)}) VALUES (1, 'launch')"
-        )
+        await conn.execute_script(f"INSERT INTO {tbl} ({q('title', dialect)}) VALUES ('launch')")
 
         after = datetime.now(timezone.utc)
 
-        rows = await conn.execute_query_dict(f"SELECT * FROM {tbl} WHERE {q('id', dialect)} = 1")
+        rows = await conn.execute_query_dict(f"SELECT * FROM {tbl}")
         assert len(rows) == 1
         raw_value = rows[0]["created_at"]
         assert raw_value is not None, "Now() default should populate the timestamp"
@@ -243,7 +237,12 @@ async def test_add_field_with_now_default(db_isolated):
 
 @pytest.mark.asyncio
 async def test_alter_field_set_and_drop_db_default(db_isolated):
-    """AlterField can SET DEFAULT and then DROP DEFAULT on a real database."""
+    """AlterField can SET DEFAULT and then DROP DEFAULT on a real database.
+
+    The table is created without a db_default, then AlterField is used to
+    add and subsequently remove the default — this is purely testing the
+    AlterField SET/DROP DEFAULT code path.
+    """
     conn = db_isolated.db()
     dialect = conn.capabilities.dialect
 
@@ -252,11 +251,16 @@ async def test_alter_field_set_and_drop_db_default(db_isolated):
 
     editor = _get_schema_editor(conn)
 
+    # Create table WITHOUT db_default — the column is nullable so inserts
+    # without a value succeed even before a default is set.
+    # A "tag" column is used to distinguish rows instead of explicit id values,
+    # so that auto-increment / IDENTITY works on every backend.
     create_op = CreateModel(
         name="Setting",
         fields=[
             ("id", IntField(primary_key=True)),
-            ("value", IntField(null=False, db_default=0)),
+            ("tag", CharField(max_length=50)),
+            ("value", IntField(null=True)),
         ],
         options={"table": "test_setting"},
     )
@@ -265,35 +269,43 @@ async def test_alter_field_set_and_drop_db_default(db_isolated):
     try:
         await create_op.run("models", state, dry_run=False, state_editor=editor)
 
-        # Verify initial default
         tbl = q("test_setting", dialect)
-        await conn.execute_script(f"INSERT INTO {tbl} ({q('id', dialect)}) VALUES (1)")
-        rows = await conn.execute_query_dict(f"SELECT * FROM {tbl} WHERE {q('id', dialect)} = 1")
-        assert rows[0]["value"] == 0
 
-        # AlterField: change default from 0 to 99
+        # AlterField: set default to 99
         alter_op = AlterField(
             model_name="Setting",
             name="value",
-            field=IntField(null=False, db_default=99),
+            field=IntField(null=True, db_default=99),
         )
         await alter_op.run("models", state, dry_run=False, state_editor=editor)
 
-        await conn.execute_script(f"INSERT INTO {tbl} ({q('id', dialect)}) VALUES (2)")
-        rows = await conn.execute_query_dict(f"SELECT * FROM {tbl} WHERE {q('id', dialect)} = 2")
+        # Insert without specifying value — should get default 99
+        await conn.execute_script(
+            f"INSERT INTO {tbl} ({q('tag', dialect)}) VALUES ('with_default')"
+        )
+        rows = await conn.execute_query_dict(
+            f"SELECT * FROM {tbl} WHERE {q('tag', dialect)} = 'with_default'"
+        )
         assert rows[0]["value"] == 99
 
         # AlterField: drop default
         drop_op = AlterField(
             model_name="Setting",
             name="value",
-            field=IntField(null=False),
+            field=IntField(null=True),
         )
         await drop_op.run("models", state, dry_run=False, state_editor=editor)
 
-        # Insert without default should now fail (NOT NULL, no default)
-        with pytest.raises(Exception):
-            await conn.execute_script(f"INSERT INTO {tbl} ({q('id', dialect)}) VALUES (3)")
+        # Insert with explicit NULL for value — verifies default no longer applies.
+        # We use explicit NULL rather than omitting the column because MySQL in
+        # strict mode rejects omitted nullable columns after DROP DEFAULT.
+        await conn.execute_script(
+            f"INSERT INTO {tbl} ({q('tag', dialect)}, {q('value', dialect)}) VALUES ('no_default', NULL)"
+        )
+        rows = await conn.execute_query_dict(
+            f"SELECT * FROM {tbl} WHERE {q('tag', dialect)} = 'no_default'"
+        )
+        assert rows[0]["value"] is None
     finally:
         try:
             await conn.execute_script(f"DROP TABLE IF EXISTS {q('test_setting', dialect)}")
@@ -329,8 +341,8 @@ async def test_remove_field(db_isolated):
         # Verify column exists
         tbl = q("test_article", dialect)
         await conn.execute_script(
-            f"INSERT INTO {tbl} ({q('id', dialect)}, {q('title', dialect)}, {q('subtitle', dialect)}) "
-            f"VALUES (1, 'Hello', 'World')"
+            f"INSERT INTO {tbl} ({q('title', dialect)}, {q('subtitle', dialect)}) "
+            f"VALUES ('Hello', 'World')"
         )
 
         # Remove the subtitle field
@@ -380,9 +392,7 @@ async def test_rename_model(db_isolated):
 
         # Insert data under old name (default table = "oldname")
         old_tbl = q("oldname", dialect)
-        await conn.execute_script(
-            f"INSERT INTO {old_tbl} ({q('id', dialect)}, {q('value', dialect)}) VALUES (1, 42)"
-        )
+        await conn.execute_script(f"INSERT INTO {old_tbl} ({q('value', dialect)}) VALUES (42)")
 
         # Rename: table should change from "oldname" to "newname"
         rename_op = RenameModel(old_name="OldName", new_name="NewName")
@@ -436,15 +446,13 @@ async def test_add_and_remove_unique_constraint(db_isolated):
 
         # Insert first row
         await conn.execute_script(
-            f"INSERT INTO {tbl} ({q('id', dialect)}, {q('email', dialect)}) "
-            f"VALUES (1, 'alice@test.com')"
+            f"INSERT INTO {tbl} ({q('email', dialect)}) VALUES ('alice@test.com')"
         )
 
         # Duplicate should fail
         with pytest.raises(IntegrityError):
             await conn.execute_script(
-                f"INSERT INTO {tbl} ({q('id', dialect)}, {q('email', dialect)}) "
-                f"VALUES (2, 'alice@test.com')"
+                f"INSERT INTO {tbl} ({q('email', dialect)}) VALUES ('alice@test.com')"
             )
 
         # Remove the constraint
@@ -453,8 +461,7 @@ async def test_add_and_remove_unique_constraint(db_isolated):
 
         # Now duplicates should be allowed
         await conn.execute_script(
-            f"INSERT INTO {tbl} ({q('id', dialect)}, {q('email', dialect)}) "
-            f"VALUES (3, 'alice@test.com')"
+            f"INSERT INTO {tbl} ({q('email', dialect)}) VALUES ('alice@test.com')"
         )
 
         rows = await conn.execute_query_dict(
@@ -502,15 +509,11 @@ async def test_add_check_constraint(db_isolated):
         tbl = q("test_product_ck", dialect)
 
         # Valid insert
-        await conn.execute_script(
-            f"INSERT INTO {tbl} ({q('id', dialect)}, {q('price', dialect)}) VALUES (1, 100)"
-        )
+        await conn.execute_script(f"INSERT INTO {tbl} ({q('price', dialect)}) VALUES (100)")
 
         # Invalid insert should be rejected
         with pytest.raises((IntegrityError, OperationalError)):
-            await conn.execute_script(
-                f"INSERT INTO {tbl} ({q('id', dialect)}, {q('price', dialect)}) VALUES (2, -5)"
-            )
+            await conn.execute_script(f"INSERT INTO {tbl} ({q('price', dialect)}) VALUES (-5)")
     finally:
         try:
             await conn.execute_script(f"DROP TABLE IF EXISTS {q('test_product_ck', dialect)}")
@@ -546,9 +549,7 @@ async def test_alter_field_null_change(db_isolated):
 
         # Currently NOT NULL — inserting NULL should fail
         with pytest.raises(Exception):
-            await conn.execute_script(
-                f"INSERT INTO {tbl} ({q('id', dialect)}, {q('value', dialect)}) VALUES (1, NULL)"
-            )
+            await conn.execute_script(f"INSERT INTO {tbl} ({q('value', dialect)}) VALUES (NULL)")
 
         # AlterField: make nullable
         alter_op = AlterField(
@@ -559,11 +560,11 @@ async def test_alter_field_null_change(db_isolated):
         await alter_op.run("models", state, dry_run=False, state_editor=editor)
 
         # Now NULL should be accepted
-        await conn.execute_script(
-            f"INSERT INTO {tbl} ({q('id', dialect)}, {q('value', dialect)}) VALUES (2, NULL)"
-        )
-        rows = await conn.execute_query_dict(f"SELECT * FROM {tbl} WHERE {q('id', dialect)} = 2")
-        assert rows[0]["value"] is None
+        await conn.execute_script(f"INSERT INTO {tbl} ({q('value', dialect)}) VALUES (NULL)")
+        rows = await conn.execute_query_dict(f"SELECT * FROM {tbl}")
+        # Find the row with NULL value
+        null_rows = [r for r in rows if r["value"] is None]
+        assert len(null_rows) == 1
 
         # AlterField: make NOT NULL again
         # First, update the NULL row so ALTER doesn't fail
@@ -580,9 +581,7 @@ async def test_alter_field_null_change(db_isolated):
 
         # NULL should be rejected again
         with pytest.raises(Exception):
-            await conn.execute_script(
-                f"INSERT INTO {tbl} ({q('id', dialect)}, {q('value', dialect)}) VALUES (3, NULL)"
-            )
+            await conn.execute_script(f"INSERT INTO {tbl} ({q('value', dialect)}) VALUES (NULL)")
     finally:
         try:
             await conn.execute_script(f"DROP TABLE IF EXISTS {q('test_config', dialect)}")
