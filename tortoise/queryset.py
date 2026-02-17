@@ -81,6 +81,14 @@ class QuerySetSingle(Protocol[T_co]):
     ) -> ValuesQuery[Literal[True]]: ...  # pragma: nocoverage
 
 
+class PreparedQuerySetSingle(QuerySetSingle[T_co]):
+    def prepared(self) -> PreparedQuerySet[MODEL]:
+        ...
+
+    async def execute(self, **params) -> list[MODEL]:
+        ...
+
+
 class AwaitableQuery(Generic[MODEL]):
     __slots__ = (
         "query",
@@ -1448,14 +1456,12 @@ class PreparedQuerySet(QuerySet[MODEL]):
         return cast(PreparedQuerySet, super().order_by(*orderings))
 
     @_disallow_queryset_methods_on_prepared_query
-    def latest(self, *orderings: str) -> QuerySetSingle[MODEL | None]:
-        # TODO: fix typing
-        return cast(PreparedQuerySet, super().latest(*orderings))
+    def latest(self, *orderings: str) -> PreparedQuerySetSingle[MODEL | None]:
+        return cast(PreparedQuerySetSingle, super().latest(*orderings))
 
     @_disallow_queryset_methods_on_prepared_query
-    def earliest(self, *orderings: str) -> QuerySetSingle[MODEL | None]:
-        # TODO: fix typing
-        return cast(PreparedQuerySet, super().earliest(*orderings))
+    def earliest(self, *orderings: str) -> PreparedQuerySetSingle[MODEL | None]:
+        return cast(PreparedQuerySetSingle, super().earliest(*orderings))
 
     @staticmethod
     def _validate_limit(value: int) -> int:
@@ -1628,19 +1634,16 @@ class PreparedQuerySet(QuerySet[MODEL]):
         return cast(PreparedQuerySet, super().all())
 
     @_disallow_queryset_methods_on_prepared_query
-    def first(self) -> QuerySetSingle[MODEL | None]:
-        # TODO: fix typing
-        return cast(PreparedQuerySet, super().first())
+    def first(self) -> PreparedQuerySetSingle[MODEL | None]:
+        return cast(PreparedQuerySetSingle, super().first())
 
     @_disallow_queryset_methods_on_prepared_query
-    def last(self) -> QuerySetSingle[MODEL | None]:
-        # TODO: fix typing
-        return cast(PreparedQuerySet, super().last())
+    def last(self) -> PreparedQuerySetSingle[MODEL | None]:
+        return cast(PreparedQuerySetSingle, super().last())
 
     @_disallow_queryset_methods_on_prepared_query
-    def get(self, *args: Q, **kwargs: Any) -> QuerySetSingle[MODEL]:
-        # TODO: fix typing
-        return cast(PreparedQuerySet, super().get(*args, **kwargs))
+    def get(self, *args: Q, **kwargs: Any) -> PreparedQuerySetSingle[MODEL]:
+        return cast(PreparedQuerySetSingle, super().get(*args, **kwargs))
 
     async def in_bulk(self, id_list: Iterable[str | int], field_name: str) -> dict[str, MODEL]:
         raise NotImplementedError("Prepared queries don't support in_bulk.")
@@ -1664,9 +1667,8 @@ class PreparedQuerySet(QuerySet[MODEL]):
         raise NotImplementedError("Prepared queries don't support bulk_update.")
 
     @_disallow_queryset_methods_on_prepared_query
-    def get_or_none(self, *args: Q, **kwargs: Any) -> QuerySetSingle[MODEL | None]:
-        # TODO: fix typing
-        return cast(PreparedQuerySet, super().get_or_none(*args, **kwargs))
+    def get_or_none(self, *args: Q, **kwargs: Any) -> PreparedQuerySetSingle[MODEL | None]:
+        return cast(PreparedQuerySetSingle, super().get_or_none(*args, **kwargs))
 
     @_disallow_queryset_methods_on_prepared_query
     def only(self, *fields_for_select: str) -> PreparedQuerySet[MODEL]:
