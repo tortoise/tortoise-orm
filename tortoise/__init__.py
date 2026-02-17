@@ -491,7 +491,9 @@ class Tortoise(metaclass=_TortoiseMeta):
         else your event loop may never complete
         as it is waiting for the connections to die.
         """
-        await get_connections().close_all()
+        ctx = cls._get_context()
+        if ctx is not None:
+            await ctx.close_connections()
         logger.info("Tortoise-ORM shutdown")
 
     @classmethod

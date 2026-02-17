@@ -25,6 +25,7 @@ Fixed
 - MySQL schema editor: FK index protection (``_create_missing_fk_index``) prevents MySQL error 1553 when dropping the only index covering a foreign key column.
 - MySQL schema editor: expression default two-step workaround for ``ADD COLUMN`` with non-deterministic ``SqlDefault`` expressions (e.g. ``RANDOM_BYTES``).
 - Multi-column constraint introspection — constraint name resolution now matches on the exact set of columns across all backends (PostgreSQL, MySQL, MSSQL, SQLite, Oracle).
+- Tortoise.close_connections() now propagates call to current context. (#2110)
 
 1.1.3
 -----
