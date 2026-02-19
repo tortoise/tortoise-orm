@@ -18,7 +18,7 @@ async def test_basic_example_script(db) -> None:
     r = subprocess.run(  # nosec
         [sys.executable, "examples/basic.py"], capture_output=True, text=True, env=env
     )
-    assert not r.stderr, f"Script had errors: {r.stderr}"
+    assert r.returncode == 0, f"Script failed (rc={r.returncode}): {r.stderr}"
     output = r.stdout
     s = "[{'id': 1, 'name': 'Updated name'}, {'id': 2, 'name': 'Test 2'}]"
     assert s in output
