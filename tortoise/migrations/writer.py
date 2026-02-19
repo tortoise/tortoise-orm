@@ -16,6 +16,7 @@ from typing import Any
 
 from pypika_tortoise.context import DEFAULT_SQL_CONTEXT
 
+from tortoise.indexes import Index
 from tortoise.migrations.constraints import CheckConstraint, UniqueConstraint
 from tortoise.migrations.operations import (
     AddConstraint,
@@ -455,8 +456,12 @@ class MigrationWriter:
         rendered: dict[str, str] = {}
         for key, value in options.items():
             if key == "indexes":
+                normalized = [
+                    item if isinstance(item, Index) else Index(fields=tuple(item))
+                    for item in value
+                ]
                 rendered[key] = (
-                    "[" + ", ".join(self._render_index(item, imports) for item in value) + "]"
+                    "[" + ", ".join(self._render_index(item, imports) for item in normalized) + "]"
                 )
                 continue
             if key == "constraints":

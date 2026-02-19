@@ -8,6 +8,13 @@ Changelog
 1.1
 ===
 
+1.1.5
+-----
+
+Fixed
+^^^^^
+- ``makemigrations`` no longer crashes with ``AttributeError: 'tuple' object has no attribute 'deconstruct'`` when generating a fresh ``CreateModel`` migration for models using tuple-style ``Meta.indexes`` (e.g. ``indexes = [("field_a", "field_b")]``). Tuple entries are now normalised to ``Index`` objects before rendering.
+
 1.1.4
 -----
 
