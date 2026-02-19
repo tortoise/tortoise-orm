@@ -144,7 +144,7 @@ class Tortoise(metaclass=_TortoiseMeta):
 
     @classmethod
     def describe_model(
-            cls, model: type[Model], serializable: bool = True
+        cls, model: type[Model], serializable: bool = True
     ) -> dict[str, Any]:  # pragma: nocoverage
         """
         Describes the given list of models or ALL registered models.
@@ -170,7 +170,7 @@ class Tortoise(metaclass=_TortoiseMeta):
 
     @classmethod
     def describe_models(
-            cls, models: list[type[Model]] | None = None, serializable: bool = True
+        cls, models: list[type[Model]] | None = None, serializable: bool = True
     ) -> dict[str, dict[str, Any]]:
         """
         Describes the given list of models or ALL registered models.
@@ -211,10 +211,10 @@ class Tortoise(metaclass=_TortoiseMeta):
 
     @classmethod
     def init_models(
-            cls,
-            models_paths: Iterable[ModuleType | str],
-            app_label: str,
-            _init_relations: bool = True,
+        cls,
+        models_paths: Iterable[ModuleType | str],
+        app_label: str,
+        _init_relations: bool = True,
     ) -> None:
         """
         Early initialisation of Tortoise ORM Models.
@@ -232,10 +232,10 @@ class Tortoise(metaclass=_TortoiseMeta):
 
     @classmethod
     def init_app(
-            cls,
-            label: str,
-            model_paths: Iterable[ModuleType | str],
-            _init_relations: bool = True,
+        cls,
+        label: str,
+        model_paths: Iterable[ModuleType | str],
+        _init_relations: bool = True,
     ) -> dict[str, type[Model]]:
         """
         Early initialization of Tortoise ORM Models for a single app.
@@ -260,7 +260,7 @@ class Tortoise(metaclass=_TortoiseMeta):
 
     @classmethod
     def _init_apps(
-            cls, apps_config: dict[str, dict[str, Any]], *, validate_connections: bool = True
+        cls, apps_config: dict[str, dict[str, Any]], *, validate_connections: bool = True
     ) -> None:
         """Internal: Initialize Apps registry on current context."""
         ctx = cls._require_context()
@@ -295,18 +295,18 @@ class Tortoise(metaclass=_TortoiseMeta):
 
     @classmethod
     async def init(
-            cls,
-            config: dict[str, Any] | TortoiseConfig | None = None,
-            config_file: str | None = None,
-            _create_db: bool = False,
-            db_url: str | None = None,
-            modules: dict[str, Iterable[str | ModuleType]] | None = None,
-            use_tz: bool = True,
-            timezone: str = "UTC",
-            routers: list[str | type] | None = None,
-            table_name_generator: Callable[[type[Model]], str] | None = None,
-            init_connections: bool = True,
-            _enable_global_fallback: bool = False,
+        cls,
+        config: dict[str, Any] | TortoiseConfig | None = None,
+        config_file: str | None = None,
+        _create_db: bool = False,
+        db_url: str | None = None,
+        modules: dict[str, Iterable[str | ModuleType]] | None = None,
+        use_tz: bool = True,
+        timezone: str = "UTC",
+        routers: list[str | type] | None = None,
+        table_name_generator: Callable[[type[Model]], str] | None = None,
+        init_connections: bool = True,
+        _enable_global_fallback: bool = False,
     ) -> TortoiseContext:
         """
         Sets up Tortoise-ORM: loads apps and models, configures database connections but does not
@@ -459,7 +459,7 @@ class Tortoise(metaclass=_TortoiseMeta):
             str_connection_config = str_connection_config.replace(
                 password,
                 # Show one third of the password at beginning (may be better for debugging purposes)
-                f"{password[0: len(password) // 3]}***",
+                f"{password[0 : len(password) // 3]}***",
             )
         return str_connection_config
 

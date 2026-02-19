@@ -457,8 +457,7 @@ class MigrationWriter:
         for key, value in options.items():
             if key == "indexes":
                 normalized = [
-                    item if isinstance(item, Index) else Index(fields=tuple(item))
-                    for item in value
+                    item if isinstance(item, Index) else Index(fields=tuple(item)) for item in value
                 ]
                 rendered[key] = (
                     "[" + ", ".join(self._render_index(item, imports) for item in normalized) + "]"
