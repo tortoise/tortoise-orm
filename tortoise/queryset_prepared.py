@@ -1,10 +1,11 @@
 from __future__ import annotations as _
 
 import functools
+import sys
 from abc import ABC, abstractmethod
 from collections import defaultdict
 from collections.abc import Callable, Iterable
-from typing import Any, Concatenate, Literal, NoReturn, ParamSpec, Protocol, Self, TypeVar, cast
+from typing import Any, Concatenate, Literal, NoReturn, ParamSpec, Protocol, TypeVar, cast
 
 from pypika_tortoise.terms import Term
 
@@ -30,6 +31,11 @@ from tortoise.queryset import (
     ValuesListQuery,
     ValuesQuery,
 )
+
+if sys.version_info >= (3, 11):  # pragma: nocoverage
+    from typing import Self
+else:
+    from typing_extensions import Self
 
 
 class PreparedQuerySetSingle(QuerySetSingle[T_co], Protocol):

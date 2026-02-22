@@ -1,12 +1,18 @@
 from __future__ import annotations
 
+import sys
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Protocol, Self, TypeVar, cast
+from typing import TYPE_CHECKING, Any, Protocol, TypeVar, cast
 
 from pypika_tortoise import SqlContext
 
 from tortoise.fields import Field
+
+if sys.version_info >= (3, 11):  # pragma: nocoverage
+    from typing import Self
+else:
+    from typing_extensions import Self
 
 if TYPE_CHECKING:
     from tortoise import Model
@@ -95,7 +101,7 @@ class Parameter:
             else:
                 encoded = self.value_encoder(value, self.model)
         elif self.field_object is not None:
-            encoded = self.field_object.to_db_value(value, cast(type[Model], self.model))
+            encoded = self.field_object.to_db_value(value, cast(type["Model"], self.model))
 
         if self.encode:
             encoded = self.encode(encoded)
