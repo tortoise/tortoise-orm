@@ -63,6 +63,9 @@ class TestQuerysetPrepared(test.TestCase):
             .prepared()
         )
 
+        # print(Author.filter(name__startswith="asd").sql())
+        # print(prepared.sql())
+
         for test_name in (author2.pk, author1.name, author3.name, "asd"):
             expected = await Author.filter(name__startswith=test_name)
             actual = await prepared.execute(name=test_name)

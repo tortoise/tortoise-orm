@@ -139,17 +139,16 @@ class CollectionParameter(Parameter):
             return self.collection_encoder(value, self.model)
 
     def get_sql(self, ctx: SqlContext) -> str:
+        if ctx.parameterizer is None:
+            raise ValueError("Parametrization must be enabled when using tortoise.Parameter.")
+
         param = self
         if isinstance(ctx, TortoiseSqlContext) and ctx.dynamic_params is not None:
             param = ctx.dynamic_params.get(self.name, self)
 
         if param.collection_size is None:
-            if ctx.parameterizer is None:
-                raise ValueError("Parametrization must be enabled when using tortoise.Parameter.")
             return ctx.parameterizer.create_param(param).get_sql(ctx)
         else:
-            if ctx.parameterizer is None:
-                raise ValueError("Parametrization must be enabled when using tortoise.Parameter.")
             placeholders = []
             for idx in range(param.collection_size):
                 new_param = param.clone()
