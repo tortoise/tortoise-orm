@@ -642,7 +642,7 @@ class QuerySet(AwaitableQuery[MODEL]):
         queryset._group_bys = fields
         return queryset
 
-    def _get_fields_list_for_select(self, *fields_: str) -> list[str]:
+    def _get_fields_list_for_select(self, *fields_: str) -> tuple[str, ...] | list[str]:
         if self._fields_for_select:
             raise ValueError(".values_list() cannot be used with .only()")
 
@@ -1275,15 +1275,15 @@ class QuerySet(AwaitableQuery[MODEL]):
 
         from tortoise.queryset_prepared import PreparedQuerySet
 
-        queryset = self._clone(PreparedQuerySet)
+        queryset = cast(PreparedQuerySet[MODEL], self._clone(PreparedQuerySet))
         queryset._cache_key = key
         queryset._prepared = False
-        queryset._sql_cache = None
-        queryset._dynamic_params = None
-        queryset._dynamic_params_names = None
+        queryset._sql_cache = {}
+        queryset._dynamic_params = {}
+        queryset._dynamic_params_names = []
         queryset._db_for_write = self._select_for_update
 
-        return cast(PreparedQuerySet[MODEL], queryset)
+        return queryset
 
 
 class UpdateQuery(AwaitableQuery):

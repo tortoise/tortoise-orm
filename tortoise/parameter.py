@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Self, TypeVar
+from typing import TYPE_CHECKING, Any, Protocol, Self, TypeVar, cast
 
 from pypika_tortoise import SqlContext
 
@@ -11,8 +11,16 @@ from tortoise.fields import Field
 if TYPE_CHECKING:
     from tortoise import Model
 
-T_out = TypeVar("T_out")
-FieldEncoder = Callable[[Any, "Model"], T_out] | Callable[[Any, "Model", Field | None], T_out]
+T_out = TypeVar("T_out", covariant=True)
+
+
+class FieldEncoder(Protocol[T_out]):
+    def __call__(
+        self,
+        value: Any,
+        model: type[Model] | None,
+        field: Field | None = None,
+    ) -> T_out: ...
 
 
 @dataclass(frozen=True)
@@ -53,7 +61,7 @@ class Parameter:
 
     def __init__(self, name: str) -> None:
         self.name = name
-        self.model: Model | None = None
+        self.model: type[Model] | None = None
         self.value_encoder: FieldEncoder[Any] | None = None
         self.field_object: Field | None = None
         self.encode: Callable[[Any], Any] | None = None
@@ -87,7 +95,7 @@ class Parameter:
             else:
                 encoded = self.value_encoder(value, self.model)
         elif self.field_object is not None:
-            encoded = self.field_object.to_db_value(value, self.model)
+            encoded = self.field_object.to_db_value(value, cast(type[Model], self.model))
 
         if self.encode:
             encoded = self.encode(encoded)
@@ -116,6 +124,9 @@ class CollectionParameter(Parameter):
         return new_param
 
     def encode_collection(self, value: Any) -> Sequence[Any]:
+        if self.collection_encoder is None:
+            return value  # TODO: probably raise exception
+
         if self.field_object is not None:
             return self.collection_encoder(value, self.model, self.field_object)
         else:
@@ -123,7 +134,7 @@ class CollectionParameter(Parameter):
 
     def get_sql(self, ctx: SqlContext) -> str:
         param = self
-        if isinstance(ctx, TortoiseSqlContext):
+        if isinstance(ctx, TortoiseSqlContext) and ctx.dynamic_params is not None:
             param = ctx.dynamic_params.get(self.name, self)
 
         if param.collection_size is None:

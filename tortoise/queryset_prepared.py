@@ -91,12 +91,10 @@ class CachedSql:
 class _PreparedQueryMixin(AwaitableQuery, ABC):
     _cache_key: str
     _prepared: bool
-    _sql_cache: dict[str, CachedSql] | None
-    _dynamic_params: dict[str, CollectionParameter] | None
-    _dynamic_params_names: list[str] | None
+    _sql_cache: dict[str, CachedSql]
+    _dynamic_params: dict[str, CollectionParameter]
+    _dynamic_params_names: list[str]
     _db_for_write: bool
-
-    __slots__ = ()
 
     @abstractmethod
     def _clone(self) -> Self: ...
@@ -113,13 +111,12 @@ class _PreparedQueryMixin(AwaitableQuery, ABC):
         queryset._choose_db_if_not_chosen(self._db_for_write)
         queryset._make_query()
 
-        queryset._sql_cache = {}
         _, params = queryset.query.get_parameterized_sql()
+        queryset._sql_cache = {}
         queryset._dynamic_params = {
             param.name: param for param in params if isinstance(param, CollectionParameter)
         }
         queryset._dynamic_params_names = sorted(queryset._dynamic_params.keys())
-
         queryset._prepared = True
 
         self.model._meta.query_cache[self._cache_key] = queryset
@@ -145,7 +142,8 @@ class _PreparedQueryMixin(AwaitableQuery, ABC):
         if cache_key not in self._sql_cache:
             # TODO: probably could be done in a better way?
             ctx = TortoiseSqlContext.copy(
-                self.query.QUERY_CLS.SQL_CONTEXT, dynamic_params=self._dynamic_params
+                self.query.QUERY_CLS.SQL_CONTEXT,
+                dynamic_params=self._dynamic_params,
             )
             sql, params_ = self.query.get_parameterized_sql(ctx)
             self._sql_cache[cache_key] = CachedSql(sql, params_)
@@ -190,9 +188,9 @@ class PreparedQuerySet(QuerySet[MODEL], _PreparedQueryMixin):
         super().__init__(model)
         self._cache_key: str = cache_key
         self._prepared: bool = False
-        self._sql_cache: dict[str, CachedSql] | None = None
-        self._dynamic_params: dict[str, CollectionParameter] | None = None
-        self._dynamic_params_names: list[str] | None = None
+        self._sql_cache: dict[str, CachedSql] = {}
+        self._dynamic_params: dict[str, CollectionParameter] = {}
+        self._dynamic_params_names: list[str] = []
         self._db_for_write = self._select_for_update
         self._custom_fields: list[str] | None = None
 
@@ -223,7 +221,7 @@ class PreparedQuerySet(QuerySet[MODEL], _PreparedQueryMixin):
             db=self._db,
             prefetch_map=self._prefetch_map,
             prefetch_queries=self._prefetch_queries,
-            select_related_idx=self._select_related_idx,
+            select_related_idx=self._select_related_idx,  # type: ignore
         ).execute_select(
             cached_query.sql,
             filled_params,
@@ -522,9 +520,9 @@ class PreparedUpdateQuery(UpdateQuery, _PreparedQueryMixin):
 
         self._cache_key: str = cache_key
         self._prepared: bool = False
-        self._sql_cache: dict[str, CachedSql] | None = None
-        self._dynamic_params: dict[str, CollectionParameter] | None = None
-        self._dynamic_params_names: list[str] | None = None
+        self._sql_cache: dict[str, CachedSql] = {}
+        self._dynamic_params: dict[str, CollectionParameter] = {}
+        self._dynamic_params_names: list[str] = []
         self._db_for_write: bool = True
 
     def _clone(self) -> PreparedUpdateQuery:
@@ -580,9 +578,9 @@ class PreparedDeleteQuery(DeleteQuery, _PreparedQueryMixin):
         )
         self._cache_key: str = cache_key
         self._prepared: bool = False
-        self._sql_cache: dict[str, CachedSql] | None = None
-        self._dynamic_params: dict[str, CollectionParameter] | None = None
-        self._dynamic_params_names: list[str] | None = None
+        self._sql_cache: dict[str, CachedSql] = {}
+        self._dynamic_params: dict[str, CollectionParameter] = {}
+        self._dynamic_params_names: list[str] = []
         self._db_for_write: bool = True
 
     def _clone(self) -> PreparedDeleteQuery:
@@ -637,9 +635,9 @@ class PreparedExistsQuery(ExistsQuery, _PreparedQueryMixin):
         )
         self._cache_key: str = cache_key
         self._prepared: bool = False
-        self._sql_cache: dict[str, CachedSql] | None = None
-        self._dynamic_params: dict[str, CollectionParameter] | None = None
-        self._dynamic_params_names: list[str] | None = None
+        self._sql_cache: dict[str, CachedSql] = {}
+        self._dynamic_params: dict[str, CollectionParameter] = {}
+        self._dynamic_params_names: list[str] = []
         self._db_for_write: bool = False
 
     def _clone(self) -> PreparedExistsQuery:
@@ -699,9 +697,9 @@ class PreparedCountQuery(CountQuery, _PreparedQueryMixin):
         )
         self._cache_key: str = cache_key
         self._prepared: bool = False
-        self._sql_cache: dict[str, CachedSql] | None = None
-        self._dynamic_params: dict[str, CollectionParameter] | None = None
-        self._dynamic_params_names: list[str] | None = None
+        self._sql_cache: dict[str, CachedSql] = {}
+        self._dynamic_params: dict[str, CollectionParameter] = {}
+        self._dynamic_params_names: list[str] = []
         self._db_for_write: bool = False
 
     def _clone(self) -> PreparedCountQuery:
@@ -783,9 +781,9 @@ class PreparedValuesListQuery(ValuesListQuery[SINGLE], _PreparedQueryMixin):
         )
         self._cache_key: str = cache_key
         self._prepared: bool = False
-        self._sql_cache: dict[str, CachedSql] | None = None
-        self._dynamic_params: dict[str, CollectionParameter] | None = None
-        self._dynamic_params_names: list[str] | None = None
+        self._sql_cache: dict[str, CachedSql] = {}
+        self._dynamic_params: dict[str, CollectionParameter] = {}
+        self._dynamic_params_names: list[str] = []
         self._db_for_write: bool = False
 
     def _clone(self) -> PreparedValuesListQuery:
@@ -867,9 +865,9 @@ class PreparedValuesQuery(ValuesQuery[SINGLE], _PreparedQueryMixin):
         )
         self._cache_key: str = cache_key
         self._prepared: bool = False
-        self._sql_cache: dict[str, CachedSql] | None = None
-        self._dynamic_params: dict[str, CollectionParameter] | None = None
-        self._dynamic_params_names: list[str] | None = None
+        self._sql_cache: dict[str, CachedSql] = {}
+        self._dynamic_params: dict[str, CollectionParameter] = {}
+        self._dynamic_params_names: list[str] = []
         self._db_for_write: bool = False
 
     def _clone(self) -> PreparedValuesQuery:

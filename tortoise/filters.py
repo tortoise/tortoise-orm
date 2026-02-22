@@ -186,7 +186,7 @@ def _format_str_or_parameter(
         wrapped = ValueWrapper(value)
         if not like_start and not like_end:
             return wrapped
-        args = []
+        args: list[str | ValueWrapper] = []
         if like_start:
             args.append("%")
         args.append(wrapped)
