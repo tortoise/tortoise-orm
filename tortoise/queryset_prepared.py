@@ -4,7 +4,7 @@ import functools
 from abc import ABC, abstractmethod
 from collections import defaultdict
 from collections.abc import Callable, Iterable
-from typing import Any, Literal, TypeVar, cast, NoReturn, ParamSpec, Self, Protocol, Concatenate
+from typing import Any, Concatenate, Literal, NoReturn, ParamSpec, Protocol, Self, TypeVar, cast
 
 from pypika_tortoise.terms import Term
 
@@ -12,22 +12,40 @@ from tortoise.backends.base.client import BaseDBAsyncClient
 from tortoise.exceptions import DoesNotExist, MultipleObjectsReturned, ParamsError
 from tortoise.expressions import Expression, Q
 from tortoise.filters import FilterInfoDict
-from tortoise.parameter import Parameter, CollectionParameter, TortoiseSqlContext
+from tortoise.parameter import CollectionParameter, Parameter, TortoiseSqlContext
 from tortoise.query_utils import Prefetch
-from tortoise.queryset import QuerySet, MODEL, QuerySetSingle, T_co, DeleteQuery, BulkCreateQuery, \
-    BulkUpdateQuery, UpdateQuery, ExistsQuery, CountQuery, ValuesListQuery, ValuesQuery, SINGLE, AwaitableQuery
+from tortoise.queryset import (
+    MODEL,
+    SINGLE,
+    AwaitableQuery,
+    BulkCreateQuery,
+    BulkUpdateQuery,
+    CountQuery,
+    DeleteQuery,
+    ExistsQuery,
+    QuerySet,
+    QuerySetSingle,
+    T_co,
+    UpdateQuery,
+    ValuesListQuery,
+    ValuesQuery,
+)
 
 
 class PreparedQuerySetSingle(QuerySetSingle[T_co], Protocol):
-    def prepared(self) -> PreparedQuerySet[MODEL]:
-        ...
+    def prepared(self) -> PreparedQuerySet[MODEL]: ...
 
-    async def execute(self, **params) -> list[MODEL]:
-        ...
+    async def execute(self, **params) -> list[MODEL]: ...
 
 
 class CachedSql:
-    __slots__ = ("sql", "params", "param_by_name", "need_params", "need_collection_params",)
+    __slots__ = (
+        "sql",
+        "params",
+        "param_by_name",
+        "need_params",
+        "need_collection_params",
+    )
 
     def __init__(self, sql: str, params: list[Parameter | Any]) -> None:
         self.sql = sql
@@ -81,8 +99,7 @@ class _PreparedQueryMixin(AwaitableQuery, ABC):
     __slots__ = ()
 
     @abstractmethod
-    def _clone(self) -> Self:
-        ...
+    def _clone(self) -> Self: ...
 
     def prepared(self) -> Self:
         if self._cache_key is None:
@@ -99,9 +116,7 @@ class _PreparedQueryMixin(AwaitableQuery, ABC):
         queryset._sql_cache = {}
         _, params = queryset.query.get_parameterized_sql()
         queryset._dynamic_params = {
-            param.name: param
-            for param in params
-            if isinstance(param, CollectionParameter)
+            param.name: param for param in params if isinstance(param, CollectionParameter)
         }
         queryset._dynamic_params_names = sorted(queryset._dynamic_params.keys())
 
@@ -129,7 +144,9 @@ class _PreparedQueryMixin(AwaitableQuery, ABC):
         # TODO: add ability to limit cache, use lru?
         if cache_key not in self._sql_cache:
             # TODO: probably could be done in a better way?
-            ctx = TortoiseSqlContext.copy(self.query.QUERY_CLS.SQL_CONTEXT, dynamic_params=self._dynamic_params)
+            ctx = TortoiseSqlContext.copy(
+                self.query.QUERY_CLS.SQL_CONTEXT, dynamic_params=self._dynamic_params
+            )
             sql, params_ = self.query.get_parameterized_sql(ctx)
             self._sql_cache[cache_key] = CachedSql(sql, params_)
 
@@ -139,8 +156,7 @@ class _PreparedQueryMixin(AwaitableQuery, ABC):
         return self._sql_cache[cache_key]
 
     @abstractmethod
-    async def execute(self, **params) -> Any:
-        ...
+    async def execute(self, **params) -> Any: ...
 
 
 P = ParamSpec("P")
@@ -148,12 +164,12 @@ T = TypeVar("T")
 
 
 def _disallow_queryset_methods_on_prepared_query(
-        func: Callable[Concatenate[PreparedQuerySet, P], T],
+    func: Callable[Concatenate[PreparedQuerySet, P], T],
 ) -> Callable[Concatenate[PreparedQuerySet, P], T]:
     @functools.wraps(func)
     def decorated(self: PreparedQuerySet, *args: P.args, **kwargs: P.kwargs) -> T:
         if self._prepared:
-            raise ValueError(f"Cannot call \"{func.__name__}\" on already prepared queryset.")
+            raise ValueError(f'Cannot call "{func.__name__}" on already prepared queryset.')
         return func(self, *args, **kwargs)
 
     return decorated
@@ -209,7 +225,8 @@ class PreparedQuerySet(QuerySet[MODEL], _PreparedQueryMixin):
             prefetch_queries=self._prefetch_queries,
             select_related_idx=self._select_related_idx,
         ).execute_select(
-            cached_query.sql, filled_params,
+            cached_query.sql,
+            filled_params,
             custom_fields=self._custom_fields,
         )
         if self._single:
@@ -256,7 +273,7 @@ class PreparedQuerySet(QuerySet[MODEL], _PreparedQueryMixin):
             limit.encode = self._validate_limit
 
         queryset = self._clone()
-        queryset._limit = limit # type: ignore
+        queryset._limit = limit  # type: ignore
         return queryset
 
     @staticmethod
@@ -294,9 +311,7 @@ class PreparedQuerySet(QuerySet[MODEL], _PreparedQueryMixin):
         of: tuple[str, ...] = (),
         no_key: bool = False,
     ) -> PreparedQuerySet[MODEL]:
-        return cast(PreparedQuerySet, super().select_for_update(
-            nowait, skip_locked, of, no_key
-        ))
+        return cast(PreparedQuerySet, super().select_for_update(nowait, skip_locked, of, no_key))
 
     @_disallow_queryset_methods_on_prepared_query
     def annotate(self, **kwargs: Expression | Term) -> PreparedQuerySet[MODEL]:
@@ -307,7 +322,9 @@ class PreparedQuerySet(QuerySet[MODEL], _PreparedQueryMixin):
         return cast(PreparedQuerySet, super().group_by(*fields))
 
     @_disallow_queryset_methods_on_prepared_query
-    def values_list(self, *fields_: str, flat: bool = False) -> PreparedValuesListQuery[Literal[False]]:
+    def values_list(
+        self, *fields_: str, flat: bool = False
+    ) -> PreparedValuesListQuery[Literal[False]]:
         fields_for_select_list = self._get_fields_list_for_select(*fields_)
 
         return PreparedValuesListQuery(
@@ -481,19 +498,26 @@ class PreparedUpdateQuery(UpdateQuery, _PreparedQueryMixin):
     )
 
     def __init__(
-            self,
-            model: type[MODEL],
-            update_kwargs: dict[str, Any],
-            db: BaseDBAsyncClient,
-            q_objects: list[Q],
-            annotations: dict[str, Any],
-            custom_filters: dict[str, FilterInfoDict],
-            limit: int | None,
-            orderings: list[tuple[str, str]],
-            cache_key: str,
+        self,
+        model: type[MODEL],
+        update_kwargs: dict[str, Any],
+        db: BaseDBAsyncClient,
+        q_objects: list[Q],
+        annotations: dict[str, Any],
+        custom_filters: dict[str, FilterInfoDict],
+        limit: int | None,
+        orderings: list[tuple[str, str]],
+        cache_key: str,
     ) -> None:
         super().__init__(
-            model, update_kwargs, db, q_objects, annotations, custom_filters, limit, orderings,
+            model,
+            update_kwargs,
+            db,
+            q_objects,
+            annotations,
+            custom_filters,
+            limit,
+            orderings,
         )
 
         self._cache_key: str = cache_key
@@ -535,18 +559,24 @@ class PreparedDeleteQuery(DeleteQuery, _PreparedQueryMixin):
     )
 
     def __init__(
-            self,
-            model: type[MODEL],
-            db: BaseDBAsyncClient,
-            q_objects: list[Q],
-            annotations: dict[str, Any],
-            custom_filters: dict[str, FilterInfoDict],
-            limit: int | None,
-            orderings: list[tuple[str, str]],
-            cache_key: str,
+        self,
+        model: type[MODEL],
+        db: BaseDBAsyncClient,
+        q_objects: list[Q],
+        annotations: dict[str, Any],
+        custom_filters: dict[str, FilterInfoDict],
+        limit: int | None,
+        orderings: list[tuple[str, str]],
+        cache_key: str,
     ) -> None:
         super().__init__(
-            model, db, q_objects, annotations, custom_filters, limit, orderings,
+            model,
+            db,
+            q_objects,
+            annotations,
+            custom_filters,
+            limit,
+            orderings,
         )
         self._cache_key: str = cache_key
         self._prepared: bool = False
@@ -586,18 +616,24 @@ class PreparedExistsQuery(ExistsQuery, _PreparedQueryMixin):
     )
 
     def __init__(
-            self,
-            model: type[MODEL],
-            db: BaseDBAsyncClient,
-            q_objects: list[Q],
-            annotations: dict[str, Any],
-            custom_filters: dict[str, FilterInfoDict],
-            force_indexes: set[str],
-            use_indexes: set[str],
-            cache_key: str,
+        self,
+        model: type[MODEL],
+        db: BaseDBAsyncClient,
+        q_objects: list[Q],
+        annotations: dict[str, Any],
+        custom_filters: dict[str, FilterInfoDict],
+        force_indexes: set[str],
+        use_indexes: set[str],
+        cache_key: str,
     ) -> None:
         super().__init__(
-            model, db, q_objects, annotations, custom_filters, force_indexes, use_indexes,
+            model,
+            db,
+            q_objects,
+            annotations,
+            custom_filters,
+            force_indexes,
+            use_indexes,
         )
         self._cache_key: str = cache_key
         self._prepared: bool = False
@@ -638,20 +674,28 @@ class PreparedCountQuery(CountQuery, _PreparedQueryMixin):
     )
 
     def __init__(
-            self,
-            model: type[MODEL],
-            db: BaseDBAsyncClient,
-            q_objects: list[Q],
-            annotations: dict[str, Any],
-            custom_filters: dict[str, FilterInfoDict],
-            limit: int | None,
-            offset: int | None,
-            force_indexes: set[str],
-            use_indexes: set[str],
-            cache_key: str,
+        self,
+        model: type[MODEL],
+        db: BaseDBAsyncClient,
+        q_objects: list[Q],
+        annotations: dict[str, Any],
+        custom_filters: dict[str, FilterInfoDict],
+        limit: int | None,
+        offset: int | None,
+        force_indexes: set[str],
+        use_indexes: set[str],
+        cache_key: str,
     ) -> None:
         super().__init__(
-            model, db, q_objects, annotations, custom_filters, limit, offset, force_indexes, use_indexes,
+            model,
+            db,
+            q_objects,
+            annotations,
+            custom_filters,
+            limit,
+            offset,
+            force_indexes,
+            use_indexes,
         )
         self._cache_key: str = cache_key
         self._prepared: bool = False
@@ -700,29 +744,42 @@ class PreparedValuesListQuery(ValuesListQuery[SINGLE], _PreparedQueryMixin):
     )
 
     def __init__(
-            self,
-            model: type[MODEL],
-            db: BaseDBAsyncClient,
-            q_objects: list[Q],
-            single: bool,
-            raise_does_not_exist: bool,
-            fields_for_select_list: tuple[str, ...] | list[str],
-            limit: int | None,
-            offset: int | None,
-            distinct: bool,
-            orderings: list[tuple[str, str]],
-            flat: bool,
-            annotations: dict[str, Any],
-            custom_filters: dict[str, FilterInfoDict],
-            group_bys: tuple[str, ...],
-            force_indexes: set[str],
-            use_indexes: set[str],
-            cache_key: str,
+        self,
+        model: type[MODEL],
+        db: BaseDBAsyncClient,
+        q_objects: list[Q],
+        single: bool,
+        raise_does_not_exist: bool,
+        fields_for_select_list: tuple[str, ...] | list[str],
+        limit: int | None,
+        offset: int | None,
+        distinct: bool,
+        orderings: list[tuple[str, str]],
+        flat: bool,
+        annotations: dict[str, Any],
+        custom_filters: dict[str, FilterInfoDict],
+        group_bys: tuple[str, ...],
+        force_indexes: set[str],
+        use_indexes: set[str],
+        cache_key: str,
     ) -> None:
         super().__init__(
-            model, db, q_objects, single, raise_does_not_exist, fields_for_select_list, limit,
-            offset, distinct, orderings, flat, annotations, custom_filters, group_bys,
-            force_indexes, use_indexes
+            model,
+            db,
+            q_objects,
+            single,
+            raise_does_not_exist,
+            fields_for_select_list,
+            limit,
+            offset,
+            distinct,
+            orderings,
+            flat,
+            annotations,
+            custom_filters,
+            group_bys,
+            force_indexes,
+            use_indexes,
         )
         self._cache_key: str = cache_key
         self._prepared: bool = False
@@ -769,32 +826,44 @@ class PreparedValuesQuery(ValuesQuery[SINGLE], _PreparedQueryMixin):
         "_sql_cache",
         "_dynamic_params",
         "_dynamic_params_names",
-        "_db_for_write"
+        "_db_for_write",
     )
 
     def __init__(
-            self,
-            model: type[MODEL],
-            db: BaseDBAsyncClient,
-            q_objects: list[Q],
-            single: bool,
-            raise_does_not_exist: bool,
-            fields_for_select: dict[str, str],
-            limit: int | None,
-            offset: int | None,
-            distinct: bool,
-            orderings: list[tuple[str, str]],
-            annotations: dict[str, Any],
-            custom_filters: dict[str, FilterInfoDict],
-            group_bys: tuple[str, ...],
-            force_indexes: set[str],
-            use_indexes: set[str],
-            cache_key: str,
+        self,
+        model: type[MODEL],
+        db: BaseDBAsyncClient,
+        q_objects: list[Q],
+        single: bool,
+        raise_does_not_exist: bool,
+        fields_for_select: dict[str, str],
+        limit: int | None,
+        offset: int | None,
+        distinct: bool,
+        orderings: list[tuple[str, str]],
+        annotations: dict[str, Any],
+        custom_filters: dict[str, FilterInfoDict],
+        group_bys: tuple[str, ...],
+        force_indexes: set[str],
+        use_indexes: set[str],
+        cache_key: str,
     ) -> None:
         super().__init__(
-            model, db, q_objects, single, raise_does_not_exist, fields_for_select, limit,
-            offset, distinct, orderings, annotations, custom_filters, group_bys,
-            force_indexes, use_indexes,
+            model,
+            db,
+            q_objects,
+            single,
+            raise_does_not_exist,
+            fields_for_select,
+            limit,
+            offset,
+            distinct,
+            orderings,
+            annotations,
+            custom_filters,
+            group_bys,
+            force_indexes,
+            use_indexes,
         )
         self._cache_key: str = cache_key
         self._prepared: bool = False

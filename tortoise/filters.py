@@ -14,15 +14,15 @@ from pypika_tortoise.terms import (
     BasicCriterion,
     Criterion,
     Equality,
+    Function,
     Term,
     ValueWrapper,
-    Function,
 )
 
 from tortoise.contrib.postgres.fields import ArrayField, TSVectorField
 from tortoise.fields import Field, JSONField
 from tortoise.fields.relational import BackwardFKRelation, ManyToManyFieldInstance
-from tortoise.parameter import Parameter, CollectionParameter
+from tortoise.parameter import CollectionParameter, Parameter
 
 if sys.version_info >= (3, 11):  # pragma：nocoverage
     from typing import NotRequired
@@ -151,7 +151,7 @@ def not_null(field: Term, value: Any) -> Criterion:
 def contains(field: Term, value: str | Parameter) -> Criterion:
     return Like(
         Cast(field, SqlTypes.VARCHAR),
-        field.wrap_constant(_format_str_or_parameter(field, value, True, True))
+        field.wrap_constant(_format_str_or_parameter(field, value, True, True)),
     )
 
 
@@ -175,8 +175,11 @@ def insensitive_posix_regex(field: Term, value: str):
 
 
 def _format_str_or_parameter(
-        field: Term, value: str | Parameter, like_start: bool = False, like_end: bool = False,
-        escape_func: Callable[[Any], str] = escape_like,
+    field: Term,
+    value: str | Parameter,
+    like_start: bool = False,
+    like_end: bool = False,
+    escape_func: Callable[[Any], str] = escape_like,
 ) -> Term:
     if isinstance(value, Parameter):
         value.encode = escape_func
@@ -192,9 +195,7 @@ def _format_str_or_parameter(
         return Function("Concat", *args)
     else:
         return field.wrap_constant(
-            f"{'%' if like_start else ''}"
-            f"{escape_func(value)}"
-            f"{'%' if like_end else ''}"
+            f"{'%' if like_start else ''}{escape_func(value)}{'%' if like_end else ''}"
         )
 
 
@@ -207,27 +208,29 @@ def ends_with(field: Term, value: str | Parameter) -> Criterion:
 
 
 def insensitive_exact(field: Term, value: str | Parameter) -> Criterion:
-    return Upper(Cast(field, SqlTypes.VARCHAR)).eq(Upper(_format_str_or_parameter(field, value, escape_func=str)))
+    return Upper(Cast(field, SqlTypes.VARCHAR)).eq(
+        Upper(_format_str_or_parameter(field, value, escape_func=str))
+    )
 
 
 def insensitive_contains(field: Term, value: str | Parameter) -> Criterion:
     return Like(
         Upper(Cast(field, SqlTypes.VARCHAR)),
-        field.wrap_constant(Upper(_format_str_or_parameter(field, value, True, True)))
+        field.wrap_constant(Upper(_format_str_or_parameter(field, value, True, True))),
     )
 
 
 def insensitive_starts_with(field: Term, value: str | Parameter) -> Criterion:
     return Like(
         Upper(Cast(field, SqlTypes.VARCHAR)),
-        field.wrap_constant(Upper(_format_str_or_parameter(field, value, False, True)))
+        field.wrap_constant(Upper(_format_str_or_parameter(field, value, False, True))),
     )
 
 
 def insensitive_ends_with(field: Term, value: str | Parameter) -> Criterion:
     return Like(
         Upper(Cast(field, SqlTypes.VARCHAR)),
-        field.wrap_constant(Upper(_format_str_or_parameter(field, value, True, False)))
+        field.wrap_constant(Upper(_format_str_or_parameter(field, value, True, False))),
     )
 
 

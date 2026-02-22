@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
-from typing import Self, Callable, Any, TYPE_CHECKING, Sequence, TypeVar
+from typing import TYPE_CHECKING, Any, Self, TypeVar
+
+from pypika_tortoise import SqlContext
 
 from tortoise.fields import Field
-from pypika_tortoise import SqlContext
 
 if TYPE_CHECKING:
     from tortoise import Model
@@ -18,7 +20,9 @@ class TortoiseSqlContext(SqlContext):
     dynamic_params: dict[str, CollectionParameter] | None = None
 
     def copy(self: SqlContext, **kwargs) -> SqlContext:
-        existing_dynamic_params = self.dynamic_params if isinstance(self, TortoiseSqlContext) else None
+        existing_dynamic_params = (
+            self.dynamic_params if isinstance(self, TortoiseSqlContext) else None
+        )
         return TortoiseSqlContext(
             quote_char=kwargs.get("quote_char", self.quote_char),
             secondary_quote_char=kwargs.get("secondary_quote_char", self.secondary_quote_char),
@@ -37,7 +41,15 @@ class TortoiseSqlContext(SqlContext):
 
 
 class Parameter:
-    __slots__ = ("name", "model", "value_encoder", "field_object", "encode", "value_getter", "value_validator",)
+    __slots__ = (
+        "name",
+        "model",
+        "value_encoder",
+        "field_object",
+        "encode",
+        "value_getter",
+        "value_validator",
+    )
 
     def __init__(self, name: str) -> None:
         self.name = name
@@ -84,7 +96,10 @@ class Parameter:
 
 
 class CollectionParameter(Parameter):
-    __slots__ = ("collection_size", "collection_encoder",)
+    __slots__ = (
+        "collection_size",
+        "collection_encoder",
+    )
 
     def __init__(self, name: str) -> None:
         super().__init__(name)

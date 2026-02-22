@@ -2,10 +2,10 @@ from __future__ import annotations
 
 import types
 from collections import defaultdict
-from collections.abc import AsyncIterator, Callable, Collection, Generator, Iterable
+from collections.abc import AsyncIterator, Callable, Collection, Generator, Iterable, Sequence
 from copy import copy
 from operator import attrgetter
-from typing import TYPE_CHECKING, Any, Generic, Literal, Protocol, TypeVar, cast, overload, Sequence
+from typing import TYPE_CHECKING, Any, Generic, Literal, Protocol, TypeVar, cast, overload
 
 from pypika_tortoise import JoinType, Order, Table
 from pypika_tortoise.analytics import Count
