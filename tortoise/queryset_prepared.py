@@ -1,49 +1,24 @@
 from __future__ import annotations
 
 import functools
-import types
+from abc import ABC
 from collections import defaultdict
-from collections.abc import AsyncIterator, Callable, Collection, Generator, Iterable
-from copy import copy
-from typing import TYPE_CHECKING, Any, Generic, Literal, Protocol, TypeVar, cast, overload, NoReturn, ParamSpec, \
-    Sequence, Self
+from collections.abc import Callable, Iterable
+from typing import Any, Literal, TypeVar, cast, NoReturn, ParamSpec, Self, Protocol
 
-from pypika_tortoise import JoinType, Order, Table
-from pypika_tortoise.analytics import Count
-from pypika_tortoise.functions import Cast
-from pypika_tortoise.queries import QueryBuilder
-from pypika_tortoise.terms import Case, Field, Star, Term, ValueWrapper
+from pypika_tortoise.terms import Term
 
-from tortoise.backends.base.client import BaseDBAsyncClient, Capabilities
-from tortoise.exceptions import (
-    DoesNotExist,
-    FieldError,
-    IntegrityError,
-    MultipleObjectsReturned,
-    ParamsError,
-)
-from tortoise.expressions import Expression, Q, RawSQL, ResolveContext, ResolveResult
-from tortoise.fields.relational import (
-    ForeignKeyFieldInstance,
-    OneToOneFieldInstance,
-    RelationalField,
-)
+from tortoise.backends.base.client import BaseDBAsyncClient
+from tortoise.exceptions import DoesNotExist, MultipleObjectsReturned, ParamsError
+from tortoise.expressions import Expression, Q
 from tortoise.filters import FilterInfoDict
 from tortoise.parameter import Parameter, CollectionParameter, TortoiseSqlContext
-from tortoise.query_utils import (
-    Prefetch,
-    QueryModifier,
-    TableCriterionTuple,
-    expand_lookup_expression,
-    get_joins_for_related_field,
-)
-from tortoise.queryset import QuerySet, MODEL, AwaitableQuery, QuerySetSingle, T_co, DeleteQuery, BulkCreateQuery, \
-    BulkUpdateQuery, UpdateQuery, ExistsQuery, CountQuery, ValuesListQuery, ValuesQuery, SINGLE
-from tortoise.router import router
-from tortoise.utils import chunk
+from tortoise.query_utils import Prefetch
+from tortoise.queryset import QuerySet, MODEL, QuerySetSingle, T_co, DeleteQuery, BulkCreateQuery, \
+    BulkUpdateQuery, UpdateQuery, ExistsQuery, CountQuery, ValuesListQuery, ValuesQuery, SINGLE, AwaitableQuery
 
 
-class PreparedQuerySetSingle(QuerySetSingle[T_co]):
+class PreparedQuerySetSingle(QuerySetSingle[T_co], Protocol):
     def prepared(self) -> PreparedQuerySet[MODEL]:
         ...
 
@@ -51,30 +26,21 @@ class PreparedQuerySetSingle(QuerySetSingle[T_co]):
         ...
 
 
-class _PreparedQuery:
-    # __slots__ = (
-    #     "_cache_key",
-    #     "_prepared",
-    #     "_sql_cache",
-    #     "_dynamic_params",
-    #     "_dynamic_params_names",
-    #     "_db_for_write"
-    # )
+class _PreparedQueryMixin(AwaitableQuery, ABC):
+    _cache_key: str
+    _prepared: bool
+    _sql_cache: dict[str, CachedSql] | None
+    _dynamic_params: dict[str, CollectionParameter] | None
+    _dynamic_params_names: list[str] | None
+    _db_for_write: bool
 
-    def __init__(self, cache_key: str) -> None:
-        self._cache_key: str = cache_key
-        self._prepared: bool = False
-
-        self._sql_cache = None
-        self._dynamic_params = None
-        self._dynamic_params_names = None
-        self._db_for_write = False
+    __slots__ = ()
 
     def _clone(self) -> Self:
         raise NotImplementedError
 
     def prepare_sql(self, key: str) -> NoReturn:
-        raise NotImplementedError("Querysets must only be prepared once")
+        raise NotImplementedError("QuerySets must only be prepared once")
 
     def prepared(self) -> Self:
         if self._cache_key is None:
@@ -148,7 +114,7 @@ def _disallow_queryset_methods_on_prepared_query(func: Callable[P, T]) -> Callab
     return decorated
 
 
-class PreparedQuerySet(QuerySet[MODEL], _PreparedQuery):
+class PreparedQuerySet(QuerySet[MODEL], _PreparedQueryMixin):
     __slots__ = (
         "_cache_key",
         "_prepared",
@@ -157,22 +123,28 @@ class PreparedQuerySet(QuerySet[MODEL], _PreparedQuery):
         "_executor",
         "_dynamic_params",
         "_dynamic_params_names",
+        "_db_for_write",
     )
 
     def __init__(self, model: type[MODEL], cache_key: str) -> None:
-        super(PreparedQuerySet, self).__init__(model)
-        super(AwaitableQuery, self).__init__(cache_key)
-
+        super().__init__(model)
+        self._cache_key: str = cache_key
+        self._prepared: bool = False
+        self._sql_cache = None
+        self._dynamic_params = None
+        self._dynamic_params_names = None
         self._db_for_write = self._select_for_update
-
         self._custom_fields = None
         self._executor = None
 
-    def _clone(self) -> PreparedQuerySet[MODEL]:
-        queryset = super()._clone()
+    def _clone(self, _new_cls: type[QuerySet[MODEL]] | None = None) -> PreparedQuerySet[MODEL]:
+        queryset = super()._clone(_new_cls)
         queryset._cache_key = self._cache_key
         queryset._prepared = self._prepared
-        queryset._db_for_write = self._select_for_update
+        queryset._sql_cache = self._sql_cache
+        queryset._dynamic_params = self._dynamic_params
+        queryset._dynamic_params_names = self._dynamic_params_names
+        queryset._db_for_write = self._db_for_write
         return cast(PreparedQuerySet, queryset)
 
     def prepared(self) -> PreparedQuerySet[MODEL]:
@@ -498,13 +470,14 @@ class CachedSql:
         return filled_params
 
 
-class PreparedUpdateQuery(UpdateQuery, _PreparedQuery):
+class PreparedUpdateQuery(UpdateQuery, _PreparedQueryMixin):
     __slots__ = (
         "_cache_key",
         "_prepared",
         "_sql_cache",
         "_dynamic_params",
         "_dynamic_params_names",
+        "_db_for_write",
     )
 
     def __init__(
@@ -519,11 +492,14 @@ class PreparedUpdateQuery(UpdateQuery, _PreparedQuery):
             orderings: list[tuple[str, str]],
             cache_key: str,
     ) -> None:
-        super(PreparedUpdateQuery, self).__init__(
+        super().__init__(
             model, update_kwargs, db, q_objects, annotations, custom_filters, limit, orderings,
         )
-        super(AwaitableQuery, self).__init__(cache_key)
-
+        self._cache_key: str = cache_key
+        self._prepared: bool = False
+        self._sql_cache = None
+        self._dynamic_params = None
+        self._dynamic_params_names = None
         self._db_for_write = True
 
     def _clone(self) -> PreparedUpdateQuery[MODEL]:
@@ -547,13 +523,14 @@ class PreparedUpdateQuery(UpdateQuery, _PreparedQuery):
         return (await self._db.execute_query(cached_query.sql, filled_params))[0]
 
 
-class PreparedDeleteQuery(DeleteQuery, _PreparedQuery):
+class PreparedDeleteQuery(DeleteQuery, _PreparedQueryMixin):
     __slots__ = (
         "_cache_key",
         "_prepared",
         "_sql_cache",
         "_dynamic_params",
         "_dynamic_params_names",
+        "_db_for_write",
     )
 
     def __init__(
@@ -567,11 +544,14 @@ class PreparedDeleteQuery(DeleteQuery, _PreparedQuery):
             orderings: list[tuple[str, str]],
             cache_key: str,
     ) -> None:
-        super(PreparedDeleteQuery, self).__init__(
+        super().__init__(
             model, db, q_objects, annotations, custom_filters, limit, orderings,
         )
-        super(AwaitableQuery, self).__init__(cache_key)
-
+        self._cache_key: str = cache_key
+        self._prepared: bool = False
+        self._sql_cache = None
+        self._dynamic_params = None
+        self._dynamic_params_names = None
         self._db_for_write = True
 
     def _clone(self) -> PreparedDeleteQuery[MODEL]:
@@ -594,13 +574,14 @@ class PreparedDeleteQuery(DeleteQuery, _PreparedQuery):
         return (await self._db.execute_query(cached_query.sql, filled_params))[0]
 
 
-class PreparedExistsQuery(ExistsQuery, _PreparedQuery):
+class PreparedExistsQuery(ExistsQuery, _PreparedQueryMixin):
     __slots__ = (
         "_cache_key",
         "_prepared",
         "_sql_cache",
         "_dynamic_params",
         "_dynamic_params_names",
+        "_db_for_write",
     )
 
     def __init__(
@@ -614,11 +595,14 @@ class PreparedExistsQuery(ExistsQuery, _PreparedQuery):
             use_indexes: set[str],
             cache_key: str,
     ) -> None:
-        super(PreparedExistsQuery, self).__init__(
+        super().__init__(
             model, db, q_objects, annotations, custom_filters, force_indexes, use_indexes,
         )
-        super(AwaitableQuery, self).__init__(cache_key)
-
+        self._cache_key: str = cache_key
+        self._prepared: bool = False
+        self._sql_cache = None
+        self._dynamic_params = None
+        self._dynamic_params_names = None
         self._db_for_write = False
 
     def _clone(self) -> PreparedExistsQuery:
@@ -642,13 +626,14 @@ class PreparedExistsQuery(ExistsQuery, _PreparedQuery):
         return bool(result)
 
 
-class PreparedCountQuery(CountQuery, _PreparedQuery):
+class PreparedCountQuery(CountQuery, _PreparedQueryMixin):
     __slots__ = (
         "_cache_key",
         "_prepared",
         "_sql_cache",
         "_dynamic_params",
         "_dynamic_params_names",
+        "_db_for_write",
     )
 
     def __init__(
@@ -664,11 +649,14 @@ class PreparedCountQuery(CountQuery, _PreparedQuery):
             use_indexes: set[str],
             cache_key: str,
     ) -> None:
-        super(PreparedCountQuery, self).__init__(
+        super().__init__(
             model, db, q_objects, annotations, custom_filters, limit, offset, force_indexes, use_indexes,
         )
-        super(AwaitableQuery, self).__init__(cache_key)
-
+        self._cache_key: str = cache_key
+        self._prepared: bool = False
+        self._sql_cache = None
+        self._dynamic_params = None
+        self._dynamic_params_names = None
         self._db_for_write = False
 
     def _clone(self) -> PreparedCountQuery:
@@ -700,13 +688,14 @@ class PreparedCountQuery(CountQuery, _PreparedQuery):
         return count
 
 
-class PreparedValuesListQuery(ValuesListQuery[SINGLE], _PreparedQuery):
+class PreparedValuesListQuery(ValuesListQuery[SINGLE], _PreparedQueryMixin):
     __slots__ = (
         "_cache_key",
         "_prepared",
         "_sql_cache",
         "_dynamic_params",
         "_dynamic_params_names",
+        "_db_for_write",
     )
 
     def __init__(
@@ -729,12 +718,16 @@ class PreparedValuesListQuery(ValuesListQuery[SINGLE], _PreparedQuery):
             use_indexes: set[str],
             cache_key: str,
     ) -> None:
-        super(PreparedValuesListQuery, self).__init__(
+        super().__init__(
             model, db, q_objects, single, raise_does_not_exist, fields_for_select_list, limit,
             offset, distinct, orderings, flat, annotations, custom_filters, group_bys,
             force_indexes, use_indexes
         )
-        super(AwaitableQuery, self).__init__(cache_key)
+        self._cache_key: str = cache_key
+        self._prepared: bool = False
+        self._sql_cache = None
+        self._dynamic_params = None
+        self._dynamic_params_names = None
         self._db_for_write = False
 
     def _clone(self) -> PreparedValuesListQuery:
@@ -768,13 +761,14 @@ class PreparedValuesListQuery(ValuesListQuery[SINGLE], _PreparedQuery):
         return self._process_results(result)
 
 
-class PreparedValuesQuery(ValuesQuery[SINGLE], _PreparedQuery):
+class PreparedValuesQuery(ValuesQuery[SINGLE], _PreparedQueryMixin):
     __slots__ = (
         "_cache_key",
         "_prepared",
         "_sql_cache",
         "_dynamic_params",
         "_dynamic_params_names",
+        "_db_for_write"
     )
 
     def __init__(
@@ -796,12 +790,16 @@ class PreparedValuesQuery(ValuesQuery[SINGLE], _PreparedQuery):
             use_indexes: set[str],
             cache_key: str,
     ) -> None:
-        super(PreparedValuesQuery, self).__init__(
+        super().__init__(
             model, db, q_objects, single, raise_does_not_exist, fields_for_select, limit,
             offset, distinct, orderings, annotations, custom_filters, group_bys,
             force_indexes, use_indexes,
         )
-        super(AwaitableQuery, self).__init__(cache_key)
+        self._cache_key: str = cache_key
+        self._prepared: bool = False
+        self._sql_cache = None
+        self._dynamic_params = None
+        self._dynamic_params_names = None
         self._db_for_write = False
 
     def _clone(self) -> PreparedValuesQuery:

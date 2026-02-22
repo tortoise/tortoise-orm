@@ -362,8 +362,10 @@ class QuerySet(AwaitableQuery[MODEL]):
         self._force_indexes: set[str] = set()
         self._use_indexes: set[str] = set()
 
-    def _clone(self) -> QuerySet[MODEL]:
-        queryset = self.__class__.__new__(self.__class__)
+    def _clone(self, _new_cls: type[QuerySet] | None = None) -> QuerySet[MODEL]:
+        if _new_cls is None:
+            _new_cls = self.__class__
+        queryset = _new_cls.__new__(_new_cls)
         queryset.fields = self.fields
         queryset.model = self.model
         queryset.query = self.query
@@ -1273,42 +1275,15 @@ class QuerySet(AwaitableQuery[MODEL]):
 
         from tortoise.queryset_prepared import PreparedQuerySet
 
-        # TODO: add some arg to _clone to override class?
-        #  to be able to to something like self._clone(PreparedQuerySet)
-        queryset = PreparedQuerySet(self.model, key)
-        queryset.fields = self.fields
-        queryset.model = self.model
-        queryset.query = self.query
-        queryset.capabilities = self.capabilities
-        queryset._prefetch_map = copy(self._prefetch_map)
-        queryset._prefetch_queries = copy(self._prefetch_queries)
-        queryset._single = self._single
-        queryset._raise_does_not_exist = self._raise_does_not_exist
-        queryset._db = self._db
-        queryset._limit = self._limit
-        queryset._offset = self._offset
-        queryset._fields_for_select = self._fields_for_select
-        queryset._filter_kwargs = copy(self._filter_kwargs)
-        queryset._orderings = copy(self._orderings)
-        queryset._joined_tables = copy(self._joined_tables)
-        queryset._q_objects = copy(self._q_objects)
-        queryset._distinct = self._distinct
-        queryset._annotations = copy(self._annotations)
-        queryset._having = copy(self._having)
-        queryset._custom_filters = copy(self._custom_filters)
-        queryset._group_bys = copy(self._group_bys)
-        queryset._select_for_update = self._select_for_update
-        queryset._select_for_update_nowait = self._select_for_update_nowait
-        queryset._select_for_update_skip_locked = self._select_for_update_skip_locked
-        queryset._select_for_update_of = self._select_for_update_of
-        queryset._select_for_update_no_key = self._select_for_update_no_key
-        queryset._select_related = self._select_related
-        queryset._select_related_idx = self._select_related_idx
-        queryset._force_indexes = self._force_indexes
-        queryset._use_indexes = self._use_indexes
+        queryset = self._clone(PreparedQuerySet)
         queryset._cache_key = key
+        queryset._prepared = False
+        queryset._sql_cache = None
+        queryset._dynamic_params = None
+        queryset._dynamic_params_names = None
+        queryset._db_for_write = self._select_for_update
 
-        return queryset
+        return cast(PreparedQuerySet[MODEL], queryset)
 
 
 class UpdateQuery(AwaitableQuery):
