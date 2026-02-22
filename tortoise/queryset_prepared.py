@@ -27,6 +27,8 @@ class PreparedQuerySetSingle(QuerySetSingle[T_co], Protocol):
 
 
 class CachedSql:
+    __slots__ = ("sql", "params", "param_by_name", "need_params", "need_collection_params",)
+
     def __init__(self, sql: str, params: list[Parameter | Any]) -> None:
         self.sql = sql
         self.params = params
