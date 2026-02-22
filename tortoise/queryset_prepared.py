@@ -164,7 +164,6 @@ class PreparedQuerySet(QuerySet[MODEL], _PreparedQueryMixin):
         "_prepared",
         "_custom_fields",
         "_sql_cache",
-        "_executor",
         "_dynamic_params",
         "_dynamic_params_names",
         "_db_for_write",
@@ -179,7 +178,6 @@ class PreparedQuerySet(QuerySet[MODEL], _PreparedQueryMixin):
         self._dynamic_params_names: list[str] | None = None
         self._db_for_write = self._select_for_update
         self._custom_fields: list[str] | None = None
-        self._executor: BaseExecutor | None = None
 
     def _clone(self, _new_cls: type[QuerySet[MODEL]] | None = None) -> PreparedQuerySet[MODEL]:
         queryset = cast(Self, super()._clone(_new_cls))
@@ -196,24 +194,20 @@ class PreparedQuerySet(QuerySet[MODEL], _PreparedQueryMixin):
 
     def prepared(self) -> PreparedQuerySet[MODEL]:
         queryset = cast(Self, super().prepared())
-
         queryset._custom_fields = list(self._annotations.keys())
-        queryset._executor = queryset._db.executor_class(
-            model=queryset.model,
-            db=queryset._db,
-            prefetch_map=queryset._prefetch_map,
-            prefetch_queries=queryset._prefetch_queries,
-            select_related_idx=queryset._select_related_idx,
-        )
-
         return queryset
 
     async def execute(self, **params) -> list[MODEL]:
         cached_query = self._get_or_create_cached_sql(params)
         filled_params = cached_query.make_filled_params(params)
 
-        # TODO: re-create executor when database changes
-        instance_list = await self._executor.execute_select(
+        instance_list = await self._db.executor_class(
+            model=self.model,
+            db=self._db,
+            prefetch_map=self._prefetch_map,
+            prefetch_queries=self._prefetch_queries,
+            select_related_idx=self._select_related_idx,
+        ).execute_select(
             cached_query.sql, filled_params,
             custom_fields=self._custom_fields,
         )
