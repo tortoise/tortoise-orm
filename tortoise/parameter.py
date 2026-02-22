@@ -1,10 +1,16 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Self, Callable, Any
+from typing import Self, Callable, Any, TYPE_CHECKING, Sequence, TypeVar
 
 from tortoise.fields import Field
 from pypika_tortoise import SqlContext
+
+if TYPE_CHECKING:
+    from tortoise import Model
+
+T_out = TypeVar("T_out")
+FieldEncoder = Callable[[Any, "Model"], T_out] | Callable[[Any, "Model", Field | None], T_out]
 
 
 @dataclass(frozen=True)
@@ -35,10 +41,10 @@ class Parameter:
 
     def __init__(self, name: str) -> None:
         self.name = name
-        self.model = None
-        self.value_encoder = None
+        self.model: Model | None = None
+        self.value_encoder: FieldEncoder[Any] | None = None
         self.field_object: Field | None = None
-        self.encode = None
+        self.encode: Callable[[Any], Any] | None = None
         self.value_getter: Callable[[Any], Any] | None = None
         self.value_validator: Callable[[Any], Any] | None = None
 
@@ -54,7 +60,7 @@ class Parameter:
 
         return new
 
-    def encode_value(self, value: ...) -> ...:
+    def encode_value(self, value: Any) -> Any:
         if self.value_validator is not None:
             self.value_validator(value)
 
@@ -82,8 +88,8 @@ class CollectionParameter(Parameter):
 
     def __init__(self, name: str) -> None:
         super().__init__(name)
-        self.collection_size = None
-        self.collection_encoder = None
+        self.collection_size: int | None = None
+        self.collection_encoder: FieldEncoder[Sequence[Any]] | None = None
 
     @classmethod
     def from_simple_param(cls, param: Parameter) -> Self:
@@ -94,7 +100,7 @@ class CollectionParameter(Parameter):
         new_param.encode = param.encode
         return new_param
 
-    def encode_collection(self, value: ...) -> ...:
+    def encode_collection(self, value: Any) -> Sequence[Any]:
         if self.field_object is not None:
             return self.collection_encoder(value, self.model, self.field_object)
         else:

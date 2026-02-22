@@ -1,14 +1,15 @@
-from __future__ import annotations
+from __future__ import annotations as _
 
 import functools
-from abc import ABC
+from abc import ABC, abstractmethod
 from collections import defaultdict
 from collections.abc import Callable, Iterable
-from typing import Any, Literal, TypeVar, cast, NoReturn, ParamSpec, Self, Protocol
+from typing import Any, Literal, TypeVar, cast, NoReturn, ParamSpec, Self, Protocol, Concatenate
 
 from pypika_tortoise.terms import Term
 
 from tortoise.backends.base.client import BaseDBAsyncClient
+from tortoise.backends.base.executor import BaseExecutor
 from tortoise.exceptions import DoesNotExist, MultipleObjectsReturned, ParamsError
 from tortoise.expressions import Expression, Q
 from tortoise.filters import FilterInfoDict
@@ -26,6 +27,48 @@ class PreparedQuerySetSingle(QuerySetSingle[T_co], Protocol):
         ...
 
 
+class CachedSql:
+    def __init__(self, sql: str, params: list[Parameter | Any]) -> None:
+        self.sql = sql
+        self.params = params
+        self.param_by_name: dict[str, Parameter] = {}
+        self.need_params: dict[str, int] = {}
+        self.need_collection_params: dict[str, list[int]] = defaultdict(list)
+        for idx, param in enumerate(params):
+            if not isinstance(param, Parameter):
+                continue
+
+            if param.name not in self.param_by_name:
+                self.param_by_name[param.name] = param
+
+            if isinstance(param, CollectionParameter):
+                self.need_collection_params[param.name].append(idx)
+            else:
+                self.need_params[param.name] = idx
+
+    def make_filled_params(self, params: dict[str, Any]) -> list[Any]:
+        # TODO: check for parameters mismatch
+
+        filled_params = self.params.copy()
+        for name, idx in self.need_params.items():
+            param = self.param_by_name[name]
+            filled_params[idx] = param.encode_value(params[name])
+
+        for name, indexes in self.need_collection_params.items():
+            param = cast(CollectionParameter, self.param_by_name[name])
+            collection = param.encode_collection(params[name])
+            if len(collection) != len(indexes):
+                raise ValueError(
+                    f"Provided value length ({len(collection)}) "
+                    f"for parameter {name!r} does not match "
+                    f"parameter indexes length ({len(indexes)})"
+                )
+            for idx, value in zip(indexes, collection):
+                filled_params[idx] = param.encode_value(value)
+
+        return filled_params
+
+
 class _PreparedQueryMixin(AwaitableQuery, ABC):
     _cache_key: str
     _prepared: bool
@@ -36,11 +79,9 @@ class _PreparedQueryMixin(AwaitableQuery, ABC):
 
     __slots__ = ()
 
+    @abstractmethod
     def _clone(self) -> Self:
-        raise NotImplementedError
-
-    def prepare_sql(self, key: str) -> NoReturn:
-        raise NotImplementedError("QuerySets must only be prepared once")
+        ...
 
     def prepared(self) -> Self:
         if self._cache_key is None:
@@ -88,23 +129,26 @@ class _PreparedQueryMixin(AwaitableQuery, ABC):
         if cache_key not in self._sql_cache:
             # TODO: probably could be done in a better way?
             ctx = TortoiseSqlContext.copy(self.query.QUERY_CLS.SQL_CONTEXT, dynamic_params=self._dynamic_params)
-            sql, params = self.query.get_parameterized_sql(ctx)
-            self._sql_cache[cache_key] = CachedSql(sql, params)
+            sql, params_ = self.query.get_parameterized_sql(ctx)
+            self._sql_cache[cache_key] = CachedSql(sql, params_)
 
         for param in reset_params:
             param.collection_size = None
 
         return self._sql_cache[cache_key]
 
-    async def execute(self, **params) -> int:
-        raise NotImplementedError
+    @abstractmethod
+    async def execute(self, **params) -> Any:
+        ...
 
 
 P = ParamSpec("P")
 T = TypeVar("T")
 
 
-def _disallow_queryset_methods_on_prepared_query(func: Callable[P, T]) -> Callable[P, T]:
+def _disallow_queryset_methods_on_prepared_query(
+        func: Callable[Concatenate[PreparedQuerySet, P], T],
+) -> Callable[Concatenate[PreparedQuerySet, P], T]:
     @functools.wraps(func)
     def decorated(self: PreparedQuerySet, *args: P.args, **kwargs: P.kwargs) -> T:
         if self._prepared:
@@ -130,15 +174,15 @@ class PreparedQuerySet(QuerySet[MODEL], _PreparedQueryMixin):
         super().__init__(model)
         self._cache_key: str = cache_key
         self._prepared: bool = False
-        self._sql_cache = None
-        self._dynamic_params = None
-        self._dynamic_params_names = None
+        self._sql_cache: dict[str, CachedSql] | None = None
+        self._dynamic_params: dict[str, CollectionParameter] | None = None
+        self._dynamic_params_names: list[str] | None = None
         self._db_for_write = self._select_for_update
-        self._custom_fields = None
-        self._executor = None
+        self._custom_fields: list[str] | None = None
+        self._executor: BaseExecutor | None = None
 
     def _clone(self, _new_cls: type[QuerySet[MODEL]] | None = None) -> PreparedQuerySet[MODEL]:
-        queryset = super()._clone(_new_cls)
+        queryset = cast(Self, super()._clone(_new_cls))
         queryset._cache_key = self._cache_key
         queryset._prepared = self._prepared
         queryset._sql_cache = self._sql_cache
@@ -147,8 +191,11 @@ class PreparedQuerySet(QuerySet[MODEL], _PreparedQueryMixin):
         queryset._db_for_write = self._db_for_write
         return cast(PreparedQuerySet, queryset)
 
+    def prepare_sql(self, key: str) -> NoReturn:
+        raise NotImplementedError("QuerySets must only be prepared once")
+
     def prepared(self) -> PreparedQuerySet[MODEL]:
-        queryset = cast(PreparedQuerySet[MODEL], super().prepared())
+        queryset = cast(Self, super().prepared())
 
         queryset._custom_fields = list(self._annotations.keys())
         queryset._executor = queryset._db.executor_class(
@@ -224,7 +271,7 @@ class PreparedQuerySet(QuerySet[MODEL], _PreparedQueryMixin):
         return value
 
     @_disallow_queryset_methods_on_prepared_query
-    def offset(self, offset: int) -> PreparedQuerySet[MODEL]:
+    def offset(self, offset: int | Parameter) -> PreparedQuerySet[MODEL]:
         if isinstance(offset, int) and offset < 0:
             raise ParamsError("Offset should be non-negative number")
         elif isinstance(offset, Parameter):
@@ -428,48 +475,6 @@ class PreparedQuerySet(QuerySet[MODEL], _PreparedQueryMixin):
         return cast(PreparedQuerySet, super().prefetch_related(*args))
 
 
-class CachedSql:
-    def __init__(self, sql: str, params: list[Parameter | Any]) -> None:
-        self.sql = sql
-        self.params = params
-        self.param_by_name: dict[str, Parameter] = {}
-        self.need_params: dict[str, int] = {}
-        self.need_collection_params: dict[str, list[int]] = defaultdict(list)
-        for idx, param in enumerate(params):
-            if not isinstance(param, Parameter):
-                continue
-
-            if param.name not in self.param_by_name:
-                self.param_by_name[param.name] = param
-
-            if isinstance(param, CollectionParameter):
-                self.need_collection_params[param.name].append(idx)
-            else:
-                self.need_params[param.name] = idx
-
-    def make_filled_params(self, params: dict[str, Any]) -> list[Any]:
-        # TODO: check for parameters mismatch
-
-        filled_params = self.params.copy()
-        for name, idx in self.need_params.items():
-            param = self.param_by_name[name]
-            filled_params[idx] = param.encode_value(params[name])
-
-        for name, indexes in self.need_collection_params.items():
-            param = cast(CollectionParameter, self.param_by_name[name])
-            collection = param.encode_collection(params[name])
-            if len(collection) != len(indexes):
-                raise ValueError(
-                    f"Provided value length ({len(collection)}) "
-                    f"for parameter {name!r} does not match "
-                    f"parameter indexes length ({len(indexes)})"
-                )
-            for idx, value in zip(indexes, collection):
-                filled_params[idx] = param.encode_value(value)
-
-        return filled_params
-
-
 class PreparedUpdateQuery(UpdateQuery, _PreparedQueryMixin):
     __slots__ = (
         "_cache_key",
@@ -495,14 +500,15 @@ class PreparedUpdateQuery(UpdateQuery, _PreparedQueryMixin):
         super().__init__(
             model, update_kwargs, db, q_objects, annotations, custom_filters, limit, orderings,
         )
+
         self._cache_key: str = cache_key
         self._prepared: bool = False
-        self._sql_cache = None
-        self._dynamic_params = None
-        self._dynamic_params_names = None
-        self._db_for_write = True
+        self._sql_cache: dict[str, CachedSql] | None = None
+        self._dynamic_params: dict[str, CollectionParameter] | None = None
+        self._dynamic_params_names: list[str] | None = None
+        self._db_for_write: bool = True
 
-    def _clone(self) -> PreparedUpdateQuery[MODEL]:
+    def _clone(self) -> PreparedUpdateQuery:
         query = self.__class__(
             model=self.model,
             update_kwargs=self.update_kwargs,
@@ -549,12 +555,12 @@ class PreparedDeleteQuery(DeleteQuery, _PreparedQueryMixin):
         )
         self._cache_key: str = cache_key
         self._prepared: bool = False
-        self._sql_cache = None
-        self._dynamic_params = None
-        self._dynamic_params_names = None
-        self._db_for_write = True
+        self._sql_cache: dict[str, CachedSql] | None = None
+        self._dynamic_params: dict[str, CollectionParameter] | None = None
+        self._dynamic_params_names: list[str] | None = None
+        self._db_for_write: bool = True
 
-    def _clone(self) -> PreparedDeleteQuery[MODEL]:
+    def _clone(self) -> PreparedDeleteQuery:
         query = self.__class__(
             model=self.model,
             db=self._db,
@@ -600,10 +606,10 @@ class PreparedExistsQuery(ExistsQuery, _PreparedQueryMixin):
         )
         self._cache_key: str = cache_key
         self._prepared: bool = False
-        self._sql_cache = None
-        self._dynamic_params = None
-        self._dynamic_params_names = None
-        self._db_for_write = False
+        self._sql_cache: dict[str, CachedSql] | None = None
+        self._dynamic_params: dict[str, CollectionParameter] | None = None
+        self._dynamic_params_names: list[str] | None = None
+        self._db_for_write: bool = False
 
     def _clone(self) -> PreparedExistsQuery:
         query = self.__class__(
@@ -654,10 +660,10 @@ class PreparedCountQuery(CountQuery, _PreparedQueryMixin):
         )
         self._cache_key: str = cache_key
         self._prepared: bool = False
-        self._sql_cache = None
-        self._dynamic_params = None
-        self._dynamic_params_names = None
-        self._db_for_write = False
+        self._sql_cache: dict[str, CachedSql] | None = None
+        self._dynamic_params: dict[str, CollectionParameter] | None = None
+        self._dynamic_params_names: list[str] | None = None
+        self._db_for_write: bool = False
 
     def _clone(self) -> PreparedCountQuery:
         query = self.__class__(
@@ -725,10 +731,10 @@ class PreparedValuesListQuery(ValuesListQuery[SINGLE], _PreparedQueryMixin):
         )
         self._cache_key: str = cache_key
         self._prepared: bool = False
-        self._sql_cache = None
-        self._dynamic_params = None
-        self._dynamic_params_names = None
-        self._db_for_write = False
+        self._sql_cache: dict[str, CachedSql] | None = None
+        self._dynamic_params: dict[str, CollectionParameter] | None = None
+        self._dynamic_params_names: list[str] | None = None
+        self._db_for_write: bool = False
 
     def _clone(self) -> PreparedValuesListQuery:
         query = self.__class__(
@@ -797,10 +803,10 @@ class PreparedValuesQuery(ValuesQuery[SINGLE], _PreparedQueryMixin):
         )
         self._cache_key: str = cache_key
         self._prepared: bool = False
-        self._sql_cache = None
-        self._dynamic_params = None
-        self._dynamic_params_names = None
-        self._db_for_write = False
+        self._sql_cache: dict[str, CachedSql] | None = None
+        self._dynamic_params: dict[str, CollectionParameter] | None = None
+        self._dynamic_params_names: list[str] | None = None
+        self._db_for_write: bool = False
 
     def _clone(self) -> PreparedValuesQuery:
         query = self.__class__(
@@ -824,7 +830,7 @@ class PreparedValuesQuery(ValuesQuery[SINGLE], _PreparedQueryMixin):
         query._prepared = self._prepared
         return query
 
-    async def execute(self, **params) -> list[Any] | tuple:
+    async def execute(self, **params) -> list[dict] | dict:
         cached_query = self._get_or_create_cached_sql(params)
         filled_params = cached_query.make_filled_params(params)
 
