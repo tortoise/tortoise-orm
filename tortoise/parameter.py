@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Self
+from typing import Self, Callable, Any
 
 from tortoise.fields import Field
 from pypika_tortoise import SqlContext
@@ -31,7 +31,7 @@ class TortoiseSqlContext(SqlContext):
 
 
 class Parameter:
-    __slots__ = ("name", "model", "value_encoder", "field_object", "encode",)
+    __slots__ = ("name", "model", "value_encoder", "field_object", "encode", "value_getter", "value_validator",)
 
     def __init__(self, name: str) -> None:
         self.name = name
@@ -39,6 +39,8 @@ class Parameter:
         self.value_encoder = None
         self.field_object: Field | None = None
         self.encode = None
+        self.value_getter: Callable[[Any], Any] | None = None
+        self.value_validator: Callable[[Any], Any] | None = None
 
     def clone(self) -> Self:
         new = self.__new__(self.__class__)
@@ -47,10 +49,18 @@ class Parameter:
         new.value_encoder = self.value_encoder
         new.field_object = self.field_object
         new.encode = self.encode
+        new.value_getter = self.value_getter
+        new.value_validator = self.value_validator
 
         return new
 
     def encode_value(self, value: ...) -> ...:
+        if self.value_validator is not None:
+            self.value_validator(value)
+
+        if self.value_getter is not None:
+            value = self.value_getter(value)
+
         encoded = value
 
         if self.value_encoder:

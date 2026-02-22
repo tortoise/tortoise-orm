@@ -1,8 +1,8 @@
 from tests.testmodels import (
-    Author,
+    Author, Book,
 )
 from tortoise.contrib import test
-from tortoise.exceptions import ParamsError
+from tortoise.exceptions import ParamsError, ValidationError
 from tortoise.expressions import Subquery, Q
 from tortoise.parameter import Parameter
 
@@ -264,3 +264,34 @@ class TestQuerysetPrepared(test.TestCase):
             await prepared_ids_flat.execute(id=author.pk * 2),
             [],
         )
+
+    async def test_update_fk(self):
+        author1 = await Author.create(name="1")
+        author2 = await Author.create(name="2")
+
+        book = await Book.create(name="test", author=author1, rating=5)
+
+        prepared = Book.prepare_sql("test_update_fk").filter(
+            id=Parameter("search_id")
+        ).update(author=Parameter("replace_author")).prepared()
+
+        await prepared.execute(search_id=book.pk, replace_author=author2)
+        book = await Book.get(id=book.pk).select_related("author")
+        # await book.refresh_from_db(["author_id"])
+        self.assertEqual(book.author, author2)
+
+        await prepared.execute(search_id=book.pk, replace_author=author1)
+        book = await Book.get(id=book.pk).select_related("author")
+        # await book.refresh_from_db(["author_id"])
+        self.assertEqual(book.author, author1)
+
+    async def test_update_pk_invalid_obj(self):
+        author = await Author.create(name="1")
+        book = await Book.create(name="test", author=author, rating=5)
+
+        prepared = Book.prepare_sql("test_update_pk_invalid_obj").filter(
+            id=Parameter("search_id")
+        ).update(author=Parameter("replace_author")).prepared()
+
+        with self.assertRaises(ValidationError):
+            await prepared.execute(search_id=book.pk, replace_author="not an Author object")

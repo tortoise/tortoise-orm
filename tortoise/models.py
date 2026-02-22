@@ -49,8 +49,8 @@ from tortoise.queryset import (
     QuerySet,
     QuerySetSingle,
     RawSQLQuery,
-    PreparedQuerySet,
 )
+from tortoise.queryset_prepared import PreparedQuerySet
 from tortoise.router import router
 from tortoise.signals import Signals
 from tortoise.transactions import in_transaction
