@@ -14,7 +14,6 @@ from pypika_tortoise.terms import (
     BasicCriterion,
     Criterion,
     Equality,
-    Function,
     Term,
     ValueWrapper,
 )
@@ -181,22 +180,17 @@ def _format_str_or_parameter(
     like_end: bool = False,
     escape_func: Callable[[Any], str] = escape_like,
 ) -> Term:
+    like_at_start = "%" if like_start else ""
+    like_at_end = "%" if like_end else ""
+
     if isinstance(value, Parameter):
         value.encode = escape_func
         wrapped = ValueWrapper(value)
-        if not like_start and not like_end:
-            return wrapped
-        args: list[str | ValueWrapper] = []
-        if like_start:
-            args.append("%")
-        args.append(wrapped)
-        if like_end:
-            args.append("%")
-        return Function("Concat", *args)
+        if like_start or like_end:
+            value.encode = lambda val: f"{like_at_start}{escape_func(val)}{like_at_end}"
+        return wrapped
     else:
-        return field.wrap_constant(
-            f"{'%' if like_start else ''}{escape_func(value)}{'%' if like_end else ''}"
-        )
+        return field.wrap_constant(f"{like_at_start}{escape_func(value)}{like_at_end}")
 
 
 def starts_with(field: Term, value: str | Parameter) -> Criterion:
