@@ -144,14 +144,17 @@ class CollectionParameter(Parameter):
             param = ctx.dynamic_params.get(self.name, self)
 
         if param.collection_size is None:
-            if ctx.parameterizer is not None:
-                ctx.parameterizer.create_param(param)
-            return "?"
+            if ctx.parameterizer is None:
+                raise ValueError("Parametrization must be enabled when using tortoise.Parameter.")
+            return ctx.parameterizer.create_param(param).get_sql(ctx)
         else:
-            if ctx.parameterizer is not None:
-                for idx in range(param.collection_size):
-                    new_param = param.clone()
-                    new_param.collection_encoder = new_param.value_encoder
-                    new_param.value_encoder = None
-                    ctx.parameterizer.create_param(new_param)
-            return f"({','.join(['?' for _ in range(param.collection_size)])})"
+            if ctx.parameterizer is None:
+                raise ValueError("Parametrization must be enabled when using tortoise.Parameter.")
+            placeholders = []
+            for idx in range(param.collection_size):
+                new_param = param.clone()
+                new_param.collection_encoder = new_param.value_encoder
+                new_param.value_encoder = None
+                pypika_param = ctx.parameterizer.create_param(new_param)
+                placeholders.append(pypika_param.get_sql(ctx))
+            return f"({','.join(placeholders)})"
