@@ -9,7 +9,6 @@ from typing import Any, Literal, TypeVar, cast, NoReturn, ParamSpec, Self, Proto
 from pypika_tortoise.terms import Term
 
 from tortoise.backends.base.client import BaseDBAsyncClient
-from tortoise.backends.base.executor import BaseExecutor
 from tortoise.exceptions import DoesNotExist, MultipleObjectsReturned, ParamsError
 from tortoise.expressions import Expression, Q
 from tortoise.filters import FilterInfoDict
@@ -113,8 +112,7 @@ class _PreparedQueryMixin(AwaitableQuery, ABC):
     def _get_or_create_cached_sql(self, params: dict[str, Any]) -> CachedSql:
         reset_params = []
 
-        # TODO: cache also by database dialect
-        cache_key = "query"
+        cache_key = f"{self._db.capabilities.dialect}-query"
         for name in self._dynamic_params_names:
             value = params[name]
             if not isinstance(value, (tuple, list, set)):
@@ -126,6 +124,7 @@ class _PreparedQueryMixin(AwaitableQuery, ABC):
             param.collection_size = len(value)
             reset_params.append(param)
 
+        # TODO: add ability to limit cache, use lru?
         if cache_key not in self._sql_cache:
             # TODO: probably could be done in a better way?
             ctx = TortoiseSqlContext.copy(self.query.QUERY_CLS.SQL_CONTEXT, dynamic_params=self._dynamic_params)
