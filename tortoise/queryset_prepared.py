@@ -17,6 +17,7 @@ from tortoise.parameter import CollectionParameter, Parameter, TortoiseSqlContex
 from tortoise.query_utils import Prefetch
 from tortoise.queryset import (
     MODEL,
+    PRIMARY_KEY,
     SINGLE,
     AwaitableQuery,
     BulkCreateQuery,
@@ -445,7 +446,9 @@ class PreparedQuerySet(QuerySet[MODEL], _PreparedQueryMixin):
     def get(self, *args: Q, **kwargs: Any) -> PreparedQuerySetSingle[MODEL]:
         return cast(PreparedQuerySetSingle, super().get(*args, **kwargs))
 
-    async def in_bulk(self, id_list: Iterable[str | int], field_name: str) -> dict[str, MODEL]:
+    async def in_bulk(
+        self, id_list: Iterable[PRIMARY_KEY], field_name: str
+    ) -> dict[PRIMARY_KEY, MODEL]:
         raise NotImplementedError("Prepared queries don't support in_bulk.")
 
     def bulk_create(
