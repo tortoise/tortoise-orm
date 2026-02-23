@@ -9,7 +9,7 @@ from pypika_tortoise import Query
 
 from tortoise.backends.base.executor import BaseExecutor
 from tortoise.backends.base.schema_generator import BaseSchemaGenerator
-from tortoise.connection import connections
+from tortoise.connection import get_connections
 from tortoise.exceptions import TransactionManagementError
 from tortoise.log import db_client_logger
 
@@ -39,6 +39,8 @@ class Capabilities:
     :param support_update_limit_order_by: support update/delete with limit and order by.
     :param support_for_posix_regex_queries: indicated if the db supports posix regex queries
     :param support_json_attributes: indicated if the db supports accessing json attributes
+    :param can_rollback_ddl: Whether the database supports transactional DDL.
+        Used to determine if migrations can be run atomically.
     """
 
     def __init__(
@@ -59,6 +61,7 @@ class Capabilities:
         support_update_limit_order_by: bool = True,
         support_for_posix_regex_queries: bool = False,
         support_json_attributes: bool = False,
+        can_rollback_ddl: bool = False,
     ) -> None:
         super().__setattr__("_mutable", True)
 
@@ -73,6 +76,7 @@ class Capabilities:
         self.support_update_limit_order_by = support_update_limit_order_by
         self.support_for_posix_regex_queries = support_for_posix_regex_queries
         self.support_json_attributes = support_json_attributes
+        self.can_rollback_ddl = can_rollback_ddl
         super().__setattr__("_mutable", False)
 
     def __setattr__(self, attr: str, value: Any) -> None:
@@ -114,6 +118,7 @@ class BaseDBAsyncClient(abc.ABC):
     _connection: Any
     _parent: BaseDBAsyncClient
     _pool: Any
+    _bound_loop: asyncio.AbstractEventLoop | None = None
     connection_name: str
     query_class: type[Query] = Query
     executor_class: type[BaseExecutor] = BaseExecutor
@@ -124,6 +129,20 @@ class BaseDBAsyncClient(abc.ABC):
         self.log = db_client_logger
         self.connection_name = connection_name
         self.fetch_inserted = fetch_inserted
+
+    def _check_loop(self) -> bool:
+        """Check if the current event loop matches the one this client was created on."""
+        try:
+            current = asyncio.get_running_loop()
+        except RuntimeError:
+            return True  # No running loop — can't validate
+        if self._bound_loop is None:
+            return True  # Not yet bound (pool not created yet)
+        return self._bound_loop is current
+
+    async def _post_connect(self) -> None:
+        """Called after pool/connection is created. Records the bound loop."""
+        self._bound_loop = asyncio.get_running_loop()
 
     async def create_connection(self, with_db: bool) -> None:
         """
@@ -316,10 +335,12 @@ class TransactionContextPooled(TransactionContext):
 
     async def __aenter__(self) -> TransactionalDBClient:
         await self.ensure_connection()
-        # Set the context variable so the current task is always seeing a
-        # TransactionWrapper conneciton.
-        self.token = connections.set(self.connection_name, self.client)
+        # Acquire connection first to avoid race condition where concurrent tasks
+        # see the wrapper via the context before it has a connection.
         self.client._connection = await self.client._parent._pool.acquire()
+        # Set the context variable so the current task is always seeing a
+        # TransactionWrapper connection.
+        self.token = get_connections().set(self.connection_name, self.client)
         await self.client.begin()
         return self.client
 
@@ -335,7 +356,7 @@ class TransactionContextPooled(TransactionContext):
         finally:
             if self.client._parent._pool:
                 await self.client._parent._pool.release(self.client._connection)
-            connections.reset(self.token)
+            get_connections().reset(self.token)
 
 
 class NestedTransactionContext(TransactionContext):

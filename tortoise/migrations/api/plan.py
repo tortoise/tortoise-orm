@@ -3,8 +3,9 @@ from __future__ import annotations
 from collections.abc import Sequence
 from typing import Any
 
-from tortoise import Tortoise, connections
+from tortoise import Tortoise
 from tortoise.config import TortoiseConfig
+from tortoise.connection import get_connection
 from tortoise.migrations.executor import MigrationExecutor, MigrationTarget, PlanStep
 
 
@@ -42,7 +43,7 @@ async def plan(
     targets = _parse_targets(target, selected_apps)
     output: list[str] = []
     for connection_name, subset in apps_by_connection.items():
-        connection = connections.get(connection_name)
+        connection = get_connection(connection_name)
         executor = MigrationExecutor(connection, subset)
         executor_targets = [t for t in targets if t.app_label in subset]
         steps = await executor.plan(executor_targets if executor_targets else None)

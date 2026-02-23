@@ -7,15 +7,15 @@ import os
 import warnings
 from collections.abc import Callable, Coroutine, Iterable
 from types import ModuleType
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from anyio import from_thread
 
 from tortoise.apps import Apps
 from tortoise.backends.base.client import BaseDBAsyncClient
-from tortoise.backends.base.config_generator import expand_db_url, generate_config
+from tortoise.backends.base.config_generator import expand_db_url
 from tortoise.config import TortoiseConfig
-from tortoise.connection import connections
+from tortoise.connection import connections, get_connection, get_connections
 from tortoise.exceptions import ConfigurationError
 from tortoise.fields.relational import (
     BackwardFKRelation,
@@ -29,11 +29,105 @@ from tortoise.models import Model, ModelMeta
 from tortoise.timezone import _reset_timezone_cache
 from tortoise.utils import generate_schema_for_client
 
+if TYPE_CHECKING:
+    from tortoise.context import TortoiseContext
 
-class Tortoise:
-    apps: Apps | None = None
+
+class classproperty:
+    """
+    Descriptor that acts like @property but works on classes.
+
+    This allows `Tortoise.apps` and `Tortoise._inited` to dynamically
+    resolve to the current context's state without using a metaclass.
+
+    Note: This only supports getters, not setters. Internal code must
+    work with context directly for mutations.
+    """
+
+    def __init__(self, func: Callable[..., Any]) -> None:
+        self.func = func
+
+    def __get__(self, obj: Any, objtype: type | None = None) -> Any:
+        return self.func(objtype)
+
+
+class _TortoiseMeta(type):
+    """Metaclass that prevents accidental shadowing of classproperty descriptors.
+
+    Direct assignment like ``Tortoise.apps = None`` silently replaces the
+    classproperty descriptor with a plain attribute, breaking dynamic context
+    resolution for the rest of the process. This metaclass intercepts such
+    assignments and raises a clear error.
+    """
+
+    def __setattr__(cls, name: str, value: Any) -> None:
+        if name in cls.__dict__ and isinstance(cls.__dict__[name], classproperty):
+            raise AttributeError(
+                f"Cannot assign to Tortoise.{name} — it is a classproperty that resolves "
+                f"from the current TortoiseContext. Modify the context directly instead "
+                f"(e.g. ctx._apps = None)."
+            )
+        super().__setattr__(name, value)
+
+
+class Tortoise(metaclass=_TortoiseMeta):
+    """
+    Tortoise ORM main interface.
+
+    Provides static methods for initialization and access to ORM state.
+    All state is managed by TortoiseContext instances.
+
+    NOTE: No class-level state except table_name_generator for backward compat.
+    All runtime state lives in TortoiseContext.
+    """
+
+    # Class-level for backward compatibility; also stored in TortoiseContext
     table_name_generator: Callable[[type[Model]], str] | None = None
-    _inited: bool = False
+
+    @classmethod
+    def _get_context(cls) -> TortoiseContext | None:
+        """Get the current context from context var."""
+        from tortoise.context import get_current_context
+
+        return get_current_context()
+
+    @classmethod
+    def _require_context(cls) -> TortoiseContext:
+        """Get the current context, raising if none exists."""
+        ctx = cls._get_context()
+        if ctx is None:
+            raise ConfigurationError(
+                "Tortoise ORM is not initialized. Call Tortoise.init() first "
+                "or use 'async with TortoiseContext()' for explicit context management."
+            )
+        return ctx
+
+    # BACKWARD COMPATIBLE: Class properties (no metaclass needed!)
+    @classproperty
+    def apps(cls) -> Apps | None:
+        """
+        Get the Apps registry from current context.
+
+        Returns None if no context is active.
+        """
+        ctx = cls._get_context()
+        return ctx.apps if ctx else None
+
+    @classproperty
+    def _inited(cls) -> bool:
+        """
+        Check if Tortoise is initialized.
+
+        Returns False if no context is active.
+        """
+        ctx = cls._get_context()
+        return ctx.inited if ctx else False
+
+    @classmethod
+    def is_inited(cls) -> bool:
+        """Check if Tortoise is initialized."""
+        ctx = cls._get_context()
+        return ctx.inited if ctx else False
 
     @classmethod
     def get_connection(cls, connection_name: str) -> BaseDBAsyncClient:
@@ -44,9 +138,9 @@ class Tortoise:
 
         .. warning::
            This is deprecated and will be removed in a future release. Please use
-           :meth:`connections.get<tortoise.connection.ConnectionHandler.get>` instead.
+           :meth:`get_connection<tortoise.connection.get_connection>` instead.
         """
-        return connections.get(connection_name)
+        return get_connection(connection_name)
 
     @classmethod
     def describe_model(
@@ -150,18 +244,29 @@ class Tortoise:
         :param model_paths: Models paths to initialize
         :param _init_relations: Whether to init relations or not
         """
-        if not cls.apps:
-            cls.apps = Apps({}, connections, cls.table_name_generator)
-        cls.apps._table_name_generator = cls.table_name_generator
-        return cls.apps.init_app(label, model_paths, _init_relations=_init_relations)
+        from tortoise.context import TortoiseContext, get_current_context
+
+        # Get or create context
+        ctx = get_current_context()
+        if ctx is None:
+            ctx = TortoiseContext()
+            ctx.__enter__()
+
+        # Create Apps if not exists
+        if ctx._apps is None:
+            ctx._apps = Apps({}, ctx.connections, cls.table_name_generator)
+        ctx._apps._table_name_generator = cls.table_name_generator
+        return ctx._apps.init_app(label, model_paths, _init_relations=_init_relations)
 
     @classmethod
     def _init_apps(
         cls, apps_config: dict[str, dict[str, Any]], *, validate_connections: bool = True
     ) -> None:
-        cls.apps = Apps(
+        """Internal: Initialize Apps registry on current context."""
+        ctx = cls._require_context()
+        ctx._apps = Apps(
             apps_config,
-            connections,
+            ctx.connections,
             cls.table_name_generator,
             validate_connections=validate_connections,
         )
@@ -196,12 +301,13 @@ class Tortoise:
         _create_db: bool = False,
         db_url: str | None = None,
         modules: dict[str, Iterable[str | ModuleType]] | None = None,
-        use_tz: bool = False,
+        use_tz: bool = True,
         timezone: str = "UTC",
         routers: list[str | type] | None = None,
         table_name_generator: Callable[[type[Model]], str] | None = None,
         init_connections: bool = True,
-    ) -> None:
+        _enable_global_fallback: bool = False,
+    ) -> TortoiseContext:
         """
         Sets up Tortoise-ORM: loads apps and models, configures database connections but does not
         connect to the database yet. The actual connection or connection pool is established
@@ -269,53 +375,49 @@ class Tortoise:
         :param init_connections:
             When ``False``, skips initializing connection clients while still loading apps
             and validating connection names against the config.
+        :param _enable_global_fallback:
+            When ``True``, stores the context as a global fallback for cross-task access.
+            This is used by RegisterTortoise (FastAPI) where asgi-lifespan runs lifespan
+            in a background task. Default is ``False`` for pure context isolation.
 
         :raises ConfigurationError: For any configuration error
+
+        :returns: The TortoiseContext that was initialized. For multiple asyncio.run()
+            calls, capture this and use 'with ctx:' to maintain context.
         """
-        if cls._inited:
-            await connections.close_all(discard=True)
+        from tortoise.context import TortoiseContext, _current_context
+
+        # Get or create context - only use contextvar, not global fallback.
+        # Global fallback is for reading (queries), not for initialization.
+        # This allows multiple apps to initialize independently even if one
+        # has global fallback enabled.
+        ctx = _current_context.get()
+        if ctx is None:
+            ctx = TortoiseContext()
+            ctx.__enter__()
+        elif ctx.inited:
+            # Re-initializing existing context
+            await ctx.close_connections()
+
+        # Validate config source - must provide exactly one
         if int(bool(config) + bool(config_file) + bool(db_url)) != 1:
             raise ConfigurationError(
                 'You should init either from "config", "config_file" or "db_url"'
             )
 
+        # Normalize config: handle config_file case
+        normalized_config: dict[str, Any] | TortoiseConfig | None = config
         if config_file:
-            config = cls._get_config_from_config_file(config_file)
-        elif db_url:
-            if not modules:
-                raise ConfigurationError('You must specify "db_url" and "modules" together')
-            config = generate_config(db_url, modules)
-        elif config is None:
-            raise ConfigurationError('You must specify "config" or "config_file" or "db_url"')
-        elif isinstance(config, TortoiseConfig):
-            config = config.to_dict()
-        else:
-            try:
-                TortoiseConfig.from_dict(config)
-            except ConfigurationError as exc:
-                warnings.warn(
-                    f"Config validation warning: {exc}",
-                    RuntimeWarning,
-                    stacklevel=2,
-                )
+            normalized_config = cls._get_config_from_config_file(config_file)
 
-        try:
-            connections_config = config["connections"]
-        except KeyError:
-            raise ConfigurationError('Config must define "connections" section')
-
-        try:
-            apps_config = config["apps"]
-        except KeyError:
-            raise ConfigurationError('Config must define "apps" section')
-
-        use_tz = config.get("use_tz", use_tz)
-        timezone = config.get("timezone", timezone)
-        routers = config.get("routers", routers)
-
-        cls.table_name_generator = table_name_generator
-
-        if logger.isEnabledFor(logging.DEBUG):
+        # Debug logging
+        if logger.isEnabledFor(logging.DEBUG) and normalized_config is not None:
+            if isinstance(normalized_config, TortoiseConfig):
+                config_dict = normalized_config.to_dict()
+            else:
+                config_dict = normalized_config
+            connections_config = config_dict.get("connections", {})
+            apps_config = config_dict.get("apps", {})
             str_connection_config = cls.star_password(connections_config)
             logger.debug(
                 "Tortoise-ORM startup\n    connections: %s\n    apps: %s",
@@ -323,17 +425,24 @@ class Tortoise:
                 str(apps_config),
             )
 
-        cls._init_timezone(use_tz, timezone)
-        if not init_connections and _create_db:
-            raise ConfigurationError("init_connections=False cannot be used with _create_db=True")
-        if init_connections:
-            await connections._init(connections_config, _create_db)
-        else:
-            connections._init_config(connections_config)
-        cls._init_apps(apps_config, validate_connections=init_connections)
-        cls._init_routers(routers)
+        # Store table_name_generator at class level for backward compatibility
+        cls.table_name_generator = table_name_generator
 
-        cls._inited = True
+        # Delegate to context init
+        await ctx.init(
+            config=normalized_config,
+            db_url=db_url,
+            modules=modules,
+            _create_db=_create_db,
+            use_tz=use_tz,
+            timezone=timezone,
+            routers=routers,
+            table_name_generator=table_name_generator,
+            init_connections=init_connections,
+            _enable_global_fallback=_enable_global_fallback,
+        )
+
+        return ctx
 
     @staticmethod
     def star_password(connections_config) -> str:
@@ -381,24 +490,24 @@ class Tortoise:
         It is required for this to be called on exit,
         else your event loop may never complete
         as it is waiting for the connections to die.
-
-        .. warning::
-           This is deprecated and will be removed in a future release. Please use
-           :meth:`connections.close_all<tortoise.connection.ConnectionHandler.close_all>` instead.
         """
-        await connections.close_all()
+        ctx = cls._get_context()
+        if ctx is not None:
+            await ctx.close_connections()
         logger.info("Tortoise-ORM shutdown")
 
     @classmethod
     async def _reset_apps(cls) -> None:
-        if not cls.apps:
+        """Internal: Reset Apps registry on current context."""
+        ctx = cls._get_context()
+        if ctx is None or ctx._apps is None:
             return
 
-        for model in cls.apps.get_models_iterable():
+        for model in ctx._apps.get_models_iterable():
             if isinstance(model, ModelMeta):
                 model._meta.default_connection = None
-        cls.apps.clear()
-        cls.apps = None
+        ctx._apps.clear()
+        ctx._apps = None
 
     @classmethod
     async def generate_schemas(cls, safe: bool = True) -> None:
@@ -413,7 +522,7 @@ class Tortoise:
         """
         if not cls._inited:
             raise ConfigurationError("You have to call .init() first before generating schemas")
-        for connection in connections.all():
+        for connection in get_connections().all():
             await generate_schema_for_client(connection, safe)
 
     @classmethod
@@ -428,10 +537,11 @@ class Tortoise:
             raise ConfigurationError("You have to call .init() first before deleting schemas")
         # this closes any existing connections/pool if any and clears
         # the storage
-        await connections.close_all(discard=False)
-        for conn in connections.all():
+        conn_handler = get_connections()
+        await conn_handler.close_all(discard=False)
+        for conn in conn_handler.all():
             await conn.db_delete()
-            connections.discard(conn.connection_name)
+            conn_handler.discard(conn.connection_name)
 
         await cls._reset_apps()
 
@@ -461,19 +571,21 @@ def run_async(coro: Coroutine) -> None:
 
         run_async(do_stuff())
     """
+    from tortoise.context import get_current_context
 
     async def main() -> None:
         try:
             await coro
         finally:
-            await connections.close_all(discard=True)
+            ctx = get_current_context()
+            if ctx is not None:
+                await ctx.connections.close_all(discard=True)
 
     with from_thread.start_blocking_portal() as portal:
         portal.call(main)
 
 
-__version__ = "0.25.3"
-
+__version__ = "1.1.5"
 
 __all__ = [
     "BackwardFKRelation",

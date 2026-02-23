@@ -14,18 +14,18 @@ if TYPE_CHECKING:  # pragma: nocoverage
 
 class OracleSchemaGenerator(BaseSchemaGenerator):
     DIALECT = "oracle"
-    TABLE_CREATE_TEMPLATE = 'CREATE TABLE "{table_name}" ({fields}){extra};'
+    TABLE_CREATE_TEMPLATE = "CREATE TABLE {table_name} ({fields}){extra};"
     FIELD_TEMPLATE = '"{name}" {type}{default}{nullable}{unique}{primary}'
-    TABLE_COMMENT_TEMPLATE = "COMMENT ON TABLE \"{table}\" IS '{comment}';"
-    COLUMN_COMMENT_TEMPLATE = 'COMMENT ON COLUMN "{table}"."{column}" IS \'{comment}\';'
-    INDEX_CREATE_TEMPLATE = 'CREATE INDEX "{index_name}" ON "{table_name}" ({fields});'
+    TABLE_COMMENT_TEMPLATE = "COMMENT ON TABLE {table} IS '{comment}';"
+    COLUMN_COMMENT_TEMPLATE = "COMMENT ON COLUMN {table}.\"{column}\" IS '{comment}';"
+    INDEX_CREATE_TEMPLATE = 'CREATE INDEX "{index_name}" ON {table_name} ({fields});'
     GENERATED_PK_TEMPLATE = '"{field_name}" {generated_sql}'
     FK_TEMPLATE = (
         '{constraint}FOREIGN KEY ("{db_column}")'
-        ' REFERENCES "{table}" ("{field}") ON DELETE {on_delete}'
+        ' REFERENCES {table} ("{field}") ON DELETE {on_delete}'
     )
     M2M_TABLE_TEMPLATE = (
-        'CREATE TABLE "{table_name}" (\n'
+        "CREATE TABLE {table_name} (\n"
         '    "{backward_key}" {backward_type} NOT NULL,\n'
         '    "{forward_key}" {forward_type} NOT NULL,\n'
         "    {backward_fk},\n"
@@ -38,9 +38,6 @@ class OracleSchemaGenerator(BaseSchemaGenerator):
         self._field_indexes: list[str] = []
         self._foreign_keys: list[str] = []
         self.comments_array: list[str] = []
-
-    def quote(self, val: str) -> str:
-        return f'"{val}"'
 
     @classmethod
     def _get_escape_translation_table(cls) -> list[str]:
@@ -75,15 +72,8 @@ class OracleSchemaGenerator(BaseSchemaGenerator):
         table: str,
         column: str,
         default: Any,
-        auto_now_add: bool = False,
-        auto_now: bool = False,
     ) -> str:
-        default_str = " DEFAULT"
-        if not (auto_now or auto_now_add):
-            default_str += f" {default}"
-        if auto_now_add:
-            default_str += " CURRENT_TIMESTAMP"
-        return default_str
+        return f" DEFAULT {default}"
 
     def _escape_default_value(self, default: Any):
         return encoders.get(type(default))(default)  # type: ignore
@@ -127,3 +117,8 @@ class OracleSchemaGenerator(BaseSchemaGenerator):
             self._foreign_keys.append(fk)
             return ""
         return fk
+
+    def _get_inner_statements(self) -> list[str]:
+        extra = list(self._foreign_keys)
+        self._foreign_keys.clear()
+        return extra

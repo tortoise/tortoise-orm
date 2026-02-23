@@ -1,9 +1,10 @@
 from typing import Any, cast
 
+import pytest_asyncio
 from pypika_tortoise import Table
 
-from tortoise import Tortoise, fields
-from tortoise.contrib.test import SimpleTestCase
+from tortoise import fields
+from tortoise.context import tortoise_test_context
 from tortoise.models import Model
 
 
@@ -23,29 +24,27 @@ def _get_table(model: type[Model]) -> Table:
     return cast(Any, model).get_table()
 
 
-class TestModelGetTable(SimpleTestCase):
-    async def asyncSetUp(self) -> None:
-        await super().asyncSetUp()
-        await Tortoise.init(db_url="sqlite://:memory:", modules={"models": [__name__]})
-        await Tortoise.generate_schemas()
+@pytest_asyncio.fixture
+async def model_get_table_db():
+    """Fixture for model get_table tests with in-memory SQLite."""
+    async with tortoise_test_context(modules=[__name__]) as ctx:
+        yield ctx
 
-    async def _tearDownDB(self) -> None:
-        await Tortoise.get_connection("default").close()
 
-    def test_get_table_returns_fresh_table(self) -> None:
-        table = _get_table(SchemaModel)
+def test_get_table_returns_fresh_table(model_get_table_db):
+    table = _get_table(SchemaModel)
 
-        self.assertIsInstance(table, Table)
-        self.assertEqual(table.get_table_name(), SchemaModel._meta.db_table)
-        self.assertIsNotNone(table._schema)
-        assert table._schema is not None
-        self.assertEqual(table._schema._name, SchemaModel._meta.schema)
-        self.assertIsNot(table, SchemaModel._meta.basetable)
-        self.assertIsNot(table, _get_table(SchemaModel))
+    assert isinstance(table, Table)
+    assert table.get_table_name() == SchemaModel._meta.db_table
+    assert table._schema is not None
+    assert table._schema._name == SchemaModel._meta.schema
+    assert table is not SchemaModel._meta.basetable
+    assert table is not _get_table(SchemaModel)
 
-    def test_get_table_default_schema(self) -> None:
-        table = _get_table(DefaultSchemaModel)
 
-        self.assertIsInstance(table, Table)
-        self.assertEqual(table.get_table_name(), DefaultSchemaModel._meta.db_table)
-        self.assertIsNone(table._schema)
+def test_get_table_default_schema(model_get_table_db):
+    table = _get_table(DefaultSchemaModel)
+
+    assert isinstance(table, Table)
+    assert table.get_table_name() == DefaultSchemaModel._meta.db_table
+    assert table._schema is None

@@ -50,6 +50,7 @@ class BasePostgresClient(BaseDBAsyncClient, abc.ABC):
         support_for_posix_regex_queries=True,
         support_for_no_key_update=True,
         support_json_attributes=True,
+        can_rollback_ddl=True,
     )
     connection_class: AsyncConnection | Connection | None = None
     loop: AbstractEventLoop | None = None

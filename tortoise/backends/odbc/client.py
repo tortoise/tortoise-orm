@@ -91,6 +91,7 @@ class ODBCClient(BaseDBAsyncClient, ABC):
             self._pool = await asyncodbc.create_pool(
                 **self._template,
             )
+            await self._post_connect()
             self.log.debug("Created connection %s pool with params: %s", self._pool, self._template)
         except pyodbc.InterfaceError:
             raise DBConnectionError(f"Can't establish connection to database {self.database}")

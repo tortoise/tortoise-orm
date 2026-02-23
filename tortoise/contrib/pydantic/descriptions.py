@@ -68,8 +68,7 @@ class ModelDescription:
 
 @dataclasses.dataclass
 class ComputedFieldDescription:
-    field_type: Any
-    function: Callable[[], Any]
+    function: Callable[..., Any]
     description: str | None
 
 

@@ -71,7 +71,18 @@ Every model should be derived from ``Model`` or its subclasses. Custom ``Model``
 This model will not affect the schema, but it will be available for inheritance.
 
 
-Further we have field ``fields.DatetimeField(auto_now=True)``. Options ``auto_now`` and ``auto_now_add`` work like Django's options.
+Further we have field ``fields.DatetimeField(auto_now=True)``. Options ``auto_now`` and ``auto_now_add`` work like Django's options — they are handled purely in Python and do **not** add a ``DEFAULT`` clause to the database schema. If you need a database-level default timestamp, use ``db_default``:
+
+.. code-block:: python3
+
+    from tortoise.fields import DatetimeField, Now
+
+    class MyModel(Model):
+        # Python-only: value set by ORM on save, no DB DEFAULT
+        modified = DatetimeField(auto_now=True)
+
+        # DB-level: emits DEFAULT CURRENT_TIMESTAMP in the schema
+        created_at = DatetimeField(db_default=Now())
 
 Use of ``__models__``
 ---------------------
@@ -223,6 +234,47 @@ The ``Meta`` class
             indexes=(("field_a", "field_b"), )
             indexes=(("field_a", "field_b"), ("field_c", "field_d", "field_e"))
 
+    .. attribute:: constraints
+        :annotation: = None
+
+        Specify ``constraints`` to add named database constraints to the model.
+        Supports ``UniqueConstraint`` and ``CheckConstraint`` objects, which are
+        tracked by the migration autodetector and generate ``AddConstraint``,
+        ``RemoveConstraint``, and ``RenameConstraint`` operations automatically.
+
+        .. code-block:: python3
+
+            from tortoise.migrations.constraints import CheckConstraint, UniqueConstraint
+
+            class MyModel(Model):
+                name = fields.CharField(max_length=100)
+                category = fields.CharField(max_length=50)
+                score = fields.IntField()
+
+                class Meta:
+                    constraints = [
+                        UniqueConstraint(fields=("name", "category"), name="uid_name_category"),
+                        CheckConstraint(check="score >= 0", name="chk_score_positive"),
+                    ]
+
+        ``UniqueConstraint`` accepts:
+
+        - ``fields`` — tuple of field names (resolved to DB column names, including FK fields).
+        - ``name`` — explicit constraint name. Required for migration tracking.
+        - ``condition`` — *(PostgreSQL only)* a SQL ``WHERE`` clause for partial unique indexes.
+
+        ``CheckConstraint`` accepts:
+
+        - ``check`` — a raw SQL expression for the ``CHECK (...)`` clause.
+        - ``name`` — explicit constraint name. Required.
+
+        .. note::
+
+            ``unique_together`` is the legacy way to define compound unique indexes.
+            ``constraints`` with ``UniqueConstraint`` objects is preferred for new code,
+            as it supports explicit naming, partial indexes (PostgreSQL), and
+            is handled by the migration framework.
+
     .. attribute:: ordering
         :annotation: = None
 
@@ -257,7 +309,7 @@ The ``Meta`` class
 In event model we got some more fields, that could be interesting for us.
 
 ``fields.ForeignKeyField('models.Tournament', related_name='events')``
-    Here we create foreign key reference to tournament. We create it by referring to model by it's literal, consisting of app name and model name. ``models`` is default app name, but you can change it in ``class Meta`` with ``app = 'other'``.
+    Here we create foreign key reference to tournament. You can refer to the model either by string literal (``"app_name.ModelName"``) or by passing the model class directly (e.g. ``fields.ForeignKeyField(Tournament)``). String references are required for forward references where the target model is not yet defined. ``models`` is default app name, but you can change it in ``class Meta`` with ``app = 'other'``.
 ``related_name``
     Is keyword argument, that defines field for related query on referenced models, so with that you could fetch all tournaments's events with like this:
 

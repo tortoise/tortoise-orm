@@ -14,12 +14,12 @@ from tests.testmodels import (
     Team,
     Tournament,
 )
-from tortoise.contrib.test import _restore_default, truncate_all_models
+from tortoise.contrib.test import truncate_all_models
 
 
 @pytest.fixture(scope="function", autouse=True)
-def setup_database():
-    _restore_default()
+def setup_database(db):
+    """Cleanup fixture that depends on db to ensure context is active."""
     yield
     asyncio.get_event_loop().run_until_complete(truncate_all_models())
 
@@ -31,7 +31,7 @@ def skip_if_codspeed_not_enabled(request):
 
 
 @pytest.fixture
-def few_fields_benchmark_dataset() -> list[BenchmarkFewFields]:
+def few_fields_benchmark_dataset(db) -> list[BenchmarkFewFields]:
     async def _create() -> list[BenchmarkFewFields]:
         res = []
         for _ in range(100):
@@ -43,7 +43,7 @@ def few_fields_benchmark_dataset() -> list[BenchmarkFewFields]:
 
 
 @pytest.fixture
-def many_fields_benchmark_dataset(gen_many_fields_data) -> list[BenchmarkManyFields]:
+def many_fields_benchmark_dataset(db, gen_many_fields_data) -> list[BenchmarkManyFields]:
     async def _create() -> list[BenchmarkManyFields]:
         res = []
         for _ in range(100):
@@ -97,7 +97,7 @@ def gen_many_fields_data():
 
 
 @pytest.fixture
-def create_team_with_participants() -> None:
+def create_team_with_participants(db) -> None:
     async def _create() -> None:
         tournament = await Tournament.create(name="New Tournament")
         event = await Event.create(name="Test", tournament_id=tournament.id)
@@ -108,7 +108,7 @@ def create_team_with_participants() -> None:
 
 
 @pytest.fixture
-def create_decimals() -> None:
+def create_decimals(db) -> None:
     async def _create() -> None:
         await DecimalFields.create(decimal=Decimal("1.23456"), decimal_nodec=18.7)
 

@@ -3,7 +3,7 @@ from __future__ import annotations
 import importlib
 import warnings
 from collections.abc import Callable, Iterable, Iterator
-from copy import deepcopy
+from copy import copy
 from inspect import isclass
 from itertools import chain
 from types import ModuleType
@@ -86,6 +86,8 @@ class Apps:
         return self.apps[label]
 
     def _load_from_config(self) -> None:
+        if self._connections is None:
+            raise ConfigurationError("ConnectionHandler is required to load from config")
         for name, info in self._config.items():
             default_connection = info.get("default_connection", "default")
             if self._validate_connections:
@@ -183,7 +185,7 @@ class Apps:
             else:
                 fk_object.to_field = related_model._meta.pk_attr
                 related_field = related_model._meta.pk
-            key_fk_object = deepcopy(related_field)
+            key_fk_object = copy(related_field)
             fk_object.to_field_instance = related_field
             fk_object.field_type = fk_object.to_field_instance.field_type
 
@@ -286,6 +288,8 @@ class Apps:
                         )
                         m2m_object.through = f"{model._meta.db_table}_{related_model_table_name}"
 
+                    m2m_object.through_schema = model._meta.schema
+
                     m2m_relation = ManyToManyFieldInstance(
                         f"{app_name}.{model_name}",
                         m2m_object.through,
@@ -296,6 +300,7 @@ class Apps:
                         description=m2m_object.description,
                     )
                     m2m_relation._generated = True
+                    m2m_relation.through_schema = model._meta.schema
                     model._meta.filters.update(get_m2m_filters(field, m2m_object))
                     related_model._meta.add_field(backward_relation_name, m2m_relation)
 

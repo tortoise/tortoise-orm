@@ -13,7 +13,7 @@ from pypika_tortoise import Order, Query, Table
 from pypika_tortoise.terms import Term
 
 from tortoise.backends.base.client import BaseDBAsyncClient
-from tortoise.connection import connections
+from tortoise.connection import get_connection
 from tortoise.exceptions import (
     ConfigurationError,
     DoesNotExist,
@@ -62,6 +62,7 @@ if TYPE_CHECKING:
         from typing_extensions import Self
 
 MODEL = TypeVar("MODEL", bound="Model")
+PRIMARY_KEY = TypeVar("PRIMARY_KEY")
 EMPTY = object()
 
 
@@ -201,6 +202,7 @@ class MetaInfo:
         "basetable",
         "_filters",
         "unique_together",
+        "constraints",
         "manager",
         "indexes",
         "pk_attr",
@@ -224,6 +226,7 @@ class MetaInfo:
         self.schema: str | None = getattr(meta, "schema", None)
         self.app: str | None = getattr(meta, "app", None)
         self.unique_together: tuple[tuple[str, ...], ...] = get_together(meta, "unique_together")
+        self.constraints: tuple = tuple(getattr(meta, "constraints", ()))
         self.indexes: tuple[tuple[str, ...] | Index, ...] = get_together(meta, "indexes")
         self._default_ordering: tuple[tuple[str, Order], ...] = prepare_default_ordering(meta)
         self._ordering_validated: bool = False
@@ -289,7 +292,7 @@ class MetaInfo:
             raise ConfigurationError(
                 f"default_connection for the model {self._model} cannot be None"
             )
-        return connections.get(self.default_connection)
+        return get_connection(self.default_connection)
 
     @property
     def ordering(self) -> tuple[tuple[str, Order], ...]:
@@ -532,11 +535,12 @@ class ModelMeta(type):
         for field in meta.fields_map.values():
             field.model = new_class  # type: ignore
 
-        for fname, comment in _get_comments(new_class).items():  # type: ignore
-            if fname in fields_map:
-                fields_map[fname].docstring = comment
-                if fields_map[fname].description is None:
-                    fields_map[fname].description = comment.split("\n")[0]
+        if not attrs.get("_no_comments"):
+            for fname, comment in _get_comments(new_class).items():  # type: ignore
+                if fname in fields_map:
+                    fields_map[fname].docstring = comment
+                    if fields_map[fname].description is None:
+                        fields_map[fname].description = comment.split("\n")[0]
 
         if new_class.__doc__ and not meta.table_description:
             meta.table_description = inspect.cleandoc(new_class.__doc__).split("\n")[0]
@@ -736,7 +740,11 @@ class Model(metaclass=ModelMeta):
             elif callable(field_default):
                 setattr(self, key, field_default())
             else:
-                setattr(self, key, deepcopy(field_object.default))
+                default = field_object.default
+                if default is None or isinstance(default, (int, float, str, bool, bytes)):
+                    setattr(self, key, default)
+                else:
+                    setattr(self, key, deepcopy(default))
 
     def __setattr__(self, key, value) -> None:
         # set field value override async default function
@@ -797,44 +805,40 @@ class Model(metaclass=ModelMeta):
         self._await_when_save = {}
 
         meta = self._meta
-        inited_keys: set[str] = set()
+        _setattr = object.__setattr__  # bypass __setattr__ override for performance
         try:
             # This is like so for performance reasons.
             #  We want to avoid conditionals and calling .to_python_value()
             # Native fields are fields that are already converted to/from python to DB type
             #  by the DB driver
             for key, model_field, field in meta.db_native_fields:
-                setattr(self, model_field, kwargs[key])
-                inited_keys.add(key)
+                _setattr(self, model_field, kwargs[key])
             # Fields that don't override .to_python_value() are converted without a call
             #  as we already know what we will be doing.
             for key, model_field, field in meta.db_default_fields:
                 if (value := kwargs[key]) is not None:
                     value = field.field_type(value)
-                setattr(self, model_field, value)
-                inited_keys.add(key)
+                _setattr(self, model_field, value)
             # These fields need manual .to_python_value()
             for key, model_field, field in meta.db_complex_fields:
-                setattr(self, model_field, field.to_python_value(kwargs[key]))
-                inited_keys.add(key)
+                _setattr(self, model_field, field.to_python_value(kwargs[key]))
         except KeyError:
+            # Partial model (.only() query) — slower but correct fallback
             self._partial = True
-            native_fields: list[Field] = [f for *_, f in meta.db_native_fields]
-            default_fields = complex_fields = None
+            native_keys = {k for k, _, _ in meta.db_native_fields}
+            default_keys = {k for k, _, _ in meta.db_default_fields}
             for key, value in kwargs.items():
-                if key in inited_keys or key not in meta.fields_map:
+                if key not in meta.fields_map:
                     continue
-                if (field := meta.fields_map[key]) not in native_fields:
-                    if default_fields is None:
-                        default_fields = [f for *_, f in meta.db_default_fields]
-                    if field in default_fields:
+                field = meta.fields_map[key]
+                if key not in native_keys:
+                    if key in default_keys:
                         if value is not None:
                             value = field.field_type(value)
                     else:
-                        if complex_fields is None:
-                            complex_fields = [f for *_, f in meta.db_complex_fields]
                         value = field.to_python_value(value)
-                setattr(self, key, value)
+                model_field = meta.fields_db_projection_reverse.get(key, key)
+                _setattr(self, model_field, value)
 
         return self
 
@@ -920,6 +924,126 @@ class Model(metaclass=ModelMeta):
             obj.pk = pk
         obj._saved_in_db = False
         return obj
+
+    @classmethod
+    def construct(cls: type[MODEL], _saved_in_db: bool = False, **kwargs: Any) -> MODEL:
+        """
+        Create a model instance without validation, DB checks, or FK restrictions.
+
+        This creates a "detached" instance that has the right shape for reading
+        attributes and iterating relations, but is not part of the ORM lifecycle.
+        Useful for unit testing and serialization without a database connection.
+
+        Unlike ``__init__``, this method:
+        - Does NOT validate field values (nullability, type checks)
+        - Does NOT require FK objects to be saved to the database
+        - Does NOT prevent setting backward FK, backward O2O, or M2M fields
+        - Does NOT call ``to_python_value`` on data fields
+        - Skips async defaults (sets them to ``None``)
+
+        Backward FK and M2M fields are wrapped in ``ReverseRelation`` and
+        ``ManyToManyRelation`` respectively with ``_fetched=True`` so that
+        iteration, ``len()``, ``in``, and ``bool()`` work without raising
+        ``NoValuesFetched``.
+
+        Example::
+
+            tournament = Tournament.construct(id=1, name="Test")
+            event = Event.construct(
+                name="Game",
+                tournament=tournament,
+                participants=[
+                    Team.construct(id=1, name="Team A"),
+                    Team.construct(id=2, name="Team B"),
+                ],
+            )
+            assert event.tournament.name == "Test"
+            assert event.tournament_id == 1
+            assert len(event.participants) == 2
+
+        :param _saved_in_db: Whether to mark the instance as saved in DB.
+            Defaults to ``False``.
+        :param kwargs: Field values to set on the instance.
+        :return: A new model instance with the given field values.
+        """
+        self = cls.__new__(cls)
+        meta = self._meta
+        _setattr = object.__setattr__
+
+        _setattr(self, "_partial", False)
+        _setattr(self, "_saved_in_db", _saved_in_db)
+        _setattr(self, "_custom_generated_pk", False)
+        _setattr(self, "_await_when_save", {})
+
+        # Track source fields that are auto-populated from FK/O2O objects
+        # so that the default-setting loop doesn't overwrite them with None.
+        populated_source_fields: set[str] = set()
+
+        for key, value in kwargs.items():
+            if key in meta.backward_fk_fields:
+                # Backward FK: wrap in ReverseRelation with _fetched=True
+                backward_fk: BackwardFKRelation = meta.fields_map[key]  # type: ignore
+                rel = ReverseRelation(
+                    backward_fk.related_model,
+                    backward_fk.relation_field,
+                    self,
+                    backward_fk.to_field_instance.model_field_name,
+                )
+                rel._fetched = True
+                rel.related_objects = list(value)
+                _setattr(self, f"_{key}", rel)
+            elif key in meta.m2m_fields:
+                # M2M: wrap in ManyToManyRelation with _fetched=True
+                field_object: ManyToManyFieldInstance = meta.fields_map[key]  # type: ignore
+                m2m_rel = ManyToManyRelation(self, field_object)
+                m2m_rel._fetched = True
+                m2m_rel.related_objects = list(value)
+                _setattr(self, f"_{key}", m2m_rel)
+            elif key in meta.backward_o2o_fields:
+                # Backward O2O: store at _{key} for property getter
+                _setattr(self, f"_{key}", value)
+            elif key in meta.fk_fields or key in meta.o2o_fields:
+                # FK/O2O: store at _{key} for property getter, also set source field
+                _setattr(self, f"_{key}", value)
+                fk_field = meta.fields_map[key]
+                if (
+                    hasattr(fk_field, "to_field_instance")
+                    and fk_field.to_field_instance is not None
+                ):
+                    source_field = fk_field.source_field
+                    if source_field is not None:
+                        if value is not None:
+                            _setattr(
+                                self,
+                                source_field,
+                                getattr(value, fk_field.to_field_instance.model_field_name, None),
+                            )
+                        else:
+                            _setattr(self, source_field, None)
+                        populated_source_fields.add(source_field)
+            else:
+                # Data fields, source fields, or unknown fields: store directly
+                _setattr(self, key, value)
+
+        # Set defaults for unprovided non-relational fields
+        for key in meta.fields.difference(kwargs.keys()):
+            if key in meta.fetch_fields:
+                continue
+            if key in populated_source_fields:
+                continue
+            default_field = meta.fields_map[key]
+            field_default = default_field.default
+            if inspect.iscoroutinefunction(field_default):
+                # Async defaults are skipped in construct() since it is synchronous
+                _setattr(self, key, None)
+            elif callable(field_default):
+                _setattr(self, key, field_default())
+            elif field_default is not None:
+                _setattr(self, key, field_default)
+            else:
+                _setattr(self, key, None)
+
+        return self
 
     def update_from_dict(self: MODEL, data: dict) -> MODEL:
         """
@@ -1281,10 +1405,10 @@ class Model(metaclass=ModelMeta):
     @classmethod
     async def in_bulk(
         cls: type[MODEL],
-        id_list: Iterable[str | int],
+        id_list: Iterable[PRIMARY_KEY],
         field_name: str = "pk",
         using_db: BaseDBAsyncClient | None = None,
-    ) -> dict[str, MODEL]:
+    ) -> dict[PRIMARY_KEY, MODEL]:
         """
         Return a dictionary mapping each of the given IDs to the object with
         that ID. If `id_list` isn't provided, evaluate the entire QuerySet.

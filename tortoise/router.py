@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
 
-from tortoise.connection import connections
+from tortoise.connection import get_connection
 from tortoise.exceptions import ConfigurationError
 
 if TYPE_CHECKING:
@@ -31,7 +31,7 @@ class ConnectionRouter:
 
     def _db_route(self, model: type[Model], action: str) -> BaseDBAsyncClient | None:
         try:
-            return connections.get(self._router_func(model, action))
+            return get_connection(self._router_func(model, action))
         except ConfigurationError:
             return None
 

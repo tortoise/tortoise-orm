@@ -1,29 +1,162 @@
 .. _changelog:
-:no-search:
 
 =========
 Changelog
 =========
 
-.. rst-class:: emphasize-children
 
-0.26
+1.1
+===
+
+1.1.5
+-----
+
+Fixed
+^^^^^
+- ``makemigrations`` no longer crashes with ``AttributeError: 'tuple' object has no attribute 'deconstruct'`` when generating a fresh ``CreateModel`` migration for models using tuple-style ``Meta.indexes`` (e.g. ``indexes = [("field_a", "field_b")]``). Tuple entries are now normalised to ``Index`` objects before rendering.
+
+1.1.4
+-----
+
+Added
+^^^^^
+- ``CheckConstraint`` support in ``Meta.constraints`` — named check constraints are now captured by the migration autodetector, enabling ``AddConstraint``/``RemoveConstraint``/``RenameConstraint`` generation via ``makemigrations``.
+- ``UniqueConstraint.condition`` parameter for partial unique indexes on PostgreSQL (emitted as ``CREATE UNIQUE INDEX ... WHERE``).
+
+Fixed
+^^^^^
+- FK field-to-column resolution in constraint operations — FK fields like ``organization`` are now correctly resolved to their DB column (e.g. ``organization_id``) in ``add_constraint``, ``remove_constraint``, and ``rename_constraint`` across all backends.
+- MSSQL ``HASHBYTES`` expression default — ``RandomHex`` now wraps ``NEWID()`` with ``CAST(... AS NVARCHAR(36))`` to avoid implicit conversion error.
+- MySQL ``ALTER COLUMN SET DEFAULT`` template now wraps expression defaults in parentheses.
+- ``RenameConstraint`` operation now preserves constraint type and fields during forward/backward migrations.
+- MySQL schema editor: FK index protection (``_create_missing_fk_index``) prevents MySQL error 1553 when dropping the only index covering a foreign key column.
+- MySQL schema editor: expression default two-step workaround for ``ADD COLUMN`` with non-deterministic ``SqlDefault`` expressions (e.g. ``RANDOM_BYTES``).
+- Multi-column constraint introspection — constraint name resolution now matches on the exact set of columns across all backends (PostgreSQL, MySQL, MSSQL, SQLite, Oracle).
+- Tortoise.close_connections() now propagates call to current context. (#2110)
+
+1.1.3
+-----
+
+Added
+^^^^^
+- ``RandomHex`` dialect-aware ``SqlDefault`` subclass for generating random hex strings across all backends. (#2108)
+- ``Meta.constraints`` support on models — named ``UniqueConstraint`` objects are now captured by the migration autodetector, enabling ``AddConstraint``/``RemoveConstraint`` generation via ``makemigrations``. (#2108)
+- MySQL schema editor: ``_alter_field`` override using ``MODIFY COLUMN`` for NULL/NOT NULL changes; backtick-quoted ``ALTER_FIELD_*`` templates. (#2108)
+- MSSQL schema editor: ``_alter_field`` override with ``ALTER COLUMN`` for nullability, named default constraint management via ``sys.default_constraints``, bracket-quoted templates, and self-referencing FK CASCADE → NO ACTION downgrade. (#2108)
+
+Fixed
+^^^^^
+- MySQL migrations: ``ALTER COLUMN ... SET NOT NULL`` / ``DROP NOT NULL`` now correctly emits ``MODIFY COLUMN col type NOT NULL/NULL``. (#2108)
+- MSSQL migrations: ``DELETE_CONSTRAINT_TEMPLATE`` and ``UNIQUE_CONSTRAINT_CREATE_TEMPLATE`` now use bracket quoting ``[name]`` instead of double quotes. (#2108)
+- MSSQL migrations: self-referencing foreign keys with ``CASCADE`` no longer fail with error 1785; automatically downgraded to ``NO ACTION``. (#2108)
+
+1.1.2
+-----
+
+Fixed
+^^^^^
+- Fixed optimisation issue, if you didn't have pydantic installed, Tortoise would try to import it on every JSONField deserialization, lowering performance.
+
+1.1.1
+-----
+
+Added
+^^^^^
+- **``SqlDefault`` and ``Now`` expressions for ``db_default``** — use ``db_default=SqlDefault("...")`` to emit raw SQL expressions (e.g. ``CURRENT_TIMESTAMP``) as database defaults. ``Now()`` is a convenience shorthand for ``SqlDefault("CURRENT_TIMESTAMP")``. (#2104)
+
+
+Changed
+^^^^^^^
+- ``Field(default=...)`` and ``auto_now`` / ``auto_now_add`` no longer emits a ``DEFAULT`` clause in ``generate_schemas()``. The ``default`` parameter is Python-only; use ``db_default`` for database-level defaults. This aligns ``generate_schemas()`` with migrations, which don't emitted ``DEFAULT`` for ``default=``. (#2104)
+
+
+1.1.0
+-----
+
+Added
+^^^^^
+- **``db_default`` parameter for fields** — set database-level ``DEFAULT`` clauses that propagate to schema generation and migrations. Unlike ``default`` (Python-only), ``db_default`` is persisted in the DB schema and applied even for rows inserted outside the ORM. (#2101)
+- ``Model.construct()`` classmethod for building model instances without field validation — useful in test factories and fixtures. (#2099)
+- ``truncate_all_models()`` now respects foreign key constraints using topological ordering (SQLite/MySQL) or ``TRUNCATE ... CASCADE`` (PostgreSQL). (#2100)
+- Auto-recreate database connection when event loop changes. Enables easier testing without session level fixtures (#2098)
+
+Fixed
+^^^^^
+- Type checking of ``None`` assignment to nullable fields. (#2089)
+- Fix ``set global fallback default`` in Sanic ``register_tortoise``. (#2090)
+- Escape ``[`` ``]`` for db url parsing. (#2081) (#2092)
+- Fix ``UnicodeEncodeError`` by using UTF-8 encoding for migration files. (#2096, #2097)
+
+
+
+1.0
+===
+
+1.0.0
+-----
+
+.. warning::
+
+    This is a **major release** with breaking changes.
+    Please read the :ref:`migration_guide` before upgrading.
+
+Breaking Changes
+^^^^^^^^^^^^^^^^
+- **Minimum Python version raised to 3.10** (was 3.9). (#2062)
+- **``use_tz`` now defaults to ``True``** (was ``False``). Set ``use_tz=False`` explicitly if you need naive datetimes.
+- **Context-first architecture**: All ORM state now lives in ``TortoiseContext`` instances. ``Tortoise.init()`` returns a ``TortoiseContext`` (previously returned ``None``). Multiple separate ``asyncio.run()`` calls require explicit context management; the typical single ``asyncio.run(main())`` pattern works unchanged.
+- **Removed legacy test infrastructure**: ``test.TestCase``, ``test.IsolatedTestCase``, ``test.TruncationTestCase``, ``test.SimpleTestCase``, ``initializer()``, ``finalizer()``, ``env_initializer()``, ``getDBConfig()``. Use ``tortoise_test_context()`` with pytest instead.
+- **Removed ``pytz`` dependency**: Timezone handling now uses the standard library ``zoneinfo`` module. Tortoise APIs return ``ZoneInfo`` objects instead of ``pytz`` timezones. (#2023)
+- **``DatetimeField``/``TimeField`` with ``auto_now=True``** no longer implicitly sets ``auto_now_add=True``. In practice ``auto_now=True`` alone still sets the value on every save (including creation), so this is unlikely to affect most users. The internal flag coupling was removed for correctness.
+- **Shell extras required**: Interactive shell dependencies are now optional. Install with ``pip install tortoise-orm[ipython]`` or ``pip install tortoise-orm[ptpython]``.
+
+Added
+^^^^^
+- **Native migrations framework** with CLI commands: ``tortoise makemigrations``, ``tortoise migrate``, ``tortoise sqlmigrate``. Supports ``RunPython``, ``RunSQL``, reversible migrations, and multi-app projects. (#2061)
+- **Database schema support** for PostgreSQL and MSSQL (on MySQL maps to database name) — tables can live in non-default schemas (e.g., ``warehouse.inventory``), with cross-schema relations and migration support. (#2084)
+- **PostgreSQL full-text search**: ``TSVectorField``, ``SearchVector``, ``SearchQuery``, ``SearchRank``, ``SearchHeadline`` expressions, and GIN/GiST index support. (#2065)
+- **Query API** (``tortoise.query_api``) for building and executing custom pypika queries against models, with ``Model.get_table()`` classmethod. (#2064)
+- ``TortoiseContext`` — explicit context manager for ORM state with full isolation. (#2069)
+- ``tortoise_test_context()`` — modern pytest fixture helper for test isolation. (#2069)
+- ``get_connection(alias)`` / ``get_connections()`` — functions to access connections from current context.
+- ``Tortoise.close_connections()`` — restored (was deprecated in 0.19) as the canonical way to close connections, now context-aware.
+- ``Tortoise.is_inited()`` — explicit method version of ``Tortoise._inited`` property.
+- ``ForeignKeyField`` and ``ManyToManyField`` now accept a model class directly, not just string references. (#2027)
+- ``DateField`` now supports ``__year`` / ``__month`` / ``__day`` filters. (#2067)
+
+Changed
+^^^^^^^
+- Framework integrations (FastAPI, Starlette, Sanic, etc.) now use ``Tortoise.close_connections()`` internally.
+- ``ConnectionHandler`` uses per-instance ContextVar storage for context isolation.
+- ``Tortoise.apps`` and ``Tortoise._inited`` are now ``classproperty`` descriptors.
+- Performance optimizations for model hydration, object construction, and query building. (#2078)
+- Pydantic model creator internals cleaned up: removed legacy validator, improved computed field handling. (#2079)
+
+Deprecated
+^^^^^^^^^^
+- ``from tortoise import connections`` — use ``get_connection()`` / ``get_connections()`` instead (still works but deprecated).
+
+Fixed
+^^^^^
+- ``use_tz=False`` now correctly preserves naive datetimes instead of silently making them timezone-aware. (#631)
+- Annotations incorrectly selected in ``ValuesListQuery`` when not specified in ``.values_list()`` fields. (#2059)
+- M2M filtering broken when two relations point to the same target model. (#2083)
+- Pydantic incorrectly marking fields with default values as ``Optional``. (#2082)
+- ``Model.in_bulk`` type annotation now supports any primary key type. (#2075)
+- Migration bug fixes: field serialization, operation ordering, and ``sqlmigrate`` command added. (#2076)
+
+0.25
 ====
 
-0.26.0 (unreleased)
--------------------
+0.25.4
+------
+
 Fixed
 ^^^^^
 - Fix ``AttributeError`` when using ``tortoise-orm`` with Nuitka-compiled Python code (#2053)
 - Fix 'Self' in python standard library typing.py, but tortoise/model.py required it in 'typing_extensions' (#2051)
-- Fix annotations being selected in ValuesListQuery despite not specified in `.values_list` fields list (#2059)
+- Fix examples should not be installed (#2050)
 
-Changed
-^^^^^
-- feat: foreignkey to model type (#2027)
-
-0.25
-====
 
 0.25.3
 ------
@@ -835,7 +968,6 @@ Removals:
 
   If you still need Python 3.6 support, you can install ``tortoise-orm<0.16`` as we will still backport critical bugfixes to the 0.15 branch for a while.
 
-.. rst-class:: emphasize-children
 
 0.15
 ====
@@ -1026,7 +1158,6 @@ Deprecations:
   There is a known context confusion, specifically regarding nested transactions.
 
 
-.. rst-class:: emphasize-children
 
 0.14
 ====
@@ -1082,7 +1213,6 @@ Breaking Changes:
   the new hash algorithm is much better in this regard.
 - Dropped support for Python 3.5
 
-.. rst-class:: emphasize-children
 
 0.13
 ====
@@ -1215,7 +1345,6 @@ Docs/examples:
 - Lots of small documentation cleanups
 
 
-.. rst-class:: emphasize-children
 
 0.12
 ====
@@ -1309,7 +1438,6 @@ Docs/examples:
       guid = fields.UUIDField(pk=True)
 
 
-.. rst-class:: emphasize-children
 
 0.11
 ====
@@ -1419,7 +1547,6 @@ Docs/examples:
 - Numerous bug fixes
 - Removed known broken connection pooling
 
-.. rst-class:: emphasize-children
 
 0.10
 ====
@@ -1524,7 +1651,6 @@ Docs/examples:
 - Added support for MySQL/MariaDB
 
 
-.. rst-class:: emphasize-children
 
 0.9 & older
 ===========

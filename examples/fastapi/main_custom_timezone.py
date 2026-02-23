@@ -9,12 +9,12 @@ from routers import router as users_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
-    # app startup
     async with register_orm(
         app,
-        use_tz=False,
+        use_tz=True,
         timezone="Asia/Shanghai",
         add_exception_handlers=True,
+        _enable_global_fallback=False,
     ):
         # db connected
         yield

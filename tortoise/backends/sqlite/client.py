@@ -22,7 +22,7 @@ from tortoise.backends.base.client import (
 )
 from tortoise.backends.sqlite.executor import SqliteExecutor
 from tortoise.backends.sqlite.schema_generator import SqliteSchemaGenerator
-from tortoise.connection import connections
+from tortoise.connection import get_connections
 from tortoise.contrib.sqlite.regex import (
     install_regexp_functions as install_regexp_functions_to_db,
 )
@@ -60,6 +60,7 @@ class SqliteClient(BaseDBAsyncClient):
         inline_comment=True,
         support_for_update=False,
         support_update_limit_order_by=False,
+        can_rollback_ddl=True,
     )
 
     def __init__(self, file_path: str, **kwargs: Any) -> None:
@@ -83,6 +84,7 @@ class SqliteClient(BaseDBAsyncClient):
             for pragma, val in self.pragmas.items():
                 cursor = await self._connection.execute(f"PRAGMA {pragma}={val}")
                 await cursor.close()
+            await self._post_connect()
             self.log.debug(
                 "Created connection %s with params: filename=%s %s",
                 self._connection,
@@ -191,7 +193,7 @@ class SqliteTransactionContext(TransactionContext):
     async def __aenter__(self) -> T_conn:
         await self._trxlock.acquire()
         await self.ensure_connection()
-        self.token = connections.set(self.connection_name, self.connection)
+        self.token = get_connections().set(self.connection_name, self.connection)
         await self.connection.begin()
         return self.connection
 
@@ -205,7 +207,7 @@ class SqliteTransactionContext(TransactionContext):
                 else:
                     await self.connection.commit()
         finally:
-            connections.reset(self.token)
+            get_connections().reset(self.token)
             self._trxlock.release()
 
 
@@ -281,7 +283,9 @@ class SqliteClientWithRegexpSupport(SqliteClient):
         requires_limit=True,
         inline_comment=True,
         support_for_update=False,
+        support_update_limit_order_by=False,
         support_for_posix_regex_queries=True,
+        can_rollback_ddl=True,
     )
 
     async def create_connection(self, with_db: bool) -> None:

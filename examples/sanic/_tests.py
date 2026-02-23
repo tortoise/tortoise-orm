@@ -2,7 +2,7 @@ import re
 from pathlib import Path
 
 import pytest
-from sanic_testing import TestManager
+from sanic_testing.reusable import ReusableClient
 
 try:
     import main
@@ -21,18 +21,21 @@ def anyio_backend() -> str:
 
 
 @pytest.fixture
-def app():
+def client():
     sanic_app = main.app
-    TestManager(sanic_app)
-    return sanic_app
+
+    # make register_tortoise treat this as sanic-testing (ReusableClient doesn't set this flag)
+    sanic_app._test_manager = True
+    client = ReusableClient(sanic_app)
+    with client:
+        yield client
 
 
-@pytest.mark.anyio
-async def test_basic_asgi_client(app):
-    request, response = await app.asgi_client.get("/")
+def test_basic_test_client(client):
+    request, response = client.get("/")
     assert response.status == 200
     assert b'{"users":[' in response.body
 
-    request, response = await app.asgi_client.post("/user")
+    request, response = client.post("/user")
     assert response.status == 200
     assert re.match(rb'{"user":"User \d+: New User"}$', response.body)

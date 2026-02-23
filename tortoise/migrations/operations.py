@@ -12,7 +12,7 @@ from tortoise.fields.relational import (
     OneToOneFieldInstance,
 )
 from tortoise.indexes import Index
-from tortoise.migrations.constraints import UniqueConstraint
+from tortoise.migrations.constraints import CheckConstraint, UniqueConstraint
 from tortoise.migrations.exceptions import IncompatibleStateError
 from tortoise.migrations.schema_editor.base import BaseSchemaEditor
 from tortoise.migrations.schema_generator.state import ModelState, State
@@ -37,6 +37,9 @@ class Operation:
     reversible = True
     reduces_to_sql = True
     atomic: bool | None = False
+
+    def describe(self) -> str:
+        return self.__class__.__name__
 
     async def run(
         self,
@@ -82,7 +85,13 @@ class SQLOperation(Operation):
         state_editor: BaseSchemaEditor | None = None,
     ) -> None:
         if not dry_run and state_editor:
-            await state_editor.client.execute_query_dict(self.query, self.values)
+            if self.values:
+                if state_editor.collect_sql:
+                    state_editor.collected_sql.append(f"{self.query}  -- params: {self.values!r}")
+                else:
+                    await state_editor.client.execute_query_dict(self.query, self.values)
+            else:
+                await state_editor._run_sql(self.query)
 
 
 class TortoiseOperation(Operation):
@@ -122,11 +131,11 @@ class TortoiseOperation(Operation):
         dry_run: bool,
         state_editor: BaseSchemaEditor | None = None,
     ) -> None:
-        old_state = state.clone()
+        old_state = state.clone() if (not dry_run and state_editor) else None
         self.state_forward(app_label, state)
         if dry_run or not state_editor:
             return
-        await self.database_forward(app_label, old_state, state, state_editor)
+        await self.database_forward(app_label, old_state, state, state_editor)  # type: ignore[arg-type]
 
 
 class CreateModel(TortoiseOperation):
@@ -143,6 +152,9 @@ class CreateModel(TortoiseOperation):
         self.bases = bases
         self._model: type[Model] | None = None
 
+    def describe(self) -> str:
+        return f"Create model {self.name}"
+
     @property
     def model(self) -> type[Model]:
         if not self._model:
@@ -150,6 +162,7 @@ class CreateModel(TortoiseOperation):
 
             attributes: dict[str, Any] = dict(self.fields)
             attributes["Meta"] = meta_class
+            attributes["_no_comments"] = True
             self._model = cast(type[Model], type(self.name, (Model,), attributes))
 
         return self._model
@@ -164,7 +177,21 @@ class CreateModel(TortoiseOperation):
             if not isinstance(field, DIRECT_RELATION_FIELDS):
                 continue
 
-            models_to_reload.add(state.apps.split_reference(field.model_name))
+            related_key = state.apps.split_reference(field.model_name)
+            if related_key in state.models:
+                models_to_reload.add(related_key)
+
+        # Also find existing models that reference the newly created model.
+        # This handles the case where a model with a FK was created before its
+        # target (e.g. alphabetical ordering: Alert before Warehouse).
+        new_model_ref = f"{app_label}.{self.name}"
+        for key, existing_state in state.models.items():
+            if key == (app_label, self.name):
+                continue
+            for field in existing_state.fields.values():
+                if isinstance(field, DIRECT_RELATION_FIELDS) and field.model_name == new_model_ref:
+                    models_to_reload.add(key)
+                    break
 
         state.reload_models(models_to_reload)
 
@@ -200,6 +227,9 @@ class RenameModel(TortoiseOperation):
     def __init__(self, old_name: str, new_name: str) -> None:
         self.old_name = old_name
         self.new_name = new_name
+
+    def describe(self) -> str:
+        return f"Rename model {self.old_name} to {self.new_name}"
 
     def state_forward(self, app_label: str, state: State) -> None:
         model_state_to_change = state.models.pop((app_label, self.old_name), None)
@@ -276,6 +306,9 @@ class DeleteModel(TortoiseOperation):
     def __init__(self, name: str) -> None:
         self.name = name
 
+    def describe(self) -> str:
+        return f"Delete model {self.name}"
+
     def state_forward(self, app_label: str, state: State) -> None:
         model_ref = f"{app_label}.{self.name}"
 
@@ -334,6 +367,9 @@ class AlterModelOptions(TortoiseOperation):
         self.name = name
         self.options = options
 
+    def describe(self) -> str:
+        return f"Alter options for {self.name}"
+
     def state_forward(self, app_label: str, state: State) -> None:
         model_state = self.get_model_state(state, app_label, self.name)
 
@@ -364,6 +400,9 @@ class AddField(TortoiseOperation):
         self.model_name = model_name
         self.name = name
         self.field = field
+
+    def describe(self) -> str:
+        return f"Add field {self.name} to {self.model_name}"
 
     def state_forward(self, app_label: str, state: State) -> None:
         model_state = self.get_model_state(state, app_label, self.model_name)
@@ -412,13 +451,16 @@ class RemoveField(TortoiseOperation):
         self.model_name = model_name
         self.name = name
 
+    def describe(self) -> str:
+        return f"Remove field {self.name} from {self.model_name}"
+
     def state_forward(self, app_label: str, state: State) -> None:
         model_state = self.get_model_state(state, app_label, self.model_name)
 
         field = model_state.fields.pop(self.name, None)
         if not field:
             raise IncompatibleStateError(
-                f"Field {field} is not present on model {app_label}.{self.model_name}"
+                f"Field {self.name} is not present on model {app_label}.{self.model_name}"
             )
 
         models_to_reload = {(app_label, self.model_name)}
@@ -458,6 +500,9 @@ class AlterField(TortoiseOperation):
         self.model_name = model_name
         self.name = name
         self.field = field
+
+    def describe(self) -> str:
+        return f"Alter field {self.name} on {self.model_name}"
 
     def state_forward(self, app_label: str, state: State) -> None:
         model_state = self.get_model_state(state, app_label, self.model_name)
@@ -507,6 +552,9 @@ class RenameField(TortoiseOperation):
         self.old_name = old_name
         self.new_name = new_name
 
+    def describe(self) -> str:
+        return f"Rename field {self.old_name} to {self.new_name} on {self.model_name}"
+
     def state_forward(self, app_label: str, state: State) -> None:
         model_state = self.get_model_state(state, app_label, self.model_name)
 
@@ -545,9 +593,11 @@ class RenameField(TortoiseOperation):
         new_db_field = new_field.source_field or new_field.model_field_name
         if old_db_field == new_db_field:
             return
-        await state_editor.client.execute_script(
+        await state_editor._run_sql(
             state_editor.RENAME_FIELD_TEMPLATE.format(
-                table=new_model._meta.db_table,
+                table=state_editor._qualify_table_name(
+                    new_model._meta.db_table, new_model._meta.schema
+                ),
                 old_column=old_db_field,
                 new_column=new_db_field,
             )
@@ -570,9 +620,11 @@ class RenameField(TortoiseOperation):
         new_db_field = new_field.source_field or new_field.model_field_name
         if old_db_field == new_db_field:
             return
-        await state_editor.client.execute_script(
+        await state_editor._run_sql(
             state_editor.RENAME_FIELD_TEMPLATE.format(
-                table=new_model._meta.db_table,
+                table=state_editor._qualify_table_name(
+                    new_model._meta.db_table, new_model._meta.schema
+                ),
                 old_column=old_db_field,
                 new_column=new_db_field,
             )
@@ -599,6 +651,9 @@ class AddIndex(TortoiseOperation):
     def __init__(self, model_name: str, index: Index) -> None:
         self.model_name = model_name
         self.index = index
+
+    def describe(self) -> str:
+        return f"Add index to {self.model_name}"
 
     def state_forward(self, app_label: str, state: State) -> None:
         model_state = self.get_model_state(state, app_label, self.model_name)
@@ -641,6 +696,9 @@ class RemoveIndex(TortoiseOperation):
         self.model_name = model_name
         self.name = name
         self.fields = fields
+
+    def describe(self) -> str:
+        return f"Remove index from {self.model_name}"
 
     def _find_index(self, model_state: ModelState) -> Index:
         indexes = _get_option_list(model_state, "indexes")
@@ -713,6 +771,9 @@ class RenameIndex(TortoiseOperation):
         self.old_name = old_name
         self.old_fields = old_fields
 
+    def describe(self) -> str:
+        return f"Rename index on {self.model_name}"
+
     def state_forward(self, app_label: str, state: State) -> None:
         model_state = self.get_model_state(state, app_label, self.model_name)
         indexes = _get_option_list(model_state, "indexes")
@@ -783,13 +844,20 @@ class RenameIndex(TortoiseOperation):
 
 
 class AddConstraint(TortoiseOperation):
-    def __init__(self, model_name: str, constraint: UniqueConstraint) -> None:
+    def __init__(self, model_name: str, constraint: UniqueConstraint | CheckConstraint) -> None:
         self.model_name = model_name
         self.constraint = constraint
 
+    def describe(self) -> str:
+        return f"Add constraint to {self.model_name}"
+
     def state_forward(self, app_label: str, state: State) -> None:
         model_state = self.get_model_state(state, app_label, self.model_name)
-        if self.constraint.name:
+        if isinstance(self.constraint, CheckConstraint):
+            constraints = _get_option_list(model_state, "constraints")
+            constraints.append(self.constraint)
+            _set_option_list(model_state, "constraints", constraints)
+        elif self.constraint.name:
             constraints = _get_option_list(model_state, "constraints")
             constraints.append(self.constraint)
             _set_option_list(model_state, "constraints", constraints)
@@ -832,10 +900,15 @@ class RemoveConstraint(TortoiseOperation):
         self.name = name
         self.fields = fields
 
-    def _resolve_constraint(self, model_state: ModelState) -> UniqueConstraint:
+    def describe(self) -> str:
+        return f"Remove constraint from {self.model_name}"
+
+    def _resolve_constraint(self, model_state: ModelState) -> UniqueConstraint | CheckConstraint:
         if self.name:
             for constraint in _get_option_list(model_state, "constraints"):
                 if isinstance(constraint, UniqueConstraint) and constraint.name == self.name:
+                    return constraint
+                if isinstance(constraint, CheckConstraint) and constraint.name == self.name:
                     return constraint
         if self.fields:
             for fields in _get_option_list(model_state, "unique_together"):
@@ -852,7 +925,10 @@ class RemoveConstraint(TortoiseOperation):
             constraints = [
                 constraint
                 for constraint in constraints
-                if not (isinstance(constraint, UniqueConstraint) and constraint.name == self.name)
+                if not (
+                    (isinstance(constraint, UniqueConstraint) and constraint.name == self.name)
+                    or (isinstance(constraint, CheckConstraint) and constraint.name == self.name)
+                )
             ]
             _set_option_list(model_state, "constraints", constraints)
         if self.fields:
@@ -898,19 +974,52 @@ class RenameConstraint(TortoiseOperation):
         self.old_name = old_name
         self.new_name = new_name
 
+    def describe(self) -> str:
+        return f"Rename constraint on {self.model_name}"
+
     def state_forward(self, app_label: str, state: State) -> None:
         model_state = self.get_model_state(state, app_label, self.model_name)
         constraints = _get_option_list(model_state, "constraints")
         for constraint in constraints:
             if isinstance(constraint, UniqueConstraint) and constraint.name == self.old_name:
                 constraints.remove(constraint)
-                constraints.append(UniqueConstraint(fields=constraint.fields, name=self.new_name))
+                constraints.append(
+                    UniqueConstraint(
+                        fields=constraint.fields,
+                        name=self.new_name,
+                        condition=constraint.condition,
+                    )
+                )
+                _set_option_list(model_state, "constraints", constraints)
+                state.reload_model(app_label, self.model_name)
+                return
+            if isinstance(constraint, CheckConstraint) and constraint.name == self.old_name:
+                constraints.remove(constraint)
+                constraints.append(
+                    CheckConstraint(
+                        check=constraint.check,
+                        name=self.new_name,
+                    )
+                )
                 _set_option_list(model_state, "constraints", constraints)
                 state.reload_model(app_label, self.model_name)
                 return
         raise IncompatibleStateError(
             f"Constraint {self.old_name} is not present on {self.model_name}"
         )
+
+    def _find_constraint_by_name(
+        self, model_state: ModelState, name: str
+    ) -> UniqueConstraint | CheckConstraint:
+        """Look up a constraint by name from the model state's constraints list."""
+        for constraint in _get_option_list(model_state, "constraints"):
+            if (
+                isinstance(constraint, (UniqueConstraint, CheckConstraint))
+                and constraint.name == name
+            ):
+                return constraint
+        # Fallback for unnamed unique_together constraints that were given a name
+        return UniqueConstraint(fields=(), name=name)
 
     async def database_forward(
         self,
@@ -922,8 +1031,21 @@ class RenameConstraint(TortoiseOperation):
         if not state_editor:
             return
         model = new_state.apps.get_model(f"{app_label}.{self.model_name}")
-        old_constraint = UniqueConstraint(fields=(), name=self.old_name)
-        new_constraint = UniqueConstraint(fields=(), name=self.new_name)
+        # Look up actual constraint from old state to get the real type and fields
+        old_model_state = old_state.models.get((app_label, self.model_name))
+        if old_model_state:
+            old_constraint = self._find_constraint_by_name(old_model_state, self.old_name)
+        else:
+            old_constraint = UniqueConstraint(fields=(), name=self.old_name)
+        # Build new constraint with same type but new name
+        if isinstance(old_constraint, CheckConstraint):
+            new_constraint: UniqueConstraint | CheckConstraint = CheckConstraint(
+                check=old_constraint.check, name=self.new_name
+            )
+        else:
+            new_constraint = UniqueConstraint(
+                fields=old_constraint.fields, name=self.new_name, condition=old_constraint.condition
+            )
         await state_editor.rename_constraint(model, old_constraint, new_constraint)
 
     async def database_backward(
@@ -936,9 +1058,22 @@ class RenameConstraint(TortoiseOperation):
         if not state_editor:
             return
         model = new_state.apps.get_model(f"{app_label}.{self.model_name}")
-        old_constraint = UniqueConstraint(fields=(), name=self.new_name)
-        new_constraint = UniqueConstraint(fields=(), name=self.old_name)
-        await state_editor.rename_constraint(model, old_constraint, new_constraint)
+        # Look up actual constraint from new state (which has the new_name)
+        new_model_state = new_state.models.get((app_label, self.model_name))
+        if new_model_state:
+            new_constraint = self._find_constraint_by_name(new_model_state, self.new_name)
+        else:
+            new_constraint = UniqueConstraint(fields=(), name=self.new_name)
+        # Build old constraint with same type but old name
+        if isinstance(new_constraint, CheckConstraint):
+            old_constraint: UniqueConstraint | CheckConstraint = CheckConstraint(
+                check=new_constraint.check, name=self.old_name
+            )
+        else:
+            old_constraint = UniqueConstraint(
+                fields=new_constraint.fields, name=self.old_name, condition=new_constraint.condition
+            )
+        await state_editor.rename_constraint(model, new_constraint, old_constraint)
 
 
 class RunPython(TortoiseOperation):
@@ -959,6 +1094,9 @@ class RunPython(TortoiseOperation):
         self.reverse_code = reverse_code
         self.atomic = atomic
         self.reversible = reverse_code is not None
+
+    def describe(self) -> str:
+        return "Run Python code"
 
     def state_forward(self, app_label: str, state: State) -> None:
         return None
@@ -994,3 +1132,145 @@ class RunPython(TortoiseOperation):
     @staticmethod
     def noop(apps: StateApps, schema_editor: BaseSchemaEditor) -> None:
         return None
+
+
+class CreateSchema(TortoiseOperation):
+    """Create a database schema before tables that use it."""
+
+    def __init__(self, schema_name: str) -> None:
+        self.schema_name = schema_name
+
+    def describe(self) -> str:
+        return f"Create schema {self.schema_name}"
+
+    async def database_forward(
+        self,
+        app_label: str,
+        old_state: State,
+        new_state: State,
+        state_editor: BaseSchemaEditor | None = None,
+    ) -> None:
+        if not state_editor:
+            return
+        await state_editor.create_schema(self.schema_name)
+
+    async def database_backward(
+        self,
+        app_label: str,
+        old_state: State,
+        new_state: State,
+        state_editor: BaseSchemaEditor | None = None,
+    ) -> None:
+        if not state_editor:
+            return
+        await state_editor.drop_schema(self.schema_name)
+
+
+class DropSchema(TortoiseOperation):
+    """Drop a database schema."""
+
+    def __init__(self, schema_name: str) -> None:
+        self.schema_name = schema_name
+
+    def describe(self) -> str:
+        return f"Drop schema {self.schema_name}"
+
+    async def database_forward(
+        self,
+        app_label: str,
+        old_state: State,
+        new_state: State,
+        state_editor: BaseSchemaEditor | None = None,
+    ) -> None:
+        if not state_editor:
+            return
+        await state_editor.drop_schema(self.schema_name)
+
+    async def database_backward(
+        self,
+        app_label: str,
+        old_state: State,
+        new_state: State,
+        state_editor: BaseSchemaEditor | None = None,
+    ) -> None:
+        if not state_editor:
+            return
+        await state_editor.create_schema(self.schema_name)
+
+
+class RunSQL(TortoiseOperation):
+    """
+    Run raw SQL statements. Optionally provide reverse SQL for rollback.
+
+    Supports:
+    - Single SQL string
+    - List/tuple of SQL strings
+    - List/tuple of (sql, params) tuples for parameterized queries
+    """
+
+    reduces_to_sql = True
+    noop = ""
+
+    def __init__(
+        self,
+        sql,
+        reverse_sql=None,
+        *,
+        atomic: bool | None = None,
+    ) -> None:
+        self.sql = sql
+        self.reverse_sql = reverse_sql
+        self.atomic = atomic
+        self.reversible = reverse_sql is not None
+
+    def describe(self) -> str:
+        return "Run SQL"
+
+    def state_forward(self, app_label: str, state: State) -> None:
+        return None
+
+    async def database_forward(
+        self,
+        app_label: str,
+        old_state: State,
+        new_state: State,
+        state_editor: BaseSchemaEditor | None = None,
+    ) -> None:
+        if not state_editor:
+            return
+        await self._run_sql(state_editor, self.sql)
+
+    async def database_backward(
+        self,
+        app_label: str,
+        old_state: State,
+        new_state: State,
+        state_editor: BaseSchemaEditor | None = None,
+    ) -> None:
+        if not state_editor:
+            return
+        if self.reverse_sql is None:
+            raise NotImplementedError("RunSQL reverse_sql is not set")
+        await self._run_sql(state_editor, self.reverse_sql)
+
+    async def _run_sql(self, state_editor: BaseSchemaEditor, sqls) -> None:
+        """Execute SQL statements using the schema editor."""
+        if isinstance(sqls, (list, tuple)):
+            for sql in sqls:
+                params = None
+                if isinstance(sql, (list, tuple)):
+                    elements = len(sql)
+                    if elements == 2:
+                        sql, params = sql
+                    else:
+                        raise ValueError(f"Expected a 2-tuple but got {elements}")
+
+                if params:
+                    if state_editor.collect_sql:
+                        state_editor.collected_sql.append(f"{sql}  -- params: {params!r}")
+                    else:
+                        await state_editor.client.execute_query(sql, params)
+                else:
+                    await state_editor._run_sql(sql)
+        elif sqls != RunSQL.noop:
+            await state_editor._run_sql(sqls)

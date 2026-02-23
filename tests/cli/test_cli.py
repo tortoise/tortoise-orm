@@ -7,14 +7,31 @@ import io
 import sys
 from pathlib import Path
 from types import SimpleNamespace
-from typing import Any, cast
+from typing import Any
 
 import pytest
 
+from tortoise import Tortoise
 from tortoise.cli import cli as cli_module
+from tortoise.config import TortoiseConfig
 from tortoise.migrations.autodetector import MigrationAutodetector
 from tortoise.migrations.graph import MigrationKey
 from tortoise.migrations.writer import MigrationWriter
+
+
+@contextlib.contextmanager
+def _override_tortoise_apps(value: Any):
+    """Temporarily replace Tortoise.apps, bypassing the metaclass protection.
+
+    Uses type.__setattr__ to bypass _TortoiseMeta.__setattr__ which
+    prevents accidental shadowing of classproperty descriptors.
+    """
+    original = Tortoise.__dict__["apps"]
+    type.__setattr__(Tortoise, "apps", value)
+    try:
+        yield
+    finally:
+        type.__setattr__(Tortoise, "apps", original)
 
 
 def _write_package(tmp_path: Path, name: str) -> Path:
@@ -186,6 +203,7 @@ TORTOISE_ORM = {
 
 @pytest.mark.asyncio
 async def test_upgrade_alias(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    _write_package(tmp_path, "cli_app")
     module_name = _write_settings(
         tmp_path,
         """
@@ -217,6 +235,7 @@ TORTOISE_ORM = {
 
 @pytest.mark.asyncio
 async def test_downgrade_defaults_to_first(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    _write_package(tmp_path, "cli_app")
     module_name = _write_settings(
         tmp_path,
         """
@@ -280,8 +299,13 @@ TORTOISE_ORM = {
     assert called["target"] == "orders.__first__"
     assert called["direction"] == "backward"
     assert called["app_labels"] is None
-    called_config = cast(dict[str, Any], called["config"])
-    assert set(called_config["apps"].keys()) == {"accounts", "orders"}
+    called_config = called["config"]
+    if isinstance(called_config, dict):
+        apps = called_config["apps"]
+    else:
+        assert isinstance(called_config, TortoiseConfig)
+        apps = called_config.apps
+    assert set(apps.keys()) == {"accounts", "orders"}
 
 
 @pytest.mark.asyncio
@@ -315,7 +339,7 @@ TORTOISE_ORM = {
 
     monkeypatch.setattr(cli_module.Tortoise, "init", fake_init)
     monkeypatch.setattr(cli_module.MigrationRecorder, "applied_migrations", fake_applied)
-    monkeypatch.setattr(cli_module.connections, "get", lambda _name: object())
+    monkeypatch.setattr(cli_module, "get_connection", lambda _name: object())
 
     result = await _run_cli(["-c", f"{module_name}.TORTOISE_ORM", "history"])
     assert result.exit_code == 0
@@ -394,7 +418,7 @@ TORTOISE_ORM = {
 
     result = await _run_cli(["-c", f"{module_name}.TORTOISE_ORM", "downgrade"])
     assert result.exit_code != 0
-    assert "required: app_label" in result.output
+    assert "app_label is required" in result.output
 
 
 @pytest.mark.asyncio
@@ -469,16 +493,16 @@ TORTOISE_ORM = {
             ]
 
     monkeypatch.setattr(cli_module.Tortoise, "init", fake_init)
-    monkeypatch.setattr(cli_module.Tortoise, "apps", object(), raising=False)
     monkeypatch.setattr(cli_module, "MigrationAutodetector", FakeAutodetector)
 
-    result = await _run_cli(
-        ["-c", f"{module_name}.TORTOISE_ORM", "makemigrations", "--name", "add blog"]
-    )
-    assert result.exit_code == 0
+    with _override_tortoise_apps(object()):
+        result = await _run_cli(
+            ["-c", f"{module_name}.TORTOISE_ORM", "makemigrations", "--name", "add blog"]
+        )
+        assert result.exit_code == 0
 
-    migrations_path = tmp_path / "cli_app" / "migrations"
-    assert (migrations_path / "0001_add_blog.py").exists()
+        migrations_path = tmp_path / "cli_app" / "migrations"
+        assert (migrations_path / "0001_add_blog.py").exists()
 
 
 @pytest.mark.asyncio
@@ -512,12 +536,12 @@ TORTOISE_ORM = {
             return []
 
     monkeypatch.setattr(cli_module.Tortoise, "init", fake_init)
-    monkeypatch.setattr(cli_module.Tortoise, "apps", object(), raising=False)
     monkeypatch.setattr(cli_module, "MigrationAutodetector", FakeAutodetector)
 
-    result = await _run_cli(["-c", f"{module_name}.TORTOISE_ORM", "makemigrations"])
-    assert result.exit_code == 0
-    assert "No changes detected" in result.output
+    with _override_tortoise_apps(object()):
+        result = await _run_cli(["-c", f"{module_name}.TORTOISE_ORM", "makemigrations"])
+        assert result.exit_code == 0
+        assert "No changes detected" in result.output
 
 
 @pytest.mark.asyncio
@@ -580,20 +604,20 @@ TORTOISE_ORM = {
             super().__init__(apps, apps_config, now=lambda: dt.datetime(2024, 1, 2, 3, 4))
 
     monkeypatch.setattr(cli_module.Tortoise, "init", fake_init)
-    monkeypatch.setattr(cli_module.Tortoise, "apps", {"app": {}}, raising=False)
     monkeypatch.setattr(cli_module, "MigrationAutodetector", FixedAutodetector)
 
-    result = await _run_cli(
-        ["-c", f"{module_name}.TORTOISE_ORM", "makemigrations", "--empty", "app"]
-    )
-    assert result.exit_code == 0
+    with _override_tortoise_apps({"app": {}}):
+        result = await _run_cli(
+            ["-c", f"{module_name}.TORTOISE_ORM", "makemigrations", "--empty", "app"]
+        )
+        assert result.exit_code == 0
 
-    migrations_path = tmp_path / "cli_app" / "migrations"
-    migration_file = migrations_path / "0003_auto_20240102_0304.py"
-    assert migration_file.exists()
-    content = migration_file.read_text(encoding="utf-8")
-    assert "operations = [" in content
-    assert "dependencies = [('app', '0001_initial'), ('app', '0002_second')]" in content
+        migrations_path = tmp_path / "cli_app" / "migrations"
+        migration_file = migrations_path / "0003_auto_20240102_0304.py"
+        assert migration_file.exists()
+        content = migration_file.read_text(encoding="utf-8")
+        assert "operations = [" in content
+        assert "dependencies = [('app', '0001_initial'), ('app', '0002_second')]" in content
 
 
 @pytest.mark.asyncio
@@ -631,21 +655,21 @@ TORTOISE_ORM = {
             super().__init__(apps, apps_config, now=lambda: dt.datetime(2024, 1, 2, 3, 4))
 
     monkeypatch.setattr(cli_module.Tortoise, "init", fake_init)
-    monkeypatch.setattr(cli_module.Tortoise, "apps", {"app": {}}, raising=False)
     monkeypatch.setattr(cli_module, "MigrationAutodetector", FixedAutodetector)
 
-    result = await _run_cli(
-        [
-            "-c",
-            f"{module_name}.TORTOISE_ORM",
-            "makemigrations",
-            "--empty",
-            "--name",
-            "manual",
-            "app",
-        ]
-    )
-    assert result.exit_code == 0
+    with _override_tortoise_apps({"app": {}}):
+        result = await _run_cli(
+            [
+                "-c",
+                f"{module_name}.TORTOISE_ORM",
+                "makemigrations",
+                "--empty",
+                "--name",
+                "manual",
+                "app",
+            ]
+        )
+        assert result.exit_code == 0
 
-    migrations_path = tmp_path / "cli_app" / "migrations"
-    assert (migrations_path / "0003_manual.py").exists()
+        migrations_path = tmp_path / "cli_app" / "migrations"
+        assert (migrations_path / "0003_manual.py").exists()

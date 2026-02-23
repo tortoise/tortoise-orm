@@ -1,6 +1,6 @@
 checkfiles = tortoise/ examples/ tests/ conftest.py
 py_warn = PYTHONDEVMODE=1
-pytest_opts = -n auto --cov=tortoise --cov-append --cov-branch --tb=native -q
+pytest_opts = -n auto --cov=tortoise --cov-append --cov-branch --tb=native -q -m "not benchmark"
 
 TORTOISE_MYSQL_PASS ?= 123456
 TORTOISE_POSTGRES_PASS ?= 123456
@@ -24,10 +24,10 @@ up:
 	uv lock --upgrade
 
 deps:
-	uv sync --frozen --all-groups --extra asyncpg --extra accel --extra psycopg --extra asyncodbc --extra aiomysql $(options)
+	uv sync --reinstall-package tortoise-orm --frozen --all-groups --extra asyncpg --extra accel --extra psycopg --extra asyncodbc --extra aiomysql $(options)
 
 deps_with_asyncmy:
-	uv sync --frozen --all-groups --extra asyncpg --extra accel --extra psycopg --extra asyncodbc --extra asyncmy $(options)
+	uv sync --reinstall-package tortoise-orm --frozen --all-groups --extra asyncpg --extra accel --extra psycopg --extra asyncodbc --extra asyncmy $(options)
 
 check: build _check
 _check:
@@ -54,6 +54,9 @@ _codeqc:
 
 test: deps
 	$(py_warn) TORTOISE_TEST_DB=sqlite://:memory: uv run --frozen pytest $(pytest_opts)
+
+test_fast: deps
+	$(py_warn) TORTOISE_TEST_DB=sqlite://:memory: uv run --frozen pytest -n auto --tb=native -q
 
 test_sqlite:
 	$(py_warn) TORTOISE_TEST_DB=sqlite://:memory: uv run --frozen pytest --cov-report= $(pytest_opts)

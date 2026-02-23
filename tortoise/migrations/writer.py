@@ -16,7 +16,8 @@ from typing import Any
 
 from pypika_tortoise.context import DEFAULT_SQL_CONTEXT
 
-from tortoise.migrations.constraints import UniqueConstraint
+from tortoise.indexes import Index
+from tortoise.migrations.constraints import CheckConstraint, UniqueConstraint
 from tortoise.migrations.operations import (
     AddConstraint,
     AddField,
@@ -24,7 +25,9 @@ from tortoise.migrations.operations import (
     AlterField,
     AlterModelOptions,
     CreateModel,
+    CreateSchema,
     DeleteModel,
+    DropSchema,
     Operation,
     RemoveConstraint,
     RemoveField,
@@ -64,7 +67,7 @@ class ImportManager:
     modules: set[str] = dataclass_field(default_factory=set)
     uses_fields_module: bool = False
     uses_indexes: set[str] = dataclass_field(default_factory=set)
-    uses_constraints: bool = False
+    uses_constraints: set[str] = dataclass_field(default_factory=set)
 
     def add_from(self, module: str, name: str) -> None:
         self.imports.setdefault(module, set()).add(name)
@@ -78,8 +81,8 @@ class ImportManager:
     def add_index_class(self, name: str) -> None:
         self.uses_indexes.add(name)
 
-    def add_constraints(self) -> None:
-        self.uses_constraints = True
+    def add_constraint_class(self, name: str) -> None:
+        self.uses_constraints.add(name)
 
     def render(self) -> list[str]:
         lines: list[str] = []
@@ -93,7 +96,8 @@ class ImportManager:
             index_names = ", ".join(sorted(self.uses_indexes))
             lines.append(f"from tortoise.indexes import {index_names}")
         if self.uses_constraints:
-            lines.append("from tortoise.migrations.constraints import UniqueConstraint")
+            constraint_names = ", ".join(sorted(self.uses_constraints))
+            lines.append(f"from tortoise.migrations.constraints import {constraint_names}")
         return lines
 
 
@@ -115,6 +119,7 @@ def _resolve_import(value: Any) -> tuple[str, str, bool]:
 
 
 def render_value(value: Any, imports: ImportManager) -> str:
+    # StrEnum instances are both str and Enum, so check Enum first
     if isinstance(value, Enum):
         enum_cls = value.__class__
         module_name, name, use_module = _resolve_import(enum_cls)
@@ -127,6 +132,17 @@ def render_value(value: Any, imports: ImportManager) -> str:
         return repr(value)
     if isinstance(value, bytes):
         return repr(value)
+    from tortoise.fields.db_defaults import Now, RandomHex, SqlDefault
+
+    if isinstance(value, Now):
+        imports.add_from("tortoise.fields.db_defaults", "Now")
+        return "Now()"
+    if isinstance(value, RandomHex):
+        imports.add_from("tortoise.fields.db_defaults", "RandomHex")
+        return "RandomHex()"
+    if isinstance(value, SqlDefault):
+        imports.add_from("tortoise.fields.db_defaults", "SqlDefault")
+        return f"SqlDefault({value.sql!r})"
     if hasattr(value, "get_sql") and callable(value.get_sql):
         sql = value.get_sql(DEFAULT_SQL_CONTEXT)
         imports.add_from("tortoise.migrations.expressions", "RawSQLTerm")
@@ -179,7 +195,17 @@ def render_value(value: Any, imports: ImportManager) -> str:
             func_ref = name
         imports.add_module("functools")
         return f"functools.partial({', '.join([func_ref, parts]) if parts else func_ref})"
-    if inspect.isfunction(value) or callable(value) or isinstance(value, type):
+    # Check type before inspect.isfunction (classes are callable too)
+    if isinstance(value, type):
+        if value.__module__ == "builtins":
+            return value.__name__
+        module_name, name, use_module = _resolve_import(value)
+        if use_module:
+            imports.add_module(module_name)
+            return name
+        imports.add_from(module_name, name)
+        return name
+    if inspect.isfunction(value) or callable(value):
         if getattr(value, "__name__", "") == "<lambda>":
             raise ValueError("Cannot serialize lambda; use a module-level function instead.")
         if hasattr(value, "__qualname__") and "<locals>" in value.__qualname__:
@@ -196,9 +222,11 @@ def render_value(value: Any, imports: ImportManager) -> str:
 def _render_call(path: str, args: list[Any], kwargs: dict[str, Any], imports: ImportManager) -> str:
     if path.startswith("tortoise.fields."):
         class_name = path.rsplit(".", 1)[1]
-        if path.startswith("tortoise.fields.relational.") and class_name.endswith("FieldInstance"):
+        # Render FieldInstance classes as their public Field name
+        if class_name.endswith("FieldInstance"):
             class_name = class_name.replace("FieldInstance", "Field")
-            if "model_name" in kwargs:
+            # For relational fields, move model_name to first positional arg
+            if path.startswith("tortoise.fields.relational.") and "model_name" in kwargs:
                 args = [kwargs.pop("model_name")] + list(args)
         imports.add_fields_alias()
         callee = f"fields.{class_name}"
@@ -207,8 +235,11 @@ def _render_call(path: str, args: list[Any], kwargs: dict[str, Any], imports: Im
         imports.add_index_class(class_name)
         callee = class_name
     elif path == "tortoise.migrations.constraints.UniqueConstraint":
-        imports.add_constraints()
+        imports.add_constraint_class("UniqueConstraint")
         callee = "UniqueConstraint"
+    elif path == "tortoise.migrations.constraints.CheckConstraint":
+        imports.add_constraint_class("CheckConstraint")
+        callee = "CheckConstraint"
     else:
         module, name = path.rsplit(".", 1)
         imports.add_from(module, name)
@@ -248,7 +279,7 @@ class MigrationWriter:
 
     def write(self) -> Path:
         path = self.path()
-        path.write_text(self.as_string(), encoding="ascii")
+        path.write_text(self.as_string(), encoding="utf-8")
         return path
 
     def as_string(self) -> str:
@@ -285,6 +316,10 @@ class MigrationWriter:
     def _format_operation(
         self, operation: Operation, imports: ImportManager, *, indent: str
     ) -> list[str]:
+        if isinstance(operation, CreateSchema):
+            return [f"{indent}ops.CreateSchema(schema_name={operation.schema_name!r}),"]
+        if isinstance(operation, DropSchema):
+            return [f"{indent}ops.DropSchema(schema_name={operation.schema_name!r}),"]
         if isinstance(operation, CreateModel):
             return self._format_create_model(operation, imports, indent=indent)
         if isinstance(operation, DeleteModel):
@@ -411,7 +446,9 @@ class MigrationWriter:
         path, args, kwargs = index.deconstruct()
         return _render_call(path, args, kwargs, imports)
 
-    def _render_constraint(self, constraint: UniqueConstraint, imports: ImportManager) -> str:
+    def _render_constraint(
+        self, constraint: UniqueConstraint | CheckConstraint, imports: ImportManager
+    ) -> str:
         path, args, kwargs = constraint.deconstruct()
         return _render_call(path, args, kwargs, imports)
 
@@ -419,8 +456,11 @@ class MigrationWriter:
         rendered: dict[str, str] = {}
         for key, value in options.items():
             if key == "indexes":
+                normalized = [
+                    item if isinstance(item, Index) else Index(fields=tuple(item)) for item in value
+                ]
                 rendered[key] = (
-                    "[" + ", ".join(self._render_index(item, imports) for item in value) + "]"
+                    "[" + ", ".join(self._render_index(item, imports) for item in normalized) + "]"
                 )
                 continue
             if key == "constraints":

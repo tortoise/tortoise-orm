@@ -10,16 +10,16 @@ import uuid
 from decimal import Decimal
 from enum import Enum, IntEnum
 
-import pytz
 from pydantic import BaseModel, ConfigDict
 
 from tortoise import fields
-from tortoise.exceptions import ValidationError
+from tortoise.exceptions import NoValuesFetched, ValidationError
 from tortoise.fields import NO_ACTION
 from tortoise.indexes import Index
 from tortoise.manager import Manager
 from tortoise.models import Model
 from tortoise.queryset import QuerySet
+from tortoise.timezone import UTC
 from tortoise.validators import (
     CommaSeparatedIntegerListValidator,
     MaxValueValidator,
@@ -623,7 +623,7 @@ class Employee(Model):
         """
         try:
             return len(self.team_members)
-        except AttributeError:
+        except (NoValuesFetched, AttributeError):
             return 0
 
     def not_annotated(self):
@@ -831,14 +831,14 @@ class DefaultUpdate(Model):
 
 
 class DefaultModel(Model):
-    int_default = fields.IntField(default=1)
-    float_default = fields.FloatField(default=1.5)
-    decimal_default = fields.DecimalField(max_digits=8, decimal_places=2, default=Decimal(1))
-    bool_default = fields.BooleanField(default=True)
-    char_default = fields.CharField(max_length=20, default="tortoise")
-    date_default = fields.DateField(default=datetime.date(year=2020, month=5, day=21))
+    int_default = fields.IntField(db_default=1)
+    float_default = fields.FloatField(db_default=1.5)
+    decimal_default = fields.DecimalField(max_digits=8, decimal_places=2, db_default=Decimal(1))
+    bool_default = fields.BooleanField(db_default=True)
+    char_default = fields.CharField(max_length=20, db_default="tortoise")
+    date_default = fields.DateField(db_default=datetime.date(year=2020, month=5, day=21))
     datetime_default = fields.DatetimeField(
-        default=datetime.datetime(year=2020, month=5, day=20, tzinfo=pytz.utc)
+        db_default=datetime.datetime(year=2020, month=5, day=20, tzinfo=UTC)
     )
 
 
@@ -1064,3 +1064,17 @@ class ModelWithIndexes(Model):
             Index(fields=["f3"], name="model_with_indexes__f3"),
         ]
         unique_together = [("u1", "u2")]
+
+
+class Flavor(Model):
+    id = fields.IntField(pk=True)
+    name = fields.CharField(max_length=50)
+
+
+class Drink(Model):
+    id = fields.IntField(pk=True)
+    name = fields.CharField(max_length=100)
+    flavors = fields.ManyToManyField("models.Flavor", related_name="drinks", through="drink_flavor")
+    toppings = fields.ManyToManyField(
+        "models.Flavor", related_name="topping_drinks", through="drink_topping"
+    )

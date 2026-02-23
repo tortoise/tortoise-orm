@@ -48,6 +48,7 @@ if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.queryset_prepared import PreparedQuerySet
 
 MODEL = TypeVar("MODEL", bound="Model")
+PRIMARY_KEY = TypeVar("PRIMARY_KEY")
 T_co = TypeVar("T_co", covariant=True)
 SINGLE = TypeVar("SINGLE", bound=bool)
 
@@ -87,7 +88,7 @@ class AwaitableQuery(Generic[MODEL]):
         "model",
         "_joined_tables",
         "_db",
-        "capabilities",
+        "_capabilities",
         "_annotations",
         "_custom_filters",
         "_q_objects",
@@ -98,10 +99,20 @@ class AwaitableQuery(Generic[MODEL]):
         self.model: type[MODEL] = model
         self.query: QueryBuilder = QUERY
         self._db: BaseDBAsyncClient = None  # type: ignore
-        self.capabilities: Capabilities = model._meta.db.capabilities
+        self._capabilities: Capabilities | None = None
         self._annotations: dict[str, Expression | Term] = {}
         self._custom_filters: dict[str, FilterInfoDict] = {}
         self._q_objects: list[Q] = []
+
+    @property
+    def capabilities(self) -> Capabilities:
+        if self._capabilities is None:
+            self._capabilities = self.model._meta.db.capabilities
+        return self._capabilities
+
+    @capabilities.setter
+    def capabilities(self, value: Capabilities) -> None:
+        self._capabilities = value
 
     def _choose_db(self, for_write: bool = False) -> BaseDBAsyncClient:
         """
@@ -859,7 +870,9 @@ class QuerySet(AwaitableQuery[MODEL]):
         queryset._raise_does_not_exist = True
         return queryset  # type: ignore
 
-    async def in_bulk(self, id_list: Iterable[str | int], field_name: str) -> dict[str, MODEL]:
+    async def in_bulk(
+        self, id_list: Iterable[PRIMARY_KEY], field_name: str
+    ) -> dict[PRIMARY_KEY, MODEL]:
         """
         Return a dictionary mapping each of the given IDs to the object with
         that ID. If `id_list` isn't provided, evaluate the entire QuerySet.

@@ -14,16 +14,21 @@ if TYPE_CHECKING:  # pragma: nocoverage
 class BasePostgresSchemaGenerator(BaseSchemaGenerator):
     DIALECT = "postgres"
     INDEX_CREATE_TEMPLATE = (
-        'CREATE INDEX {exists}"{index_name}" ON "{table_name}" {index_type}({fields}){extra};'
+        'CREATE INDEX {exists}"{index_name}" ON {table_name} {index_type}({fields}){extra};'
     )
     UNIQUE_INDEX_CREATE_TEMPLATE = INDEX_CREATE_TEMPLATE.replace("INDEX", "UNIQUE INDEX")
-    TABLE_COMMENT_TEMPLATE = "COMMENT ON TABLE \"{table}\" IS '{comment}';"
-    COLUMN_COMMENT_TEMPLATE = 'COMMENT ON COLUMN "{table}"."{column}" IS \'{comment}\';'
+    TABLE_COMMENT_TEMPLATE = "COMMENT ON TABLE {table} IS '{comment}';"
+    COLUMN_COMMENT_TEMPLATE = "COMMENT ON COLUMN {table}.\"{column}\" IS '{comment}';"
     GENERATED_PK_TEMPLATE = '"{field_name}" {generated_sql}'
 
     def __init__(self, client: BasePostgresClient) -> None:
         super().__init__(client)
         self.comments_array: list[str] = []
+
+    def _get_schema_create_sql(self, schema: str, safe: bool) -> str:
+        if safe:
+            return f"CREATE SCHEMA IF NOT EXISTS {self.quote(schema)};"
+        return f"CREATE SCHEMA {self.quote(schema)};"
 
     @classmethod
     def _get_escape_translation_table(cls) -> list[str]:
@@ -58,12 +63,8 @@ class BasePostgresSchemaGenerator(BaseSchemaGenerator):
         table: str,
         column: str,
         default: Any,
-        auto_now_add: bool = False,
-        auto_now: bool = False,
     ) -> str:
-        default_str = " DEFAULT"
-        default_str += " CURRENT_TIMESTAMP" if auto_now_add else f" {default}"
-        return default_str
+        return f" DEFAULT {default}"
 
     def _escape_default_value(self, default: Any):
         if isinstance(default, bool):

@@ -141,6 +141,69 @@ def test_add_model_two_simple_models_fields_in_one_app_with_fk(
     assert fk_field.related_model.__name__ == "TestModel"
 
 
+@pytest.mark.parametrize(
+    "field_class",
+    [ForeignKeyFieldInstance, OneToOneFieldInstance, ManyToManyFieldInstance],
+)
+def test_create_model_with_fk_to_not_yet_created_model(
+    empty_state: State,
+    field_class: type[ForeignKeyFieldInstance | OneToOneFieldInstance | ManyToManyFieldInstance],
+):
+    """Regression test: CreateModel should not raise when the FK target model
+    hasn't been added to state yet (simulates alphabetical ordering where
+    e.g. 'Event' is created before 'Tournament')."""
+    state = empty_state
+
+    # Create the model that references another model not yet in state.
+    # This simulates alphabetical ordering: Alert (with FK to Warehouse) before Warehouse.
+    op1 = CreateModel(
+        name="Alert",
+        fields=[
+            ("id", fields.IntField(pk=True)),
+            ("reference", field_class("models.Warehouse", related_name="alerts")),
+        ],
+    )
+    op1.state_forward("models", state)
+
+    # Now create the referenced model.
+    op2 = CreateModel(
+        name="Warehouse",
+        fields=[
+            ("id", fields.IntField(pk=True)),
+            ("name", fields.TextField()),
+        ],
+    )
+    op2.state_forward("models", state)
+
+    assert len(state.models) == 2
+
+    model_alert = state.apps.get_model("models.Alert")
+    fk_field = cast(RelationalFieldInstance, model_alert._meta.fields_map["reference"])
+    assert isinstance(fk_field, field_class)
+    assert fk_field.related_model.__name__ == "Warehouse"
+
+    # Validation should pass — all relations are resolved
+    state.validate_relations_initialized()
+
+
+def test_validate_catches_permanently_unresolved_relation(empty_state: State):
+    """validate_relations_initialized should raise when a FK target model
+    is never created, ensuring silent corruption cannot happen."""
+    state = empty_state
+
+    op = CreateModel(
+        name="Orphan",
+        fields=[
+            ("id", fields.IntField(pk=True)),
+            ("ref", ForeignKeyFieldInstance("models.Ghost", related_name="orphans")),
+        ],
+    )
+    op.state_forward("models", state)
+
+    with pytest.raises(RuntimeError, match="uninitialized relations"):
+        state.validate_relations_initialized()
+
+
 def test_simple_rename(state_with_model: State):
     operation = RenameModel("TestModel", "NewName")
     operation.state_forward("models", state_with_model)

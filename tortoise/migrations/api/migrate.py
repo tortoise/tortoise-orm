@@ -4,8 +4,9 @@ import inspect
 from collections.abc import Callable, Sequence
 from typing import Any
 
-from tortoise import Tortoise, connections
+from tortoise import Tortoise
 from tortoise.config import TortoiseConfig
+from tortoise.connection import get_connection
 from tortoise.migrations.executor import MigrationExecutor, MigrationTarget, PlanStep
 
 
@@ -19,6 +20,7 @@ async def migrate(
     dry_run: bool = False,
     direction: str = "both",
     reporter: Callable[[str, list[PlanStep], bool, bool], object] | None = None,
+    progress: Callable[[str, str, str], object] | None = None,
 ) -> None:
     """Run migrations for configured apps."""
     if isinstance(config, TortoiseConfig):
@@ -44,7 +46,7 @@ async def migrate(
 
     targets = _parse_targets(target, selected_apps)
     for connection_name, subset in apps_by_connection.items():
-        connection = connections.get(connection_name)
+        connection = get_connection(connection_name)
         executor = MigrationExecutor(connection, subset)
         executor_targets = [t for t in targets if t.app_label in subset]
         if reporter is not None:
@@ -57,6 +59,7 @@ async def migrate(
             fake=fake,
             dry_run=dry_run,
             direction=direction,
+            progress=progress,
         )
 
 

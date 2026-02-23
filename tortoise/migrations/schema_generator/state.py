@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import inspect
 from collections.abc import Iterable
-from copy import deepcopy
+from copy import copy
 from dataclasses import dataclass
 from typing import Any, cast
 
@@ -41,14 +41,18 @@ class ModelState(BaseEntityState):
             options=dict(self.options),
             bases=self.bases,
             pk_field_name=self.pk_field_name,
-            fields={name: deepcopy(field) for name, field in self.fields.items()},
+            fields={name: copy(field) for name, field in self.fields.items()},
         )
 
-    def render(self, apps: StateApps) -> type[Model]:
+    def render(self, apps: StateApps, *, deepcopy_fields: bool = True) -> type[Model]:
         meta_class = type("Meta", (), self.options)
 
-        attrs: dict[str, Any] = {name: deepcopy(field) for name, field in self.fields.items()}
+        if deepcopy_fields:
+            attrs: dict[str, Any] = {name: copy(field) for name, field in self.fields.items()}
+        else:
+            attrs = dict(self.fields)
         attrs["Meta"] = meta_class
+        attrs["_no_comments"] = True
 
         model = type(self.name, self.bases, attrs)
         return cast(type[Model], model)
@@ -66,7 +70,7 @@ class ModelState(BaseEntityState):
             if getattr(field, "reference", None) is not None:
                 continue
 
-            fields[name] = deepcopy(field)
+            fields[name] = copy(field)
 
         options: dict[str, Any] = {}
         if model._meta.abstract:
@@ -79,6 +83,8 @@ class ModelState(BaseEntityState):
             options["app"] = model._meta.app
         if model._meta.unique_together:
             options["unique_together"] = model._meta.unique_together
+        if model._meta.constraints:
+            options["constraints"] = model._meta.constraints
         if model._meta.indexes:
             options["indexes"] = model._meta.indexes
         if model._meta.pk_attr:
@@ -106,7 +112,11 @@ def get_related_models(model: type[Model]) -> list[type[Model]]:
 
     for field_name in model._meta.fetch_fields:
         field = cast(RelationalField, model._meta.fields_map[field_name])
-        related_models.append(field.related_model)
+        # related_model may be None if the target model hasn't been registered yet
+        # (e.g. during migration state-building when CreateModel operations are
+        # processed in alphabetical order).
+        if field.related_model is not None:
+            related_models.append(field.related_model)
 
     return related_models
 
@@ -177,12 +187,32 @@ class State:
         for app_label, model_name in model_tuples:
             model_state = self.models.get((app_label, model_name))
             if not model_state:
-                raise LookupError(f"Model state {app_label}.{model_name} is unknown")
+                continue
 
             related_models |= self._find_related_models(app_label, model_name)
 
         self._reload(related_models)
 
+    def validate_relations_initialized(self) -> None:
+        """Verify that all registered models have had their relations fully initialized.
+
+        Raises ``RuntimeError`` if any model still has ``_inited = False``, which
+        indicates a relational field whose target was never resolved.  This acts as
+        a safety-net for the deferred-init logic in ``StateApps._init_relations``.
+        """
+        uninited: list[str] = []
+        for app in self.apps.apps.values():
+            for model in app.values():
+                if not model._meta._inited:
+                    uninited.append(f"{model._meta.app}.{model.__name__}")
+        if uninited:
+            raise RuntimeError(
+                "The following models still have uninitialized relations after "
+                f"applying all operations: {', '.join(sorted(uninited))}. "
+                "This usually means a relational field references a model that "
+                "was never created in this migration sequence."
+            )
+
     def clone(self) -> State:
         models = {key: model.clone() for key, model in self.models.items()}
-        return self.__class__(models=models, apps=self.apps.clone())
+        return self.__class__(models=models, apps=self.apps.clone(model_states=models))

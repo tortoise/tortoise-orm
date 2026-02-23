@@ -5,17 +5,37 @@ import asyncio
 import contextlib
 import importlib
 import importlib.util
+import os
 import platform
 import sys
 from collections.abc import AsyncGenerator, Iterable
+from enum import Enum
 from pathlib import Path
 from typing import Any
 
-from ptpython.repl import embed
+try:
+    from IPython.terminal.embed import embed as ipython_embed
 
-from tortoise import Tortoise, __version__, connections
+    HAS_IPYTHON = True
+except ImportError:
+    ipython_embed = None
+    HAS_IPYTHON = False
+
+try:
+    from ptpython.repl import embed as ptpython_embed
+
+    HAS_PTPYTHON = True
+except ImportError:
+    ptpython_embed = None
+    HAS_PTPYTHON = False
+
+from tortoise import Tortoise, __version__
 from tortoise.cli import utils
+from tortoise.config import AppConfig, TortoiseConfig
+from tortoise.connection import get_connection
+from tortoise.context import TortoiseContext
 from tortoise.migrations.api import migrate as migrate_api
+from tortoise.migrations.api import sqlmigrate as sqlmigrate_api
 from tortoise.migrations.autodetector import MigrationAutodetector
 from tortoise.migrations.executor import PlanStep
 from tortoise.migrations.graph import MigrationKey
@@ -24,10 +44,14 @@ from tortoise.migrations.recorder import MigrationRecorder
 from tortoise.migrations.writer import MigrationWriter, format_migration_name
 
 if platform.system() == "Windows":
+    # Windows-specific patch for ptpython signal handler issues
+    # Only applied when launching ptpython shell on Windows
     # Remove when prompt-toolkit/ptpython#582 is fixed.
     from asyncio import get_event_loop_policy
 
     def _patch_loop_factory_for_ptpython() -> None:
+        """Patch event loop policy to work around ptpython signal handler bug on Windows."""
+
         def do_nothing(*_args, **_kwargs) -> None:
             return None
 
@@ -36,16 +60,101 @@ if platform.system() == "Windows":
             for attr in ("add_signal_handler", "remove_signal_handler"):
                 setattr(loop_factory, attr, do_nothing)
 
-    _patch_loop_factory_for_ptpython()
+
+class ShellProvider(Enum):
+    IPYTHON = "ipython"
+    PTPYTHON = "ptpython"
+
+
+def _get_available_shell_provider() -> ShellProvider | None:
+    if HAS_IPYTHON:
+        return ShellProvider.IPYTHON
+    elif HAS_PTPYTHON:
+        return ShellProvider.PTPYTHON
+    return None
+
+
+def _launch_ipython_shell(namespace: dict[str, Any]) -> None:
+    """Launch IPython shell synchronously.
+
+    IPython manages its own event loop for autoawait, so this must be called
+    from a synchronous context to avoid nested event loop errors.
+
+    Args:
+        namespace: The namespace dict to make available in the shell
+    """
+    # Apply nest_asyncio to allow IPython to run its own event loop
+    # This is needed because we're already inside an async context
+    import nest_asyncio
+
+    nest_asyncio.apply()
+
+    with contextlib.suppress(EOFError, ValueError):
+        # Configure IPython for async/await support
+        from IPython.terminal.embed import InteractiveShellEmbed
+
+        model_names = [
+            k for k in namespace.keys() if k not in ("Tortoise", "tortoise", "connections", "apps")
+        ]
+        models_info = (
+            f"Available models: {', '.join(model_names)}" if model_names else "No models loaded"
+        )
+
+        banner = (
+            "Tortoise ORM Shell (IPython with async support)\n"
+            f"{models_info}\n"
+            "Use 'await' directly for async operations (e.g., 'await YourModel.all()').\n"
+        )
+
+        # Create IPython shell with async autoawait enabled
+        ipshell = InteractiveShellEmbed(
+            user_ns=namespace,
+            banner1=banner,
+        )
+        # Enable autoawait for top-level await
+        ipshell.autoawait = True
+        ipshell()
+
+
+async def _launch_ptpython_shell(namespace: dict[str, Any]) -> None:
+    """Launch ptpython shell asynchronously.
+
+    Args:
+        namespace: The namespace dict to make available in the shell
+    """
+    # Apply Windows patch for ptpython signal handler issues
+    if platform.system() == "Windows":
+        _patch_loop_factory_for_ptpython()
+
+    model_names = [
+        k for k in namespace.keys() if k not in ("Tortoise", "tortoise", "connections", "apps")
+    ]
+
+    # Print banner before launching ptpython
+    models_info = (
+        f"Available models: {', '.join(model_names)}" if model_names else "No models loaded"
+    )
+    print("Tortoise ORM Shell (ptpython)")
+    print(models_info)
+    print("Use 'await' directly for async operations (e.g., 'await YourModel.all()').\n")
+
+    with contextlib.suppress(EOFError, ValueError):
+        await ptpython_embed(
+            globals=namespace,
+            title="Tortoise Shell",
+            vi_mode=True,
+            return_asyncio_coroutine=True,
+            patch_stdout=True,
+        )
 
 
 @contextlib.asynccontextmanager
-async def aclose_tortoise() -> AsyncGenerator[None]:
-    try:
-        yield
-    finally:
-        if Tortoise._inited:
-            await connections.close_all()
+async def tortoise_cli_context(
+    config: dict[str, Any] | TortoiseConfig,
+) -> AsyncGenerator[TortoiseContext, None]:
+    async with TortoiseContext() as ctx:
+        await ctx.init(config=config)
+        yield ctx
 
 
 class _NoopRecorder(MigrationRecorder):
@@ -59,11 +168,17 @@ class _NoopRecorder(MigrationRecorder):
         return None
 
 
-def _load_config(ctx: CLIContext) -> dict[str, Any]:
+def _load_config(ctx: CLIContext) -> TortoiseConfig:
+    """Load Tortoise ORM configuration from various sources.
+
+    Returns:
+        TortoiseConfig: Validated configuration object
+    """
     config_value = ctx.config
     config_file = ctx.config_file
     if config_file:
-        return Tortoise._get_config_from_config_file(config_file)
+        config_dict = Tortoise._get_config_from_config_file(config_file)
+        return TortoiseConfig.from_dict(config_dict)
     if not config_value:
         config_value = utils.tortoise_orm_config()
     if not config_value:
@@ -73,25 +188,17 @@ def _load_config(ctx: CLIContext) -> dict[str, Any]:
     return utils.get_tortoise_config(config_value)
 
 
-def _normalized_config(config: dict[str, Any]) -> dict[str, Any]:
-    normalized = dict(config)
-    apps_config = config.get("apps", {})
-    normalized["apps"] = utils.normalize_apps_config(apps_config)
-    return normalized
-
-
-def _select_apps(
-    apps_config: dict[str, dict[str, Any]], app_labels: Iterable[str] | None
-) -> dict[str, dict[str, Any]]:
-    if not apps_config:
+def _select_apps(config: TortoiseConfig, app_labels: Iterable[str] | None) -> dict[str, AppConfig]:
+    """Select specific apps from config, or all if no labels specified."""
+    if not config.apps:
         raise utils.CLIError("No apps configured in TORTOISE_ORM")
     if not app_labels:
-        return apps_config
-    selected: dict[str, dict[str, Any]] = {}
+        return dict(config.apps)
+    selected: dict[str, AppConfig] = {}
     for label in app_labels:
-        if label not in apps_config:
+        if label not in config.apps:
             raise utils.CLIUsageError(f"Unknown app label {label}")
-        selected[label] = apps_config[label]
+        selected[label] = config.apps[label]
     return selected
 
 
@@ -156,12 +263,34 @@ def _ensure_migrations_package(app_label: str, app_config: dict[str, Any]) -> tu
     return migrations_module, package_path
 
 
+def _supports_color() -> bool:
+    """Check if the terminal supports ANSI colors."""
+    if not hasattr(sys.stdout, "isatty") or not sys.stdout.isatty():
+        return False
+    if sys.platform == "win32":
+        # Windows 10+ supports ANSI via Virtual Terminal Processing
+        return "WT_SESSION" in os.environ or "ANSICON" in os.environ
+    return True
+
+
+_COLOR = _supports_color()
+
+# ANSI color codes
+_BOLD = "\033[1m" if _COLOR else ""
+_DIM = "\033[2m" if _COLOR else ""
+_GREEN = "\033[32m" if _COLOR else ""
+_YELLOW = "\033[33m" if _COLOR else ""
+_CYAN = "\033[36m" if _COLOR else ""
+_RED = "\033[31m" if _COLOR else ""
+_RESET = "\033[0m" if _COLOR else ""
+
+
 def _echo_connection_header(connection_name: str, *, suffix: str = "") -> None:
-    print(f"Connection: {connection_name}{suffix}")
+    print(f"{_BOLD}Connection: {connection_name}{suffix}{_RESET}")
 
 
 def _echo_app_header(app_label: str) -> None:
-    print(f"  {app_label}:")
+    print(f"  {_BOLD}{app_label}:{_RESET}")
 
 
 def _emit_history(
@@ -178,10 +307,10 @@ def _emit_history(
         _echo_app_header(app_label)
         names = by_app[app_label]
         if not names:
-            print("    (no applied migrations)")
+            print(f"    {_DIM}(no applied migrations){_RESET}")
             continue
         for name in names:
-            print(f"    - {app_label} {name}")
+            print(f"    {_GREEN}-{_RESET} {app_label} {name}")
 
 
 def _emit_heads(
@@ -194,10 +323,10 @@ def _emit_heads(
         _echo_app_header(app_label)
         keys = list(loader.graph.leaf_nodes(app_label))
         if not keys:
-            print("    (no heads)")
+            print(f"    {_DIM}(no heads){_RESET}")
             continue
         for key in keys:
-            print(f"    - {app_label}.{key.name}")
+            print(f"    {_CYAN}-{_RESET} {app_label}.{key.name}")
 
 
 def _emit_migration_plan(
@@ -214,7 +343,7 @@ def _emit_migration_plan(
     suffix = f" ({', '.join(suffixes)})" if suffixes else ""
     _echo_connection_header(connection_name, suffix=suffix)
     if not plan:
-        print("  No migrations to apply")
+        print(f"  {_DIM}No migrations to apply{_RESET}")
         return
     applied = 0
     rolled_back = 0
@@ -222,11 +351,11 @@ def _emit_migration_plan(
         label = f"{step.migration.app_label}.{step.migration.name}"
         if step.backward:
             rolled_back += 1
-            print(f"  ROLLBACK  {label}")
+            print(f"  {_YELLOW}ROLLBACK{_RESET}  {label}")
         else:
             applied += 1
-            print(f"  APPLY     {label}")
-    print(f"  Plan: {applied} apply, {rolled_back} rollback")
+            print(f"  {_CYAN}APPLY{_RESET}     {label}")
+    print(f"  {_DIM}Plan: {applied} to apply, {rolled_back} to roll back{_RESET}")
 
 
 class CLIContext:
@@ -236,25 +365,71 @@ class CLIContext:
 
 
 async def init(ctx: CLIContext, app_labels: tuple[str, ...]) -> None:
-    config = _normalized_config(_load_config(ctx))
-    apps_config = _select_apps(config.get("apps", {}), app_labels or None)
+    config = _load_config(ctx)
+    apps_config = _select_apps(config, app_labels or None)
     for label, app_config in apps_config.items():
-        module, path = _ensure_migrations_package(label, app_config)
+        # Convert AppConfig to dict for _ensure_migrations_package
+        app_dict = app_config.to_dict()
+        module, path = _ensure_migrations_package(label, app_dict)
         print(f"{label}: {module} -> {path}")
 
 
 async def shell(ctx: CLIContext) -> None:
-    config = _normalized_config(_load_config(ctx))
-    async with aclose_tortoise():
-        await Tortoise.init(config=config)
-        with contextlib.suppress(EOFError, ValueError):
-            await embed(
-                globals=globals(),
-                title="Tortoise Shell",
-                vi_mode=True,
-                return_asyncio_coroutine=True,
-                patch_stdout=True,
-            )
+    """Launch an interactive shell with Tortoise ORM context.
+
+    Prefers IPython if available, falls back to ptpython.
+    Requires at least one shell provider to be installed.
+
+    Raises:
+        CLIError: If neither IPython nor ptpython is installed
+    """
+    # Detect which shell provider is available
+    provider = _get_available_shell_provider()
+
+    if provider is None:
+        raise utils.CLIError(
+            "No interactive shell available. Please install one of the following:\n"
+            "  - IPython (recommended): pip install tortoise-orm[ipython]\n"
+            "  - ptpython: pip install tortoise-orm[ptpython]\n"
+            "  - Or install directly: pip install ipython (or ptpython)"
+        )
+
+    config = _load_config(ctx)
+
+    # For IPython: Initialize context, prepare namespace, then launch synchronously
+    # IPython manages its own event loop for autoawait
+    if provider == ShellProvider.IPYTHON:
+        async with tortoise_cli_context(config) as tortoise_ctx:
+            # Prepare namespace with Tortoise context and useful imports
+            namespace = {
+                "Tortoise": Tortoise,
+                "tortoise": tortoise_ctx,
+                "apps": tortoise_ctx.apps,
+            }
+            # Add all models to namespace for easy access
+            if tortoise_ctx.apps:
+                for app_name, models_dict in tortoise_ctx.apps.items():
+                    for model_name, model_class in models_dict.items():
+                        namespace[model_name] = model_class
+
+            # Launch IPython synchronously - it will manage its own event loop
+            _launch_ipython_shell(namespace)
+    else:
+        # ptpython works fine in async context
+        async with tortoise_cli_context(config) as tortoise_ctx:
+            # Prepare namespace with Tortoise context and useful imports
+            namespace = {
+                "Tortoise": Tortoise,
+                "tortoise": tortoise_ctx,
+                "apps": tortoise_ctx.apps,
+            }
+            # Add all models to namespace for easy access
+            if tortoise_ctx.apps:
+                for app_name, models_dict in tortoise_ctx.apps.items():
+                    for model_name, model_class in models_dict.items():
+                        namespace[model_name] = model_class
+
+            await _launch_ptpython_shell(namespace)
 
 
 async def makemigrations(
@@ -262,24 +437,27 @@ async def makemigrations(
 ) -> None:
     if empty and not app_labels:
         raise utils.CLIUsageError("--empty requires at least one APP_LABEL")
-    config = _normalized_config(_load_config(ctx))
-    apps_config = _select_apps(config.get("apps", {}), app_labels or None)
-    for label, app_config in apps_config.items():
+    tortoise_config = _load_config(ctx)
+    apps_config = _select_apps(tortoise_config, app_labels or None)
+
+    apps_dict = {label: app.to_dict() for label, app in apps_config.items()}
+    for label, app_config in apps_dict.items():
         migrations_module, _ = _ensure_migrations_package(label, app_config)
         app_config["migrations"] = migrations_module
-    config["apps"] = apps_config
 
-    async with aclose_tortoise():
-        await Tortoise.init(config=config)
-        if not Tortoise.apps:
+    config_dict = tortoise_config.to_dict()
+    config_dict["apps"] = apps_dict
+
+    async with tortoise_cli_context(config_dict) as ctx:
+        if not ctx.apps:
             raise utils.CLIError("Tortoise apps are not initialized")
-        autodetector = MigrationAutodetector(Tortoise.apps, apps_config)
+        autodetector = MigrationAutodetector(ctx.apps, apps_dict)
         if empty:
             await autodetector.loader.build_graph()
             old_state = await autodetector._project_state()
             new_state = autodetector._current_state()
             writers = []
-            for label, app_config in apps_config.items():
+            for label, app_config in apps_dict.items():
                 migrations_module_name = app_config.get("migrations")
                 if not isinstance(migrations_module_name, str):
                     continue
@@ -301,7 +479,7 @@ async def makemigrations(
             writers = await autodetector.changes()
 
     if not writers:
-        print("No changes detected")
+        print(f"{_DIM}No changes detected{_RESET}")
         return
 
     for writer in writers:
@@ -312,8 +490,21 @@ async def makemigrations(
                 number = 1
             writer.name = format_migration_name(number, name)
         path = writer.write()
-        print(f"Created {writer.app_label}.{writer.name}")
-        print(f"  {path}")
+        print(f"  {_GREEN}Created{_RESET} {writer.app_label}.{writer.name}")
+        print(f"    {_DIM}{path}{_RESET}")
+
+
+def _progress_reporter(event: str, app_label: str, name: str) -> None:
+    """Inline progress reporter for migration execution."""
+    label = f"{app_label}.{name}"
+    if event == "apply_start":
+        print(f"  Applying {_CYAN}{label}{_RESET}...", end="", flush=True)
+    elif event == "apply_done":
+        print(f" {_GREEN}OK{_RESET}")
+    elif event == "rollback_start":
+        print(f"  Rolling back {_YELLOW}{label}{_RESET}...", end="", flush=True)
+    elif event == "rollback_done":
+        print(f" {_GREEN}OK{_RESET}")
 
 
 async def _run_migrate(
@@ -329,7 +520,7 @@ async def _run_migrate(
     if app_label and not migration and "." in app_label:
         app_label, migration = app_label.split(".", 1)
 
-    config = _normalized_config(_load_config(ctx))
+    config = _load_config(ctx)
 
     target = target_override
     if target is None:
@@ -340,7 +531,7 @@ async def _run_migrate(
                 raise utils.CLIUsageError("MIGRATION requires APP_LABEL")
             target = f"{app_label}.{migration}"
 
-    async with aclose_tortoise():
+    async with tortoise_cli_context(config):
         await migrate_api(
             config=config,
             app_labels=None,
@@ -349,6 +540,7 @@ async def _run_migrate(
             dry_run=dry_run,
             direction=direction,
             reporter=_emit_migration_plan,
+            progress=_progress_reporter,
         )
 
 
@@ -381,11 +573,16 @@ async def upgrade(
 
 async def downgrade(
     ctx: CLIContext,
-    app_label: str,
+    app_label: str | None,
     migration: str | None,
     fake: bool,
     dry_run: bool,
 ) -> None:
+    if not app_label:
+        config = _load_config(ctx)
+        labels = sorted(config.apps) if config.apps else []
+        available = ", ".join(labels) if labels else "(none)"
+        raise utils.CLIUsageError(f"app_label is required. Available app labels: {available}")
     if not migration and "." in app_label:
         app_label, migration = app_label.split(".", 1)
     if migration:
@@ -404,30 +601,91 @@ async def downgrade(
 
 
 async def history(ctx: CLIContext, app_labels: tuple[str, ...]) -> None:
-    config = _normalized_config(_load_config(ctx))
-    apps_config = _select_apps(config.get("apps", {}), app_labels or None)
-    config["apps"] = apps_config
-    apps_by_connection = _group_apps_by_connection(apps_config)
+    tortoise_config = _load_config(ctx)
+    apps_config = _select_apps(tortoise_config, app_labels or None)
+    apps_dict = {label: app.to_dict() for label, app in apps_config.items()}
+    apps_by_connection = _group_apps_by_connection(apps_dict)
 
-    async with aclose_tortoise():
-        await Tortoise.init(config=config)
+    config_dict = tortoise_config.to_dict()
+    config_dict["apps"] = apps_dict
+
+    async with tortoise_cli_context(config_dict):
         for connection_name, subset in apps_by_connection.items():
-            recorder = MigrationRecorder(connections.get(connection_name))
+            recorder = MigrationRecorder(get_connection(connection_name))
             applied = await recorder.applied_migrations()
             _emit_history(applied, connection_name, subset)
 
 
 async def heads(ctx: CLIContext, app_labels: tuple[str, ...]) -> None:
-    config = _normalized_config(_load_config(ctx))
-    apps_config = _select_apps(config.get("apps", {}), app_labels or None)
-    config["apps"] = apps_config
-    apps_by_connection = _group_apps_by_connection(apps_config)
+    tortoise_config = _load_config(ctx)
+    apps_config = _select_apps(tortoise_config, app_labels or None)
+    apps_dict = {label: app.to_dict() for label, app in apps_config.items()}
+    apps_by_connection = _group_apps_by_connection(apps_dict)
 
-    loader = MigrationLoader(apps_config, _NoopRecorder(), load=False)
+    loader = MigrationLoader(apps_dict, _NoopRecorder(), load=False)
     await loader.build_graph()
 
     for connection_name, subset in apps_by_connection.items():
         _emit_heads(loader, connection_name, subset)
+
+
+async def sqlmigrate_cmd(
+    ctx: CLIContext,
+    app_label: str | None,
+    migration_name: str | None,
+    backward: bool,
+) -> None:
+    config = _load_config(ctx)
+    if not app_label or not migration_name:
+        labels = sorted(config.apps) if config.apps else []
+        available = ", ".join(labels) if labels else "(none)"
+        if not app_label:
+            raise utils.CLIUsageError(f"app_label is required. Available app labels: {available}")
+        raise utils.CLIUsageError(
+            f"migration_name is required. Usage: sqlmigrate {app_label} <migration_name>"
+        )
+    try:
+        statements = await sqlmigrate_api(
+            config=config,
+            app_label=app_label,
+            migration_name=migration_name,
+            backward=backward,
+        )
+    except ValueError as exc:
+        raise utils.CLIError(str(exc)) from None
+
+    if not statements:
+        print(f"{_DIM}-- (no SQL statements){_RESET}")
+        return
+
+    config_dict = config.to_dict()
+    app_cfg = config_dict.get("apps", {}).get(app_label, {})
+    connection_name = app_cfg.get("default_connection", "default")
+    connection_url = config_dict.get("connections", {}).get(connection_name, "")
+    if isinstance(connection_url, dict):
+        engine = connection_url.get("engine", "")
+        supports_transactional_ddl = "postgres" in engine or "psycopg" in engine
+    else:
+        supports_transactional_ddl = "postgres" in str(connection_url) or "psycopg" in str(
+            connection_url
+        )
+
+    wrap_in_transaction = supports_transactional_ddl
+
+    if wrap_in_transaction:
+        print(f"{_DIM}BEGIN;{_RESET}")
+
+    for statement in statements:
+        if statement.startswith("--"):
+            print(f"{_DIM}{statement}{_RESET}")
+        else:
+            if not statement.rstrip().endswith(";"):
+                print(f"{statement};")
+            else:
+                print(statement)
+
+    if wrap_in_transaction:
+        print(f"{_DIM}COMMIT;{_RESET}")
 
 
 def _add_global_options(parser: argparse.ArgumentParser) -> None:
@@ -452,7 +710,9 @@ def _add_init_parser(subparsers: argparse._SubParsersAction) -> None:
 
 
 def _add_shell_parser(subparsers: argparse._SubParsersAction) -> None:
-    shell_parser = subparsers.add_parser("shell", help="Start an interactive shell.")
+    shell_parser = subparsers.add_parser(
+        "shell", help="Start an interactive shell (requires ipython or ptpython)."
+    )
     shell_parser.set_defaults(func=_run_shell)
 
 
@@ -496,7 +756,7 @@ def _add_upgrade_parser(subparsers: argparse._SubParsersAction) -> None:
 
 def _add_downgrade_parser(subparsers: argparse._SubParsersAction) -> None:
     downgrade_parser = subparsers.add_parser("downgrade", help="Unapply migrations.")
-    downgrade_parser.add_argument("app_label")
+    downgrade_parser.add_argument("app_label", nargs="?")
     downgrade_parser.add_argument("migration", nargs="?")
     downgrade_parser.add_argument(
         "--fake", action="store_true", help="Record migrations without executing SQL."
@@ -521,6 +781,18 @@ def _add_heads_parser(subparsers: argparse._SubParsersAction) -> None:
     heads_parser.set_defaults(func=_run_heads)
 
 
+def _add_sqlmigrate_parser(subparsers: argparse._SubParsersAction) -> None:
+    sqlmigrate_parser = subparsers.add_parser("sqlmigrate", help="Print the SQL for a migration.")
+    sqlmigrate_parser.add_argument("app_label", nargs="?", help="App label.")
+    sqlmigrate_parser.add_argument("migration_name", nargs="?", help="Migration name.")
+    sqlmigrate_parser.add_argument(
+        "--backward",
+        action="store_true",
+        help="Generate SQL to unapply the migration.",
+    )
+    sqlmigrate_parser.set_defaults(func=_run_sqlmigrate)
+
+
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="tortoise")
     _add_global_options(parser)
@@ -534,6 +806,7 @@ def _build_parser() -> argparse.ArgumentParser:
     _add_downgrade_parser(subparsers)
     _add_history_parser(subparsers)
     _add_heads_parser(subparsers)
+    _add_sqlmigrate_parser(subparsers)
 
     return parser
 
@@ -568,6 +841,10 @@ async def _run_history(ctx: CLIContext, args: argparse.Namespace) -> None:
 
 async def _run_heads(ctx: CLIContext, args: argparse.Namespace) -> None:
     await heads(ctx, tuple(args.app_labels))
+
+
+async def _run_sqlmigrate(ctx: CLIContext, args: argparse.Namespace) -> None:
+    await sqlmigrate_cmd(ctx, args.app_label, args.migration_name, args.backward)
 
 
 async def run_cli_async(argv: list[str] | None = None) -> int:

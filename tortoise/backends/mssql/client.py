@@ -65,8 +65,7 @@ class MSSQLClient(ODBCClient):
         async with self.acquire_connection() as connection:
             self.log.debug("%s: %s", query, values)
             async with connection.cursor() as cursor:
-                await cursor.execute(query, values)
-                await cursor.execute("SELECT @@IDENTITY;")
+                await cursor.execute(f"SET NOCOUNT ON; {query}; SELECT @@IDENTITY", values)
                 return (await cursor.fetchone())[0]
 
     async def db_delete(self) -> None:
