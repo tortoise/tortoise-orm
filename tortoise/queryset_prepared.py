@@ -4,9 +4,9 @@ import sys
 from abc import ABC, abstractmethod
 from collections import defaultdict
 from collections.abc import Iterable
-from typing import Any, Literal, NoReturn, Protocol, cast
+from typing import TYPE_CHECKING, Any, Literal, NoReturn, Protocol, cast
 
-from pypika_tortoise.queries import QueryBuilder
+from pypika_tortoise.queries import QueryBuilder, Table
 from pypika_tortoise.terms import Term
 
 from tortoise.backends.base.client import BaseDBAsyncClient
@@ -37,9 +37,12 @@ if sys.version_info >= (3, 11):  # pragma: nocoverage
 else:
     from typing_extensions import Self
 
+if TYPE_CHECKING:
+    from tortoise import Model
+
 
 class PreparedQuerySetSingle(QuerySetSingle[T_co], Protocol):
-    def prepared(self) -> PreparedQuerySet[MODEL]: ...
+    def prepared(self) -> PreparedQuerySet: ...
 
     async def execute(self, **params) -> list[MODEL]: ...
 
@@ -94,30 +97,6 @@ class CachedSql:
         return filled_params
 
 
-class _PreparingQueryMixin(AwaitableQuery[MODEL], ABC):
-    _cache_key: str
-    _db_for_write: bool
-
-    @abstractmethod
-    def _clone(self, new_cls: type[AwaitableQuery[MODEL]] | None = None) -> AwaitableQuery[MODEL]: ...
-
-    @abstractmethod
-    def _clone_prepared(self) -> _PreparedQueryMixin[MODEL]:
-        ...
-
-    def prepared(self) -> Self:
-        if self._cache_key in self.model._meta.query_cache:
-            return self.model._meta.query_cache[self._cache_key]
-
-        queryset = self._clone_prepared()
-
-        queryset._choose_db_if_not_chosen(self._db_for_write)
-        queryset._make_query()
-        queryset._init_prepared()
-
-        return queryset
-
-
 class _PreparedQueryMixin(AwaitableQuery[MODEL], ABC):
     _cache_key: str
     _sql_cache: dict[str, CachedSql]
@@ -125,11 +104,14 @@ class _PreparedQueryMixin(AwaitableQuery[MODEL], ABC):
     _dynamic_params_names: list[str]
     _db_for_write: bool
 
+    @abstractmethod
+    def _clone(self) -> Self: ...
+
     def prepare_sql(self, key: str) -> NoReturn:
         raise NotImplementedError("QuerySets must be prepared only once")
 
-    def prepared(self) -> PreparedQuerySet[MODEL]:
-        return self
+    def prepared(self) -> PreparedQuerySet:
+        return cast(PreparedQuerySet, self)
 
     def _init_prepared(self) -> None:
         _, params = self.query.get_parameterized_sql()
@@ -173,13 +155,13 @@ class _PreparedQueryMixin(AwaitableQuery[MODEL], ABC):
     @abstractmethod
     async def execute(self, **params) -> Any: ...
 
-    def filter(self, *args: Q, **kwargs: Any) -> PreparedQuerySet[MODEL]:
+    def filter(self, *args: Q, **kwargs: Any) -> PreparedQuerySet:
         return cast(PreparedQuerySet, self)
 
-    def exclude(self, *args: Q, **kwargs: Any) -> PreparedQuerySet[MODEL]:
+    def exclude(self, *args: Q, **kwargs: Any) -> PreparedQuerySet:
         return cast(PreparedQuerySet, self)
 
-    def order_by(self, *orderings: str) -> PreparedQuerySet[MODEL]:
+    def order_by(self, *orderings: str) -> PreparedQuerySet:
         return cast(PreparedQuerySet, self)
 
     def latest(self, *orderings: str) -> PreparedQuerySetSingle[MODEL | None]:
@@ -188,16 +170,16 @@ class _PreparedQueryMixin(AwaitableQuery[MODEL], ABC):
     def earliest(self, *orderings: str) -> PreparedQuerySetSingle[MODEL | None]:
         return cast(PreparedQuerySetSingle, self)
 
-    def limit(self, limit: int | Parameter) -> PreparedQuerySet[MODEL]:
+    def limit(self, limit: int | Parameter) -> PreparedQuerySet:
         return cast(PreparedQuerySet, self)
 
-    def offset(self, offset: int | Parameter) -> PreparedQuerySet[MODEL]:
+    def offset(self, offset: int | Parameter) -> PreparedQuerySet:
         return cast(PreparedQuerySet, self)
 
-    def __getitem__(self, key: slice) -> PreparedQuerySet[MODEL]:
+    def __getitem__(self, key: slice) -> PreparedQuerySet:
         return cast(PreparedQuerySet, self)
 
-    def distinct(self) -> PreparedQuerySet[MODEL]:
+    def distinct(self) -> PreparedQuerySet:
         return cast(PreparedQuerySet, self)
 
     def select_for_update(
@@ -206,13 +188,13 @@ class _PreparedQueryMixin(AwaitableQuery[MODEL], ABC):
         skip_locked: bool = False,
         of: tuple[str, ...] = (),
         no_key: bool = False,
-    ) -> PreparedQuerySet[MODEL]:
+    ) -> PreparedQuerySet:
         return cast(PreparedQuerySet, self)
 
-    def annotate(self, **kwargs: Expression | Term) -> PreparedQuerySet[MODEL]:
+    def annotate(self, **kwargs: Expression | Term) -> PreparedQuerySet:
         return cast(PreparedQuerySet, self)
 
-    def group_by(self, *fields: str) -> PreparedQuerySet[MODEL]:
+    def group_by(self, *fields: str) -> PreparedQuerySet:
         return cast(PreparedQuerySet, self)
 
     def values_list(
@@ -235,7 +217,7 @@ class _PreparedQueryMixin(AwaitableQuery[MODEL], ABC):
     def exists(self) -> PreparedExistsQuery:
         return cast(PreparedExistsQuery, self)
 
-    def all(self) -> PreparedQuerySet[MODEL]:
+    def all(self) -> PreparedQuerySet:
         return cast(PreparedQuerySet, self)
 
     def first(self) -> PreparedQuerySetSingle[MODEL | None]:
@@ -273,49 +255,59 @@ class _PreparedQueryMixin(AwaitableQuery[MODEL], ABC):
     def get_or_none(self, *args: Q, **kwargs: Any) -> PreparedQuerySetSingle[MODEL | None]:
         return cast(PreparedQuerySetSingle, self)
 
-    def only(self, *fields_for_select: str) -> PreparedQuerySet[MODEL]:
+    def only(self, *fields_for_select: str) -> PreparedQuerySet:
         return cast(PreparedQuerySet, self)
 
-    def select_related(self, *fields: str) -> PreparedQuerySet[MODEL]:
+    def select_related(self, *fields: str) -> PreparedQuerySet:
         return cast(PreparedQuerySet, self)
 
-    def force_index(self, *index_names: str) -> PreparedQuerySet[MODEL]:
+    def force_index(self, *index_names: str) -> PreparedQuerySet:
         return cast(PreparedQuerySet, self)
 
-    def use_index(self, *index_names: str) -> PreparedQuerySet[MODEL]:
+    def use_index(self, *index_names: str) -> PreparedQuerySet:
         return cast(PreparedQuerySet, self)
 
-    def prefetch_related(self, *args: str | Prefetch) -> PreparedQuerySet[MODEL]:
+    def prefetch_related(self, *args: str | Prefetch) -> PreparedQuerySet:
         return cast(PreparedQuerySet, self)
 
 
-class PreparingQuerySet(QuerySet[MODEL], _PreparingQueryMixin):
-    __slots__ = (
-        "_cache_key",
-        "_db_for_write",
-    )
+class PreparingQuerySet(QuerySet[MODEL]):
+    __slots__ = ("_cache_key",)
 
     def __init__(self, model: type[MODEL], cache_key: str) -> None:
         super().__init__(model)
         self._cache_key: str = cache_key
-        self._db_for_write = self._select_for_update
 
     def _clone(self, _new_cls: type[QuerySet[MODEL]] | None = None) -> PreparingQuerySet[MODEL]:
         queryset = cast(Self, super()._clone(_new_cls))
         queryset._cache_key = self._cache_key
-        queryset._db_for_write = self._select_for_update
         return cast(PreparingQuerySet, queryset)
 
-    def _clone_prepared(self) -> _PreparedQueryMixin[MODEL]:
-        return self._clone(PreparedQuerySet)
+    def prepared(self) -> PreparedQuerySet:
+        if self._cache_key in self.model._meta.query_cache:
+            return cast(PreparedQuerySet, self.model._meta.query_cache[self._cache_key])
+
+        self._db = self._choose_db(self._select_for_update)
+        self._make_query()
+
+        prepared = PreparedQuerySet(
+            model=self.model,
+            db=self._db,
+            query=self.query,
+            prefetch_map=self._prefetch_map,
+            prefetch_queries=self._prefetch_queries,
+            select_related_idx=self._select_related_idx,
+            single=self._single,
+            raise_does_not_exist=self._raise_does_not_exist,
+            select_for_update=self._select_for_update,
+            custom_fields=list(self._annotations.keys()),
+            cache_key=self._cache_key,
+        )
+        prepared._init_prepared()
+        return prepared
 
     def prepare_sql(self, key: str) -> NoReturn:
         raise NotImplementedError("QuerySets must be prepared only once")
-
-    def prepared(self) -> PreparedQuerySet[MODEL]:
-        queryset = cast(Self, super().prepared())
-        queryset._custom_fields = list(self._annotations.keys())
-        return queryset
 
     def filter(self, *args: Q, **kwargs: Any) -> PreparingQuerySet[MODEL]:
         return cast(PreparingQuerySet, super().filter(*args, **kwargs))
@@ -391,7 +383,7 @@ class PreparingQuerySet(QuerySet[MODEL], _PreparingQueryMixin):
         self, *fields_: str, flat: bool = False
     ) -> PreparedValuesListQuery[Literal[False]]:
         fields_for_select_list = self._get_fields_list_for_select(*fields_)
-        query = ValuesListQuery(
+        query: ValuesListQuery = ValuesListQuery(
             db=self._db,
             model=self.model,
             q_objects=self._q_objects,
@@ -412,8 +404,8 @@ class PreparingQuerySet(QuerySet[MODEL], _PreparingQueryMixin):
         query._db = query._choose_db(True)
         query._make_query()
 
-        prepared = PreparedValuesListQuery(
-            db=self._db,
+        prepared: PreparedValuesListQuery = PreparedValuesListQuery(
+            db=query._db,
             model=self.model,
             single=self._single,
             raise_does_not_exist=self._raise_does_not_exist,
@@ -428,7 +420,7 @@ class PreparingQuerySet(QuerySet[MODEL], _PreparingQueryMixin):
 
     def values(self, *args: str, **kwargs: str) -> PreparedValuesQuery[Literal[False]]:
         fields_for_select = self._get_fields_for_select(*args, **kwargs)
-        query = ValuesQuery(
+        query: ValuesQuery = ValuesQuery(
             db=self._db,
             model=self.model,
             q_objects=self._q_objects,
@@ -448,8 +440,8 @@ class PreparingQuerySet(QuerySet[MODEL], _PreparingQueryMixin):
         query._db = query._choose_db(True)
         query._make_query()
 
-        prepared = PreparedValuesQuery(
-            db=self._db,
+        prepared: PreparedValuesQuery = PreparedValuesQuery(
+            db=query._db,
             model=self.model,
             single=self._single,
             raise_does_not_exist=self._raise_does_not_exist,
@@ -461,7 +453,7 @@ class PreparingQuerySet(QuerySet[MODEL], _PreparingQueryMixin):
         prepared._init_prepared()
         return prepared
 
-    def delete(self) -> PreparedDeleteQuery:
+    def delete(self) -> PreparedDeleteQuery:  # type: ignore
         query = DeleteQuery(
             model=self.model,
             db=self._db,
@@ -476,14 +468,14 @@ class PreparingQuerySet(QuerySet[MODEL], _PreparingQueryMixin):
 
         prepared = PreparedDeleteQuery(
             model=self.model,
-            db=self._db,
+            db=query._db,
             query=query.query,
             cache_key=self._cache_key,
         )
         prepared._init_prepared()
         return prepared
 
-    def update(self, **kwargs: Any) -> PreparedUpdateQuery:
+    def update(self, **kwargs: Any) -> PreparedUpdateQuery:  # type: ignore
         query = UpdateQuery(
             model=self.model,
             update_kwargs=kwargs,
@@ -499,14 +491,14 @@ class PreparingQuerySet(QuerySet[MODEL], _PreparingQueryMixin):
 
         prepared = PreparedUpdateQuery(
             model=self.model,
-            db=self._db,
+            db=query._db,
             query=query.query,
             cache_key=self._cache_key,
         )
         prepared._init_prepared()
         return prepared
 
-    def count(self) -> PreparedCountQuery:
+    def count(self) -> PreparedCountQuery:  # type: ignore
         query = CountQuery(
             model=self.model,
             db=self._db,
@@ -523,7 +515,7 @@ class PreparingQuerySet(QuerySet[MODEL], _PreparingQueryMixin):
 
         prepared = PreparedCountQuery(
             model=self.model,
-            db=self._db,
+            db=query._db,
             query=query.query,
             limit=self._limit,
             offset=self._offset,
@@ -532,7 +524,7 @@ class PreparingQuerySet(QuerySet[MODEL], _PreparingQueryMixin):
         prepared._init_prepared()
         return prepared
 
-    def exists(self) -> PreparedExistsQuery:
+    def exists(self) -> PreparedExistsQuery:  # type: ignore
         query = ExistsQuery(
             model=self.model,
             db=self._db,
@@ -547,7 +539,7 @@ class PreparingQuerySet(QuerySet[MODEL], _PreparingQueryMixin):
 
         prepared = PreparedExistsQuery(
             model=self.model,
-            db=self._db,
+            db=query._db,
             query=query.query,
             cache_key=self._cache_key,
         )
@@ -608,7 +600,7 @@ class PreparingQuerySet(QuerySet[MODEL], _PreparingQueryMixin):
         return cast(PreparingQuerySet, super().prefetch_related(*args))
 
 
-class PreparedQuerySet(_PreparedQueryMixin, QuerySet[MODEL]):
+class PreparedQuerySet(_PreparedQueryMixin):
     __slots__ = (
         "_cache_key",
         "_custom_fields",
@@ -618,28 +610,65 @@ class PreparedQuerySet(_PreparedQueryMixin, QuerySet[MODEL]):
         "_db_for_write",
     )
 
-    def __init__(self, model: type[MODEL], cache_key: str) -> None:
+    def __init__(
+        self,
+        model: type[MODEL],
+        query: QueryBuilder,
+        db: BaseDBAsyncClient,
+        prefetch_map: dict[str, set[str | Prefetch]],
+        prefetch_queries: dict[str, list[tuple[str | None, QuerySet]]],
+        select_related_idx: list[
+            tuple[type[Model], int, Table | str, type[Model], Iterable[str | None]]
+        ],
+        single: bool,
+        raise_does_not_exist: bool,
+        select_for_update: bool,
+        custom_fields: list[str] | None,
+        cache_key: str,
+    ) -> None:
         super().__init__(model)
+        self._db = db
+        self._prefetch_map = prefetch_map
+        self._prefetch_queries = prefetch_queries
+        self._select_related_idx = select_related_idx
+        self._single = single
+        self._raise_does_not_exist = raise_does_not_exist
+        self._db_for_write = select_for_update
+        self._custom_fields: list[str] | None = custom_fields
+
+        self.query = query
         self._cache_key: str = cache_key
         self._sql_cache: dict[str, CachedSql] = {}
         self._dynamic_params: dict[str, CollectionParameter] = {}
         self._dynamic_params_names: list[str] = []
-        self._db_for_write = self._select_for_update
-        self._custom_fields: list[str] | None = None
 
-    def _clone(self, _new_cls: type[QuerySet[MODEL]] | None = None) -> PreparedQuerySet[MODEL]:
-        queryset = cast(Self, super()._clone(_new_cls))
+    def _clone(self) -> PreparedQuerySet:
+        queryset = self.__class__.__new__(self.__class__)
+        queryset.model = self.model
+        queryset.query = self.query
+        queryset._capabilities = self._capabilities
+        queryset._annotations = self._annotations
+
+        queryset._db = self._db
+        queryset._prefetch_map = self._prefetch_map
+        queryset._prefetch_queries = self._prefetch_queries
+        queryset._select_related_idx = self._select_related_idx
+        queryset._single = self._single
+        queryset._raise_does_not_exist = self._raise_does_not_exist
+        queryset._db_for_write = self._db_for_write
+        queryset._custom_fields = self._custom_fields
+
         queryset._cache_key = self._cache_key
         queryset._sql_cache = self._sql_cache
         queryset._dynamic_params = self._dynamic_params
         queryset._dynamic_params_names = self._dynamic_params_names
-        queryset._db_for_write = self._db_for_write
-        return cast(PreparedQuerySet, queryset)
+        return queryset
 
     async def execute(self, **params) -> list[MODEL]:
         cached_query = self._get_or_create_cached_sql(params)
         filled_params = cached_query.make_filled_params(params)
 
+        self._choose_db_if_not_chosen(self._db_for_write)
         instance_list = await self._db.executor_class(
             model=self.model,
             db=self._db,
@@ -688,11 +717,14 @@ class PreparedUpdateQuery(_PreparedQueryMixin):
         self._dynamic_params_names: list[str] = []
         self._db_for_write: bool = True
 
-    def _clone(self) -> PreparedUpdateQuery[MODEL]:
+    def _clone(self) -> PreparedUpdateQuery:
         query = self.__class__.__new__(self.__class__)
         query.model = self.model
         query.query = self.query
         query._db = self._db
+        query._capabilities = self._capabilities
+        query._annotations = self._annotations
+
         query._cache_key = self._cache_key
         query._db_for_write = self._db_for_write
         query._sql_cache = self._sql_cache
@@ -717,11 +749,11 @@ class PreparedDeleteQuery(_PreparedQueryMixin):
     )
 
     def __init__(
-            self,
-            model: type[MODEL],
-            db: BaseDBAsyncClient,
-            query: QueryBuilder,
-            cache_key: str,
+        self,
+        model: type[MODEL],
+        db: BaseDBAsyncClient,
+        query: QueryBuilder,
+        cache_key: str,
     ) -> None:
         super().__init__(model)
         self._db = db
@@ -733,10 +765,12 @@ class PreparedDeleteQuery(_PreparedQueryMixin):
         self._dynamic_params_names: list[str] = []
         self._db_for_write: bool = True
 
-    def _clone(self) -> PreparedDeleteQuery[MODEL]:
+    def _clone(self) -> PreparedDeleteQuery:
         query = self.__class__.__new__(self.__class__)
         query.model = self.model
         query.query = self.query
+        query._capabilities = self._capabilities
+        query._annotations = self._annotations
         query._db = self._db
         query._cache_key = self._cache_key
         query._db_for_write = self._db_for_write
@@ -762,11 +796,11 @@ class PreparedExistsQuery(_PreparedQueryMixin):
     )
 
     def __init__(
-            self,
-            model: type[MODEL],
-            db: BaseDBAsyncClient,
-            query: QueryBuilder,
-            cache_key: str,
+        self,
+        model: type[MODEL],
+        db: BaseDBAsyncClient,
+        query: QueryBuilder,
+        cache_key: str,
     ) -> None:
         super().__init__(model)
         self._db = db
@@ -778,10 +812,12 @@ class PreparedExistsQuery(_PreparedQueryMixin):
         self._dynamic_params_names: list[str] = []
         self._db_for_write: bool = False
 
-    def _clone(self) -> PreparedExistsQuery[MODEL]:
+    def _clone(self) -> PreparedExistsQuery:
         query = self.__class__.__new__(self.__class__)
         query.model = self.model
         query.query = self.query
+        query._capabilities = self._capabilities
+        query._annotations = self._annotations
         query._db = self._db
         query._cache_key = self._cache_key
         query._db_for_write = self._db_for_write
@@ -810,13 +846,13 @@ class PreparedCountQuery(_PreparedQueryMixin):
     )
 
     def __init__(
-            self,
-            model: type[MODEL],
-            db: BaseDBAsyncClient,
-            query: QueryBuilder,
-            limit: int | None,
-            offset: int | None,
-            cache_key: str,
+        self,
+        model: type[MODEL],
+        db: BaseDBAsyncClient,
+        query: QueryBuilder,
+        limit: int | None,
+        offset: int | None,
+        cache_key: str,
     ) -> None:
         super().__init__(model)
         self._db = db
@@ -830,10 +866,12 @@ class PreparedCountQuery(_PreparedQueryMixin):
         self._dynamic_params_names: list[str] = []
         self._db_for_write: bool = False
 
-    def _clone(self) -> PreparedCountQuery[MODEL]:
+    def _clone(self) -> PreparedCountQuery:
         query = self.__class__.__new__(self.__class__)
         query.model = self.model
         query.query = self.query
+        query._capabilities = self._capabilities
+        query._annotations = self._annotations
         query._db = self._db
         query._limit = self._limit
         query._offset = self._offset
@@ -868,16 +906,16 @@ class PreparedValuesListQuery(ValuesListQuery[SINGLE], _PreparedQueryMixin):
     )
 
     def __init__(
-            self,
-            model: type[MODEL],
-            db: BaseDBAsyncClient,
-            single: bool,
-            raise_does_not_exist: bool,
-            fields_for_select_list: tuple[str, ...] | list[str],
-            flat: bool,
-            annotations: dict[str, Any],
-            query: QueryBuilder,
-            cache_key: str,
+        self,
+        model: type[MODEL],
+        db: BaseDBAsyncClient,
+        single: bool,
+        raise_does_not_exist: bool,
+        fields_for_select_list: tuple[str, ...] | list[str],
+        flat: bool,
+        annotations: dict[str, Any],
+        query: QueryBuilder,
+        cache_key: str,
     ) -> None:
         super().__init__(
             model=model,
@@ -905,13 +943,29 @@ class PreparedValuesListQuery(ValuesListQuery[SINGLE], _PreparedQueryMixin):
         self._dynamic_params_names: list[str] = []
         self._db_for_write: bool = False
 
-    def _clone(self) -> PreparedValuesListQuery[MODEL]:
+    def _clone(self) -> PreparedValuesListQuery[SINGLE]:
         query = self.__class__.__new__(self.__class__)
         query.model = self.model
         query.query = self.query
         query._db = self._db
+        query._capabilities = self._capabilities
 
-        # TODO: clone rest of the fields
+        query.fields = self.fields
+        query._limit = self._limit
+        query._offset = self._offset
+        query._distinct = self._distinct
+        query._orderings = self._orderings
+        query._custom_filters = self._custom_filters
+        query._q_objects = self._q_objects
+        query._single = self._single
+        query._raise_does_not_exist = self._raise_does_not_exist
+        query._fields_for_select_list = self._fields_for_select_list
+        query._flat = self._flat
+        query._group_bys = self._group_bys
+        query._force_indexes = self._force_indexes
+        query._use_indexes = self._use_indexes
+        query._fields_to_select_sql = self._fields_to_select_sql
+        query._annotations = self._annotations
 
         query._cache_key = self._cache_key
         query._db_for_write = self._db_for_write
@@ -974,14 +1028,13 @@ class PreparedValuesQuery(ValuesQuery[SINGLE], _PreparedQueryMixin):
         self._dynamic_params_names: list[str] = []
         self._db_for_write: bool = False
 
-    def _clone(self, _new_cls: type[ValuesQuery[MODEL]] | None = None) -> ValuesQuery[MODEL]:
-        if _new_cls is None:
-            _new_cls = self.__class__
-
-        # TODO: rewrite ._clone()
-
-        query = _new_cls.__new__(_new_cls)
+    def _clone(self) -> PreparedValuesQuery[SINGLE]:
+        query = self.__class__.__new__(self.__class__)
         query.model = self.model
+        query.query = self.query
+        query._db = self._db
+        query._capabilities = self._capabilities
+
         query._fields_for_select = self._fields_for_select
         query._limit = self._limit
         query._offset = self._offset
@@ -995,6 +1048,8 @@ class PreparedValuesQuery(ValuesQuery[SINGLE], _PreparedQueryMixin):
         query._group_bys = self._group_bys
         query._force_indexes = self._force_indexes
         query._use_indexes = self._use_indexes
+        query._annotations = self._annotations
+
         query._cache_key = self._cache_key
         query._db_for_write = self._db_for_write
         query._sql_cache = self._sql_cache
