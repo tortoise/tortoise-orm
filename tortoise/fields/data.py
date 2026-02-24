@@ -775,6 +775,9 @@ class JSONField(Field[T], dict, list):  # type: ignore
             return value
 
         if _PydanticBaseModel is not None and isinstance(value, _PydanticBaseModel):
+            if self.encoder is JSON_DUMPS:
+                return value.model_dump_json()
+            # self.encoder may be a custom json encoder
             value = value.model_dump()
 
         return self.encoder(value)

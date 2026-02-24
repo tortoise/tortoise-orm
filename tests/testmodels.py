@@ -4,11 +4,13 @@ This is the testing Models
 
 import binascii
 import datetime
+import json
 import os
 import re
 import uuid
 from decimal import Decimal
 from enum import Enum, IntEnum
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict
 
@@ -333,6 +335,24 @@ def raise_if_not_dict_or_list(value: dict | list):
         raise ValidationError("Value must be a dict or list.")
 
 
+class DecimalEncoder(json.JSONEncoder):
+    def default(self, obj: Any) -> Any:
+        if isinstance(obj, Decimal):
+            return str(obj)
+        return super().default(obj)
+
+    @classmethod
+    def dumps(cls, obj: Any) -> str:
+        return json.dumps(obj, cls=cls)
+
+
+class IndexEncoder(DecimalEncoder):
+    def default(self, obj: Any) -> Any:
+        if isinstance(obj, Index):
+            return obj.describe()
+        return super().default(obj)
+
+
 class JSONFields(Model):
     """
     This model contains many JSON blobs
@@ -350,6 +370,10 @@ class JSONFields(Model):
     data_pydantic = fields.JSONField[TestSchemaForJSONField](
         default=json_pydantic_default, field_type=TestSchemaForJSONField
     )
+
+    # Test cases where encoders are provided
+    data_decimal = fields.JSONField[dict | list](null=True, encoder=DecimalEncoder.dumps)
+    data_index = fields.JSONField[dict | list](null=True, encoder=IndexEncoder.dumps)
 
 
 class UUIDFields(Model):

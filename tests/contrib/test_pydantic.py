@@ -1366,6 +1366,8 @@ async def test_json_field(db):
         "data_default": {"a": 1},
         "data_validate": None,
         "data_pydantic": json_pydantic_default.model_dump(),
+        "data_decimal": None,
+        "data_index": None,
     }
     ret1 = creator.model_validate(json_field_1_get).model_dump()
     assert ret1 == {
@@ -1375,6 +1377,8 @@ async def test_json_field(db):
         "data_default": {"a": 1},
         "data_validate": None,
         "data_pydantic": json_pydantic_default.model_dump(),
+        "data_decimal": None,
+        "data_index": None,
     }
 
 
