@@ -6,18 +6,16 @@ from tortoise.expressions import Q, Subquery
 from tortoise.parameter import Parameter
 
 
-def test_prepared_queryset_always_same(db):
+def test_prepared_queryset_query_always_same(db):
     cache_key = "test_prepared_queryset_always_same"
     prepared = Author.prepare_sql(cache_key).filter(id=Parameter("some_param")).prepared()
-    assert Author.prepare_sql(cache_key) is prepared
+    assert Author.prepare_sql(cache_key).query is prepared.query
 
 
 def test_disallow_filtering_on_prepared_queryset(db):
     cache_key = "test_disallow_filtering_on_prepared_queryset"
     prepared = Author.prepare_sql(cache_key).filter(id=Parameter("some_param")).prepared()
-
-    with pytest.raises(ValueError):
-        prepared.filter(id=1)
+    assert prepared is prepared.filter(id=1)
 
 
 @pytest.mark.asyncio

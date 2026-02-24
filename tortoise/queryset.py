@@ -45,7 +45,7 @@ QUERY: QueryBuilder = QueryBuilder()
 
 if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.models import Model
-    from tortoise.queryset_prepared import PreparedQuerySet
+    from tortoise.queryset_prepared import PreparingQuerySet
 
 MODEL = TypeVar("MODEL", bound="Model")
 PRIMARY_KEY = TypeVar("PRIMARY_KEY")
@@ -1278,7 +1278,7 @@ class QuerySet(AwaitableQuery[MODEL]):
             raise MultipleObjectsReturned(self.model)
         return instance_list
 
-    def prepare_sql(self, key: str) -> PreparedQuerySet[MODEL]:
+    def prepare_sql(self, key: str) -> PreparingQuerySet[MODEL]:
         """
         Cache generated sql of this query set.
         If query set is already in cache, return cached version with already generated sql.
@@ -1289,9 +1289,9 @@ class QuerySet(AwaitableQuery[MODEL]):
             queryset._db = queryset._choose_db(queryset._db_for_write)
             return queryset
 
-        from tortoise.queryset_prepared import PreparedQuerySet
+        from tortoise.queryset_prepared import PreparingQuerySet
 
-        queryset = cast(PreparedQuerySet[MODEL], self._clone(PreparedQuerySet))
+        queryset = cast(PreparingQuerySet[MODEL], self._clone(PreparingQuerySet))
         queryset._cache_key = key
         queryset._prepared = False
         queryset._sql_cache = {}
