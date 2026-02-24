@@ -1284,7 +1284,10 @@ class QuerySet(AwaitableQuery[MODEL]):
         If query set is already in cache, return cached version with already generated sql.
         """
         if key in self.model._meta.query_cache:
-            return self.model._meta.query_cache[key]
+            queryset = self.model._meta.query_cache[key]._clone()
+            queryset._db = None
+            queryset._db = queryset._choose_db(queryset._db_for_write)
+            return queryset
 
         from tortoise.queryset_prepared import PreparedQuerySet
 
@@ -1295,6 +1298,8 @@ class QuerySet(AwaitableQuery[MODEL]):
         queryset._dynamic_params = {}
         queryset._dynamic_params_names = []
         queryset._db_for_write = self._select_for_update
+        queryset._db = None
+        queryset._db = queryset._choose_db(queryset._db_for_write)
 
         return queryset
 
