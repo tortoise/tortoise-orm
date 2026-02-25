@@ -8,6 +8,13 @@ Changelog
 1.1
 ===
 
+1.1.6
+-----
+
+Fixed
+^^^^^
+- Migration generator now correctly orders ``AddField`` before ``AddIndex`` or ``AddConstraint`` when adding a new indexed field or constraint field to a model.
+
 1.1.5
 -----
 

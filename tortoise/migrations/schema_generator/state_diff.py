@@ -115,6 +115,7 @@ class StateModelDiff:
             return []
 
         operations: list[TortoiseOperation] = []
+        operations.extend(StateFieldDiff(self.old_state, self.new_state).generate_operations())
         operations.extend(self._generate_index_operations())
         operations.extend(self._generate_constraint_operations())
         old_options = _model_options_for_compare(self.old_state.options)
@@ -127,7 +128,6 @@ class StateModelDiff:
                 )
             )
 
-        operations.extend(StateFieldDiff(self.old_state, self.new_state).generate_operations())
         return operations
 
     @staticmethod
