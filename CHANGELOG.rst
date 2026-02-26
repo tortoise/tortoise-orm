@@ -13,7 +13,7 @@ Changelog
 
 Fixed
 ^^^^^
-- Migration generator now correctly orders ``AddField`` before ``AddIndex`` or ``AddConstraint`` when adding a new indexed field or constraint field to a model.
+- Migration generator now correctly orders ``AddIndex``, ``RemoveIndex``, ``AddConstraint``, ``RemoveConstraint`` operatins when adding/removing a field to a model and is used in an index or constraint.
 
 1.1.5
 -----
