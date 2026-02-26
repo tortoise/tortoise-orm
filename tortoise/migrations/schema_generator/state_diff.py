@@ -131,7 +131,6 @@ class StateModelDiff:
 
         # Classes that must always be last
         always_last = (AddIndex, AddConstraint)
-
         operations = sorted(operations, key=lambda op: isinstance(op, always_last))
         return operations
 
