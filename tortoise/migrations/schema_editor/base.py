@@ -359,6 +359,16 @@ class BaseSchemaEditor(SchemaQuotingMixin):
                     comment=comment,
                 )
 
+            if field_object.has_db_default():
+                if hasattr(field_object.db_default, "get_sql"):
+                    field_creation_string += (
+                        f" DEFAULT {field_object.db_default.get_sql(dialect=self.DIALECT)}"
+                    )
+                else:
+                    db_val = field_object.to_db_value(field_object.db_default, model)
+                    escaped = self._escape_default_value(db_val)
+                    field_creation_string += f" DEFAULT {escaped}"
+
             in_table_definitions.append(field_creation_string)
 
             if field_object.index and not field_object.pk:
