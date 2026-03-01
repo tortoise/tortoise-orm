@@ -166,6 +166,28 @@ async def test_update_auto_now(db):
 
 
 @pytest.mark.asyncio
+async def test_update_auto_now_with_update_fields(db):
+    tournament = await Tournament.create(name="1")
+    event = await Event.create(name="original", tournament=tournament)
+    original_modified = event.modified
+
+    # Set modified to the past so we can detect if it gets updated
+    past = timezone.now() - timedelta(days=1)
+    await Event.filter(pk=event.pk).update(modified=past)
+
+    event = await Event.get(pk=event.pk)
+    assert event.modified.date() == past.date()
+
+    # Update only name with update_fields; auto_now field should also be updated
+    event.name = "updated"
+    await event.save(update_fields=["name"])
+
+    event = await Event.get(pk=event.pk)
+    assert event.name == "updated"
+    assert event.modified.date() == timezone.now().date()
+
+
+@pytest.mark.asyncio
 async def test_update_relation(db):
     tournament_first = await Tournament.create(name="1")
     tournament_second = await Tournament.create(name="2")
