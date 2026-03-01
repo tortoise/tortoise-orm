@@ -1933,7 +1933,11 @@ class BulkUpdateQuery(UpdateQuery, Generic[MODEL]):
             limit=limit,
             orderings=orderings,
         )
-        self.fields = fields
+        fields_list = list(fields)
+        for field_name, field_obj in model._meta.fields_map.items():
+            if field_name not in fields_list and getattr(field_obj, "auto_now", False):
+                fields_list.append(field_name)
+        self.fields = fields_list
         self._objects = objects
         self._batch_size = batch_size
         self._queries: list[QueryBuilder] = []
