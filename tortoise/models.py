@@ -1614,7 +1614,7 @@ class Model(metaclass=ModelMeta):
         await db.executor_class(model=cls, db=db).fetch_for_list(instance_list, *args)
 
     @classmethod
-    def prepare_sql(cls, key: str) -> PreparingQuerySet[MODEL] | _PreparedQueryMixin:
+    def prepare_sql(cls, key: str) -> PreparingQuerySet[Self] | _PreparedQueryMixin[Self]:
         return cls._meta.manager.get_queryset().prepare_sql(key)
 
     @classmethod

@@ -42,9 +42,29 @@ if TYPE_CHECKING:
 
 
 class PreparedQuerySetSingle(QuerySetSingle[T_co], Protocol):
-    def prepared(self) -> PreparedQuerySet: ...
+    def prefetch_related(
+        self, *args: str | Prefetch
+    ) -> PreparedQuerySetSingle[T_co]: ...  # pragma: nocoverage
 
-    async def execute(self, **params) -> list[MODEL]: ...
+    def select_related(self, *args: str) -> PreparedQuerySetSingle[T_co]: ...  # pragma: nocoverage
+
+    def annotate(
+        self, **kwargs: Expression | Term
+    ) -> PreparedQuerySetSingle[T_co]: ...  # pragma: nocoverage
+
+    def only(self, *fields_for_select: str) -> PreparedQuerySetSingle[T_co]: ...  # pragma: nocoverage
+
+    def values_list(
+        self, *fields_: str, flat: bool = False
+    ) -> PreparedValuesListQuery[Literal[True]]: ...  # pragma: nocoverage
+
+    def values(
+        self, *args: str, **kwargs: str
+    ) -> PreparedValuesQuery[Literal[True]]: ...  # pragma: nocoverage
+
+    def prepared(self) -> PreparedQuerySet[T_co]: ...
+
+    async def execute(self, **params) -> list[T_co]: ...
 
 
 class CachedSql:
@@ -110,8 +130,8 @@ class _PreparedQueryMixin(AwaitableQuery[MODEL], ABC):
     def prepare_sql(self, key: str) -> NoReturn:
         raise NotImplementedError("QuerySets must be prepared only once")
 
-    def prepared(self) -> PreparedQuerySet:
-        return cast(PreparedQuerySet, self)
+    def prepared(self) -> Self:
+        return self
 
     def _init_prepared(self) -> None:
         _, params = self.query.get_parameterized_sql()
@@ -155,13 +175,13 @@ class _PreparedQueryMixin(AwaitableQuery[MODEL], ABC):
     @abstractmethod
     async def execute(self, **params) -> Any: ...
 
-    def filter(self, *args: Q, **kwargs: Any) -> PreparedQuerySet:
+    def filter(self, *args: Q, **kwargs: Any) -> Self:
         return cast(PreparedQuerySet, self)
 
-    def exclude(self, *args: Q, **kwargs: Any) -> PreparedQuerySet:
+    def exclude(self, *args: Q, **kwargs: Any) -> Self:
         return cast(PreparedQuerySet, self)
 
-    def order_by(self, *orderings: str) -> PreparedQuerySet:
+    def order_by(self, *orderings: str) -> Self:
         return cast(PreparedQuerySet, self)
 
     def latest(self, *orderings: str) -> PreparedQuerySetSingle[MODEL | None]:
@@ -170,16 +190,16 @@ class _PreparedQueryMixin(AwaitableQuery[MODEL], ABC):
     def earliest(self, *orderings: str) -> PreparedQuerySetSingle[MODEL | None]:
         return cast(PreparedQuerySetSingle, self)
 
-    def limit(self, limit: int | Parameter) -> PreparedQuerySet:
+    def limit(self, limit: int | Parameter) -> Self:
         return cast(PreparedQuerySet, self)
 
-    def offset(self, offset: int | Parameter) -> PreparedQuerySet:
+    def offset(self, offset: int | Parameter) -> Self:
         return cast(PreparedQuerySet, self)
 
-    def __getitem__(self, key: slice) -> PreparedQuerySet:
+    def __getitem__(self, key: slice) -> Self:
         return cast(PreparedQuerySet, self)
 
-    def distinct(self) -> PreparedQuerySet:
+    def distinct(self) -> Self:
         return cast(PreparedQuerySet, self)
 
     def select_for_update(
@@ -188,13 +208,13 @@ class _PreparedQueryMixin(AwaitableQuery[MODEL], ABC):
         skip_locked: bool = False,
         of: tuple[str, ...] = (),
         no_key: bool = False,
-    ) -> PreparedQuerySet:
+    ) -> Self:
         return cast(PreparedQuerySet, self)
 
-    def annotate(self, **kwargs: Expression | Term) -> PreparedQuerySet:
+    def annotate(self, **kwargs: Expression | Term) -> Self:
         return cast(PreparedQuerySet, self)
 
-    def group_by(self, *fields: str) -> PreparedQuerySet:
+    def group_by(self, *fields: str) -> Self:
         return cast(PreparedQuerySet, self)
 
     def values_list(
@@ -217,7 +237,7 @@ class _PreparedQueryMixin(AwaitableQuery[MODEL], ABC):
     def exists(self) -> PreparedExistsQuery:
         return cast(PreparedExistsQuery, self)
 
-    def all(self) -> PreparedQuerySet:
+    def all(self) -> Self:
         return cast(PreparedQuerySet, self)
 
     def first(self) -> PreparedQuerySetSingle[MODEL | None]:
@@ -255,19 +275,19 @@ class _PreparedQueryMixin(AwaitableQuery[MODEL], ABC):
     def get_or_none(self, *args: Q, **kwargs: Any) -> PreparedQuerySetSingle[MODEL | None]:
         return cast(PreparedQuerySetSingle, self)
 
-    def only(self, *fields_for_select: str) -> PreparedQuerySet:
+    def only(self, *fields_for_select: str) -> Self:
         return cast(PreparedQuerySet, self)
 
-    def select_related(self, *fields: str) -> PreparedQuerySet:
+    def select_related(self, *fields: str) -> Self:
         return cast(PreparedQuerySet, self)
 
-    def force_index(self, *index_names: str) -> PreparedQuerySet:
+    def force_index(self, *index_names: str) -> Self:
         return cast(PreparedQuerySet, self)
 
-    def use_index(self, *index_names: str) -> PreparedQuerySet:
+    def use_index(self, *index_names: str) -> Self:
         return cast(PreparedQuerySet, self)
 
-    def prefetch_related(self, *args: str | Prefetch) -> PreparedQuerySet:
+    def prefetch_related(self, *args: str | Prefetch) -> Self:
         return cast(PreparedQuerySet, self)
 
 
@@ -600,7 +620,8 @@ class PreparingQuerySet(QuerySet[MODEL]):
         return cast(PreparingQuerySet, super().prefetch_related(*args))
 
 
-class PreparedQuerySet(_PreparedQueryMixin):
+# TODO: make it generic
+class PreparedQuerySet(_PreparedQueryMixin[MODEL]):
     __slots__ = (
         "_cache_key",
         "_custom_fields",
@@ -642,7 +663,10 @@ class PreparedQuerySet(_PreparedQueryMixin):
         self._dynamic_params: dict[str, CollectionParameter] = {}
         self._dynamic_params_names: list[str] = []
 
-    def _clone(self) -> PreparedQuerySet:
+    def prepared(self) -> PreparedQuerySet[MODEL]:
+        return self
+
+    def _clone(self) -> PreparedQuerySet[MODEL]:
         queryset = self.__class__.__new__(self.__class__)
         queryset.model = self.model
         queryset.query = self.query
@@ -717,6 +741,9 @@ class PreparedUpdateQuery(_PreparedQueryMixin):
         self._dynamic_params_names: list[str] = []
         self._db_for_write: bool = True
 
+    def prepared(self) -> PreparedUpdateQuery:
+        return self
+
     def _clone(self) -> PreparedUpdateQuery:
         query = self.__class__.__new__(self.__class__)
         query.model = self.model
@@ -765,6 +792,9 @@ class PreparedDeleteQuery(_PreparedQueryMixin):
         self._dynamic_params_names: list[str] = []
         self._db_for_write: bool = True
 
+    def prepared(self) -> PreparedDeleteQuery:
+        return self
+
     def _clone(self) -> PreparedDeleteQuery:
         query = self.__class__.__new__(self.__class__)
         query.model = self.model
@@ -811,6 +841,9 @@ class PreparedExistsQuery(_PreparedQueryMixin):
         self._dynamic_params: dict[str, CollectionParameter] = {}
         self._dynamic_params_names: list[str] = []
         self._db_for_write: bool = False
+
+    def prepared(self) -> PreparedExistsQuery:
+        return self
 
     def _clone(self) -> PreparedExistsQuery:
         query = self.__class__.__new__(self.__class__)
@@ -865,6 +898,9 @@ class PreparedCountQuery(_PreparedQueryMixin):
         self._dynamic_params: dict[str, CollectionParameter] = {}
         self._dynamic_params_names: list[str] = []
         self._db_for_write: bool = False
+
+    def prepared(self) -> PreparedCountQuery:
+        return self
 
     def _clone(self) -> PreparedCountQuery:
         query = self.__class__.__new__(self.__class__)
@@ -942,6 +978,9 @@ class PreparedValuesListQuery(ValuesListQuery[SINGLE], _PreparedQueryMixin):
         self._dynamic_params: dict[str, CollectionParameter] = {}
         self._dynamic_params_names: list[str] = []
         self._db_for_write: bool = False
+
+    def prepared(self) -> PreparedValuesListQuery[SINGLE]:
+        return self
 
     def _clone(self) -> PreparedValuesListQuery[SINGLE]:
         query = self.__class__.__new__(self.__class__)
@@ -1027,6 +1066,9 @@ class PreparedValuesQuery(ValuesQuery[SINGLE], _PreparedQueryMixin):
         self._dynamic_params: dict[str, CollectionParameter] = {}
         self._dynamic_params_names: list[str] = []
         self._db_for_write: bool = False
+
+    def prepared(self) -> PreparedValuesQuery[SINGLE]:
+        return self
 
     def _clone(self) -> PreparedValuesQuery[SINGLE]:
         query = self.__class__.__new__(self.__class__)

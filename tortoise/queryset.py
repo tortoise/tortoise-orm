@@ -1303,7 +1303,7 @@ class UpdateQuery(AwaitableQuery):
         "update_kwargs",
         "_orderings",
         "_limit",
-        "values",  # TODO: unused?
+        "values",
     )
 
     def __init__(
