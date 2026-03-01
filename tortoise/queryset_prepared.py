@@ -4,7 +4,7 @@ import sys
 from abc import ABC, abstractmethod
 from collections import defaultdict
 from collections.abc import Iterable
-from typing import TYPE_CHECKING, Any, Literal, NoReturn, Protocol, cast
+from typing import TYPE_CHECKING, Any, Literal, NoReturn, Protocol, TypeVar, cast
 
 from pypika_tortoise.queries import QueryBuilder, Table
 from pypika_tortoise.terms import Term
@@ -26,7 +26,6 @@ from tortoise.queryset import (
     ExistsQuery,
     QuerySet,
     QuerySetSingle,
-    T_co,
     UpdateQuery,
     ValuesListQuery,
     ValuesQuery,
@@ -41,18 +40,21 @@ if TYPE_CHECKING:
     from tortoise import Model
 
 
-class PreparedQuerySetSingle(QuerySetSingle[T_co], Protocol):
+T = TypeVar("T")
+
+
+class PreparedQuerySetSingle(QuerySetSingle[T], Protocol[T]):
     def prefetch_related(
         self, *args: str | Prefetch
-    ) -> PreparedQuerySetSingle[T_co]: ...  # pragma: nocoverage
+    ) -> PreparedQuerySetSingle[T]: ...  # pragma: nocoverage
 
-    def select_related(self, *args: str) -> PreparedQuerySetSingle[T_co]: ...  # pragma: nocoverage
+    def select_related(self, *args: str) -> PreparedQuerySetSingle[T]: ...  # pragma: nocoverage
 
     def annotate(
         self, **kwargs: Expression | Term
-    ) -> PreparedQuerySetSingle[T_co]: ...  # pragma: nocoverage
+    ) -> PreparedQuerySetSingle[T]: ...  # pragma: nocoverage
 
-    def only(self, *fields_for_select: str) -> PreparedQuerySetSingle[T_co]: ...  # pragma: nocoverage
+    def only(self, *fields_for_select: str) -> PreparedQuerySetSingle[T]: ...  # pragma: nocoverage
 
     def values_list(
         self, *fields_: str, flat: bool = False
@@ -62,9 +64,9 @@ class PreparedQuerySetSingle(QuerySetSingle[T_co], Protocol):
         self, *args: str, **kwargs: str
     ) -> PreparedValuesQuery[Literal[True]]: ...  # pragma: nocoverage
 
-    def prepared(self) -> PreparedQuerySet[T_co]: ...
+    def prepared(self) -> PreparedQuerySetSingle[T]: ...
 
-    async def execute(self, **params) -> list[T_co]: ...
+    async def execute(self, **params) -> list[T]: ...
 
 
 class CachedSql:
@@ -176,13 +178,13 @@ class _PreparedQueryMixin(AwaitableQuery[MODEL], ABC):
     async def execute(self, **params) -> Any: ...
 
     def filter(self, *args: Q, **kwargs: Any) -> Self:
-        return cast(PreparedQuerySet, self)
+        return self
 
     def exclude(self, *args: Q, **kwargs: Any) -> Self:
-        return cast(PreparedQuerySet, self)
+        return self
 
     def order_by(self, *orderings: str) -> Self:
-        return cast(PreparedQuerySet, self)
+        return self
 
     def latest(self, *orderings: str) -> PreparedQuerySetSingle[MODEL | None]:
         return cast(PreparedQuerySetSingle, self)
@@ -191,16 +193,16 @@ class _PreparedQueryMixin(AwaitableQuery[MODEL], ABC):
         return cast(PreparedQuerySetSingle, self)
 
     def limit(self, limit: int | Parameter) -> Self:
-        return cast(PreparedQuerySet, self)
+        return self
 
     def offset(self, offset: int | Parameter) -> Self:
-        return cast(PreparedQuerySet, self)
+        return self
 
     def __getitem__(self, key: slice) -> Self:
-        return cast(PreparedQuerySet, self)
+        return self
 
     def distinct(self) -> Self:
-        return cast(PreparedQuerySet, self)
+        return self
 
     def select_for_update(
         self,
@@ -209,13 +211,13 @@ class _PreparedQueryMixin(AwaitableQuery[MODEL], ABC):
         of: tuple[str, ...] = (),
         no_key: bool = False,
     ) -> Self:
-        return cast(PreparedQuerySet, self)
+        return self
 
     def annotate(self, **kwargs: Expression | Term) -> Self:
-        return cast(PreparedQuerySet, self)
+        return self
 
     def group_by(self, *fields: str) -> Self:
-        return cast(PreparedQuerySet, self)
+        return self
 
     def values_list(
         self, *fields_: str, flat: bool = False
@@ -238,7 +240,7 @@ class _PreparedQueryMixin(AwaitableQuery[MODEL], ABC):
         return cast(PreparedExistsQuery, self)
 
     def all(self) -> Self:
-        return cast(PreparedQuerySet, self)
+        return self
 
     def first(self) -> PreparedQuerySetSingle[MODEL | None]:
         return cast(PreparedQuerySetSingle, self)
@@ -276,19 +278,19 @@ class _PreparedQueryMixin(AwaitableQuery[MODEL], ABC):
         return cast(PreparedQuerySetSingle, self)
 
     def only(self, *fields_for_select: str) -> Self:
-        return cast(PreparedQuerySet, self)
+        return self
 
     def select_related(self, *fields: str) -> Self:
-        return cast(PreparedQuerySet, self)
+        return self
 
     def force_index(self, *index_names: str) -> Self:
-        return cast(PreparedQuerySet, self)
+        return self
 
     def use_index(self, *index_names: str) -> Self:
-        return cast(PreparedQuerySet, self)
+        return self
 
     def prefetch_related(self, *args: str | Prefetch) -> Self:
-        return cast(PreparedQuerySet, self)
+        return self
 
 
 class PreparingQuerySet(QuerySet[MODEL]):

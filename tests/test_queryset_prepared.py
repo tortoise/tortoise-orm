@@ -2,7 +2,7 @@ import pytest
 
 from tests.testmodels import Author, Book
 from tortoise.exceptions import ParamsError, ValidationError
-from tortoise.expressions import Q, Subquery
+from tortoise.expressions import Q, Subquery, F
 from tortoise.parameter import Parameter
 
 
