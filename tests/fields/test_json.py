@@ -41,7 +41,7 @@ async def test_create(db):
     assert obj == obj2
     obj3 = await testmodels.JSONFields.create(data="{}", data_decimal=Decimal(0))
     obj3 = await testmodels.JSONFields.get(id=obj3.id)
-    assert obj3.data_decimal == "0"
+    assert str(obj3.data_decimal) == "0"
     pyd_model = MyPydanticModel(name="", idx=Index(fields=["data"]))
     obj4 = await testmodels.JSONFields.create(data="{}", data_index=pyd_model)
     obj4 = await testmodels.JSONFields.get(id=obj4.id)
