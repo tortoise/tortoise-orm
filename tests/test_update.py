@@ -98,6 +98,24 @@ async def test_bulk_update_pk_uuid(db):
 
 
 @pytest.mark.asyncio
+async def test_bulk_update_foreign_key(db):
+    tournament1 = await Tournament.create(name="t1")
+    tournament2 = await Tournament.create(name="t2")
+    events = [
+        await Event.create(name="e1", tournament=tournament1),
+        await Event.create(name="e2", tournament=tournament1),
+    ]
+    events[0].tournament = tournament2
+    events[1].tournament = tournament2
+    rows_affected = await Event.bulk_update(events, fields=["tournament"])
+    assert rows_affected == 2
+    e1 = await Event.get(pk=events[0].pk).select_related("tournament")
+    e2 = await Event.get(pk=events[1].pk).select_related("tournament")
+    assert e1.tournament.pk == tournament2.pk
+    assert e2.tournament.pk == tournament2.pk
+
+
+@pytest.mark.asyncio
 async def test_bulk_renamed_pk_source_field(db):
     objs = [
         await SourceFieldPk.create(name="Model 1"),

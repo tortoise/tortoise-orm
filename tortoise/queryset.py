@@ -1959,25 +1959,39 @@ class BulkUpdateQuery(UpdateQuery, Generic[MODEL]):
             for field in self.fields:
                 case = Case()
                 pk_list = []
+                field_obj = self.model._meta.fields_map[field]
+                is_fk = isinstance(field_obj, (ForeignKeyFieldInstance, OneToOneFieldInstance))
+                if is_fk:
+                    fk_field = field_obj.source_field
+                    underlying_field_obj = self.model._meta.fields_map[fk_field]
+                    db_column = underlying_field_obj.source_field
+                else:
+                    underlying_field_obj = field_obj
+                    db_column = self.model._meta.fields_db_projection[field]
                 for obj in objects_item:
                     pk_value = self.model._meta.fields_map[pk_attr].to_db_value(obj.pk, None)
-                    field_obj = obj._meta.fields_map[field]
-                    field_value = field_obj.to_db_value(getattr(obj, field), obj)
-                    case.when(
-                        pk == pk_value,
-                        (
-                            Cast(
-                                self.query._wrapper_cls(field_value),
-                                field_obj.get_for_dialect(
-                                    self._db.schema_generator.DIALECT, "SQL_TYPE"
-                                ),
-                            )
-                            if self._db.schema_generator.DIALECT == "postgres"
-                            else self.query._wrapper_cls(field_value)
-                        ),
-                    )
+                    if is_fk:
+                        related_obj = getattr(obj, field)
+                        self.model._validate_relation_type(field, related_obj)
+                        field_value = underlying_field_obj.to_db_value(
+                            getattr(related_obj, field_obj.to_field_instance.model_field_name),
+                            None,
+                        )
+                    else:
+                        field_value = underlying_field_obj.to_db_value(getattr(obj, field), obj)
+                    value_expr: Term
+                    if self._db.schema_generator.DIALECT == "postgres":
+                        value_expr = Cast(
+                            self.query._wrapper_cls(field_value),
+                            underlying_field_obj.get_for_dialect(
+                                self._db.schema_generator.DIALECT, "SQL_TYPE"
+                            ),
+                        )
+                    else:
+                        value_expr = self.query._wrapper_cls(field_value)
+                    case.when(pk == pk_value, value_expr)
                     pk_list.append(pk_value)
-                query = query.set(field, case)
+                query = query.set(db_column, case)
                 query = query.where(pk.isin(pk_list))
             self._queries.append(query)
         return [query.get_parameterized_sql() for query in self._queries]
