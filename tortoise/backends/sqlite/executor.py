@@ -4,12 +4,13 @@ from decimal import Decimal
 
 from tortoise import Model
 from tortoise.backends.base.executor import BaseExecutor
+from tortoise.contrib.sqlite.json_functions import sqlite_json_contains
 from tortoise.contrib.sqlite.regex import (
     insensitive_posix_sqlite_regexp,
     posix_sqlite_regexp,
 )
 from tortoise.fields import BigIntField, IntField, SmallIntField
-from tortoise.filters import insensitive_posix_regex, posix_regex
+from tortoise.filters import insensitive_posix_regex, json_contains, posix_regex
 
 # Conversion for the cases where it's hard to know the
 # related field, e.g. in raw queries, math or annotations.
@@ -24,6 +25,7 @@ class SqliteExecutor(BaseExecutor):
     FILTER_FUNC_OVERRIDE = {
         posix_regex: posix_sqlite_regexp,
         insensitive_posix_regex: insensitive_posix_sqlite_regexp,
+        json_contains: sqlite_json_contains,
     }
 
     async def _process_insert_result(self, instance: Model, results: int) -> None:

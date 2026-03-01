@@ -93,7 +93,7 @@ async def test_list(db):
     assert obj == obj2
 
 
-@requireCapability(dialect=In("mysql", "postgres"))
+@requireCapability(dialect=In("mysql", "postgres", "sqlite"))
 @pytest.mark.asyncio
 async def test_list_contains(db):
     """Test JSON contains filter on list."""

@@ -23,6 +23,9 @@ from tortoise.backends.base.client import (
 from tortoise.backends.sqlite.executor import SqliteExecutor
 from tortoise.backends.sqlite.schema_generator import SqliteSchemaGenerator
 from tortoise.connection import get_connections
+from tortoise.contrib.sqlite.json_functions import (
+    install_json_functions as install_json_functions_to_db,
+)
 from tortoise.contrib.sqlite.regex import (
     install_regexp_functions as install_regexp_functions_to_db,
 )
@@ -84,6 +87,7 @@ class SqliteClient(BaseDBAsyncClient):
             for pragma, val in self.pragmas.items():
                 cursor = await self._connection.execute(f"PRAGMA {pragma}={val}")
                 await cursor.close()
+            await install_json_functions_to_db(self._connection)
             self.log.debug(
                 "Created connection %s with params: filename=%s %s",
                 self._connection,
