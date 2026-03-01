@@ -126,15 +126,22 @@ class MSSQLSchemaEditor(MSSQLQuotingMixin, BaseSchemaEditor):
         db_field = new_field.source_field or new_field.model_field_name
         qualified_table = self._qualify_table_name(model._meta.db_table, model._meta.schema)
 
-        # MSSQL requires ALTER COLUMN with full type for nullability changes
-        if old_field.null != new_field.null:
-            col_type = new_field.get_for_dialect(self.DIALECT, "SQL_TYPE")
+        # MSSQL requires ALTER COLUMN with full type for nullability and type changes
+        old_sql_type = old_field.get_for_dialect(self.DIALECT, "SQL_TYPE")
+        new_sql_type = new_field.get_for_dialect(self.DIALECT, "SQL_TYPE")
+        null_changed = old_field.null != new_field.null
+        type_changed = old_sql_type != new_sql_type
+
+        if null_changed or type_changed:
             nullable = "NULL" if new_field.null else "NOT NULL"
             await self._run_sql(
-                f"ALTER TABLE {qualified_table} ALTER COLUMN [{db_field}] {col_type} {nullable}"
+                f"ALTER TABLE {qualified_table} ALTER COLUMN [{db_field}] {new_sql_type} {nullable}"
             )
             old_field = copy(old_field)
             old_field.null = new_field.null
+            for attr in ("max_length", "max_digits", "decimal_places"):
+                if hasattr(new_field, attr):
+                    setattr(old_field, attr, getattr(new_field, attr))
 
         # MSSQL uses named default constraints instead of ALTER COLUMN SET/DROP DEFAULT
         old_has_default = old_field.has_db_default()
