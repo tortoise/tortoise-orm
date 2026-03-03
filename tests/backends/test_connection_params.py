@@ -190,9 +190,7 @@ async def test_mysql_session_timezone_uses_configured_tz():
 
                 # Verify SET time_zone was called with Asia/Shanghai offset (+8:00)
                 tz_calls = [
-                    call
-                    for call in mock_cursor.execute.await_args_list
-                    if "time_zone" in str(call)
+                    call for call in mock_cursor.execute.await_args_list if "time_zone" in str(call)
                 ]
                 assert len(tz_calls) == 1, f"Expected 1 SET time_zone call, got {tz_calls}"
                 assert "+8:00" in str(tz_calls[0]), (
