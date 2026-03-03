@@ -218,6 +218,26 @@ async def test_bulk_update_auto_now(db):
 
 
 @pytest.mark.asyncio
+async def test_queryset_update_auto_now(db):
+    tournament = await Tournament.create(name="1")
+    event = await Event.create(name="original", tournament=tournament)
+
+    # Set modified to the past (explicit modified= won't be overridden by auto_now)
+    past = timezone.now() - timedelta(days=1)
+    await Event.filter(pk=event.pk).update(modified=past)
+
+    event = await Event.get(pk=event.pk)
+    assert event.modified.date() == past.date()
+
+    # queryset.update() should auto-include auto_now fields
+    await Event.filter(pk=event.pk).update(name="updated")
+
+    event = await Event.get(pk=event.pk)
+    assert event.name == "updated"
+    assert event.modified.date() == timezone.now().date()
+
+
+@pytest.mark.asyncio
 async def test_update_relation(db):
     tournament_first = await Tournament.create(name="1")
     tournament_second = await Tournament.create(name="2")

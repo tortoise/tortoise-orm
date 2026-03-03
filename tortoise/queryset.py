@@ -1285,6 +1285,12 @@ class UpdateQuery(AwaitableQuery):
         orderings: list[tuple[str, str]],
     ) -> None:
         super().__init__(model)
+        # Inject auto_now fields into update_kwargs if not already specified
+        from tortoise import timezone
+
+        for field_name, field_obj in model._meta.fields_map.items():
+            if field_name not in update_kwargs and getattr(field_obj, "auto_now", False):
+                update_kwargs[field_name] = timezone.now()
         self.update_kwargs = update_kwargs
         self._q_objects = q_objects
         self._annotations = annotations
