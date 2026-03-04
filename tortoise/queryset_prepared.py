@@ -21,7 +21,6 @@ from tortoise.queryset import (
     AwaitableQuery,
     BulkCreateQuery,
     BulkUpdateQuery,
-    DeleteQuery,
     QuerySet,
     QuerySetSingle,
     ValuesListQuery,
@@ -228,8 +227,8 @@ class _PreparedQueryMixin(AwaitableQuery[MODEL], ABC):
     def values(self, *args: str, **kwargs: str) -> PreparedValuesQuery[Literal[False]]:
         return cast(PreparedValuesQuery, self)
 
-    def delete(self) -> DeleteQuery:
-        return cast(DeleteQuery, self)
+    def delete(self) -> PreparedDeleteQuery:
+        return cast(PreparedDeleteQuery, self)
 
     def update(self, **kwargs: Any) -> PreparedUpdateQuery:
         return cast(PreparedUpdateQuery, self)
