@@ -1286,6 +1286,7 @@ class QuerySet(AwaitableQuery[MODEL]):
 
         if key in self.model._meta.query_cache:
             prepared_queryset = self.model._meta.query_cache[key]._clone()
+            # TODO: select db in .prepared, not in here
             prepared_queryset._db = None  # type: ignore
             prepared_queryset._db = prepared_queryset._choose_db(prepared_queryset._db_for_write)
             return prepared_queryset

@@ -378,3 +378,12 @@ async def test_update_pk_invalid_obj(db):
 
     with pytest.raises(ValidationError):
         await prepared.execute(search_id=book.pk, replace_author="not an Author object")
+
+
+def test_remove_prepared_queryset_from_cache(db):
+    cache_key = "test_remove_query_from_cache"
+    prepared = Author.prepare_sql(cache_key).filter(id=Parameter("some_param")).prepared()
+    assert Author.prepare_sql(cache_key).query is prepared.query
+    Author.remove_prepared_query(cache_key)
+    assert Author.prepare_sql(cache_key).query is not prepared.query
+

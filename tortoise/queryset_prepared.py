@@ -551,7 +551,6 @@ class PreparingQuerySet(QuerySet[MODEL]):
         return cast(PreparingQuerySet, super().prefetch_related(*args))
 
 
-# TODO: make it generic
 class PreparedQuerySet(_PreparedQueryMixin[MODEL]):
     __slots__ = (
         "_cache_key",

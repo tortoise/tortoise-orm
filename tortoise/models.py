@@ -1618,6 +1618,10 @@ class Model(metaclass=ModelMeta):
         return cls._meta.manager.get_queryset().prepare_sql(key)
 
     @classmethod
+    def remove_prepared_query(cls, key: str) -> None:
+        cls._meta.query_cache.pop(key, None)
+
+    @classmethod
     def _check(cls) -> None:
         """
         Calls various checks to validate the model.
