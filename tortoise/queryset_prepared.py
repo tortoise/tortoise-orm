@@ -174,6 +174,10 @@ class _PreparedQueryMixin(AwaitableQuery[MODEL], ABC):
     @abstractmethod
     async def execute(self, **params) -> Any: ...
 
+    def sql(self, **params) -> str:
+        cached_query = self._get_or_create_cached_sql(params)
+        return cached_query.sql
+
     def filter(self, *args: Q, **kwargs: Any) -> Self:
         return self
 

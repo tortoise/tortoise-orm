@@ -1,6 +1,6 @@
 import pytest
 
-from tests.testmodels import Author, Book
+from tests.testmodels import Author, Book, CharPkModel
 from tortoise.exceptions import ParamsError, ValidationError
 from tortoise.expressions import Q, Subquery
 from tortoise.parameter import Parameter
@@ -386,4 +386,24 @@ def test_remove_prepared_queryset_from_cache(db):
     assert Author.prepare_sql(cache_key).query is prepared.query
     Author.remove_prepared_query(cache_key)
     assert Author.prepare_sql(cache_key).query is not prepared.query
+
+
+@pytest.mark.parametrize(
+    ("filter_kwargs", "cache_key_suffix",),
+    [
+        ({"id": "123"}, "1"),
+        ({"id__gte": "321"}, "2"),
+        ({"id__in": ["321", 123, 987]}, "3"),
+    ],
+)
+def test_prepared_query_get_sql(db, filter_kwargs: dict[str, ...], cache_key_suffix: str):
+    expected_sql = CharPkModel.all().filter(**filter_kwargs).limit(10).offset(0).sql()
+    actual_sql = CharPkModel.prepare_sql(
+        f"test_prepared_query_get_sql-{cache_key_suffix}"
+    ).all().filter(**{
+        key: Parameter(key)
+        for key in filter_kwargs
+    }).limit(10).offset(0).prepared().sql(**filter_kwargs)
+
+    assert expected_sql == actual_sql
 
