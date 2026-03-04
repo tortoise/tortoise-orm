@@ -39,6 +39,7 @@ class BaseSchemaEditor(SchemaQuotingMixin):
     RENAME_FIELD_TEMPLATE = 'ALTER TABLE {table} RENAME COLUMN "{old_column}" TO "{new_column}"'
     ALTER_FIELD_NULL_TEMPLATE = 'ALTER COLUMN "{column}" DROP NOT NULL'
     ALTER_FIELD_NOT_NULL_TEMPLATE = 'ALTER COLUMN "{column}" SET NOT NULL'
+    ALTER_FIELD_TYPE_TEMPLATE = 'ALTER COLUMN "{column}" TYPE {sql_type}'
     ALTER_FIELD_SET_DEFAULT_TEMPLATE = 'ALTER COLUMN "{column}" SET DEFAULT {default}'
     ALTER_FIELD_DROP_DEFAULT_TEMPLATE = 'ALTER COLUMN "{column}" DROP DEFAULT'
 
@@ -359,6 +360,16 @@ class BaseSchemaEditor(SchemaQuotingMixin):
                     comment=comment,
                 )
 
+            if field_object.has_db_default():
+                if hasattr(field_object.db_default, "get_sql"):
+                    field_creation_string += (
+                        f" DEFAULT {field_object.db_default.get_sql(dialect=self.DIALECT)}"
+                    )
+                else:
+                    db_val = field_object.to_db_value(field_object.db_default, model)
+                    escaped = self._escape_default_value(db_val)
+                    field_creation_string += f" DEFAULT {escaped}"
+
             in_table_definitions.append(field_creation_string)
 
             if field_object.index and not field_object.pk:
@@ -603,6 +614,13 @@ class BaseSchemaEditor(SchemaQuotingMixin):
         qualified_table = self._qualify_table_name(model._meta.db_table, model._meta.schema)
         if await self._alter_generated_field(model, old_field, new_field):
             return
+        old_sql_type = old_field.get_for_dialect(self.DIALECT, "SQL_TYPE")
+        new_sql_type = new_field.get_for_dialect(self.DIALECT, "SQL_TYPE")
+        if old_sql_type != new_sql_type:
+            changes = self.ALTER_FIELD_TYPE_TEMPLATE.format(
+                column=new_db_field, sql_type=new_sql_type
+            )
+            actions.append(self.ALTER_FIELD_TEMPLATE.format(table=qualified_table, changes=changes))
         if old_field.null != new_field.null:
             if new_field.null:
                 changes = self.ALTER_FIELD_NULL_TEMPLATE.format(column=old_db_field)

@@ -331,6 +331,15 @@ class PydanticModelCreator:
                     self._model_description.backward_o2o_fields,
                 ):
                     self._field_map.field_map_update(fields, self.meta)
+            else:
+                # Include only explicitly annotated backward relations
+                for fields in (
+                    self._model_description.backward_fk_fields,
+                    self._model_description.backward_o2o_fields,
+                ):
+                    annotated = [f for f in fields if f.model_field_name in self._annotations]
+                    if annotated:
+                        self._field_map.field_map_update(annotated, self.meta)
             self._field_map.computed_field_map_update(self.meta.computed, self._cls)
         if self.meta.sort_alphabetically:
             self._field_map.sort_alphabetically()

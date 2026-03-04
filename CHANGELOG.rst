@@ -8,6 +8,13 @@ Changelog
 1.1
 ===
 
+1.1.6
+-----
+
+Fixed
+^^^^^
+- Migration generator now correctly orders ``AddIndex``, ``RemoveIndex``, ``AddConstraint``, ``RemoveConstraint`` operatins when adding/removing a field to a model and is used in an index or constraint.
+
 1.1.5
 -----
 

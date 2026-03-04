@@ -722,3 +722,92 @@ async def test_oracle_alter_field_drop_default() -> None:
 
     assert len(client.executed) == 1
     assert client.executed[0] == 'ALTER TABLE "product" MODIFY ("stock" DEFAULT NULL)'
+
+
+# ---------------------------------------------------------------------------
+# ALTER COLUMN TYPE tests (max_length changes)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_postgres_alter_field_max_length() -> None:
+    """PostgreSQL alter_field changing max_length should emit ALTER COLUMN TYPE."""
+
+    class OldWidget(Model):
+        id = fields.IntField(pk=True)
+        name = fields.CharField(max_length=32, null=True)
+
+        class Meta:
+            table = "widget"
+            app = "models"
+
+    class NewWidget(Model):
+        id = fields.IntField(pk=True)
+        name = fields.CharField(max_length=64, null=True)
+
+        class Meta:
+            table = "widget"
+            app = "models"
+
+    client = FakeClient("postgres", inline_comment=False)
+    editor = BasePostgresSchemaEditor(client)
+    await editor.alter_field(OldWidget, NewWidget, "name")
+
+    assert len(client.executed) == 1
+    assert client.executed[0] == 'ALTER TABLE "widget" ALTER COLUMN "name" TYPE VARCHAR(64)'
+
+
+@pytest.mark.asyncio
+async def test_mysql_alter_field_max_length() -> None:
+    """MySQL alter_field changing max_length should use MODIFY COLUMN."""
+
+    class OldWidget(Model):
+        id = fields.IntField(pk=True)
+        name = fields.CharField(max_length=32, null=True)
+
+        class Meta:
+            table = "widget"
+            app = "models"
+
+    class NewWidget(Model):
+        id = fields.IntField(pk=True)
+        name = fields.CharField(max_length=64, null=True)
+
+        class Meta:
+            table = "widget"
+            app = "models"
+
+    client = FakeClient("mysql")
+    editor = MySQLSchemaEditor(client)
+    await editor.alter_field(OldWidget, NewWidget, "name")
+
+    assert len(client.executed) == 1
+    assert client.executed[0] == "ALTER TABLE `widget` MODIFY COLUMN `name` VARCHAR(64) NULL"
+
+
+@pytest.mark.asyncio
+async def test_mssql_alter_field_max_length() -> None:
+    """MSSQL alter_field changing max_length should use ALTER COLUMN with full type."""
+
+    class OldWidget(Model):
+        id = fields.IntField(pk=True)
+        name = fields.CharField(max_length=32, null=True)
+
+        class Meta:
+            table = "widget"
+            app = "models"
+
+    class NewWidget(Model):
+        id = fields.IntField(pk=True)
+        name = fields.CharField(max_length=64, null=True)
+
+        class Meta:
+            table = "widget"
+            app = "models"
+
+    client = FakeClient("mssql")
+    editor = MSSQLSchemaEditor(client)
+    await editor.alter_field(OldWidget, NewWidget, "name")
+
+    assert len(client.executed) == 1
+    assert client.executed[0] == "ALTER TABLE [widget] ALTER COLUMN [name] VARCHAR(64) NULL"

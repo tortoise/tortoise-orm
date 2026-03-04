@@ -245,6 +245,12 @@ def test_mysql_pre_encoded_percent_in_password():
     assert res["credentials"]["password"] == "foo%bar"
 
 
+def test_postgres_plus_sign_in_password():
+    for scheme, engine in _postgres_scheme_engines.items():
+        res = expand_db_url(f"{scheme}://postgres:p%2Bss+word@127.0.0.1:54321/test")
+        assert res["credentials"]["password"] == "p+ss+word"
+
+
 def test_mysql_basic():
     res = expand_db_url("mysql://root:@127.0.0.1:33060/test")
     assert res == {

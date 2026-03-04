@@ -226,3 +226,26 @@ async def test_alter_generated_field_raises() -> None:
     with pytest.raises(ValueError):
         await editor.alter_field(OldSearchDocument, NewSearchDocument, "search_vector")
     assert not client.executed
+
+
+@pytest.mark.asyncio
+async def test_create_model_includes_db_default() -> None:
+    """CreateModel should include DEFAULT clause for fields with db_default."""
+
+    class WidgetWithDefault(Model):
+        id = fields.IntField(pk=True)
+        status = fields.CharField(max_length=20, db_default="active")
+
+        class Meta:
+            table = "widget"
+            app = "models"
+
+    client = FakeClient("sql")
+    editor = TestSchemaEditor(client)
+
+    await editor.create_model(WidgetWithDefault)
+
+    assert len(client.executed) == 1
+    sql = client.executed[0]
+    assert 'CREATE TABLE "widget"' in sql
+    assert "DEFAULT 'active'" in sql

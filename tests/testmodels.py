@@ -145,6 +145,32 @@ class ModelTestPydanticMetaBackwardRelations3(Model):
     )
 
 
+class ModelTestPydanticAnnotatedBackwardRel(Model):
+    """Model with backward_relations=False but an annotated ReverseRelation."""
+
+    annotated_children: fields.ReverseRelation["ModelTestPydanticAnnotatedChild"]
+
+    class PydanticMeta:
+        backward_relations = False
+
+
+class ModelTestPydanticAnnotatedChild(Model):
+    parent: fields.ForeignKeyRelation[ModelTestPydanticAnnotatedBackwardRel] = (
+        fields.ForeignKeyField(
+            "models.ModelTestPydanticAnnotatedBackwardRel", related_name="annotated_children"
+        )
+    )
+
+
+class ModelTestPydanticUnannotatedChild(Model):
+    parent: fields.ForeignKeyRelation[ModelTestPydanticAnnotatedBackwardRel] = (
+        fields.ForeignKeyField(
+            "models.ModelTestPydanticAnnotatedBackwardRel",
+            related_name="unannotated_children",
+        )
+    )
+
+
 class Node(Model):
     name = fields.CharField(max_length=10)
 

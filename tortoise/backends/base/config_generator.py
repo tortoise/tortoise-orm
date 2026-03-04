@@ -212,7 +212,7 @@ def expand_db_url(db_url: str, testing: bool = False) -> dict:
         params[vmap["password"]] = (
             None
             if (not url.password and db_backend in {"postgres", "asyncpg", "psycopg"})
-            else urlparse.unquote_plus(url.password or "")
+            else urlparse.unquote(url.password or "")
         )
 
     return {"engine": db["engine"], "credentials": params}

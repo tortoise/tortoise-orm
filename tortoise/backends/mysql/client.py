@@ -19,7 +19,6 @@ except ImportError:
 
 from pypika_tortoise import MySQLQuery
 
-from tortoise import timezone
 from tortoise.backends.base.client import (
     BaseDBAsyncClient,
     Capabilities,
@@ -38,7 +37,7 @@ from tortoise.exceptions import (
     OperationalError,
     TransactionManagementError,
 )
-from tortoise.timezone import get_use_tz
+from tortoise.timezone import get_default_timezone, get_use_tz
 
 T = TypeVar("T")
 FuncType = Callable[..., Coroutine[None, None, T]]
@@ -137,8 +136,13 @@ class MySQLClient(BaseDBAsyncClient):
                                 self.capabilities.__dict__["supports_transactions"] = False
                         # Only set session timezone when use_tz=True
                         if get_use_tz():
-                            hours = timezone.now().utcoffset().seconds / 3600  # type: ignore
-                            tz = f"{int(hours):+d}:{int((hours % 1) * 60):02d}"
+                            from datetime import datetime as _datetime
+
+                            offset = _datetime.now(tz=get_default_timezone()).utcoffset()
+                            total_seconds = int(offset.total_seconds())  # type: ignore
+                            hours = total_seconds // 3600
+                            minutes = abs(total_seconds) % 3600 // 60
+                            tz = f"{hours:+d}:{minutes:02d}"
                             await cursor.execute(f"SET time_zone='{tz}';")
             await self._post_connect()
             self.log.debug("Created connection %s pool with params: %s", self._pool, self._template)
