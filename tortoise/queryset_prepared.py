@@ -21,12 +21,9 @@ from tortoise.queryset import (
     AwaitableQuery,
     BulkCreateQuery,
     BulkUpdateQuery,
-    CountQuery,
     DeleteQuery,
-    ExistsQuery,
     QuerySet,
     QuerySetSingle,
-    UpdateQuery,
     ValuesListQuery,
     ValuesQuery,
 )
@@ -405,24 +402,7 @@ class PreparingQuerySet(QuerySet[MODEL]):
         self, *fields_: str, flat: bool = False
     ) -> PreparedValuesListQuery[Literal[False]]:
         fields_for_select_list = self._get_fields_list_for_select(*fields_)
-        query: ValuesListQuery = ValuesListQuery(
-            db=self._db,
-            model=self.model,
-            q_objects=self._q_objects,
-            single=self._single,
-            raise_does_not_exist=self._raise_does_not_exist,
-            flat=flat,
-            fields_for_select_list=fields_for_select_list,
-            distinct=self._distinct,
-            limit=self._limit,
-            offset=self._offset,
-            orderings=self._orderings,
-            annotations=self._annotations,
-            custom_filters=self._custom_filters,
-            group_bys=self._group_bys,
-            force_indexes=self._force_indexes,
-            use_indexes=self._use_indexes,
-        )
+        query = super().values_list(*fields_, flat=flat)
         query._db = query._choose_db(True)
         query._make_query()
 
@@ -442,23 +422,7 @@ class PreparingQuerySet(QuerySet[MODEL]):
 
     def values(self, *args: str, **kwargs: str) -> PreparedValuesQuery[Literal[False]]:
         fields_for_select = self._get_fields_for_select(*args, **kwargs)
-        query: ValuesQuery = ValuesQuery(
-            db=self._db,
-            model=self.model,
-            q_objects=self._q_objects,
-            single=self._single,
-            raise_does_not_exist=self._raise_does_not_exist,
-            fields_for_select=fields_for_select,
-            distinct=self._distinct,
-            limit=self._limit,
-            offset=self._offset,
-            orderings=self._orderings,
-            annotations=self._annotations,
-            custom_filters=self._custom_filters,
-            group_bys=self._group_bys,
-            force_indexes=self._force_indexes,
-            use_indexes=self._use_indexes,
-        )
+        query = super().values(*args, **kwargs)
         query._db = query._choose_db(True)
         query._make_query()
 
@@ -476,15 +440,7 @@ class PreparingQuerySet(QuerySet[MODEL]):
         return prepared
 
     def delete(self) -> PreparedDeleteQuery:  # type: ignore
-        query = DeleteQuery(
-            model=self.model,
-            db=self._db,
-            q_objects=self._q_objects,
-            annotations=self._annotations,
-            custom_filters=self._custom_filters,
-            limit=self._limit,
-            orderings=self._orderings,
-        )
+        query = super().delete()
         query._db = query._choose_db(True)
         query._make_query()
 
@@ -498,16 +454,7 @@ class PreparingQuerySet(QuerySet[MODEL]):
         return prepared
 
     def update(self, **kwargs: Any) -> PreparedUpdateQuery:  # type: ignore
-        query = UpdateQuery(
-            model=self.model,
-            update_kwargs=kwargs,
-            db=self._db,
-            q_objects=self._q_objects,
-            annotations=self._annotations,
-            custom_filters=self._custom_filters,
-            limit=self._limit,
-            orderings=self._orderings,
-        )
+        query = super().update(**kwargs)
         query._db = query._choose_db(True)
         query._make_query()
 
@@ -521,17 +468,7 @@ class PreparingQuerySet(QuerySet[MODEL]):
         return prepared
 
     def count(self) -> PreparedCountQuery:  # type: ignore
-        query = CountQuery(
-            model=self.model,
-            db=self._db,
-            q_objects=self._q_objects,
-            annotations=self._annotations,
-            custom_filters=self._custom_filters,
-            limit=self._limit,
-            offset=self._offset,
-            force_indexes=self._force_indexes,
-            use_indexes=self._use_indexes,
-        )
+        query = super().count()
         query._db = query._choose_db(True)
         query._make_query()
 
@@ -547,15 +484,7 @@ class PreparingQuerySet(QuerySet[MODEL]):
         return prepared
 
     def exists(self) -> PreparedExistsQuery:  # type: ignore
-        query = ExistsQuery(
-            model=self.model,
-            db=self._db,
-            q_objects=self._q_objects,
-            annotations=self._annotations,
-            custom_filters=self._custom_filters,
-            force_indexes=self._force_indexes,
-            use_indexes=self._use_indexes,
-        )
+        query = super().exists()
         query._db = query._choose_db(True)
         query._make_query()
 
