@@ -1,3 +1,5 @@
+from typing import Any
+
 import pytest
 
 from tests.testmodels import Author, Book, CharPkModel
@@ -389,21 +391,26 @@ def test_remove_prepared_queryset_from_cache(db):
 
 
 @pytest.mark.parametrize(
-    ("filter_kwargs", "cache_key_suffix",),
+    (
+        "filter_kwargs",
+        "cache_key_suffix",
+    ),
     [
         ({"id": "123"}, "1"),
         ({"id__gte": "321"}, "2"),
         ({"id__in": ["321", 123, 987]}, "3"),
     ],
 )
-def test_prepared_query_get_sql(db, filter_kwargs: dict[str, ...], cache_key_suffix: str):
+def test_prepared_query_get_sql(db, filter_kwargs: dict[str, Any], cache_key_suffix: str):
     expected_sql = CharPkModel.all().filter(**filter_kwargs).limit(10).offset(0).sql()
-    actual_sql = CharPkModel.prepare_sql(
-        f"test_prepared_query_get_sql-{cache_key_suffix}"
-    ).all().filter(**{
-        key: Parameter(key)
-        for key in filter_kwargs
-    }).limit(10).offset(0).prepared().sql(**filter_kwargs)
+    actual_sql = (
+        CharPkModel.prepare_sql(f"test_prepared_query_get_sql-{cache_key_suffix}")
+        .all()
+        .filter(**{key: Parameter(key) for key in filter_kwargs})
+        .limit(10)
+        .offset(0)
+        .prepared()
+        .sql(**filter_kwargs)
+    )
 
     assert expected_sql == actual_sql
-
