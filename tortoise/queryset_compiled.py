@@ -2,7 +2,7 @@ from __future__ import annotations as _
 
 import sys
 from abc import ABC, abstractmethod
-from collections import defaultdict
+from collections import OrderedDict, defaultdict
 from collections.abc import Callable, Iterable
 from typing import TYPE_CHECKING, Any, Generic, Literal, Protocol, TypeVar, cast, overload
 
@@ -90,14 +90,59 @@ class CachedSql:
         return filled_params
 
 
-class BaseCompiledQuery(AwaitableQuery[MODEL], ABC):
-    __slots__ = ("_sql_cache", "_dynamic_params", "_dynamic_params_names", "_dynamic_params_init")
+class _BoundedLRU(Generic[T]):
+    __slots__ = ("_data", "_maxsize")
 
-    def __init__(self, model: type[MODEL], query: QueryBuilder) -> None:
+    def __init__(self, maxsize: int) -> None:
+        self._data: OrderedDict[str, T] = OrderedDict()
+        self._maxsize = maxsize
+
+    @property
+    def maxsize(self) -> int:
+        return self._maxsize
+
+    @maxsize.setter
+    def maxsize(self, value: int) -> None:
+        self._maxsize = value
+
+    def get(self, key: str) -> T | None:
+        try:
+            self._data.move_to_end(key)
+            return self._data[key]
+        except KeyError:
+            return None
+
+    def put(self, key: str, value: T) -> None:
+        if key in self._data:
+            self._data.move_to_end(key)
+            self._data[key] = value
+        else:
+            if len(self._data) >= self._maxsize:
+                self._data.popitem(last=False)
+            self._data[key] = value
+
+
+class BaseCompiledQuery(AwaitableQuery[MODEL], ABC):
+    DEFAULT_CACHE_SIZE_SIMPLE = 1
+    DEFAULT_CACHE_SIZE_COLLECTIONS = 128
+
+    __slots__ = (
+        "_sql_cache",
+        "_sql_cache_maxsize",
+        "_dynamic_params",
+        "_dynamic_params_names",
+        "_dynamic_params_init",
+    )
+
+    def __init__(
+        self, model: type[MODEL], query: QueryBuilder, sql_cache_maxsize: int | None
+    ) -> None:
         super().__init__(model)
         self.query = query
-        # TODO: use lru
-        self._sql_cache: dict[str, CachedSql] = {}
+        self._sql_cache_maxsize = sql_cache_maxsize
+        self._sql_cache: _BoundedLRU[CachedSql] = _BoundedLRU(
+            sql_cache_maxsize or self.DEFAULT_CACHE_SIZE_SIMPLE,
+        )
         self._dynamic_params: dict[str, CollectionParameter] = {}
         self._dynamic_params_names: list[str] = []
         self._dynamic_params_init: bool = False
@@ -120,12 +165,13 @@ class BaseCompiledQuery(AwaitableQuery[MODEL], ABC):
 
     def init_params_table(self) -> None:
         _, params = self.query.get_parameterized_sql()
-        self._sql_cache = {}
         self._dynamic_params = {
             param.name: param for param in params if isinstance(param, CollectionParameter)
         }
         self._dynamic_params_names = sorted(self._dynamic_params.keys())
         self._dynamic_params_init = True
+        if self._dynamic_params and self._sql_cache_maxsize is None:
+            self._sql_cache.maxsize = self.DEFAULT_CACHE_SIZE_COLLECTIONS
 
     def _get_or_create_cached_sql(self, params: dict[str, Any]) -> CachedSql:
         if not self._dynamic_params_init:
@@ -145,19 +191,19 @@ class BaseCompiledQuery(AwaitableQuery[MODEL], ABC):
             param.collection_size = len(value)
             reset_params.append(param)
 
-        if cache_key not in self._sql_cache:
+        if self._sql_cache.get(cache_key) is None:
             # TODO: probably could be done in a better way?
             ctx = TortoiseSqlContext.copy(
                 self.query.QUERY_CLS.SQL_CONTEXT,
                 dynamic_params=self._dynamic_params,
             )
             sql, params_ = self.query.get_parameterized_sql(ctx)
-            self._sql_cache[cache_key] = CachedSql(sql, params_)
+            self._sql_cache.put(cache_key, CachedSql(sql, params_))
 
         for param in reset_params:
             param.collection_size = None
 
-        return self._sql_cache[cache_key]
+        return cast(CachedSql, self._sql_cache.get(cache_key))
 
     def sql(self, params_inline=False, **params) -> str:
         old_db = self._db
@@ -182,6 +228,7 @@ class CompiledQuerySet(BaseCompiledQuery[MODEL]):
         self,
         model: type[MODEL],
         query: QueryBuilder,
+        sql_cache_maxsize: int | None,
         prefetch_map: dict[str, set[str | Prefetch]],
         prefetch_queries: dict[str, list[tuple[str | None, QuerySet]]],
         select_related_idx: list[
@@ -192,7 +239,7 @@ class CompiledQuerySet(BaseCompiledQuery[MODEL]):
         select_for_update: bool,
         custom_fields: list[str] | None,
     ) -> None:
-        super().__init__(model, query)
+        super().__init__(model, query, sql_cache_maxsize)
         self._prefetch_map = prefetch_map
         self._prefetch_queries = prefetch_queries
         self._select_related_idx = select_related_idx
@@ -274,10 +321,11 @@ class CompiledCountQuery(BaseCompiledQuery[MODEL]):
         self,
         model: type[MODEL],
         query: QueryBuilder,
+        sql_cache_maxsize: int | None,
         limit: int | None,
         offset: int | None,
     ) -> None:
-        super().__init__(model, query)
+        super().__init__(model, query, sql_cache_maxsize)
         self._limit = limit or 0
         self._offset = offset or 0
 
@@ -314,13 +362,14 @@ class CompiledValuesListQuery(BaseCompiledQuery[MODEL], Generic[MODEL, SINGLE]):
         self,
         model: type[MODEL],
         query: QueryBuilder,
+        sql_cache_maxsize: int | None,
         single: bool,
         raise_does_not_exist: bool,
         fields_for_select_list: tuple[str, ...] | list[str],
         flat: bool,
         annotations: dict[str, Any],
     ) -> None:
-        super().__init__(model, query)
+        super().__init__(model, query, sql_cache_maxsize)
 
         fields_for_select = {str(i): field for i, field in enumerate(fields_for_select_list)}
         self.fields = fields_for_select
@@ -369,12 +418,13 @@ class CompiledValuesQuery(BaseCompiledQuery[MODEL], Generic[MODEL, SINGLE]):
         self,
         model: type[MODEL],
         query: QueryBuilder,
+        sql_cache_maxsize: int | None,
         single: bool,
         raise_does_not_exist: bool,
         fields_for_select: dict[str, str],
         annotations: dict[str, Any],
     ) -> None:
-        super().__init__(model, query)
+        super().__init__(model, query, sql_cache_maxsize)
 
         self._single = single
         self._raise_does_not_exist = raise_does_not_exist

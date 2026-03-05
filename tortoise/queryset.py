@@ -90,7 +90,9 @@ class QuerySetSingle(Protocol[T_co]):
         self, *args: str, **kwargs: str
     ) -> ValuesQuery[Literal[True]]: ...  # pragma: nocoverage
 
-    def compile(self, key: str | None = None) -> CompiledQuerySetSingle[T_co]: ...
+    def compile(
+        self, key: str | None = None, sql_cache_maxsize: int | None = None
+    ) -> CompiledQuerySetSingle[T_co]: ...
 
 
 class AwaitableQuery(Generic[MODEL]):
@@ -384,11 +386,8 @@ class QuerySet(AwaitableQuery[MODEL]):
         self._force_indexes: set[str] = set()
         self._use_indexes: set[str] = set()
 
-    # TODO: remove _new_cls
-    def _clone(self, _new_cls: type[QuerySet] | None = None) -> QuerySet[MODEL]:
-        if _new_cls is None:
-            _new_cls = self.__class__
-        queryset = _new_cls.__new__(_new_cls)
+    def _clone(self) -> QuerySet[MODEL]:
+        queryset = self.__class__.__new__(self.__class__)
         queryset.fields = self.fields
         queryset.model = self.model
         queryset.query = self.query
@@ -1307,7 +1306,9 @@ class QuerySet(AwaitableQuery[MODEL]):
             raise MultipleObjectsReturned(self.model)
         return instance_list
 
-    def compile(self, key: str | None = None) -> CompiledQuerySet[MODEL]:
+    def compile(
+        self, key: str | None = None, sql_cache_maxsize: int | None = None
+    ) -> CompiledQuerySet[MODEL]:
         """
         Compiles queryset sql.
         :param key: Cache key for saving compiled query to model cache.
@@ -1330,6 +1331,7 @@ class QuerySet(AwaitableQuery[MODEL]):
         compiled = CompiledQuerySet(
             model=self.model,
             query=self.query,
+            sql_cache_maxsize=sql_cache_maxsize,
             prefetch_map=self._prefetch_map,
             prefetch_queries=self._prefetch_queries,
             select_related_idx=self._select_related_idx,
@@ -1435,7 +1437,9 @@ class UpdateQuery(AwaitableQuery):
     async def _execute(self) -> int:
         return (await self._db.execute_query(*self.query.get_parameterized_sql()))[0]
 
-    def compile(self, key: str | None = None) -> CompiledUpdateQuery[MODEL]:
+    def compile(
+        self, key: str | None = None, sql_cache_maxsize: int | None = None
+    ) -> CompiledUpdateQuery[MODEL]:
         """
         Compiles query sql.
         :param key: Cache key for saving compiled query to model cache.
@@ -1455,7 +1459,11 @@ class UpdateQuery(AwaitableQuery):
 
         self._choose_db_if_not_chosen(True)
         self._make_query()
-        compiled = CompiledUpdateQuery(model=self.model, query=self.query)
+        compiled = CompiledUpdateQuery(
+            model=self.model,
+            query=self.query,
+            sql_cache_maxsize=sql_cache_maxsize,
+        )
 
         if key is not None:
             self.model._meta.query_cache[key] = compiled
@@ -1511,7 +1519,9 @@ class DeleteQuery(AwaitableQuery):
     async def _execute(self) -> int:
         return (await self._db.execute_query(*self.query.get_parameterized_sql()))[0]
 
-    def compile(self, key: str | None = None) -> CompiledDeleteQuery[MODEL]:
+    def compile(
+        self, key: str | None = None, sql_cache_maxsize: int | None = None
+    ) -> CompiledDeleteQuery[MODEL]:
         """
         Compiles query sql.
         :param key: Cache key for saving compiled query to model cache.
@@ -1531,7 +1541,11 @@ class DeleteQuery(AwaitableQuery):
 
         self._choose_db_if_not_chosen(True)
         self._make_query()
-        compiled = CompiledDeleteQuery(model=self.model, query=self.query)
+        compiled = CompiledDeleteQuery(
+            model=self.model,
+            query=self.query,
+            sql_cache_maxsize=sql_cache_maxsize,
+        )
 
         if key is not None:
             self.model._meta.query_cache[key] = compiled
@@ -1587,7 +1601,9 @@ class ExistsQuery(AwaitableQuery):
         result, _ = await self._db.execute_query(*self.query.get_parameterized_sql())
         return bool(result)
 
-    def compile(self, key: str | None = None) -> CompiledExistsQuery[MODEL]:
+    def compile(
+        self, key: str | None = None, sql_cache_maxsize: int | None = None
+    ) -> CompiledExistsQuery[MODEL]:
         """
         Compiles query sql.
         :param key: Cache key for saving compiled query to model cache.
@@ -1607,7 +1623,11 @@ class ExistsQuery(AwaitableQuery):
 
         self._choose_db_if_not_chosen(False)
         self._make_query()
-        compiled = CompiledExistsQuery(model=self.model, query=self.query)
+        compiled = CompiledExistsQuery(
+            model=self.model,
+            query=self.query,
+            sql_cache_maxsize=sql_cache_maxsize,
+        )
 
         if key is not None:
             self.model._meta.query_cache[key] = compiled
@@ -1677,10 +1697,14 @@ class CountQuery(AwaitableQuery):
             return self._limit
         return count
 
-    def compile(self, key: str | None = None) -> CompiledCountQuery[MODEL]:
+    def compile(
+        self, key: str | None = None, sql_cache_maxsize: int | None = None
+    ) -> CompiledCountQuery[MODEL]:
         """
         Compiles query sql.
         :param key: Cache key for saving compiled query to model cache.
+        :param sql_cache_maxsize: Maximum cache size for generated sql cache.
+            Only makes sense for queries that contain collections as a parameters.
         """
 
         from tortoise.queryset_compiled import CompiledCountQuery
@@ -1700,6 +1724,7 @@ class CountQuery(AwaitableQuery):
         compiled = CompiledCountQuery(
             model=self.model,
             query=self.query,
+            sql_cache_maxsize=sql_cache_maxsize,
             limit=self._limit,
             offset=self._offset,
         )
@@ -1976,7 +2001,9 @@ class ValuesListQuery(FieldSelectQuery, Generic[SINGLE]):
         _, result = await self._db.execute_query(*self.query.get_parameterized_sql())
         return self._process_results(result)
 
-    def compile(self, key: str | None = None) -> CompiledValuesListQuery[MODEL, SINGLE]:
+    def compile(
+        self, key: str | None = None, sql_cache_maxsize: int | None = None
+    ) -> CompiledValuesListQuery[MODEL, SINGLE]:
         """
         Compiles query sql.
         :param key: Cache key for saving compiled query to model cache.
@@ -1999,6 +2026,7 @@ class ValuesListQuery(FieldSelectQuery, Generic[SINGLE]):
         compiled: CompiledValuesListQuery[MODEL, SINGLE] = CompiledValuesListQuery(
             model=self.model,
             query=self.query,
+            sql_cache_maxsize=sql_cache_maxsize,
             single=self._single,
             raise_does_not_exist=self._raise_does_not_exist,
             fields_for_select_list=self._fields_for_select_list,
@@ -2152,7 +2180,9 @@ class ValuesQuery(FieldSelectQuery, Generic[SINGLE]):
         result = await self._db.execute_query_dict(*self.query.get_parameterized_sql())
         return self._process_results(result)
 
-    def compile(self, key: str | None = None) -> CompiledValuesQuery[MODEL, SINGLE]:
+    def compile(
+        self, key: str | None = None, sql_cache_maxsize: int | None = None
+    ) -> CompiledValuesQuery[MODEL, SINGLE]:
         """
         Compiles query sql.
         :param key: Cache key for saving compiled query to model cache.
@@ -2175,6 +2205,7 @@ class ValuesQuery(FieldSelectQuery, Generic[SINGLE]):
         compiled: CompiledValuesQuery[MODEL, SINGLE] = CompiledValuesQuery(
             model=self.model,
             query=self.query,
+            sql_cache_maxsize=sql_cache_maxsize,
             single=self._single,
             raise_does_not_exist=self._raise_does_not_exist,
             fields_for_select=self._fields_for_select,

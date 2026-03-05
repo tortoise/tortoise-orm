@@ -370,3 +370,20 @@ def test_prepared_query_get_sql(db, filter_kwargs: dict[str, Any], cache_key_suf
     )
 
     assert expected_sql == actual_sql
+
+
+def test_compiled_query_auto_cache_size(db):
+    compiled = Author.filter(id=Parameter("id")).compile()
+    # Trigger sql generation
+    compiled.sql(id=1)
+    assert compiled._sql_cache.maxsize == compiled.DEFAULT_CACHE_SIZE_SIMPLE
+
+    compiled = Author.filter(
+        id__in=Subquery(Author.filter(Q(id=Parameter("id1")) | Q(id=Parameter("id2"))))
+    ).compile()
+    compiled.sql(id1=1, id2=2)
+    assert compiled._sql_cache.maxsize == compiled.DEFAULT_CACHE_SIZE_SIMPLE
+
+    compiled = Author.filter(id__in=Parameter("ids")).compile()
+    compiled.sql(ids=[1])
+    assert compiled._sql_cache.maxsize == compiled.DEFAULT_CACHE_SIZE_COLLECTIONS
