@@ -50,6 +50,7 @@ if TYPE_CHECKING:  # pragma: nocoverage
         CompiledDeleteQuery,
         CompiledExistsQuery,
         CompiledQuerySet,
+        CompiledQuerySetSingle,
         CompiledUpdateQuery,
         CompiledValuesListQuery,
         CompiledValuesQuery,
@@ -88,6 +89,8 @@ class QuerySetSingle(Protocol[T_co]):
     def values(
         self, *args: str, **kwargs: str
     ) -> ValuesQuery[Literal[True]]: ...  # pragma: nocoverage
+
+    def compile(self, key: str | None = None) -> CompiledQuerySetSingle[T_co]: ...
 
 
 class AwaitableQuery(Generic[MODEL]):
@@ -1973,7 +1976,7 @@ class ValuesListQuery(FieldSelectQuery, Generic[SINGLE]):
         _, result = await self._db.execute_query(*self.query.get_parameterized_sql())
         return self._process_results(result)
 
-    def compile(self, key: str | None = None) -> CompiledValuesListQuery[MODEL]:
+    def compile(self, key: str | None = None) -> CompiledValuesListQuery[MODEL, SINGLE]:
         """
         Compiles query sql.
         :param key: Cache key for saving compiled query to model cache.
@@ -1993,7 +1996,7 @@ class ValuesListQuery(FieldSelectQuery, Generic[SINGLE]):
 
         self._choose_db_if_not_chosen(False)
         self._make_query()
-        compiled = CompiledValuesListQuery(
+        compiled: CompiledValuesListQuery[MODEL, SINGLE] = CompiledValuesListQuery(
             model=self.model,
             query=self.query,
             single=self._single,
@@ -2149,7 +2152,7 @@ class ValuesQuery(FieldSelectQuery, Generic[SINGLE]):
         result = await self._db.execute_query_dict(*self.query.get_parameterized_sql())
         return self._process_results(result)
 
-    def compile(self, key: str | None = None) -> CompiledValuesQuery[MODEL]:
+    def compile(self, key: str | None = None) -> CompiledValuesQuery[MODEL, SINGLE]:
         """
         Compiles query sql.
         :param key: Cache key for saving compiled query to model cache.
@@ -2169,7 +2172,7 @@ class ValuesQuery(FieldSelectQuery, Generic[SINGLE]):
 
         self._choose_db_if_not_chosen(False)
         self._make_query()
-        compiled = CompiledValuesQuery(
+        compiled: CompiledValuesQuery[MODEL, SINGLE] = CompiledValuesQuery(
             model=self.model,
             query=self.query,
             single=self._single,

@@ -4,7 +4,7 @@ import sys
 from abc import ABC, abstractmethod
 from collections import defaultdict
 from collections.abc import Callable, Iterable
-from typing import TYPE_CHECKING, Any, TypeVar, cast
+from typing import TYPE_CHECKING, Any, Generic, Literal, Protocol, TypeVar, cast, overload
 
 from pypika_tortoise.queries import QueryBuilder, Table
 
@@ -13,9 +13,11 @@ from tortoise.parameter import CollectionParameter, Parameter, TortoiseSqlContex
 from tortoise.query_utils import Prefetch
 from tortoise.queryset import (
     MODEL,
+    SINGLE,
     AwaitableQuery,
     FieldSelectQuery,
     QuerySet,
+    T_co,
     ValuesListQuery,
     ValuesQuery,
 )
@@ -27,6 +29,12 @@ else:
 
 if TYPE_CHECKING:
     from tortoise import Model
+
+
+class CompiledQuerySetSingle(Protocol[T_co]):
+    def sql(self, **params) -> str: ...
+
+    async def execute(self, **params) -> MODEL: ...
 
 
 T = TypeVar("T")
@@ -137,7 +145,6 @@ class BaseCompiledQuery(AwaitableQuery[MODEL], ABC):
             param.collection_size = len(value)
             reset_params.append(param)
 
-        # TODO: add ability to limit cache, use lru?
         if cache_key not in self._sql_cache:
             # TODO: probably could be done in a better way?
             ctx = TortoiseSqlContext.copy(
@@ -160,7 +167,6 @@ class BaseCompiledQuery(AwaitableQuery[MODEL], ABC):
         return cached_query.sql
 
 
-# TODO: type single queries
 class CompiledQuerySet(BaseCompiledQuery[MODEL]):
     __slots__ = (
         "_prefetch_map",
@@ -295,8 +301,7 @@ class CompiledCountQuery(BaseCompiledQuery[MODEL]):
         return count
 
 
-# TODO: type single query
-class CompiledValuesListQuery(BaseCompiledQuery[MODEL]):
+class CompiledValuesListQuery(BaseCompiledQuery[MODEL], Generic[MODEL, SINGLE]):
     __slots__ = (
         "fields",
         "_single",
@@ -336,6 +341,14 @@ class CompiledValuesListQuery(BaseCompiledQuery[MODEL]):
     def resolve_to_python_value(self, model: type[MODEL], field: str) -> Callable:
         return FieldSelectQuery.resolve_to_python_value(self, model, field)
 
+    @overload
+    async def execute(self: CompiledValuesListQuery[MODEL, Literal[True]], **params) -> tuple: ...
+
+    @overload
+    async def execute(
+        self: CompiledValuesListQuery[MODEL, Literal[False]], **params
+    ) -> list[Any]: ...
+
     async def execute(self, **params) -> list[Any] | tuple:
         self._choose_db_if_not_chosen(False)
         cached_query = self._get_or_create_cached_sql(params)
@@ -344,8 +357,7 @@ class CompiledValuesListQuery(BaseCompiledQuery[MODEL]):
         return ValuesListQuery._process_results(self, result)
 
 
-# TODO: type single query
-class CompiledValuesQuery(BaseCompiledQuery[MODEL]):
+class CompiledValuesQuery(BaseCompiledQuery[MODEL], Generic[MODEL, SINGLE]):
     __slots__ = (
         "_single",
         "_raise_does_not_exist",
@@ -379,6 +391,12 @@ class CompiledValuesQuery(BaseCompiledQuery[MODEL]):
 
     def resolve_to_python_value(self, model: type[MODEL], field: str) -> Callable:
         return FieldSelectQuery.resolve_to_python_value(self, model, field)
+
+    @overload
+    async def execute(self: CompiledValuesQuery[MODEL, Literal[True]], **params) -> dict: ...
+
+    @overload
+    async def execute(self: CompiledValuesQuery[MODEL, Literal[False]], **params) -> list[dict]: ...
 
     async def execute(self, **params) -> list[dict] | dict:
         self._choose_db_if_not_chosen(False)
