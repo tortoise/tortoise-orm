@@ -45,7 +45,8 @@ QUERY: QueryBuilder = QueryBuilder()
 
 if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.models import Model
-    from tortoise.queryset_prepared import PreparingQuerySet, _PreparedQueryMixin
+    from tortoise.queryset_compiled import CompiledQuerySet, CompiledUpdateQuery, CompiledDeleteQuery, \
+        CompiledExistsQuery, CompiledCountQuery
 
 MODEL = TypeVar("MODEL", bound="Model")
 PRIMARY_KEY = TypeVar("PRIMARY_KEY")
@@ -373,6 +374,7 @@ class QuerySet(AwaitableQuery[MODEL]):
         self._force_indexes: set[str] = set()
         self._use_indexes: set[str] = set()
 
+    # TODO: remove _new_cls
     def _clone(self, _new_cls: type[QuerySet] | None = None) -> QuerySet[MODEL]:
         if _new_cls is None:
             _new_cls = self.__class__
@@ -517,6 +519,7 @@ class QuerySet(AwaitableQuery[MODEL]):
         queryset._orderings = self._parse_orderings(orderings)
         return queryset._as_single()
 
+    # TODO: support Parameter arguments
     def limit(self, limit: int) -> QuerySet[MODEL]:
         """
         Limits QuerySet to given length.
@@ -530,6 +533,7 @@ class QuerySet(AwaitableQuery[MODEL]):
         queryset._limit = limit
         return queryset
 
+    # TODO: support Parameter arguments
     def offset(self, offset: int) -> QuerySet[MODEL]:
         """
         Query offset for QuerySet.
@@ -1278,25 +1282,38 @@ class QuerySet(AwaitableQuery[MODEL]):
             raise MultipleObjectsReturned(self.model)
         return instance_list
 
-    def prepare_sql(self, key: str) -> PreparingQuerySet[MODEL] | _PreparedQueryMixin:
+    def compile(self, key: str | None = None) -> CompiledQuerySet[MODEL]:
         """
-        Cache generated sql of this query set.
-        If query set is already in cache, return cached version with already generated sql.
+        Compiles queryset sql.
+        :param key: Cache key for saving compiled query to model cache.
         """
+
+        from tortoise.queryset_compiled import CompiledQuerySet
 
         if key in self.model._meta.query_cache:
-            prepared_queryset = self.model._meta.query_cache[key]._clone()
-            # TODO: select db in .prepared, not in here
-            prepared_queryset._db = None  # type: ignore
-            prepared_queryset._db = prepared_queryset._choose_db(prepared_queryset._db_for_write)
-            return prepared_queryset
+            cached = self.model._meta.query_cache[key]
+            if not isinstance(cached, CompiledQuerySet):
+                ...  # TODO: raise an exception
+            return cached._clone()
 
-        from tortoise.queryset_prepared import PreparingQuerySet
+        self._choose_db_if_not_chosen(self._select_for_update)
+        self._make_query()
+        compiled = CompiledQuerySet(
+            model=self.model,
+            query=self.query,
+            prefetch_map=self._prefetch_map,
+            prefetch_queries=self._prefetch_queries,
+            select_related_idx=self._select_related_idx,
+            single=self._single,
+            raise_does_not_exist=self._raise_does_not_exist,
+            select_for_update=self._select_for_update,
+            custom_fields=list(self._annotations.keys()),
+        )
 
-        preparing_queryset = cast(PreparingQuerySet[MODEL], self._clone(PreparingQuerySet))
-        preparing_queryset._cache_key = key
+        if key is not None:
+            self.model._meta.query_cache[key] = compiled
 
-        return preparing_queryset
+        return compiled
 
 
 class UpdateQuery(AwaitableQuery):
@@ -1389,6 +1406,29 @@ class UpdateQuery(AwaitableQuery):
     async def _execute(self) -> int:
         return (await self._db.execute_query(*self.query.get_parameterized_sql()))[0]
 
+    def compile(self, key: str | None = None) -> CompiledUpdateQuery[MODEL]:
+        """
+        Compiles query sql.
+        :param key: Cache key for saving compiled query to model cache.
+        """
+
+        from tortoise.queryset_compiled import CompiledUpdateQuery
+
+        if key in self.model._meta.query_cache:
+            cached = self.model._meta.query_cache[key]
+            if not isinstance(cached, CompiledUpdateQuery):
+                ...  # TODO: raise an exception
+            return cached._clone()
+
+        self._choose_db_if_not_chosen(True)
+        self._make_query()
+        compiled = CompiledUpdateQuery(model=self.model, query=self.query)
+
+        if key is not None:
+            self.model._meta.query_cache[key] = compiled
+
+        return compiled
+
 
 class DeleteQuery(AwaitableQuery):
     __slots__ = (
@@ -1438,6 +1478,29 @@ class DeleteQuery(AwaitableQuery):
     async def _execute(self) -> int:
         return (await self._db.execute_query(*self.query.get_parameterized_sql()))[0]
 
+    def compile(self, key: str | None = None) -> CompiledDeleteQuery[MODEL]:
+        """
+        Compiles query sql.
+        :param key: Cache key for saving compiled query to model cache.
+        """
+
+        from tortoise.queryset_compiled import CompiledDeleteQuery
+
+        if key in self.model._meta.query_cache:
+            cached = self.model._meta.query_cache[key]
+            if not isinstance(cached, CompiledDeleteQuery):
+                ...  # TODO: raise an exception
+            return cached._clone()
+
+        self._choose_db_if_not_chosen(True)
+        self._make_query()
+        compiled = CompiledDeleteQuery(model=self.model, query=self.query)
+
+        if key is not None:
+            self.model._meta.query_cache[key] = compiled
+
+        return compiled
+
 
 class ExistsQuery(AwaitableQuery):
     __slots__ = (
@@ -1486,6 +1549,29 @@ class ExistsQuery(AwaitableQuery):
     ) -> bool:
         result, _ = await self._db.execute_query(*self.query.get_parameterized_sql())
         return bool(result)
+
+    def compile(self, key: str | None = None) -> CompiledExistsQuery[MODEL]:
+        """
+        Compiles query sql.
+        :param key: Cache key for saving compiled query to model cache.
+        """
+
+        from tortoise.queryset_compiled import CompiledExistsQuery
+
+        if key in self.model._meta.query_cache:
+            cached = self.model._meta.query_cache[key]
+            if not isinstance(cached, CompiledExistsQuery):
+                ...  # TODO: raise an exception
+            return cached._clone()
+
+        self._choose_db_if_not_chosen(False)
+        self._make_query()
+        compiled = CompiledExistsQuery(model=self.model, query=self.query)
+
+        if key is not None:
+            self.model._meta.query_cache[key] = compiled
+
+        return compiled
 
 
 class CountQuery(AwaitableQuery):
@@ -1549,6 +1635,34 @@ class CountQuery(AwaitableQuery):
         if self._limit and count > self._limit:
             return self._limit
         return count
+
+    def compile(self, key: str | None = None) -> CompiledCountQuery[MODEL]:
+        """
+        Compiles query sql.
+        :param key: Cache key for saving compiled query to model cache.
+        """
+
+        from tortoise.queryset_compiled import CompiledCountQuery
+
+        if key in self.model._meta.query_cache:
+            cached = self.model._meta.query_cache[key]
+            if not isinstance(cached, CompiledCountQuery):
+                ...  # TODO: raise an exception
+            return cached._clone()
+
+        self._choose_db_if_not_chosen(False)
+        self._make_query()
+        compiled = CompiledCountQuery(
+            model=self.model,
+            query=self.query,
+            limit=self._limit,
+            offset=self._offset,
+        )
+
+        if key is not None:
+            self.model._meta.query_cache[key] = compiled
+
+        return compiled
 
 
 class FieldSelectQuery(AwaitableQuery):
@@ -1801,6 +1915,26 @@ class ValuesListQuery(FieldSelectQuery, Generic[SINGLE]):
         _, result = await self._db.execute_query(*self.query.get_parameterized_sql())
         return self._process_results(result)
 
+    # TODO: add compiled values list query class
+    # def compile(self, key: str | None = None) -> CompiledValuesListQuery[MODEL]:
+    #     """
+    #     Compiles query sql.
+    #     :param key: Cache key for saving compiled query to model cache.
+    #     """
+    #
+    #     if key in self.model._meta.query_cache:
+    #         cached = self.model._meta.query_cache[key]
+    #         if not isinstance(cached, CompiledValuesListQuery):
+    #             ...  # TODO: raise an exception
+    #         return cached._clone()
+    #
+    #     compiled = CompiledValuesListQuery(model=self.model, query=self.query)
+    #
+    #     if key is not None:
+    #         self.model._meta.query_cache[key] = compiled
+    #
+    #     return compiled
+
 
 class ValuesQuery(FieldSelectQuery, Generic[SINGLE]):
     __slots__ = (
@@ -1935,6 +2069,26 @@ class ValuesQuery(FieldSelectQuery, Generic[SINGLE]):
     async def _execute(self) -> list[dict] | dict:
         result = await self._db.execute_query_dict(*self.query.get_parameterized_sql())
         return self._process_results(result)
+
+    # TODO: add compiled values list query class
+    # def compile(self, key: str | None = None) -> CompiledValuesQuery[MODEL]:
+    #     """
+    #     Compiles query sql.
+    #     :param key: Cache key for saving compiled query to model cache.
+    #     """
+    #
+    #     if key in self.model._meta.query_cache:
+    #         cached = self.model._meta.query_cache[key]
+    #         if not isinstance(cached, CompiledValuesQuery):
+    #             ...  # TODO: raise an exception
+    #         return cached._clone()
+    #
+    #     compiled = CompiledValuesQuery(model=self.model, query=self.query)
+    #
+    #     if key is not None:
+    #         self.model._meta.query_cache[key] = compiled
+    #
+    #     return compiled
 
 
 class RawSQLQuery(AwaitableQuery):

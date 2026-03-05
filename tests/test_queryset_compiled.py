@@ -10,14 +10,8 @@ from tortoise.parameter import Parameter
 
 def test_prepared_queryset_query_always_same(db):
     cache_key = "test_prepared_queryset_always_same"
-    prepared = Author.prepare_sql(cache_key).filter(id=Parameter("some_param")).prepared()
-    assert Author.prepare_sql(cache_key).query is prepared.query
-
-
-def test_disallow_filtering_on_prepared_queryset(db):
-    cache_key = "test_disallow_filtering_on_prepared_queryset"
-    prepared = Author.prepare_sql(cache_key).filter(id=Parameter("some_param")).prepared()
-    assert prepared is prepared.filter(id=1)
+    prepared = Author.filter(id=Parameter("some_param")).compile(cache_key)
+    assert Author.all().compile(cache_key).query is prepared.query
 
 
 @pytest.mark.asyncio
@@ -28,15 +22,16 @@ async def test_gte_filter(db):
     expected = await Author.filter(id__gte=author2.pk).order_by("id")
 
     prepared = (
-        Author.prepare_sql("test_gte_filter")
+        Author
         .filter(id__gte=Parameter("idgte"))
         .order_by("id")
-        .prepared()
+        .compile("test_gte_filter")
     )
+    print(prepared.sql(idgte=author2.pk))
     actual = await prepared.execute(idgte=author2.pk)
     assert len(actual) == 2
-    assert actual[0].id == author2.pk
-    assert actual[1].id == author3.pk
+    assert actual[0].pk == author2.pk
+    assert actual[1].pk == author3.pk
     assert expected == actual
 
 
@@ -48,10 +43,10 @@ async def test_string_param(db):
 
     expected = await Author.filter(name=author2.name)
 
-    prepared = Author.prepare_sql("test_string_param").filter(name=Parameter("name")).prepared()
+    prepared = Author.filter(name=Parameter("name")).compile("test_string_param")
     actual = await prepared.execute(name=author2.name)
     assert len(actual) == 1
-    assert actual[0].id == author2.pk
+    assert actual[0].pk == author2.pk
     assert expected == actual
 
 
@@ -62,13 +57,10 @@ async def test_startswith_filter(db):
     author3 = await Author.create(name="qwetest")
 
     prepared = (
-        Author.prepare_sql("test_startswith_filter")
+        Author
         .filter(name__startswith=Parameter("name"))
-        .prepared()
+        .compile("test_startswith_filter")
     )
-
-    # print(Author.filter(name__startswith="asd").sql())
-    # print(prepared.sql())
 
     for test_name in (author2.pk, author1.name, author3.name, "asd"):
         expected = await Author.filter(name__startswith=test_name)
@@ -82,7 +74,7 @@ async def test_in_filter(db):
     author2 = await Author.create(name="testqwe")
     author3 = await Author.create(name="qwetest")
 
-    prepared = Author.prepare_sql("test_in_filter").filter(id__in=Parameter("ids")).prepared()
+    prepared = Author.filter(id__in=Parameter("ids")).compile("test_in_filter")
 
     for test_ids in ([author2.pk, author1.pk], [author3.pk, author3.pk * 2, author3.pk * 10]):
         expected = await Author.filter(id__in=test_ids)
@@ -97,13 +89,13 @@ async def test_subqueries(db):
     author3 = await Author.create(name="3")
 
     prepared = (
-        Author.prepare_sql("test_subqueries")
+        Author
         .filter(
             id__in=Subquery(
                 Author.filter(Q(id=Parameter("id1")) | Q(id=Parameter("id2"))).values("id")
             )
         )
-        .prepared()
+        .compile("test_subqueries")
     )
 
     for id1, id2 in (
@@ -124,9 +116,9 @@ async def test_subqueries_in_filter(db):
     author3 = await Author.create(name="3")
 
     prepared = (
-        Author.prepare_sql("test_subqueries_in_filter")
+        Author
         .filter(id__in=Subquery(Author.filter(id__in=Parameter("ids")).values("id")))
-        .prepared()
+        .compile("test_subqueries_in_filter")
     )
 
     for test_ids in ([author2.pk, author1.pk], [author3.pk, author3.pk * 2, author3.pk * 10]):
@@ -145,10 +137,10 @@ async def test_update(db):
     new_name1 = f"{author1.name}_test"
 
     prepared = (
-        Author.prepare_sql("test_update")
+        Author
         .filter(id=Parameter("search_id"))
         .update(name=Parameter("replace_name"))
-        .prepared()
+        .compile("test_update")
     )
 
     await prepared.execute(search_id=author1.pk, replace_name=new_name1)
@@ -169,12 +161,12 @@ async def test_delete(db):
     author3 = await Author.create(name="3")
 
     prepared = (
-        Author.prepare_sql("test_delete")
+        Author
         .filter(
             id__in=Parameter("ids"),
         )
         .delete()
-        .prepared()
+        .compile("test_delete")
     )
 
     affected = await prepared.execute(ids=[author1.pk])
@@ -189,12 +181,12 @@ async def test_exists(db):
     author = await Author.create(name="1")
 
     prepared = (
-        Author.prepare_sql("test_exists")
+        Author
         .filter(
             id__in=Parameter("ids"),
         )
         .exists()
-        .prepared()
+        .compile("test_exists")
     )
 
     assert await prepared.execute(ids=[author.pk])
@@ -208,12 +200,12 @@ async def test_count(db):
     author3 = await Author.create(name="3")
 
     prepared = (
-        Author.prepare_sql("test_count")
+        Author
         .filter(
             id__gte=Parameter("idgte"),
         )
         .count()
-        .prepared()
+        .compile("test_count")
     )
 
     assert await prepared.execute(idgte=author1.pk) == 3
@@ -233,11 +225,11 @@ async def test_parameter_in_limit(db):
     )
 
     prepared = (
-        Author.prepare_sql("test_parameter_in_limit")
+        Author
         .all()
         .limit(Parameter("lim"))
         .order_by("id")
-        .prepared()
+        .compile("test_parameter_in_limit")
     )
 
     assert len(await prepared.execute(lim=1)) == 1
@@ -260,11 +252,11 @@ async def test_parameter_in_offset(db):
     )
 
     prepared = (
-        Author.prepare_sql("test_parameter_in_offset")
+        Author
         .all()
         .offset(Parameter("off"))
         .order_by("id")
-        .prepared()
+        .compile("test_parameter_in_offset")
     )
 
     assert len(await prepared.execute(off=1)) == 2
@@ -281,12 +273,12 @@ async def test_values(db):
     author = await Author.create(name="1")
 
     prepared = (
-        Author.prepare_sql("test_values")
+        Author
         .filter(
             id=Parameter("id"),
         )
         .values()
-        .prepared()
+        .compile("test_values")
     )
 
     assert await prepared.execute(id=author.pk) == [{"id": author.pk, "name": author.name}]
@@ -298,12 +290,12 @@ async def test_values_list_all_fields(db):
     author = await Author.create(name="1")
 
     prepared_all = (
-        Author.prepare_sql("test_values_list_all_fields")
+        Author
         .filter(
             id=Parameter("id"),
         )
         .values_list()
-        .prepared()
+        .compile("test_values_list_all_fields")
     )
     assert await prepared_all.execute(id=author.pk) == [(author.pk, author.name)]
     assert await prepared_all.execute(id=author.pk * 2) == []
@@ -314,12 +306,12 @@ async def test_values_list_only_id_field(db):
     author = await Author.create(name="1")
 
     prepared_ids = (
-        Author.prepare_sql("test_values_list_only_id_field")
+        Author
         .filter(
             id=Parameter("id"),
         )
         .values_list("id")
-        .prepared()
+        .compile("test_values_list_only_id_field")
     )
     assert await prepared_ids.execute(id=author.pk) == [(author.pk,)]
     assert await prepared_ids.execute(id=author.pk * 2) == []
@@ -330,12 +322,12 @@ async def test_values_list_only_id_field_flat(db):
     author = await Author.create(name="1")
 
     prepared_ids_flat = (
-        Author.prepare_sql("test_values_list_only_id_field_flat")
+        Author
         .filter(
             id=Parameter("id"),
         )
         .values_list("id", flat=True)
-        .prepared()
+        .compile("test_values_list_only_id_field_flat")
     )
     assert await prepared_ids_flat.execute(id=author.pk) == [author.pk]
     assert await prepared_ids_flat.execute(id=author.pk * 2) == []
@@ -349,10 +341,10 @@ async def test_update_fk(db):
     book = await Book.create(name="test", author=author1, rating=5)
 
     prepared = (
-        Book.prepare_sql("test_update_fk")
+        Book
         .filter(id=Parameter("search_id"))
         .update(author=Parameter("replace_author"))
-        .prepared()
+        .compile("test_update_fk")
     )
 
     await prepared.execute(search_id=book.pk, replace_author=author2)
@@ -372,10 +364,10 @@ async def test_update_pk_invalid_obj(db):
     book = await Book.create(name="test", author=author, rating=5)
 
     prepared = (
-        Book.prepare_sql("test_update_pk_invalid_obj")
+        Book
         .filter(id=Parameter("search_id"))
         .update(author=Parameter("replace_author"))
-        .prepared()
+        .compile("test_update_pk_invalid_obj")
     )
 
     with pytest.raises(ValidationError):
@@ -384,10 +376,10 @@ async def test_update_pk_invalid_obj(db):
 
 def test_remove_prepared_queryset_from_cache(db):
     cache_key = "test_remove_query_from_cache"
-    prepared = Author.prepare_sql(cache_key).filter(id=Parameter("some_param")).prepared()
-    assert Author.prepare_sql(cache_key).query is prepared.query
-    Author.remove_prepared_query(cache_key)
-    assert Author.prepare_sql(cache_key).query is not prepared.query
+    prepared = Author.filter(id=Parameter("some_param")).compile(cache_key)
+    assert Author.all().compile(cache_key).query is prepared.query
+    Author.remove_compiled_query(cache_key)
+    assert Author.all().compile(cache_key).query is not prepared.query
 
 
 @pytest.mark.parametrize(
@@ -404,12 +396,12 @@ def test_remove_prepared_queryset_from_cache(db):
 def test_prepared_query_get_sql(db, filter_kwargs: dict[str, Any], cache_key_suffix: str):
     expected_sql = CharPkModel.all().filter(**filter_kwargs).limit(10).offset(0).sql()
     actual_sql = (
-        CharPkModel.prepare_sql(f"test_prepared_query_get_sql-{cache_key_suffix}")
+        CharPkModel
         .all()
         .filter(**{key: Parameter(key) for key in filter_kwargs})
         .limit(10)
         .offset(0)
-        .prepared()
+        .compile(f"test_prepared_query_get_sql-{cache_key_suffix}")
         .sql(**filter_kwargs)
     )
 

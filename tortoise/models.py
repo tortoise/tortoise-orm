@@ -50,7 +50,7 @@ from tortoise.queryset import (
     QuerySetSingle,
     RawSQLQuery,
 )
-from tortoise.queryset_prepared import PreparingQuerySet, _PreparedQueryMixin
+from tortoise.queryset_compiled import BaseCompiledQuery
 from tortoise.router import router
 from tortoise.signals import Signals
 from tortoise.transactions import in_transaction
@@ -257,7 +257,7 @@ class MetaInfo:
         self.db_native_fields: list[tuple[str, str, Field]] = []
         self.db_default_fields: list[tuple[str, str, Field]] = []
         self.db_complex_fields: list[tuple[str, str, Field]] = []
-        self.query_cache: dict[str, _PreparedQueryMixin] = {}
+        self.query_cache: dict[str, BaseCompiledQuery[Self]] = {}
 
     @property
     def full_name(self) -> str:
@@ -1614,11 +1614,7 @@ class Model(metaclass=ModelMeta):
         await db.executor_class(model=cls, db=db).fetch_for_list(instance_list, *args)
 
     @classmethod
-    def prepare_sql(cls, key: str) -> PreparingQuerySet[Self] | _PreparedQueryMixin[Self]:
-        return cls._meta.manager.get_queryset().prepare_sql(key)
-
-    @classmethod
-    def remove_prepared_query(cls, key: str) -> None:
+    def remove_compiled_query(cls, key: str) -> None:
         cls._meta.query_cache.pop(key, None)
 
     @classmethod
