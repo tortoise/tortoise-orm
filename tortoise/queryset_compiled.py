@@ -155,9 +155,11 @@ class BaseCompiledQuery(AwaitableQuery[MODEL], ABC):
         query._capabilities = self._capabilities
         query._annotations = self._annotations
 
+        query._sql_cache_maxsize = self._sql_cache_maxsize
         query._sql_cache = self._sql_cache
         query._dynamic_params = self._dynamic_params
         query._dynamic_params_names = self._dynamic_params_names
+        query._dynamic_params_init = self._dynamic_params_init
 
         return query
 
