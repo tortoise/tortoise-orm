@@ -151,6 +151,7 @@ class BaseCompiledQuery(AwaitableQuery[MODEL], ABC):
         query = self.__class__.__new__(self.__class__)
         query.model = self.model
         query.query = self.query
+        query._db = None  # type: ignore
         query._capabilities = self._capabilities
         query._annotations = self._annotations
 
