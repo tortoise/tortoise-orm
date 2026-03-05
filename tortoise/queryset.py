@@ -519,32 +519,47 @@ class QuerySet(AwaitableQuery[MODEL]):
         queryset._orderings = self._parse_orderings(orderings)
         return queryset._as_single()
 
-    # TODO: support Parameter arguments
-    def limit(self, limit: int) -> QuerySet[MODEL]:
+    @staticmethod
+    def _validate_limit(value: int) -> int:
+        if value < 0:
+            raise ParamsError("Limit should be non-negative number")
+        return value
+
+    def limit(self, limit: int | Parameter) -> QuerySet[MODEL]:
         """
         Limits QuerySet to given length.
 
         :raises ParamsError: Limit should be non-negative number.
         """
-        if limit < 0:
-            raise ParamsError("Limit should be non-negative number")
+        if isinstance(limit, int):
+            self._validate_limit(limit)
+        elif isinstance(limit, Parameter):
+            limit.encode = self._validate_limit
 
         queryset = self._clone()
-        queryset._limit = limit
+        queryset._limit = limit  # type: ignore
         return queryset
 
-    # TODO: support Parameter arguments
-    def offset(self, offset: int) -> QuerySet[MODEL]:
+    @staticmethod
+    def _validate_offset(value: int) -> int:
+        if value < 0:
+            raise ParamsError("Offset should be non-negative number")
+        return value
+
+    def offset(self, offset: int | Parameter) -> QuerySet[MODEL]:
         """
         Query offset for QuerySet.
 
         :raises ParamsError: Offset should be non-negative number.
         """
-        if offset < 0:
-            raise ParamsError("Offset should be non-negative number")
+
+        if isinstance(offset, int) and offset < 0:
+            self._validate_offset(offset)
+        elif isinstance(offset, Parameter):
+            offset.encode = self._validate_offset
 
         queryset = self._clone()
-        queryset._offset = offset
+        queryset._offset = offset  # type: ignore
         if self.capabilities.requires_limit and queryset._limit is None:
             queryset._limit = 1000000
         return queryset
