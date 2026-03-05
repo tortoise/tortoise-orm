@@ -46,7 +46,7 @@ QUERY: QueryBuilder = QueryBuilder()
 if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.models import Model
     from tortoise.queryset_compiled import CompiledQuerySet, CompiledUpdateQuery, CompiledDeleteQuery, \
-        CompiledExistsQuery, CompiledCountQuery
+        CompiledExistsQuery, CompiledCountQuery, CompiledValuesListQuery, CompiledValuesQuery
 
 MODEL = TypeVar("MODEL", bound="Model")
 PRIMARY_KEY = TypeVar("PRIMARY_KEY")
@@ -1665,6 +1665,14 @@ class CountQuery(AwaitableQuery):
         return compiled
 
 
+class FieldsSelectProtocol(Protocol[MODEL]):
+    model: type[MODEL]
+    _annotations: dict[str, Any]
+
+    def resolve_to_python_value(self, model: type[MODEL], field: str) -> Callable:
+        ...
+
+
 class FieldSelectQuery(AwaitableQuery):
     # pylint: disable=W0223
 
@@ -1732,7 +1740,7 @@ class FieldSelectQuery(AwaitableQuery):
 
         raise FieldError(f'Unknown field "{field}" for model "{self.model.__name__}"')
 
-    def resolve_to_python_value(self, model: type[MODEL], field: str) -> Callable:
+    def resolve_to_python_value(self: FieldsSelectProtocol[MODEL], model: type[MODEL], field: str) -> Callable:
         if field in model._meta.fetch_fields:
             # return as is to get whole model objects
             return lambda x: x
@@ -1775,6 +1783,13 @@ class FieldSelectQuery(AwaitableQuery):
             )
             group_bys.append(field)
         return group_bys
+
+
+class ValuesListProtocol(FieldsSelectProtocol[MODEL], Protocol[MODEL]):
+    fields: dict[str, str]
+    _flat: bool
+    _single: bool
+    _raise_does_not_exist: bool
 
 
 class ValuesListQuery(FieldSelectQuery, Generic[SINGLE]):
@@ -1888,7 +1903,7 @@ class ValuesListQuery(FieldSelectQuery, Generic[SINGLE]):
         for val in await self:
             yield val
 
-    def _process_results(self, result: Sequence[dict]) -> list[Any] | tuple:
+    def _process_results(self: ValuesListProtocol, result: Sequence[dict]) -> list[Any] | tuple:
         columns = [
             (key, self.resolve_to_python_value(self.model, name))
             for key, name in self.fields.items()
@@ -1915,25 +1930,42 @@ class ValuesListQuery(FieldSelectQuery, Generic[SINGLE]):
         _, result = await self._db.execute_query(*self.query.get_parameterized_sql())
         return self._process_results(result)
 
-    # TODO: add compiled values list query class
-    # def compile(self, key: str | None = None) -> CompiledValuesListQuery[MODEL]:
-    #     """
-    #     Compiles query sql.
-    #     :param key: Cache key for saving compiled query to model cache.
-    #     """
-    #
-    #     if key in self.model._meta.query_cache:
-    #         cached = self.model._meta.query_cache[key]
-    #         if not isinstance(cached, CompiledValuesListQuery):
-    #             ...  # TODO: raise an exception
-    #         return cached._clone()
-    #
-    #     compiled = CompiledValuesListQuery(model=self.model, query=self.query)
-    #
-    #     if key is not None:
-    #         self.model._meta.query_cache[key] = compiled
-    #
-    #     return compiled
+    def compile(self, key: str | None = None) -> CompiledValuesListQuery[MODEL]:
+        """
+        Compiles query sql.
+        :param key: Cache key for saving compiled query to model cache.
+        """
+
+        from tortoise.queryset_compiled import CompiledValuesListQuery
+
+        if key in self.model._meta.query_cache:
+            cached = self.model._meta.query_cache[key]
+            if not isinstance(cached, CompiledValuesListQuery):
+                ...  # TODO: raise an exception
+            return cached._clone()
+
+        self._choose_db_if_not_chosen(False)
+        self._make_query()
+        compiled = CompiledValuesListQuery(
+            model=self.model,
+            query=self.query,
+            single=self._single,
+            raise_does_not_exist=self._raise_does_not_exist,
+            fields_for_select_list=self._fields_for_select_list,
+            flat=self._flat,
+            annotations=self._annotations,
+        )
+
+        if key is not None:
+            self.model._meta.query_cache[key] = compiled
+
+        return compiled
+
+
+class ValuesProtocol(FieldsSelectProtocol[MODEL], Protocol[MODEL]):
+    _fields_for_select: dict[str, str]
+    _single: bool
+    _raise_does_not_exist: bool
 
 
 class ValuesQuery(FieldSelectQuery, Generic[SINGLE]):
@@ -2041,7 +2073,7 @@ class ValuesQuery(FieldSelectQuery, Generic[SINGLE]):
         for val in await self:
             yield val
 
-    def _process_results(self, result: list[dict]) -> list[dict] | dict:
+    def _process_results(self: ValuesProtocol, result: list[dict]) -> list[dict] | dict:
         columns = [
             val
             for val in [
@@ -2070,25 +2102,35 @@ class ValuesQuery(FieldSelectQuery, Generic[SINGLE]):
         result = await self._db.execute_query_dict(*self.query.get_parameterized_sql())
         return self._process_results(result)
 
-    # TODO: add compiled values list query class
-    # def compile(self, key: str | None = None) -> CompiledValuesQuery[MODEL]:
-    #     """
-    #     Compiles query sql.
-    #     :param key: Cache key for saving compiled query to model cache.
-    #     """
-    #
-    #     if key in self.model._meta.query_cache:
-    #         cached = self.model._meta.query_cache[key]
-    #         if not isinstance(cached, CompiledValuesQuery):
-    #             ...  # TODO: raise an exception
-    #         return cached._clone()
-    #
-    #     compiled = CompiledValuesQuery(model=self.model, query=self.query)
-    #
-    #     if key is not None:
-    #         self.model._meta.query_cache[key] = compiled
-    #
-    #     return compiled
+    def compile(self, key: str | None = None) -> CompiledValuesQuery[MODEL]:
+        """
+        Compiles query sql.
+        :param key: Cache key for saving compiled query to model cache.
+        """
+
+        from tortoise.queryset_compiled import CompiledValuesQuery
+
+        if key in self.model._meta.query_cache:
+            cached = self.model._meta.query_cache[key]
+            if not isinstance(cached, CompiledValuesQuery):
+                ...  # TODO: raise an exception
+            return cached._clone()
+
+        self._choose_db_if_not_chosen(False)
+        self._make_query()
+        compiled = CompiledValuesQuery(
+            model=self.model,
+            query=self.query,
+            single=self._single,
+            raise_does_not_exist=self._raise_does_not_exist,
+            fields_for_select=self._fields_for_select,
+            annotations=self._annotations,
+        )
+
+        if key is not None:
+            self.model._meta.query_cache[key] = compiled
+
+        return compiled
 
 
 class RawSQLQuery(AwaitableQuery):

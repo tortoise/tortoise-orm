@@ -4,14 +4,14 @@ import sys
 from abc import ABC
 from collections import defaultdict
 from collections.abc import Iterable
-from typing import TYPE_CHECKING, Any, TypeVar, cast
+from typing import TYPE_CHECKING, Any, TypeVar, cast, Callable
 
 from pypika_tortoise.queries import QueryBuilder, Table
 
 from tortoise.exceptions import DoesNotExist, MultipleObjectsReturned
 from tortoise.parameter import CollectionParameter, Parameter, TortoiseSqlContext
 from tortoise.query_utils import Prefetch
-from tortoise.queryset import MODEL, AwaitableQuery, QuerySet
+from tortoise.queryset import MODEL, AwaitableQuery, QuerySet, ValuesListQuery, FieldSelectQuery, ValuesQuery
 
 if sys.version_info >= (3, 11):  # pragma: nocoverage
     from typing import Self
@@ -287,179 +287,95 @@ class CompiledCountQuery(BaseCompiledQuery[MODEL]):
             return self._limit
         return count
 
-"""
-class PreparedValuesListQuery(ValuesListQuery[SINGLE], _PreparedQueryMixin):
+
+# TODO: type single query
+class CompiledValuesListQuery(BaseCompiledQuery[MODEL]):
     __slots__ = (
-        "_cache_key",
-        "_sql_cache",
-        "_dynamic_params",
-        "_dynamic_params_names",
-        "_db_for_write",
+        "fields",
+        "_single",
+        "_raise_does_not_exist",
+        "_flat",
+        "_annotations",
     )
 
     def __init__(
         self,
         model: type[MODEL],
-        db: BaseDBAsyncClient,
+        query: QueryBuilder,
         single: bool,
         raise_does_not_exist: bool,
         fields_for_select_list: tuple[str, ...] | list[str],
         flat: bool,
         annotations: dict[str, Any],
-        query: QueryBuilder,
-        cache_key: str,
     ) -> None:
-        super().__init__(
-            model=model,
-            db=db,
-            q_objects=[],
-            single=single,
-            raise_does_not_exist=raise_does_not_exist,
-            fields_for_select_list=fields_for_select_list,
-            limit=None,
-            offset=None,
-            distinct=False,
-            orderings=[],
-            flat=flat,
-            annotations=annotations,
-            custom_filters={},
-            group_bys=(),
-            force_indexes=set(),
-            use_indexes=set(),
-        )
-        self.query = query
+        super().__init__(model, query)
 
-        self._cache_key: str = cache_key
-        self._sql_cache: dict[str, CachedSql] = {}
-        self._dynamic_params: dict[str, CollectionParameter] = {}
-        self._dynamic_params_names: list[str] = []
-        self._db_for_write: bool = False
+        fields_for_select = {str(i): field for i, field in enumerate(fields_for_select_list)}
+        self.fields = fields_for_select
+        self._single = single
+        self._raise_does_not_exist = raise_does_not_exist
+        self._flat = flat
+        self._annotations = annotations
 
-    def prepared(self) -> PreparedValuesListQuery[SINGLE]:
-        return self
-
-    def _clone(self) -> PreparedValuesListQuery[SINGLE]:
-        query = self.__class__.__new__(self.__class__)
-        query.model = self.model
-        query.query = self.query
-        query._db = self._db
-        query._capabilities = self._capabilities
-
+    def _clone(self) -> Self:
+        query = super()._clone()
         query.fields = self.fields
-        query._limit = self._limit
-        query._offset = self._offset
-        query._distinct = self._distinct
-        query._orderings = self._orderings
-        query._custom_filters = self._custom_filters
-        query._q_objects = self._q_objects
         query._single = self._single
         query._raise_does_not_exist = self._raise_does_not_exist
-        query._fields_for_select_list = self._fields_for_select_list
         query._flat = self._flat
-        query._group_bys = self._group_bys
-        query._force_indexes = self._force_indexes
-        query._use_indexes = self._use_indexes
-        query._fields_to_select_sql = self._fields_to_select_sql
         query._annotations = self._annotations
-
-        query._cache_key = self._cache_key
-        query._db_for_write = self._db_for_write
-        query._sql_cache = self._sql_cache
-        query._dynamic_params = self._dynamic_params
-        query._dynamic_params_names = self._dynamic_params_names
-
         return query
 
+    def resolve_to_python_value(self, model: type[MODEL], field: str) -> Callable:
+        return FieldSelectQuery.resolve_to_python_value(self, model, field)
+
     async def execute(self, **params) -> list[Any] | tuple:
+        self._choose_db_if_not_chosen(False)
         cached_query = self._get_or_create_cached_sql(params)
         filled_params = cached_query.make_filled_params(params)
-
         _, result = await self._db.execute_query(cached_query.sql, filled_params)
-        return self._process_results(result)
+        return ValuesListQuery._process_results(self, result)
 
 
-class PreparedValuesQuery(ValuesQuery[SINGLE], _PreparedQueryMixin):
+# TODO: type single query
+class CompiledValuesQuery(BaseCompiledQuery[MODEL]):
     __slots__ = (
-        "_cache_key",
-        "_sql_cache",
-        "_dynamic_params",
-        "_dynamic_params_names",
-        "_db_for_write",
+        "_single",
+        "_raise_does_not_exist",
+        "_fields_for_select",
+        "_annotations",
     )
 
     def __init__(
         self,
         model: type[MODEL],
-        db: BaseDBAsyncClient,
+        query: QueryBuilder,
         single: bool,
         raise_does_not_exist: bool,
         fields_for_select: dict[str, str],
         annotations: dict[str, Any],
-        query: QueryBuilder,
-        cache_key: str,
     ) -> None:
-        super().__init__(
-            model=model,
-            db=db,
-            q_objects=[],
-            single=single,
-            raise_does_not_exist=raise_does_not_exist,
-            fields_for_select=fields_for_select,
-            limit=None,
-            offset=None,
-            distinct=False,
-            orderings=[],
-            annotations=annotations,
-            custom_filters={},
-            group_bys=(),
-            force_indexes=set(),
-            use_indexes=set(),
-        )
+        super().__init__(model, query)
 
-        self.query = query
-        self._cache_key: str = cache_key
-        self._sql_cache: dict[str, CachedSql] = {}
-        self._dynamic_params: dict[str, CollectionParameter] = {}
-        self._dynamic_params_names: list[str] = []
-        self._db_for_write: bool = False
+        self._single = single
+        self._raise_does_not_exist = raise_does_not_exist
+        self._fields_for_select = fields_for_select
+        self._annotations = annotations
 
-    def prepared(self) -> PreparedValuesQuery[SINGLE]:
-        return self
-
-    def _clone(self) -> PreparedValuesQuery[SINGLE]:
-        query = self.__class__.__new__(self.__class__)
-        query.model = self.model
-        query.query = self.query
-        query._db = self._db
-        query._capabilities = self._capabilities
-
-        query._fields_for_select = self._fields_for_select
-        query._limit = self._limit
-        query._offset = self._offset
-        query._distinct = self._distinct
-        query._orderings = self._orderings
-        query._custom_filters = self._custom_filters
-        query._q_objects = self._q_objects
+    def _clone(self) -> Self:
+        query = super()._clone()
         query._single = self._single
         query._raise_does_not_exist = self._raise_does_not_exist
-        query._db = self._db
-        query._group_bys = self._group_bys
-        query._force_indexes = self._force_indexes
-        query._use_indexes = self._use_indexes
+        query._fields_for_select = self._fields_for_select
         query._annotations = self._annotations
-
-        query._cache_key = self._cache_key
-        query._db_for_write = self._db_for_write
-        query._sql_cache = self._sql_cache
-        query._dynamic_params = self._dynamic_params
-        query._dynamic_params_names = self._dynamic_params_names
-
         return query
 
+    def resolve_to_python_value(self, model: type[MODEL], field: str) -> Callable:
+        return FieldSelectQuery.resolve_to_python_value(self, model, field)
+
     async def execute(self, **params) -> list[dict] | dict:
+        self._choose_db_if_not_chosen(False)
         cached_query = self._get_or_create_cached_sql(params)
         filled_params = cached_query.make_filled_params(params)
-
         result = await self._db.execute_query_dict(cached_query.sql, filled_params)
-        return self._process_results(result)
-"""
+        return ValuesQuery._process_results(self, result)
