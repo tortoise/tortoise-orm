@@ -1,17 +1,24 @@
 from __future__ import annotations as _
 
 import sys
-from abc import ABC
+from abc import ABC, abstractmethod
 from collections import defaultdict
-from collections.abc import Iterable
-from typing import TYPE_CHECKING, Any, TypeVar, cast, Callable
+from collections.abc import Callable, Iterable
+from typing import TYPE_CHECKING, Any, TypeVar, cast
 
 from pypika_tortoise.queries import QueryBuilder, Table
 
 from tortoise.exceptions import DoesNotExist, MultipleObjectsReturned
 from tortoise.parameter import CollectionParameter, Parameter, TortoiseSqlContext
 from tortoise.query_utils import Prefetch
-from tortoise.queryset import MODEL, AwaitableQuery, QuerySet, ValuesListQuery, FieldSelectQuery, ValuesQuery
+from tortoise.queryset import (
+    MODEL,
+    AwaitableQuery,
+    FieldSelectQuery,
+    QuerySet,
+    ValuesListQuery,
+    ValuesQuery,
+)
 
 if sys.version_info >= (3, 11):  # pragma: nocoverage
     from typing import Self
@@ -100,8 +107,8 @@ class BaseCompiledQuery(AwaitableQuery[MODEL], ABC):
 
         return query
 
-    async def execute(self, **params) -> ...:
-        ...
+    @abstractmethod
+    async def execute(self, **params) -> Any: ...
 
     def init_params_table(self) -> None:
         _, params = self.query.get_parameterized_sql()

@@ -45,8 +45,15 @@ QUERY: QueryBuilder = QueryBuilder()
 
 if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.models import Model
-    from tortoise.queryset_compiled import CompiledQuerySet, CompiledUpdateQuery, CompiledDeleteQuery, \
-        CompiledExistsQuery, CompiledCountQuery, CompiledValuesListQuery, CompiledValuesQuery
+    from tortoise.queryset_compiled import (
+        CompiledCountQuery,
+        CompiledDeleteQuery,
+        CompiledExistsQuery,
+        CompiledQuerySet,
+        CompiledUpdateQuery,
+        CompiledValuesListQuery,
+        CompiledValuesQuery,
+    )
 
 MODEL = TypeVar("MODEL", bound="Model")
 PRIMARY_KEY = TypeVar("PRIMARY_KEY")
@@ -1308,7 +1315,11 @@ class QuerySet(AwaitableQuery[MODEL]):
         if key in self.model._meta.query_cache:
             cached = self.model._meta.query_cache[key]
             if not isinstance(cached, CompiledQuerySet):
-                ...  # TODO: raise an exception
+                raise ValueError(
+                    f"Cached query type mismatch: "
+                    f"expected {self.__class__.__name__}, "
+                    f"got {cached.__class__.__name__}"
+                )
             return cached._clone()
 
         self._choose_db_if_not_chosen(self._select_for_update)
@@ -1432,7 +1443,11 @@ class UpdateQuery(AwaitableQuery):
         if key in self.model._meta.query_cache:
             cached = self.model._meta.query_cache[key]
             if not isinstance(cached, CompiledUpdateQuery):
-                ...  # TODO: raise an exception
+                raise ValueError(
+                    f"Cached query type mismatch: "
+                    f"expected {self.__class__.__name__}, "
+                    f"got {cached.__class__.__name__}"
+                )
             return cached._clone()
 
         self._choose_db_if_not_chosen(True)
@@ -1504,7 +1519,11 @@ class DeleteQuery(AwaitableQuery):
         if key in self.model._meta.query_cache:
             cached = self.model._meta.query_cache[key]
             if not isinstance(cached, CompiledDeleteQuery):
-                ...  # TODO: raise an exception
+                raise ValueError(
+                    f"Cached query type mismatch: "
+                    f"expected {self.__class__.__name__}, "
+                    f"got {cached.__class__.__name__}"
+                )
             return cached._clone()
 
         self._choose_db_if_not_chosen(True)
@@ -1576,7 +1595,11 @@ class ExistsQuery(AwaitableQuery):
         if key in self.model._meta.query_cache:
             cached = self.model._meta.query_cache[key]
             if not isinstance(cached, CompiledExistsQuery):
-                ...  # TODO: raise an exception
+                raise ValueError(
+                    f"Cached query type mismatch: "
+                    f"expected {self.__class__.__name__}, "
+                    f"got {cached.__class__.__name__}"
+                )
             return cached._clone()
 
         self._choose_db_if_not_chosen(False)
@@ -1662,7 +1685,11 @@ class CountQuery(AwaitableQuery):
         if key in self.model._meta.query_cache:
             cached = self.model._meta.query_cache[key]
             if not isinstance(cached, CompiledCountQuery):
-                ...  # TODO: raise an exception
+                raise ValueError(
+                    f"Cached query type mismatch: "
+                    f"expected {self.__class__.__name__}, "
+                    f"got {cached.__class__.__name__}"
+                )
             return cached._clone()
 
         self._choose_db_if_not_chosen(False)
@@ -1684,8 +1711,7 @@ class FieldsSelectProtocol(Protocol[MODEL]):
     model: type[MODEL]
     _annotations: dict[str, Any]
 
-    def resolve_to_python_value(self, model: type[MODEL], field: str) -> Callable:
-        ...
+    def resolve_to_python_value(self, model: type[MODEL], field: str) -> Callable: ...
 
 
 class FieldSelectQuery(AwaitableQuery):
@@ -1755,7 +1781,9 @@ class FieldSelectQuery(AwaitableQuery):
 
         raise FieldError(f'Unknown field "{field}" for model "{self.model.__name__}"')
 
-    def resolve_to_python_value(self: FieldsSelectProtocol[MODEL], model: type[MODEL], field: str) -> Callable:
+    def resolve_to_python_value(
+        self: FieldsSelectProtocol[MODEL], model: type[MODEL], field: str
+    ) -> Callable:
         if field in model._meta.fetch_fields:
             # return as is to get whole model objects
             return lambda x: x
@@ -1956,7 +1984,11 @@ class ValuesListQuery(FieldSelectQuery, Generic[SINGLE]):
         if key in self.model._meta.query_cache:
             cached = self.model._meta.query_cache[key]
             if not isinstance(cached, CompiledValuesListQuery):
-                ...  # TODO: raise an exception
+                raise ValueError(
+                    f"Cached query type mismatch: "
+                    f"expected {self.__class__.__name__}, "
+                    f"got {cached.__class__.__name__}"
+                )
             return cached._clone()
 
         self._choose_db_if_not_chosen(False)
@@ -2128,7 +2160,11 @@ class ValuesQuery(FieldSelectQuery, Generic[SINGLE]):
         if key in self.model._meta.query_cache:
             cached = self.model._meta.query_cache[key]
             if not isinstance(cached, CompiledValuesQuery):
-                ...  # TODO: raise an exception
+                raise ValueError(
+                    f"Cached query type mismatch: "
+                    f"expected {self.__class__.__name__}, "
+                    f"got {cached.__class__.__name__}"
+                )
             return cached._clone()
 
         self._choose_db_if_not_chosen(False)

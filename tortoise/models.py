@@ -257,7 +257,7 @@ class MetaInfo:
         self.db_native_fields: list[tuple[str, str, Field]] = []
         self.db_default_fields: list[tuple[str, str, Field]] = []
         self.db_complex_fields: list[tuple[str, str, Field]] = []
-        self.query_cache: dict[str, BaseCompiledQuery[Self]] = {}
+        self.query_cache: dict[str, BaseCompiledQuery] = {}
 
     @property
     def full_name(self) -> str:

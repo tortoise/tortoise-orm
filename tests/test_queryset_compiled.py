@@ -21,12 +21,7 @@ async def test_gte_filter(db):
 
     expected = await Author.filter(id__gte=author2.pk).order_by("id")
 
-    prepared = (
-        Author
-        .filter(id__gte=Parameter("idgte"))
-        .order_by("id")
-        .compile("test_gte_filter")
-    )
+    prepared = Author.filter(id__gte=Parameter("idgte")).order_by("id").compile("test_gte_filter")
     print(prepared.sql(idgte=author2.pk))
     actual = await prepared.execute(idgte=author2.pk)
     assert len(actual) == 2
@@ -56,11 +51,7 @@ async def test_startswith_filter(db):
     author2 = await Author.create(name="testqwe")
     author3 = await Author.create(name="qwetest")
 
-    prepared = (
-        Author
-        .filter(name__startswith=Parameter("name"))
-        .compile("test_startswith_filter")
-    )
+    prepared = Author.filter(name__startswith=Parameter("name")).compile("test_startswith_filter")
 
     for test_name in (author2.pk, author1.name, author3.name, "asd"):
         expected = await Author.filter(name__startswith=test_name)
@@ -88,15 +79,9 @@ async def test_subqueries(db):
     author2 = await Author.create(name="2")
     author3 = await Author.create(name="3")
 
-    prepared = (
-        Author
-        .filter(
-            id__in=Subquery(
-                Author.filter(Q(id=Parameter("id1")) | Q(id=Parameter("id2"))).values("id")
-            )
-        )
-        .compile("test_subqueries")
-    )
+    prepared = Author.filter(
+        id__in=Subquery(Author.filter(Q(id=Parameter("id1")) | Q(id=Parameter("id2"))).values("id"))
+    ).compile("test_subqueries")
 
     for id1, id2 in (
         (author2.pk, author1.pk),
@@ -115,11 +100,9 @@ async def test_subqueries_in_filter(db):
     author2 = await Author.create(name="2")
     author3 = await Author.create(name="3")
 
-    prepared = (
-        Author
-        .filter(id__in=Subquery(Author.filter(id__in=Parameter("ids")).values("id")))
-        .compile("test_subqueries_in_filter")
-    )
+    prepared = Author.filter(
+        id__in=Subquery(Author.filter(id__in=Parameter("ids")).values("id"))
+    ).compile("test_subqueries_in_filter")
 
     for test_ids in ([author2.pk, author1.pk], [author3.pk, author3.pk * 2, author3.pk * 10]):
         expected = await Author.filter(id__in=Subquery(Author.filter(id__in=test_ids).values("id")))
@@ -137,8 +120,7 @@ async def test_update(db):
     new_name1 = f"{author1.name}_test"
 
     prepared = (
-        Author
-        .filter(id=Parameter("search_id"))
+        Author.filter(id=Parameter("search_id"))
         .update(name=Parameter("replace_name"))
         .compile("test_update")
     )
@@ -161,8 +143,7 @@ async def test_delete(db):
     author3 = await Author.create(name="3")
 
     prepared = (
-        Author
-        .filter(
+        Author.filter(
             id__in=Parameter("ids"),
         )
         .delete()
@@ -181,8 +162,7 @@ async def test_exists(db):
     author = await Author.create(name="1")
 
     prepared = (
-        Author
-        .filter(
+        Author.filter(
             id__in=Parameter("ids"),
         )
         .exists()
@@ -200,8 +180,7 @@ async def test_count(db):
     author3 = await Author.create(name="3")
 
     prepared = (
-        Author
-        .filter(
+        Author.filter(
             id__gte=Parameter("idgte"),
         )
         .count()
@@ -225,11 +204,7 @@ async def test_parameter_in_limit(db):
     )
 
     prepared = (
-        Author
-        .all()
-        .limit(Parameter("lim"))
-        .order_by("id")
-        .compile("test_parameter_in_limit")
+        Author.all().limit(Parameter("lim")).order_by("id").compile("test_parameter_in_limit")
     )
 
     assert len(await prepared.execute(lim=1)) == 1
@@ -252,11 +227,7 @@ async def test_parameter_in_offset(db):
     )
 
     prepared = (
-        Author
-        .all()
-        .offset(Parameter("off"))
-        .order_by("id")
-        .compile("test_parameter_in_offset")
+        Author.all().offset(Parameter("off")).order_by("id").compile("test_parameter_in_offset")
     )
 
     assert len(await prepared.execute(off=1)) == 2
@@ -273,8 +244,7 @@ async def test_values(db):
     author = await Author.create(name="1")
 
     prepared = (
-        Author
-        .filter(
+        Author.filter(
             id=Parameter("id"),
         )
         .values()
@@ -290,8 +260,7 @@ async def test_values_list_all_fields(db):
     author = await Author.create(name="1")
 
     prepared_all = (
-        Author
-        .filter(
+        Author.filter(
             id=Parameter("id"),
         )
         .values_list()
@@ -306,8 +275,7 @@ async def test_values_list_only_id_field(db):
     author = await Author.create(name="1")
 
     prepared_ids = (
-        Author
-        .filter(
+        Author.filter(
             id=Parameter("id"),
         )
         .values_list("id")
@@ -322,8 +290,7 @@ async def test_values_list_only_id_field_flat(db):
     author = await Author.create(name="1")
 
     prepared_ids_flat = (
-        Author
-        .filter(
+        Author.filter(
             id=Parameter("id"),
         )
         .values_list("id", flat=True)
@@ -341,8 +308,7 @@ async def test_update_fk(db):
     book = await Book.create(name="test", author=author1, rating=5)
 
     prepared = (
-        Book
-        .filter(id=Parameter("search_id"))
+        Book.filter(id=Parameter("search_id"))
         .update(author=Parameter("replace_author"))
         .compile("test_update_fk")
     )
@@ -364,8 +330,7 @@ async def test_update_pk_invalid_obj(db):
     book = await Book.create(name="test", author=author, rating=5)
 
     prepared = (
-        Book
-        .filter(id=Parameter("search_id"))
+        Book.filter(id=Parameter("search_id"))
         .update(author=Parameter("replace_author"))
         .compile("test_update_pk_invalid_obj")
     )
@@ -396,8 +361,7 @@ def test_remove_prepared_queryset_from_cache(db):
 def test_prepared_query_get_sql(db, filter_kwargs: dict[str, Any], cache_key_suffix: str):
     expected_sql = CharPkModel.all().filter(**filter_kwargs).limit(10).offset(0).sql()
     actual_sql = (
-        CharPkModel
-        .all()
+        CharPkModel.all()
         .filter(**{key: Parameter(key) for key in filter_kwargs})
         .limit(10)
         .offset(0)
