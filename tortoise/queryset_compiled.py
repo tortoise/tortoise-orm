@@ -68,7 +68,21 @@ class CachedSql:
                 self.need_params[param.name] = idx
 
     def make_filled_params(self, params: dict[str, Any]) -> list[Any]:
-        # TODO: check for parameters mismatch
+        for name in self.need_params:
+            if name not in params:
+                raise KeyError(f'Expected parameter "{name}" is not provided!')
+
+        for name, indexes in self.need_collection_params.items():
+            if name not in params:
+                raise KeyError(f'Expected parameter "{name}" is not provided!')
+            collection_length = len(params[name])
+            param_length = len(params[name])
+            if collection_length != param_length:
+                raise ValueError(
+                    f"Provided value length ({collection_length}) "
+                    f"for parameter {name!r} does not match "
+                    f"parameter indexes length ({param_length})"
+                )
 
         filled_params = self.params.copy()
         for name, idx in self.need_params.items():
@@ -78,12 +92,6 @@ class CachedSql:
         for name, indexes in self.need_collection_params.items():
             param = cast(CollectionParameter, self.param_by_name[name])
             collection = param.encode_collection(params[name])
-            if len(collection) != len(indexes):
-                raise ValueError(
-                    f"Provided value length ({len(collection)}) "
-                    f"for parameter {name!r} does not match "
-                    f"parameter indexes length ({len(indexes)})"
-                )
             for idx, value in zip(indexes, collection):
                 filled_params[idx] = param.encode_value(value)
 
@@ -186,8 +194,7 @@ class BaseCompiledQuery(AwaitableQuery[MODEL], ABC):
         for name in self._dynamic_params_names:
             value = params[name]
             if not isinstance(value, (tuple, list, set)):
-                # TODO: raise exception?
-                continue
+                raise ValueError(f'Expected parameter "{name}" to be a collection, got {value!r}')
 
             param = self._dynamic_params[name]
             cache_key += f"-{name}{len(value)}"

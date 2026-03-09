@@ -400,3 +400,20 @@ async def test_filter_by_model(db):
     assert book == [book1]
     book = await compiled.execute(author=author2)
     assert book == [book2]
+
+
+def test_collection_parameter_got_not_collection(db):
+    compiled = Author.filter(id__in=Parameter("ids")).compile()
+    with pytest.raises(ValueError):
+        compiled.sql(ids=123)
+
+
+@pytest.mark.asyncio
+async def test_missing_parameters(db):
+    compiled = Author.filter(
+        id__in=Parameter("ids"), name__startswith=Parameter("name_prefix")
+    ).compile()
+    with pytest.raises(KeyError):
+        await compiled.execute(ids=[123])
+    with pytest.raises(KeyError):
+        await compiled.execute(name_prefix="test")
