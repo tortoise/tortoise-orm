@@ -22,7 +22,7 @@ from pypika_tortoise.utils import format_alias_sql
 from tortoise.exceptions import FieldError, OperationalError
 from tortoise.fields.base import Field
 from tortoise.fields.data import JSONField
-from tortoise.fields.relational import RelationalField
+from tortoise.fields.relational import ForeignKeyFieldInstance, RelationalField
 from tortoise.filters import FilterInfoDict
 from tortoise.parameter import Parameter
 from tortoise.query_utils import (
@@ -408,6 +408,9 @@ class Q:
             field_object = model._meta.fields_map[filter_info["field"]]
             value_encoder = filter_info["value_encoder"] if "value_encoder" in filter_info else None
             if isinstance(value, Parameter):
+                if isinstance(field_object.reference, ForeignKeyFieldInstance):
+                    fk_to_field = field_object.reference.to_field
+                    value.value_getter = lambda obj: getattr(obj, fk_to_field)
                 value.field_object = field_object
                 value.value_encoder = value_encoder
             else:

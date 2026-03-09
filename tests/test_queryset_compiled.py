@@ -22,7 +22,6 @@ async def test_gte_filter(db):
     expected = await Author.filter(id__gte=author2.pk).order_by("id")
 
     prepared = Author.filter(id__gte=Parameter("idgte")).order_by("id").compile("test_gte_filter")
-    print(prepared.sql(idgte=author2.pk))
     actual = await prepared.execute(idgte=author2.pk)
     assert len(actual) == 2
     assert actual[0].pk == author2.pk
@@ -387,3 +386,17 @@ def test_compiled_query_auto_cache_size(db):
     compiled = Author.filter(id__in=Parameter("ids")).compile()
     compiled.sql(ids=[1])
     assert compiled._sql_cache.maxsize == compiled.DEFAULT_CACHE_SIZE_COLLECTIONS
+
+
+@pytest.mark.asyncio
+async def test_filter_by_model(db):
+    author1 = await Author.create(name="1")
+    book1 = await Book.create(name="test 1", author=author1, rating=5)
+    author2 = await Author.create(name="2")
+    book2 = await Book.create(name="test 2", author=author2, rating=3)
+
+    compiled = Book.filter(author=Parameter("author")).compile()
+    book = await compiled.execute(author=author1)
+    assert book == [book1]
+    book = await compiled.execute(author=author2)
+    assert book == [book2]
