@@ -82,6 +82,8 @@ class Field(Generic[VALUE], metaclass=_FieldMeta):
     :param default: A default value for the field if not specified on Model creation.
         This can also be a callable for dynamic defaults in which case we will call it.
         The default value will not be part of the schema.
+    :param db_default: A database-level default value. This can be a static value or an
+        instance of :class:`~tortoise.fields.db_defaults.SqlDefault`
     :param unique: Is this field unique?
     :param db_index: Should this field be indexed by itself?
     :param description: Field description. Will also appear in ``Tortoise.describe_model()``

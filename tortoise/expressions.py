@@ -605,7 +605,7 @@ class Aggregate(Function):
 
     :param field: Field name
     :param default_values: Extra parameters to the function.
-    :param is_distinct: Flag for aggregate with distinction
+    :param distinct: Flag for aggregate with distinction
     """
 
     database_func: type[AggregateFunction] = DistinctOptionFunction
