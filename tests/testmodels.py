@@ -25,10 +25,12 @@ from tortoise.timezone import UTC
 from tortoise.validators import (
     CommaSeparatedIntegerListValidator,
     MaxValueValidator,
+    MinLengthValidator,
     MinValueValidator,
     RegexValidator,
     validate_ipv4_address,
     validate_ipv6_address,
+    validate_ipv46_address,
 )
 
 
@@ -900,8 +902,10 @@ class RequiredPKModel(Model):
 class ValidatorModel(Model):
     regex = fields.CharField(max_length=100, null=True, validators=[RegexValidator("abc.+", re.I)])
     max_length = fields.CharField(max_length=5, null=True)
+    min_length = fields.CharField(max_length=5, null=True, validators=[MinLengthValidator(3)])
     ipv4 = fields.CharField(max_length=100, null=True, validators=[validate_ipv4_address])
     ipv6 = fields.CharField(max_length=100, null=True, validators=[validate_ipv6_address])
+    ipv46 = fields.CharField(max_length=100, null=True, validators=[validate_ipv46_address])
     max_value = fields.IntField(null=True, validators=[MaxValueValidator(20.0)])
     min_value = fields.IntField(null=True, validators=[MinValueValidator(10.0)])
     max_value_decimal = fields.DecimalField(
