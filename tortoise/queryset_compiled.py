@@ -193,7 +193,7 @@ class BaseCompiledQuery(AwaitableQuery[MODEL], ABC):
             if not isinstance(value, (tuple, list, set)):
                 raise ValueError(f'Expected parameter "{name}" to be a collection, got {value!r}')
 
-            cache_key_parts.append(f"{name}:{len(value)}")
+            cache_key_parts.append(str(len(value)))
 
         cache_key = f"{self._db.capabilities.dialect}|{'-'.join(cache_key_parts)}"
 
