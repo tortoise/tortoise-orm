@@ -131,15 +131,13 @@ class _BoundedLRU(Generic[T]):
 
 
 class BaseCompiledQuery(AwaitableQuery[MODEL], ABC):
-    DEFAULT_CACHE_SIZE_SIMPLE = 1
+    DEFAULT_CACHE_SIZE_SIMPLE = 2
     DEFAULT_CACHE_SIZE_COLLECTIONS = 128
 
     __slots__ = (
         "_sql_cache",
-        "_sql_cache_maxsize",
-        "_dynamic_params",
-        "_dynamic_params_names",
-        "_dynamic_params_init",
+        "_collection_params",
+        "_collection_params_names",
     )
 
     def __init__(
@@ -147,13 +145,19 @@ class BaseCompiledQuery(AwaitableQuery[MODEL], ABC):
     ) -> None:
         super().__init__(model)
         self.query = query
-        self._sql_cache_maxsize = sql_cache_maxsize
-        self._sql_cache: _BoundedLRU[CachedSql] = _BoundedLRU(
-            sql_cache_maxsize or self.DEFAULT_CACHE_SIZE_SIMPLE,
-        )
-        self._dynamic_params: dict[str, CollectionParameter] = {}
-        self._dynamic_params_names: list[str] = []
-        self._dynamic_params_init: bool = False
+        self._sql_cache: _BoundedLRU[CachedSql] = _BoundedLRU(0)
+        self._collection_params: dict[str, CollectionParameter] = {}
+        self._collection_params_names: list[str] = []
+
+        sql, params = self.query.get_parameterized_sql()
+        self._collection_params = {
+            param.name: param for param in params if isinstance(param, CollectionParameter)
+        }
+        if self._collection_params:
+            self._collection_params_names = sorted(self._collection_params.keys())
+            self._sql_cache.maxsize = sql_cache_maxsize or self.DEFAULT_CACHE_SIZE_COLLECTIONS
+        else:
+            self._sql_cache.maxsize = sql_cache_maxsize or self.DEFAULT_CACHE_SIZE_SIMPLE
 
     def _clone(self) -> Self:
         query = self.__class__.__new__(self.__class__)
@@ -163,41 +167,38 @@ class BaseCompiledQuery(AwaitableQuery[MODEL], ABC):
         query._capabilities = self._capabilities
         query._annotations = self._annotations
 
-        query._sql_cache_maxsize = self._sql_cache_maxsize
         query._sql_cache = self._sql_cache
-        query._dynamic_params = self._dynamic_params
-        query._dynamic_params_names = self._dynamic_params_names
-        query._dynamic_params_init = self._dynamic_params_init
+        query._collection_params = self._collection_params
+        query._collection_params_names = self._collection_params_names
 
         return query
 
     @abstractmethod
     async def execute(self, **params) -> Any: ...
 
-    def init_params_table(self) -> None:
-        _, params = self.query.get_parameterized_sql()
-        self._dynamic_params = {
-            param.name: param for param in params if isinstance(param, CollectionParameter)
-        }
-        self._dynamic_params_names = sorted(self._dynamic_params.keys())
-        self._dynamic_params_init = True
-        if self._dynamic_params and self._sql_cache_maxsize is None:
-            self._sql_cache.maxsize = self.DEFAULT_CACHE_SIZE_COLLECTIONS
+    def _get_or_create_cached_sql_simple(self) -> CachedSql:
+        cache_key = self._db.capabilities.dialect
+        if (cached := self._sql_cache.get(cache_key)) is None:
+            cached = CachedSql(*self.query.get_parameterized_sql())
+            self._sql_cache.put(cache_key, cached)
+        return cached
 
     def _get_or_create_cached_sql(self, params: dict[str, Any]) -> CachedSql:
-        if not self._dynamic_params_init:
-            self.init_params_table()
+        if not self._collection_params:
+            return self._get_or_create_cached_sql_simple()
+
+        cache_key = self._db.capabilities.dialect
 
         reset_params = []
 
-        cache_key = f"{self._db.capabilities.dialect}-query"
-        for name in self._dynamic_params_names:
+        cache_key_parts = []
+        for name in self._collection_params_names:
             value = params[name]
             if not isinstance(value, (tuple, list, set)):
                 raise ValueError(f'Expected parameter "{name}" to be a collection, got {value!r}')
 
-            param = self._dynamic_params[name]
-            cache_key += f"-{name}{len(value)}"
+            param = self._collection_params[name]
+            cache_key_parts.append(f"-{name}:{len(value)}")
             param.collection_size = len(value)
             reset_params.append(param)
 
@@ -205,7 +206,7 @@ class BaseCompiledQuery(AwaitableQuery[MODEL], ABC):
             # TODO: probably could be done in a better way?
             ctx = TortoiseSqlContext.copy(
                 self.query.QUERY_CLS.SQL_CONTEXT,
-                dynamic_params=self._dynamic_params,
+                dynamic_params=self._collection_params,
             )
             sql, params_ = self.query.get_parameterized_sql(ctx)
             self._sql_cache.put(cache_key, CachedSql(sql, params_))
