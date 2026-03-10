@@ -187,22 +187,23 @@ class BaseCompiledQuery(AwaitableQuery[MODEL], ABC):
         if not self._collection_params:
             return self._get_or_create_cached_sql_simple()
 
-        cache_key = self._db.capabilities.dialect
-
-        reset_params = []
-
         cache_key_parts = []
         for name in self._collection_params_names:
             value = params[name]
             if not isinstance(value, (tuple, list, set)):
                 raise ValueError(f'Expected parameter "{name}" to be a collection, got {value!r}')
 
-            param = self._collection_params[name]
-            cache_key_parts.append(f"-{name}:{len(value)}")
-            param.collection_size = len(value)
-            reset_params.append(param)
+            cache_key_parts.append(f"{name}:{len(value)}")
+
+        cache_key = f"{self._db.capabilities.dialect}|{'-'.join(cache_key_parts)}"
 
         if self._sql_cache.get(cache_key) is None:
+            reset_params = []
+            for name in self._collection_params_names:
+                param = self._collection_params[name]
+                param.collection_size = len(params[name])
+                reset_params.append(param)
+
             # TODO: probably could be done in a better way?
             ctx = TortoiseSqlContext.copy(
                 self.query.QUERY_CLS.SQL_CONTEXT,
@@ -211,8 +212,8 @@ class BaseCompiledQuery(AwaitableQuery[MODEL], ABC):
             sql, params_ = self.query.get_parameterized_sql(ctx)
             self._sql_cache.put(cache_key, CachedSql(sql, params_))
 
-        for param in reset_params:
-            param.collection_size = None
+            for param in reset_params:
+                param.collection_size = None
 
         return cast(CachedSql, self._sql_cache.get(cache_key))
 
