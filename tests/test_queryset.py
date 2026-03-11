@@ -478,6 +478,28 @@ async def test_delete_limit_order_by(db, intfields_data):
     with pytest.raises(DoesNotExist):
         await IntFields.get(intnum=97)
 
+@pytest.mark.asyncio
+async def test_delete_filter_with_foreign_key(db):
+    author = await Author.create(name="test")
+    await Book.create(name="book1", author=author, rating=5.0)
+    await Book.create(name="book2", author=author, rating=4.0)
+
+    # This is the failing query
+    await Book.filter(author__name="test").delete()
+
+    assert await Book.all().count() == 0
+
+
+@pytest.mark.asyncio
+async def test_update_filter_with_foreign_key(db):
+    author = await Author.create(name="test")
+    await Book.create(name="book1", author=author, rating=5.0)
+
+    await Book.filter(author__name="test").update(rating=1.0)
+
+    book = await Book.first()
+    assert book.rating == 1.0
+
 
 @pytest.mark.asyncio
 async def test_async_iter(db, intfields_data):
