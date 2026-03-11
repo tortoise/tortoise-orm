@@ -8,6 +8,13 @@ Changelog
 1.1
 ===
 
+1.1.7
+-----
+
+Fixed
+^^^^^
+- Fixed DELETE and UPDATE queries failing when filtering by related fields (foreign keys). Using a subquery pattern instead of JOIN for compatibility with MySQL and SQLite. (#283)
+
 1.1.6
 -----
 
