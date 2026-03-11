@@ -19,9 +19,25 @@ from tortoise.context import (
     TortoiseContext,
     get_current_context,
     require_context,
+    set_global_context,
     tortoise_test_context,
 )
 from tortoise.exceptions import ConfigurationError
+
+
+def _clear_global_context():
+    """Clear the global context to ensure test isolation."""
+    import tortoise.context as ctx_module
+
+    ctx_module._global_context = None
+
+
+@pytest.fixture(autouse=True)
+def cleanup_global_context():
+    """Fixture to clear global context before and after each test."""
+    _clear_global_context()
+    yield
+    _clear_global_context()
 
 
 class TestTortoiseContextInstantiation:
@@ -201,6 +217,26 @@ class TestAsyncContextManager:
         # After exit, apps should be cleared
         assert ctx.apps is None
         assert ctx.inited is False
+
+    def test_set_global_context_sets_global(self):
+        """set_global_context sets the global context."""
+        ctx = TortoiseContext()
+        set_global_context(ctx)
+
+        # Verify global context is set
+        import tortoise.context as ctx_module
+
+        assert ctx_module._global_context is ctx
+
+    def test_set_global_context_raises_when_already_set(self):
+        """set_global_context raises ConfigurationError when already set."""
+        ctx1 = TortoiseContext()
+        ctx2 = TortoiseContext()
+
+        set_global_context(ctx1)
+
+        with pytest.raises(ConfigurationError):
+            set_global_context(ctx2)
 
 
 class TestGetModel:
