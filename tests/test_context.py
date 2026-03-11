@@ -529,6 +529,9 @@ class TestModelContextResolution:
 class TestTimezoneAndRouters:
     """Test cases for timezone and routers configuration."""
 
+    class TestRouter:
+        pass
+
     def test_context_default_timezone_settings(self):
         """Context has default timezone settings."""
         ctx = TortoiseContext()
@@ -576,6 +579,98 @@ class TestTimezoneAndRouters:
         ) as ctx:
             assert ctx.use_tz is True
             assert ctx.timezone == "Asia/Tokyo"
+
+    @pytest.mark.asyncio
+    async def test_init_routers_empty_list(self):
+        """_init_routers with empty list initializes correctly."""
+        async with TortoiseContext() as ctx:
+            await ctx.init(
+                db_url="sqlite://:memory:",
+                modules={"models": ["tests.testmodels"]},
+                routers=[],
+            )
+
+            assert ctx.routers == []
+
+    @pytest.mark.asyncio
+    async def test_init_routers_with_type(self):
+        """_init_routers accepts router type directly."""
+
+        async with TortoiseContext() as ctx:
+            await ctx.init(
+                db_url="sqlite://:memory:",
+                modules={"models": ["tests.testmodels"]},
+                routers=[TestTimezoneAndRouters.TestRouter],
+            )
+
+            assert ctx.routers == [TestTimezoneAndRouters.TestRouter]
+
+    @pytest.mark.asyncio
+    async def test_init_routers_with_string_path(self):
+        """_init_routers accepts router as string path."""
+        async with TortoiseContext() as ctx:
+            await ctx.init(
+                db_url="sqlite://:memory:",
+                modules={"models": ["tests.testmodels"]},
+                routers=["tortoise.router.ConnectionRouter"],
+            )
+
+            from tortoise.router import ConnectionRouter
+
+            assert ctx.routers == [ConnectionRouter]
+
+    @pytest.mark.asyncio
+    async def test_init_routers_mixed_types_and_strings(self):
+        """_init_routers accepts mixed router types and strings."""
+
+        async with TortoiseContext() as ctx:
+            await ctx.init(
+                db_url="sqlite://:memory:",
+                modules={"models": ["tests.testmodels"]},
+                routers=[TestTimezoneAndRouters.TestRouter, "tortoise.router.ConnectionRouter"],
+            )
+
+            from tortoise.router import ConnectionRouter
+
+            assert ctx.routers == [TestTimezoneAndRouters.TestRouter, ConnectionRouter]
+
+    @pytest.mark.asyncio
+    async def test_init_routers_invalid_router_type(self):
+        """_init_routers raises on invalid router type."""
+        async with TortoiseContext() as ctx:
+            with pytest.raises(ConfigurationError) as exc_info:
+                await ctx.init(
+                    db_url="sqlite://:memory:",
+                    modules={"models": ["tests.testmodels"]},
+                    routers=["not_a_valid_router_path"],
+                )
+
+            assert "Can't import router" in str(exc_info.value)
+
+    @pytest.mark.asyncio
+    async def test_init_routers_invalid_router_item(self):
+        """_init_routers raises when router is neither string nor type."""
+        async with TortoiseContext() as ctx:
+            with pytest.raises(ConfigurationError) as exc_info:
+                await ctx.init(
+                    db_url="sqlite://:memory:",
+                    modules={"models": ["tests.testmodels"]},
+                    routers=[123],
+                )
+
+            assert "Router must be either str or type" in str(exc_info.value)
+
+    @pytest.mark.asyncio
+    async def test_init_routers_none_uses_empty_list(self):
+        """_init_routers with None uses empty list."""
+        async with TortoiseContext() as ctx:
+            await ctx.init(
+                db_url="sqlite://:memory:",
+                modules={"models": ["tests.testmodels"]},
+                routers=None,
+            )
+
+            assert ctx.routers == []
 
 
 class TestTortoiseConfigValidation:
