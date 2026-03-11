@@ -8,8 +8,12 @@ Note: These tests may run with a session-scoped default context active
 by testing context isolation relative to the current state.
 """
 
-import pytest
+import json
 
+import pytest
+import yaml
+
+from tortoise.config import AppConfig, DBUrlConfig, TortoiseConfig
 from tortoise.connection import ConnectionHandler
 from tortoise.context import (
     TortoiseContext,
@@ -270,6 +274,64 @@ class TestInit:
             await ctx.init(config={"connections": {}})
 
         assert 'Config must define "apps" section' in str(exc_info.value)
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("serializer", [json.dumps, yaml.dump])
+    async def test_init_with_config_file(self, tmp_path, serializer):
+        """init() with config_file (JSON/YAML) initializes context correctly."""
+        suffix = ".yaml" if serializer is yaml.dump else ".json"
+        config_file = tmp_path / f"config{suffix}"
+
+        config = TortoiseConfig(
+            connections={"default": DBUrlConfig("sqlite://:memory:")},
+            apps={"models": AppConfig(models=["tests.testmodels"])},
+        )
+        config_dict = config.to_dict()
+        config_file.write_text(serializer(config_dict))
+
+        async with TortoiseContext() as ctx:
+            await ctx.init(config_file=str(config_file))
+
+            assert ctx.inited is True
+            assert ctx._connections is not None
+            conn = ctx.connections.get("default")
+            assert conn is not None
+            assert ctx.apps is not None
+
+    @pytest.mark.asyncio
+    async def test_init_raises_with_config_and_config_file(self, tmp_path):
+        """init() raises when both config and config_file are provided."""
+        config = TortoiseConfig(
+            connections={"default": DBUrlConfig("sqlite://:memory:")},
+            apps={"models": AppConfig(models=["tests.testmodels"])},
+        )
+        config_dict = config.to_dict()
+
+        config_file = tmp_path / "config.json"
+        config_file.write_text(json.dumps(config_dict))
+
+        ctx = TortoiseContext()
+
+        with pytest.raises(ConfigurationError) as exc_info:
+            await ctx.init(
+                config={"connections": {}, "apps": {}},
+                config_file=str(config_file),
+            )
+
+        assert "Cannot specify both 'config' and 'config_file'" in str(exc_info.value)
+
+    @pytest.mark.asyncio
+    async def test_init_raises_with_invalid_config_file_extension(self, tmp_path):
+        """init() raises when config_file has unsupported extension."""
+        config_file = tmp_path / "config.txt"
+        config_file.write_text("some config")
+
+        ctx = TortoiseContext()
+
+        with pytest.raises(ConfigurationError) as exc_info:
+            await ctx.init(config_file=str(config_file))
+
+        assert "Unknown config extension .txt" in str(exc_info.value)
 
 
 class TestGenerateSchemas:
