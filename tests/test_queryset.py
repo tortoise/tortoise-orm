@@ -478,6 +478,7 @@ async def test_delete_limit_order_by(db, intfields_data):
     with pytest.raises(DoesNotExist):
         await IntFields.get(intnum=97)
 
+
 @pytest.mark.asyncio
 async def test_delete_filter_with_foreign_key(db):
     author = await Author.create(name="test")
