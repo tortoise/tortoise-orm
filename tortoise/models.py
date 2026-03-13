@@ -50,6 +50,7 @@ from tortoise.queryset import (
     QuerySetSingle,
     RawSQLQuery,
 )
+from tortoise.queryset_compiled import BaseCompiledQuery
 from tortoise.router import router
 from tortoise.signals import Signals
 from tortoise.transactions import in_transaction
@@ -215,6 +216,7 @@ class MetaInfo:
         "db_complex_fields",
         "_default_ordering",
         "_ordering_validated",
+        "query_cache",
     )
 
     def __init__(self, meta: Model.Meta) -> None:
@@ -255,6 +257,7 @@ class MetaInfo:
         self.db_native_fields: list[tuple[str, str, Field]] = []
         self.db_default_fields: list[tuple[str, str, Field]] = []
         self.db_complex_fields: list[tuple[str, str, Field]] = []
+        self.query_cache: dict[str, BaseCompiledQuery] = {}
 
     @property
     def full_name(self) -> str:
@@ -1609,6 +1612,10 @@ class Model(metaclass=ModelMeta):
         """
         db = using_db or cls._choose_db()
         await db.executor_class(model=cls, db=db).fetch_for_list(instance_list, *args)
+
+    @classmethod
+    def remove_compiled_query(cls, key: str) -> None:
+        cls._meta.query_cache.pop(key, None)
 
     @classmethod
     def _check(cls) -> None:

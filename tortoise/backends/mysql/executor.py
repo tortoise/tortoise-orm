@@ -1,4 +1,6 @@
 import enum
+from collections.abc import Callable
+from typing import Any
 
 from pypika_tortoise import SqlContext, functions
 from pypika_tortoise.enums import SqlTypes
@@ -32,6 +34,7 @@ from tortoise.filters import (
     search,
     starts_with,
 )
+from tortoise.parameter import Parameter
 
 
 class MySQLRegexpComparators(enum.Enum):
@@ -49,8 +52,45 @@ class StrWrapper(ValueWrapper):
         return format_quotes(value, quote_char)
 
 
+# TODO: maybe there is better way to do this?
+class StrParamWrapper(ValueWrapper):
+    value: Parameter
+
+    def get_value_sql(self, ctx: SqlContext) -> str:
+        quote_char = ctx.secondary_quote_char or ""
+        real_encoder = self.value.encode
+
+        def _encoder(val: str) -> str:
+            if real_encoder is not None:
+                val = real_encoder(val)
+            val = val.replace(quote_char, quote_char * 2)
+            return format_quotes(val, quote_char)
+
+        new_param = self.value.clone()
+        new_param.encode = _encoder
+        return new_param  # type: ignore[return-value]
+
+
 def escape_like(val: str) -> str:
     return val.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+
+
+def _format_str_or_parameter(
+    value: str | Parameter,
+    like_start: bool = False,
+    like_end: bool = False,
+    escape_func: Callable[[Any], str] = escape_like,
+) -> Term:
+    like_at_start = "%" if like_start else ""
+    like_at_end = "%" if like_end else ""
+
+    if isinstance(value, Parameter):
+        value.encode = escape_func
+        if like_start or like_end:
+            value.encode = lambda val: f"{like_at_start}{escape_func(val)}{like_at_end}"
+        return StrParamWrapper(value)
+    else:
+        return StrWrapper(f"{like_at_start}{escape_func(value)}{like_at_end}")
 
 
 def mysql_contains(field: Term, value: str) -> Criterion:
@@ -61,24 +101,30 @@ def mysql_contains(field: Term, value: str) -> Criterion:
 
 def mysql_starts_with(field: Term, value: str) -> Criterion:
     return Like(
-        functions.Cast(field, SqlTypes.CHAR), StrWrapper(f"{escape_like(value)}%"), escape=""
+        functions.Cast(field, SqlTypes.CHAR),
+        _format_str_or_parameter(value, False, True, escape_like),
+        escape="",
     )
 
 
 def mysql_ends_with(field: Term, value: str) -> Criterion:
     return Like(
-        functions.Cast(field, SqlTypes.CHAR), StrWrapper(f"%{escape_like(value)}"), escape=""
+        functions.Cast(field, SqlTypes.CHAR),
+        _format_str_or_parameter(value, True, False, escape_like),
+        escape="",
     )
 
 
 def mysql_insensitive_exact(field: Term, value: str) -> Criterion:
-    return functions.Upper(functions.Cast(field, SqlTypes.CHAR)).eq(functions.Upper(str(value)))
+    return functions.Upper(functions.Cast(field, SqlTypes.CHAR)).eq(
+        functions.Upper(_format_str_or_parameter(value, escape_func=str))
+    )
 
 
 def mysql_insensitive_contains(field: Term, value: str) -> Criterion:
     return Like(
         functions.Upper(functions.Cast(field, SqlTypes.CHAR)),
-        functions.Upper(StrWrapper(f"%{escape_like(value)}%")),
+        functions.Upper(_format_str_or_parameter(value, True, True, escape_like)),
         escape="",
     )
 
@@ -86,7 +132,7 @@ def mysql_insensitive_contains(field: Term, value: str) -> Criterion:
 def mysql_insensitive_starts_with(field: Term, value: str) -> Criterion:
     return Like(
         functions.Upper(functions.Cast(field, SqlTypes.CHAR)),
-        functions.Upper(StrWrapper(f"{escape_like(value)}%")),
+        functions.Upper(_format_str_or_parameter(value, False, True, escape_like)),
         escape="",
     )
 
@@ -94,18 +140,20 @@ def mysql_insensitive_starts_with(field: Term, value: str) -> Criterion:
 def mysql_insensitive_ends_with(field: Term, value: str) -> Criterion:
     return Like(
         functions.Upper(functions.Cast(field, SqlTypes.CHAR)),
-        functions.Upper(StrWrapper(f"%{escape_like(value)}")),
+        functions.Upper(_format_str_or_parameter(value, True, False, escape_like)),
         escape="",
     )
 
 
 def mysql_search(field: Term, value: str) -> SearchCriterion:
-    return SearchCriterion(field, expr=StrWrapper(value))
+    return SearchCriterion(field, expr=_format_str_or_parameter(value, escape_func=lambda x: x))
 
 
 def mysql_posix_regex(field: Term, value: str) -> BasicCriterion:
     return BasicCriterion(
-        MySQLRegexpComparators.REGEXP, Coalesce(Cast(field, SqlTypes.CHAR)), StrWrapper(value)
+        MySQLRegexpComparators.REGEXP,
+        Coalesce(Cast(field, SqlTypes.CHAR)),
+        _format_str_or_parameter(value, escape_func=lambda x: x),
     )
 
 

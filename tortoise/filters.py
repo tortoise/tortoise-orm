@@ -21,6 +21,7 @@ from pypika_tortoise.terms import (
 from tortoise.contrib.postgres.fields import ArrayField, TSVectorField
 from tortoise.fields import Field, JSONField
 from tortoise.fields.relational import BackwardFKRelation, ManyToManyFieldInstance
+from tortoise.parameter import CollectionParameter, Parameter
 
 if sys.version_info >= (3, 11):  # pragma：nocoverage
     from typing import NotRequired
@@ -102,6 +103,8 @@ def array_encoder(value: Any | Sequence[Any], instance: Model, field: Field) -> 
 
 def is_in(field: Term, value: Any) -> Criterion:
     if value:
+        if isinstance(value, Parameter):
+            return CollectionParameter(field, value, True)
         return field.isin(value)
     # SQL has no False, so we return 1=0
     return BasicCriterion(
@@ -113,6 +116,8 @@ def is_in(field: Term, value: Any) -> Criterion:
 
 def not_in(field: Term, value: Any) -> Criterion:
     if value:
+        if isinstance(value, Parameter):
+            return CollectionParameter(field, value, False)
         return field.notin(value) | field.isnull()
     # SQL has no True, so we return 1=1
     return BasicCriterion(
@@ -142,8 +147,11 @@ def not_null(field: Term, value: Any) -> Criterion:
     return field.isnull()
 
 
-def contains(field: Term, value: str) -> Criterion:
-    return Like(Cast(field, SqlTypes.VARCHAR), field.wrap_constant(f"%{escape_like(value)}%"))
+def contains(field: Term, value: str | Parameter) -> Criterion:
+    return Like(
+        Cast(field, SqlTypes.VARCHAR),
+        field.wrap_constant(_format_str_or_parameter(field, value, True, True)),
+    )
 
 
 def search(field: Term, value: str) -> Any:
@@ -165,33 +173,58 @@ def insensitive_posix_regex(field: Term, value: str):
     )
 
 
-def starts_with(field: Term, value: str) -> Criterion:
-    return Like(Cast(field, SqlTypes.VARCHAR), field.wrap_constant(f"{escape_like(value)}%"))
+def _format_str_or_parameter(
+    field: Term,
+    value: str | Parameter,
+    like_start: bool = False,
+    like_end: bool = False,
+    escape_func: Callable[[Any], str] = escape_like,
+) -> Term:
+    like_at_start = "%" if like_start else ""
+    like_at_end = "%" if like_end else ""
+
+    if isinstance(value, Parameter):
+        value.encode = escape_func
+        wrapped = ValueWrapper(value)
+        if like_start or like_end:
+            value.encode = lambda val: f"{like_at_start}{escape_func(val)}{like_at_end}"
+        return wrapped
+    else:
+        return field.wrap_constant(f"{like_at_start}{escape_func(value)}{like_at_end}")
 
 
-def ends_with(field: Term, value: str) -> Criterion:
-    return Like(Cast(field, SqlTypes.VARCHAR), field.wrap_constant(f"%{escape_like(value)}"))
+def starts_with(field: Term, value: str | Parameter) -> Criterion:
+    return Like(Cast(field, SqlTypes.VARCHAR), _format_str_or_parameter(field, value, False, True))
 
 
-def insensitive_exact(field: Term, value: str) -> Criterion:
-    return Upper(Cast(field, SqlTypes.VARCHAR)).eq(Upper(str(value)))
+def ends_with(field: Term, value: str | Parameter) -> Criterion:
+    return Like(Cast(field, SqlTypes.VARCHAR), _format_str_or_parameter(field, value, True, False))
 
 
-def insensitive_contains(field: Term, value: str) -> Criterion:
-    return Like(
-        Upper(Cast(field, SqlTypes.VARCHAR)), field.wrap_constant(Upper(f"%{escape_like(value)}%"))
+def insensitive_exact(field: Term, value: str | Parameter) -> Criterion:
+    return Upper(Cast(field, SqlTypes.VARCHAR)).eq(
+        Upper(_format_str_or_parameter(field, value, escape_func=str))
     )
 
 
-def insensitive_starts_with(field: Term, value: str) -> Criterion:
+def insensitive_contains(field: Term, value: str | Parameter) -> Criterion:
     return Like(
-        Upper(Cast(field, SqlTypes.VARCHAR)), field.wrap_constant(Upper(f"{escape_like(value)}%"))
+        Upper(Cast(field, SqlTypes.VARCHAR)),
+        field.wrap_constant(Upper(_format_str_or_parameter(field, value, True, True))),
     )
 
 
-def insensitive_ends_with(field: Term, value: str) -> Criterion:
+def insensitive_starts_with(field: Term, value: str | Parameter) -> Criterion:
     return Like(
-        Upper(Cast(field, SqlTypes.VARCHAR)), field.wrap_constant(Upper(f"%{escape_like(value)}"))
+        Upper(Cast(field, SqlTypes.VARCHAR)),
+        field.wrap_constant(Upper(_format_str_or_parameter(field, value, False, True))),
+    )
+
+
+def insensitive_ends_with(field: Term, value: str | Parameter) -> Criterion:
+    return Like(
+        Upper(Cast(field, SqlTypes.VARCHAR)),
+        field.wrap_constant(Upper(_format_str_or_parameter(field, value, True, False))),
     )
 
 
@@ -240,7 +273,7 @@ def json_contained_by(field: Term, value: str) -> Criterion:
 
 
 def json_filter(field: Term, value: dict) -> Criterion:
-    raise NotImplementedError("must be overridden in each xecutor")
+    raise NotImplementedError("must be overridden in each executor")
 
 
 def array_contains(field: Term, value: Any | Sequence[Any]) -> Criterion:

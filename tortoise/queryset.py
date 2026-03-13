@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import types
 from collections import defaultdict
-from collections.abc import AsyncIterator, Callable, Collection, Generator, Iterable
+from collections.abc import AsyncIterator, Callable, Collection, Generator, Iterable, Sequence
 from copy import copy
+from operator import attrgetter
 from typing import TYPE_CHECKING, Any, Generic, Literal, Protocol, TypeVar, cast, overload
 
 from pypika_tortoise import JoinType, Order, Table
@@ -27,6 +28,7 @@ from tortoise.fields.relational import (
     RelationalField,
 )
 from tortoise.filters import FilterInfoDict
+from tortoise.parameter import Parameter
 from tortoise.query_utils import (
     Prefetch,
     QueryModifier,
@@ -43,6 +45,16 @@ QUERY: QueryBuilder = QueryBuilder()
 
 if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.models import Model
+    from tortoise.queryset_compiled import (
+        CompiledCountQuery,
+        CompiledDeleteQuery,
+        CompiledExistsQuery,
+        CompiledQuerySet,
+        CompiledQuerySetSingle,
+        CompiledUpdateQuery,
+        CompiledValuesListQuery,
+        CompiledValuesQuery,
+    )
 
 MODEL = TypeVar("MODEL", bound="Model")
 PRIMARY_KEY = TypeVar("PRIMARY_KEY")
@@ -77,6 +89,10 @@ class QuerySetSingle(Protocol[T_co]):
     def values(
         self, *args: str, **kwargs: str
     ) -> ValuesQuery[Literal[True]]: ...  # pragma: nocoverage
+
+    def compile(
+        self, key: str | None = None, sql_cache_maxsize: int | None = None
+    ) -> CompiledQuerySetSingle[T_co]: ...
 
 
 class AwaitableQuery(Generic[MODEL]):
@@ -512,30 +528,47 @@ class QuerySet(AwaitableQuery[MODEL]):
         queryset._orderings = self._parse_orderings(orderings)
         return queryset._as_single()
 
-    def limit(self, limit: int) -> QuerySet[MODEL]:
+    @staticmethod
+    def _validate_limit(value: int) -> int:
+        if value < 0:
+            raise ParamsError("Limit should be non-negative number")
+        return value
+
+    def limit(self, limit: int | Parameter) -> QuerySet[MODEL]:
         """
         Limits QuerySet to given length.
 
         :raises ParamsError: Limit should be non-negative number.
         """
-        if limit < 0:
-            raise ParamsError("Limit should be non-negative number")
+        if isinstance(limit, int):
+            self._validate_limit(limit)
+        elif isinstance(limit, Parameter):
+            limit.encode = self._validate_limit
 
         queryset = self._clone()
-        queryset._limit = limit
+        queryset._limit = limit  # type: ignore
         return queryset
 
-    def offset(self, offset: int) -> QuerySet[MODEL]:
+    @staticmethod
+    def _validate_offset(value: int) -> int:
+        if value < 0:
+            raise ParamsError("Offset should be non-negative number")
+        return value
+
+    def offset(self, offset: int | Parameter) -> QuerySet[MODEL]:
         """
         Query offset for QuerySet.
 
         :raises ParamsError: Offset should be non-negative number.
         """
-        if offset < 0:
-            raise ParamsError("Offset should be non-negative number")
+
+        if isinstance(offset, int) and offset < 0:
+            self._validate_offset(offset)
+        elif isinstance(offset, Parameter):
+            offset.encode = self._validate_offset
 
         queryset = self._clone()
-        queryset._offset = offset
+        queryset._offset = offset  # type: ignore
         if self.capabilities.requires_limit and queryset._limit is None:
             queryset._limit = 1000000
         return queryset
@@ -648,6 +681,14 @@ class QuerySet(AwaitableQuery[MODEL]):
         queryset._group_bys = fields
         return queryset
 
+    def _get_fields_list_for_select(self, *fields_: str) -> tuple[str, ...] | list[str]:
+        if self._fields_for_select:
+            raise ValueError(".values_list() cannot be used with .only()")
+
+        return fields_ or [
+            field for field in self.model._meta.fields_map if field in self.model._meta.db_fields
+        ] + list(self._annotations.keys())
+
     def values_list(self, *fields_: str, flat: bool = False) -> ValuesListQuery[Literal[False]]:
         """
         Make QuerySet returns list of tuples for given args instead of objects.
@@ -659,12 +700,8 @@ class QuerySet(AwaitableQuery[MODEL]):
         If no arguments are passed it will default to a tuple containing all fields
         in order of declaration.
         """
-        if self._fields_for_select:
-            raise ValueError(".values_list() cannot be used with .only()")
+        fields_for_select_list = self._get_fields_list_for_select(*fields_)
 
-        fields_for_select_list = fields_ or [
-            field for field in self.model._meta.fields_map if field in self.model._meta.db_fields
-        ] + list(self._annotations.keys())
         return ValuesListQuery(
             db=self._db,
             model=self.model,
@@ -684,20 +721,7 @@ class QuerySet(AwaitableQuery[MODEL]):
             use_indexes=self._use_indexes,
         )
 
-    def values(self, *args: str, **kwargs: str) -> ValuesQuery[Literal[False]]:
-        """
-        Make QuerySet return dicts instead of objects.
-
-        If called after `.get()`, `.get_or_none()` or `.first()`, returns a dict instead of an object.
-
-        You can specify which fields to include by:
-        - Passing field names as positional arguments
-        - Using kwargs in the format `field_name='name_in_dict'` to customize the keys in the resulting dict
-
-        If no arguments are passed, it will default to a dict containing all fields.
-
-        :raises FieldError: If duplicate key has been provided.
-        """
+    def _get_fields_for_select(self, *args: str, **kwargs: str) -> dict[str, str]:
         if self._fields_for_select:
             raise ValueError(".values() cannot be used with .only()")
 
@@ -720,6 +744,24 @@ class QuerySet(AwaitableQuery[MODEL]):
             ] + list(self._annotations.keys())
 
             fields_for_select = {field: field for field in _fields}
+
+        return fields_for_select
+
+    def values(self, *args: str, **kwargs: str) -> ValuesQuery[Literal[False]]:
+        """
+        Make QuerySet return dicts instead of objects.
+
+        If called after `.get()`, `.get_or_none()` or `.first()`, returns a dict instead of an object.
+
+        You can specify which fields to include by:
+        - Passing field names as positional arguments
+        - Using kwargs in the format `field_name='name_in_dict'` to customize the keys in the resulting dict
+
+        If no arguments are passed, it will default to a dict containing all fields.
+
+        :raises FieldError: If duplicate key has been provided.
+        """
+        fields_for_select = self._get_fields_for_select(*args, **kwargs)
 
         return ValuesQuery(
             db=self._db,
@@ -1264,6 +1306,46 @@ class QuerySet(AwaitableQuery[MODEL]):
             raise MultipleObjectsReturned(self.model)
         return instance_list
 
+    def compile(
+        self, key: str | None = None, sql_cache_maxsize: int | None = None
+    ) -> CompiledQuerySet[MODEL]:
+        """
+        Compiles queryset sql.
+        :param key: Cache key for saving compiled query to model cache.
+        """
+
+        from tortoise.queryset_compiled import CompiledQuerySet
+
+        if key in self.model._meta.query_cache:
+            cached = self.model._meta.query_cache[key]
+            if not isinstance(cached, CompiledQuerySet):
+                raise ValueError(
+                    f"Cached query type mismatch: "
+                    f"expected {self.__class__.__name__}, "
+                    f"got {cached.__class__.__name__}"
+                )
+            return cached._clone()
+
+        self._choose_db_if_not_chosen(self._select_for_update)
+        self._make_query()
+        compiled = CompiledQuerySet(
+            model=self.model,
+            query=self.query,
+            sql_cache_maxsize=sql_cache_maxsize,
+            prefetch_map=self._prefetch_map,
+            prefetch_queries=self._prefetch_queries,
+            select_related_idx=self._select_related_idx,
+            single=self._single,
+            raise_does_not_exist=self._raise_does_not_exist,
+            select_for_update=self._select_for_update,
+            custom_fields=list(self._annotations.keys()),
+        )
+
+        if key is not None:
+            self.model._meta.query_cache[key] = compiled
+
+        return compiled
+
 
 class UpdateQuery(AwaitableQuery):
     __slots__ = (
@@ -1310,13 +1392,19 @@ class UpdateQuery(AwaitableQuery):
             if field_object.generated:
                 raise IntegrityError(f"Field {key} is generated and can not be updated")
             if isinstance(field_object, (ForeignKeyFieldInstance, OneToOneFieldInstance)):
-                self.model._validate_relation_type(key, value)
                 fk_field: str = field_object.source_field  # type: ignore
                 db_field = self.model._meta.fields_map[fk_field].source_field
-                value = self.model._meta.fields_map[fk_field].to_db_value(
-                    getattr(value, field_object.to_field_instance.model_field_name),
-                    None,
-                )
+
+                if isinstance(value, Parameter):
+                    value.field_object = self.model._meta.fields_map[fk_field]
+                    value.value_getter = attrgetter(field_object.to_field_instance.model_field_name)
+                    value.value_validator = lambda val: self.model._validate_relation_type(key, val)
+                else:
+                    self.model._validate_relation_type(key, value)
+                    value = self.model._meta.fields_map[fk_field].to_db_value(
+                        getattr(value, field_object.to_field_instance.model_field_name),
+                        None,
+                    )
             else:
                 try:
                     db_field = self.model._meta.fields_db_projection[key]
@@ -1333,7 +1421,11 @@ class UpdateQuery(AwaitableQuery):
                         )
                     ).term
                 else:
-                    value = self.model._meta.fields_map[key].to_db_value(value, None)
+                    field_object = self.model._meta.fields_map[key]
+                    if isinstance(value, Parameter):
+                        value.field_object = field_object
+                    else:
+                        value = field_object.to_db_value(value, None)
 
             self.query = self.query.set(db_field, value)
 
@@ -1344,6 +1436,39 @@ class UpdateQuery(AwaitableQuery):
 
     async def _execute(self) -> int:
         return (await self._db.execute_query(*self.query.get_parameterized_sql()))[0]
+
+    def compile(
+        self, key: str | None = None, sql_cache_maxsize: int | None = None
+    ) -> CompiledUpdateQuery[MODEL]:
+        """
+        Compiles query sql.
+        :param key: Cache key for saving compiled query to model cache.
+        """
+
+        from tortoise.queryset_compiled import CompiledUpdateQuery
+
+        if key in self.model._meta.query_cache:
+            cached = self.model._meta.query_cache[key]
+            if not isinstance(cached, CompiledUpdateQuery):
+                raise ValueError(
+                    f"Cached query type mismatch: "
+                    f"expected {self.__class__.__name__}, "
+                    f"got {cached.__class__.__name__}"
+                )
+            return cached._clone()
+
+        self._choose_db_if_not_chosen(True)
+        self._make_query()
+        compiled = CompiledUpdateQuery(
+            model=self.model,
+            query=self.query,
+            sql_cache_maxsize=sql_cache_maxsize,
+        )
+
+        if key is not None:
+            self.model._meta.query_cache[key] = compiled
+
+        return compiled
 
 
 class DeleteQuery(AwaitableQuery):
@@ -1394,6 +1519,39 @@ class DeleteQuery(AwaitableQuery):
     async def _execute(self) -> int:
         return (await self._db.execute_query(*self.query.get_parameterized_sql()))[0]
 
+    def compile(
+        self, key: str | None = None, sql_cache_maxsize: int | None = None
+    ) -> CompiledDeleteQuery[MODEL]:
+        """
+        Compiles query sql.
+        :param key: Cache key for saving compiled query to model cache.
+        """
+
+        from tortoise.queryset_compiled import CompiledDeleteQuery
+
+        if key in self.model._meta.query_cache:
+            cached = self.model._meta.query_cache[key]
+            if not isinstance(cached, CompiledDeleteQuery):
+                raise ValueError(
+                    f"Cached query type mismatch: "
+                    f"expected {self.__class__.__name__}, "
+                    f"got {cached.__class__.__name__}"
+                )
+            return cached._clone()
+
+        self._choose_db_if_not_chosen(True)
+        self._make_query()
+        compiled = CompiledDeleteQuery(
+            model=self.model,
+            query=self.query,
+            sql_cache_maxsize=sql_cache_maxsize,
+        )
+
+        if key is not None:
+            self.model._meta.query_cache[key] = compiled
+
+        return compiled
+
 
 class ExistsQuery(AwaitableQuery):
     __slots__ = (
@@ -1442,6 +1600,39 @@ class ExistsQuery(AwaitableQuery):
     ) -> bool:
         result, _ = await self._db.execute_query(*self.query.get_parameterized_sql())
         return bool(result)
+
+    def compile(
+        self, key: str | None = None, sql_cache_maxsize: int | None = None
+    ) -> CompiledExistsQuery[MODEL]:
+        """
+        Compiles query sql.
+        :param key: Cache key for saving compiled query to model cache.
+        """
+
+        from tortoise.queryset_compiled import CompiledExistsQuery
+
+        if key in self.model._meta.query_cache:
+            cached = self.model._meta.query_cache[key]
+            if not isinstance(cached, CompiledExistsQuery):
+                raise ValueError(
+                    f"Cached query type mismatch: "
+                    f"expected {self.__class__.__name__}, "
+                    f"got {cached.__class__.__name__}"
+                )
+            return cached._clone()
+
+        self._choose_db_if_not_chosen(False)
+        self._make_query()
+        compiled = CompiledExistsQuery(
+            model=self.model,
+            query=self.query,
+            sql_cache_maxsize=sql_cache_maxsize,
+        )
+
+        if key is not None:
+            self.model._meta.query_cache[key] = compiled
+
+        return compiled
 
 
 class CountQuery(AwaitableQuery):
@@ -1505,6 +1696,50 @@ class CountQuery(AwaitableQuery):
         if self._limit and count > self._limit:
             return self._limit
         return count
+
+    def compile(
+        self, key: str | None = None, sql_cache_maxsize: int | None = None
+    ) -> CompiledCountQuery[MODEL]:
+        """
+        Compiles query sql.
+        :param key: Cache key for saving compiled query to model cache.
+        :param sql_cache_maxsize: Maximum cache size for generated sql cache.
+            Only makes sense for queries that contain collections as a parameters.
+        """
+
+        from tortoise.queryset_compiled import CompiledCountQuery
+
+        if key in self.model._meta.query_cache:
+            cached = self.model._meta.query_cache[key]
+            if not isinstance(cached, CompiledCountQuery):
+                raise ValueError(
+                    f"Cached query type mismatch: "
+                    f"expected {self.__class__.__name__}, "
+                    f"got {cached.__class__.__name__}"
+                )
+            return cached._clone()
+
+        self._choose_db_if_not_chosen(False)
+        self._make_query()
+        compiled = CompiledCountQuery(
+            model=self.model,
+            query=self.query,
+            sql_cache_maxsize=sql_cache_maxsize,
+            limit=self._limit,
+            offset=self._offset,
+        )
+
+        if key is not None:
+            self.model._meta.query_cache[key] = compiled
+
+        return compiled
+
+
+class FieldsSelectProtocol(Protocol[MODEL]):
+    model: type[MODEL]
+    _annotations: dict[str, Any]
+
+    def resolve_to_python_value(self, model: type[MODEL], field: str) -> Callable: ...
 
 
 class FieldSelectQuery(AwaitableQuery):
@@ -1574,7 +1809,9 @@ class FieldSelectQuery(AwaitableQuery):
 
         raise FieldError(f'Unknown field "{field}" for model "{self.model.__name__}"')
 
-    def resolve_to_python_value(self, model: type[MODEL], field: str) -> Callable:
+    def resolve_to_python_value(
+        self: FieldsSelectProtocol[MODEL], model: type[MODEL], field: str
+    ) -> Callable:
         if field in model._meta.fetch_fields:
             # return as is to get whole model objects
             return lambda x: x
@@ -1617,6 +1854,13 @@ class FieldSelectQuery(AwaitableQuery):
             )
             group_bys.append(field)
         return group_bys
+
+
+class ValuesListProtocol(FieldsSelectProtocol[MODEL], Protocol[MODEL]):
+    fields: dict[str, str]
+    _flat: bool
+    _single: bool
+    _raise_does_not_exist: bool
 
 
 class ValuesListQuery(FieldSelectQuery, Generic[SINGLE]):
@@ -1730,8 +1974,7 @@ class ValuesListQuery(FieldSelectQuery, Generic[SINGLE]):
         for val in await self:
             yield val
 
-    async def _execute(self) -> list[Any] | tuple:
-        _, result = await self._db.execute_query(*self.query.get_parameterized_sql())
+    def _process_results(self: ValuesListProtocol, result: Sequence[dict]) -> list[Any] | tuple:
         columns = [
             (key, self.resolve_to_python_value(self.model, name))
             for key, name in self.fields.items()
@@ -1753,6 +1996,54 @@ class ValuesListQuery(FieldSelectQuery, Generic[SINGLE]):
                 return None  # type: ignore
             raise MultipleObjectsReturned(self.model)
         return lst_values
+
+    async def _execute(self) -> list[Any] | tuple:
+        _, result = await self._db.execute_query(*self.query.get_parameterized_sql())
+        return self._process_results(result)
+
+    def compile(
+        self, key: str | None = None, sql_cache_maxsize: int | None = None
+    ) -> CompiledValuesListQuery[MODEL, SINGLE]:
+        """
+        Compiles query sql.
+        :param key: Cache key for saving compiled query to model cache.
+        """
+
+        from tortoise.queryset_compiled import CompiledValuesListQuery
+
+        if key in self.model._meta.query_cache:
+            cached = self.model._meta.query_cache[key]
+            if not isinstance(cached, CompiledValuesListQuery):
+                raise ValueError(
+                    f"Cached query type mismatch: "
+                    f"expected {self.__class__.__name__}, "
+                    f"got {cached.__class__.__name__}"
+                )
+            return cached._clone()
+
+        self._choose_db_if_not_chosen(False)
+        self._make_query()
+        compiled: CompiledValuesListQuery[MODEL, SINGLE] = CompiledValuesListQuery(
+            model=self.model,
+            query=self.query,
+            sql_cache_maxsize=sql_cache_maxsize,
+            single=self._single,
+            raise_does_not_exist=self._raise_does_not_exist,
+            fields_for_select_list=self._fields_for_select_list,
+            flat=self._flat,
+            annotations=self._annotations,
+        )
+
+        if key is not None:
+            self.model._meta.query_cache[key] = compiled
+
+        return compiled
+
+
+class ValuesProtocol(FieldsSelectProtocol[MODEL], Protocol[MODEL]):
+    _fields_for_select: dict[str, str]
+    _single: bool
+    _raise_does_not_exist: bool
 
 
 class ValuesQuery(FieldSelectQuery, Generic[SINGLE]):
@@ -1860,8 +2151,7 @@ class ValuesQuery(FieldSelectQuery, Generic[SINGLE]):
         for val in await self:
             yield val
 
-    async def _execute(self) -> list[dict] | dict:
-        result = await self._db.execute_query_dict(*self.query.get_parameterized_sql())
+    def _process_results(self: ValuesProtocol, result: list[dict]) -> list[dict] | dict:
         columns = [
             val
             for val in [
@@ -1885,6 +2175,47 @@ class ValuesQuery(FieldSelectQuery, Generic[SINGLE]):
                 return None  # type: ignore
             raise MultipleObjectsReturned(self.model)
         return result
+
+    async def _execute(self) -> list[dict] | dict:
+        result = await self._db.execute_query_dict(*self.query.get_parameterized_sql())
+        return self._process_results(result)
+
+    def compile(
+        self, key: str | None = None, sql_cache_maxsize: int | None = None
+    ) -> CompiledValuesQuery[MODEL, SINGLE]:
+        """
+        Compiles query sql.
+        :param key: Cache key for saving compiled query to model cache.
+        """
+
+        from tortoise.queryset_compiled import CompiledValuesQuery
+
+        if key in self.model._meta.query_cache:
+            cached = self.model._meta.query_cache[key]
+            if not isinstance(cached, CompiledValuesQuery):
+                raise ValueError(
+                    f"Cached query type mismatch: "
+                    f"expected {self.__class__.__name__}, "
+                    f"got {cached.__class__.__name__}"
+                )
+            return cached._clone()
+
+        self._choose_db_if_not_chosen(False)
+        self._make_query()
+        compiled: CompiledValuesQuery[MODEL, SINGLE] = CompiledValuesQuery(
+            model=self.model,
+            query=self.query,
+            sql_cache_maxsize=sql_cache_maxsize,
+            single=self._single,
+            raise_does_not_exist=self._raise_does_not_exist,
+            fields_for_select=self._fields_for_select,
+            annotations=self._annotations,
+        )
+
+        if key is not None:
+            self.model._meta.query_cache[key] = compiled
+
+        return compiled
 
 
 class RawSQLQuery(AwaitableQuery):
