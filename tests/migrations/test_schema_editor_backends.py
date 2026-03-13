@@ -811,3 +811,254 @@ async def test_mssql_alter_field_max_length() -> None:
 
     assert len(client.executed) == 1
     assert client.executed[0] == "ALTER TABLE [widget] ALTER COLUMN [name] VARCHAR(64) NULL"
+
+
+# ---------------------------------------------------------------------------
+# Bug 1: MySQL MODIFY COLUMN preserves db_default (Issue #2141)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_mysql_alter_field_max_length_preserves_db_default() -> None:
+    """MySQL MODIFY COLUMN for max_length change must re-emit SET DEFAULT."""
+
+    class OldWidget(Model):
+        id = fields.IntField(pk=True)
+        name = fields.CharField(max_length=10, db_default="")
+
+        class Meta:
+            table = "profile"
+            app = "models"
+
+    class NewWidget(Model):
+        id = fields.IntField(pk=True)
+        name = fields.CharField(max_length=20, db_default="")
+
+        class Meta:
+            table = "profile"
+            app = "models"
+
+    client = FakeClient("mysql")
+    editor = MySQLSchemaEditor(client)
+    await editor.alter_field(OldWidget, NewWidget, "name")
+
+    assert len(client.executed) == 1
+    sql = client.executed[0]
+    assert "MODIFY COLUMN" in sql
+    assert "DEFAULT ''" in sql
+
+
+@pytest.mark.asyncio
+async def test_mysql_alter_field_null_change_preserves_db_default() -> None:
+    """MySQL MODIFY COLUMN for null change must preserve DEFAULT in the same statement."""
+
+    class OldWidget(Model):
+        id = fields.IntField(pk=True)
+        value = fields.IntField(null=False, db_default=99)
+
+        class Meta:
+            table = "score"
+            app = "models"
+
+    class NewWidget(Model):
+        id = fields.IntField(pk=True)
+        value = fields.IntField(null=True, db_default=99)
+
+        class Meta:
+            table = "score"
+            app = "models"
+
+    client = FakeClient("mysql")
+    editor = MySQLSchemaEditor(client)
+    await editor.alter_field(OldWidget, NewWidget, "value")
+
+    assert len(client.executed) == 1
+    sql = client.executed[0]
+    assert "MODIFY COLUMN" in sql
+    assert "DEFAULT 99" in sql
+
+
+# ---------------------------------------------------------------------------
+# Bug 2: Description changes emit real SQL (Issue #2141)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_postgres_alter_field_description_change() -> None:
+    """PostgreSQL should emit COMMENT ON COLUMN when description changes."""
+
+    class OldWidget(Model):
+        id = fields.IntField(pk=True)
+        name = fields.CharField(max_length=100, description="item name")
+
+        class Meta:
+            table = "item"
+            app = "models"
+
+    class NewWidget(Model):
+        id = fields.IntField(pk=True)
+        name = fields.CharField(max_length=100, description="short item name")
+
+        class Meta:
+            table = "item"
+            app = "models"
+
+    client = FakeClient("postgres", inline_comment=False)
+    editor = BasePostgresSchemaEditor(client)
+    await editor.alter_field(OldWidget, NewWidget, "name")
+
+    assert len(client.executed) == 1
+    assert "COMMENT ON COLUMN" in client.executed[0]
+    assert "short item name" in client.executed[0]
+
+
+@pytest.mark.asyncio
+async def test_postgres_alter_field_description_removal() -> None:
+    """PostgreSQL should emit COMMENT ON COLUMN ... IS NULL when description removed."""
+
+    class OldWidget(Model):
+        id = fields.IntField(pk=True)
+        name = fields.CharField(max_length=100, description="item name")
+
+        class Meta:
+            table = "item"
+            app = "models"
+
+    class NewWidget(Model):
+        id = fields.IntField(pk=True)
+        name = fields.CharField(max_length=100)
+
+        class Meta:
+            table = "item"
+            app = "models"
+
+    client = FakeClient("postgres", inline_comment=False)
+    editor = BasePostgresSchemaEditor(client)
+    await editor.alter_field(OldWidget, NewWidget, "name")
+
+    assert len(client.executed) == 1
+    assert "IS NULL" in client.executed[0]
+
+
+@pytest.mark.asyncio
+async def test_mysql_alter_field_description_change() -> None:
+    """MySQL should emit MODIFY COLUMN with COMMENT when description changes."""
+
+    class OldWidget(Model):
+        id = fields.IntField(pk=True)
+        name = fields.CharField(max_length=100, description="item name")
+
+        class Meta:
+            table = "item"
+            app = "models"
+
+    class NewWidget(Model):
+        id = fields.IntField(pk=True)
+        name = fields.CharField(max_length=100, description="short item name")
+
+        class Meta:
+            table = "item"
+            app = "models"
+
+    client = FakeClient("mysql")
+    editor = MySQLSchemaEditor(client)
+    await editor.alter_field(OldWidget, NewWidget, "name")
+
+    assert len(client.executed) == 1
+    assert "MODIFY COLUMN" in client.executed[0]
+    assert "COMMENT" in client.executed[0]
+    assert "short item name" in client.executed[0]
+
+
+@pytest.mark.asyncio
+async def test_base_alter_field_description_change_noop() -> None:
+    """Base editor should emit no SQL for description-only changes (unsupported)."""
+
+    class OldWidget(Model):
+        id = fields.IntField(pk=True)
+        name = fields.CharField(max_length=100, description="old desc")
+
+        class Meta:
+            table = "item"
+            app = "models"
+
+    class NewWidget(Model):
+        id = fields.IntField(pk=True)
+        name = fields.CharField(max_length=100, description="new desc")
+
+        class Meta:
+            table = "item"
+            app = "models"
+
+    client = FakeClient("sql")
+    editor = TestSchemaEditor(client)
+    await editor.alter_field(OldWidget, NewWidget, "name")
+
+    assert len(client.executed) == 0
+
+
+# ---------------------------------------------------------------------------
+# Step 3: Combined description + other changes on MySQL (Issue #2141)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_mysql_alter_field_null_and_description_combined() -> None:
+    """MySQL should emit a single MODIFY COLUMN with both NULL and COMMENT."""
+
+    class OldWidget(Model):
+        id = fields.IntField(pk=True)
+        name = fields.CharField(max_length=100, description="old desc")
+
+        class Meta:
+            table = "item"
+            app = "models"
+
+    class NewWidget(Model):
+        id = fields.IntField(pk=True)
+        name = fields.CharField(max_length=100, null=True, description="new desc")
+
+        class Meta:
+            table = "item"
+            app = "models"
+
+    client = FakeClient("mysql")
+    editor = MySQLSchemaEditor(client)
+    await editor.alter_field(OldWidget, NewWidget, "name")
+
+    # Should be a single MODIFY COLUMN with both NULL and COMMENT
+    modify_stmts = [s for s in client.executed if "MODIFY COLUMN" in s]
+    assert len(modify_stmts) == 1
+    assert "NULL" in modify_stmts[0]
+    assert "COMMENT" in modify_stmts[0]
+    assert "new desc" in modify_stmts[0]
+
+
+@pytest.mark.asyncio
+async def test_mysql_alter_field_null_change_preserves_description() -> None:
+    """MySQL MODIFY COLUMN for null change must preserve existing COMMENT."""
+
+    class OldWidget(Model):
+        id = fields.IntField(pk=True)
+        name = fields.CharField(max_length=100, description="keep this")
+
+        class Meta:
+            table = "item"
+            app = "models"
+
+    class NewWidget(Model):
+        id = fields.IntField(pk=True)
+        name = fields.CharField(max_length=100, null=True, description="keep this")
+
+        class Meta:
+            table = "item"
+            app = "models"
+
+    client = FakeClient("mysql")
+    editor = MySQLSchemaEditor(client)
+    await editor.alter_field(OldWidget, NewWidget, "name")
+
+    modify_stmts = [s for s in client.executed if "MODIFY COLUMN" in s]
+    assert len(modify_stmts) == 1
+    assert "COMMENT" in modify_stmts[0]
+    assert "keep this" in modify_stmts[0]
