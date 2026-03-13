@@ -17,7 +17,7 @@ from pydantic import BaseModel, ConfigDict
 from tortoise import fields
 from tortoise.exceptions import NoValuesFetched, ValidationError
 from tortoise.fields import NO_ACTION
-from tortoise.fields.db_defaults import RandomHex, SqlDefault
+from tortoise.fields.db_defaults import Now, RandomHex, SqlDefault
 from tortoise.indexes import Index
 from tortoise.manager import Manager
 from tortoise.models import Model
@@ -897,7 +897,8 @@ class SqlDefaultModel(Model):
     """Model with SqlDefault expressions for db_default."""
 
     name = fields.CharField(max_length=100)
-    created_at = fields.DatetimeField(db_default=SqlDefault("CURRENT_TIMESTAMP"))
+    created_at = fields.DatetimeField(db_default=Now())
+    counter = fields.IntField(db_default=SqlDefault("0"))
     tracking_id = fields.CharField(max_length=36, null=True, db_default=RandomHex())
 
     class Meta:

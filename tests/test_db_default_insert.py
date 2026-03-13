@@ -186,6 +186,7 @@ class TestBulkCreateWithDbDefault:
         assert len(all_inst) == 2
         for inst in all_inst:
             assert inst.created_at is not None
+            assert inst.counter == 0
 
     @pytest.mark.asyncio
     async def test_bulk_create_allowed_with_fetch_false(self, db):
