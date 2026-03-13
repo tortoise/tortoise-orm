@@ -6,6 +6,8 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Protocol, TypeVar, cast
 
 from pypika_tortoise import SqlContext
+from pypika_tortoise.enums import Equality
+from pypika_tortoise.terms import BasicCriterion, Criterion, NullCriterion, Term, ValueWrapper
 
 from tortoise.fields import Field
 
@@ -109,25 +111,36 @@ class Parameter:
         return encoded
 
 
-class CollectionParameter(Parameter):
-    __slots__ = (
-        "collection_size",
-        "collection_encoder",
+class CollectionParameter(Parameter, Criterion):
+    IS_IN_EMPTY = BasicCriterion(
+        Equality.eq,
+        ValueWrapper(1, allow_parametrize=False),
+        ValueWrapper(0, allow_parametrize=False),
+    )
+    IS_NOT_IN_EMPTY = BasicCriterion(
+        Equality.eq,
+        ValueWrapper(1, allow_parametrize=False),
+        ValueWrapper(1, allow_parametrize=False),
     )
 
-    def __init__(self, name: str) -> None:
-        super().__init__(name)
+    __slots__ = (
+        "term",
+        "collection_size",
+        "collection_encoder",
+        "is_in",
+    )
+
+    def __init__(self, term: Term, param: Parameter, is_in: bool) -> None:
+        super().__init__(param.name)
+        self.model = param.model
+        self.value_encoder = param.value_encoder
+        self.field_object = param.field_object
+        self.encode = param.encode
+
+        self.term = term
         self.collection_size: int | None = None
         self.collection_encoder: FieldEncoder[Sequence[Any]] | None = None
-
-    @classmethod
-    def from_simple_param(cls, param: Parameter) -> Self:
-        new_param = cls(param.name)
-        new_param.model = param.model
-        new_param.value_encoder = param.value_encoder
-        new_param.field_object = param.field_object
-        new_param.encode = param.encode
-        return new_param
+        self.is_in = is_in
 
     def encode_collection(self, value: Any) -> Sequence[Any]:
         if self.collection_encoder is None:
@@ -142,18 +155,42 @@ class CollectionParameter(Parameter):
         if ctx.parameterizer is None:
             raise ValueError("Parametrization must be enabled when using tortoise.Parameter.")
 
+        term_sql = self.term.get_sql(ctx)
+        not_ = "" if self.is_in else "NOT "
+        fmt = "{term} {not_}IN {container}"
+
         param = self
         if isinstance(ctx, TortoiseSqlContext) and ctx.dynamic_params is not None:
             param = ctx.dynamic_params.get(self.name, self)
 
         if param.collection_size is None:
-            return ctx.parameterizer.create_param(param).get_sql(ctx)
-        else:
-            placeholders = []
-            for idx in range(param.collection_size):
-                new_param = param.clone()
-                new_param.collection_encoder = new_param.value_encoder
-                new_param.value_encoder = None
-                pypika_param = ctx.parameterizer.create_param(new_param)
-                placeholders.append(pypika_param.get_sql(ctx))
-            return f"({','.join(placeholders)})"
+            return fmt.format(
+                term=term_sql,
+                container=ctx.parameterizer.create_param(param).get_sql(ctx),
+                not_=not_,
+            )
+
+        if not param.collection_size:
+            if self.is_in:
+                return self.IS_IN_EMPTY.get_sql(ctx)
+            return self.IS_NOT_IN_EMPTY.get_sql(ctx)
+
+        placeholders = []
+        for idx in range(param.collection_size):
+            new_param = param.clone()
+            new_param.collection_encoder = new_param.value_encoder
+            new_param.value_encoder = None
+            pypika_param = ctx.parameterizer.create_param(new_param)
+            placeholders.append(pypika_param.get_sql(ctx))
+
+        sql = fmt.format(
+            term=term_sql,
+            container=f"({','.join(placeholders)})",
+            not_=not_,
+        )
+
+        if not self.is_in:
+            null_crit = NullCriterion(self.term)
+            sql = f"({sql} OR {null_crit})"
+
+        return sql

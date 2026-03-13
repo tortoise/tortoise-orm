@@ -417,3 +417,35 @@ async def test_missing_parameters(db):
         await compiled.execute(ids=[123])
     with pytest.raises(KeyError):
         await compiled.execute(name_prefix="test")
+
+
+@pytest.mark.asyncio
+async def test_parameter_in_empty(db):
+    await Author.create(name="1")
+    await Author.create(name="2")
+
+    compiled = Author.filter(name__in=Parameter("names")).compile()
+    authors = await compiled.execute(names=[])
+    assert not authors
+
+
+@pytest.mark.asyncio
+async def test_parameter_not_in_empty(db):
+    author1 = await Author.create(name="1")
+    author2 = await Author.create(name="2")
+
+    compiled = Author.filter(name__not_in=Parameter("names")).order_by("id").compile()
+    authors = await compiled.execute(names=[])
+    assert authors == [author1, author2]
+
+
+def test_parameter_in_empty_sql(db):
+    compiled = Author.filter(name__in=Parameter("names")).compile()
+    compiled_sql = compiled.sql(names=[])
+    assert "IN ()" not in compiled_sql
+
+
+def test_parameter_not_in_empty_sql(db):
+    compiled = Author.filter(name__not_in=Parameter("names")).order_by("id").compile()
+    compiled_sql = compiled.sql(names=[])
+    assert "NOT IN ()" not in compiled_sql

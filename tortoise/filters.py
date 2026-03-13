@@ -104,7 +104,7 @@ def array_encoder(value: Any | Sequence[Any], instance: Model, field: Field) -> 
 def is_in(field: Term, value: Any) -> Criterion:
     if value:
         if isinstance(value, Parameter):
-            value = CollectionParameter.from_simple_param(value)
+            return CollectionParameter(field, value, True)
         return field.isin(value)
     # SQL has no False, so we return 1=0
     return BasicCriterion(
@@ -117,7 +117,7 @@ def is_in(field: Term, value: Any) -> Criterion:
 def not_in(field: Term, value: Any) -> Criterion:
     if value:
         if isinstance(value, Parameter):
-            value = CollectionParameter.from_simple_param(value)
+            return CollectionParameter(field, value, False)
         return field.notin(value) | field.isnull()
     # SQL has no True, so we return 1=1
     return BasicCriterion(

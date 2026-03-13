@@ -76,13 +76,15 @@ class CachedSql:
             if name not in params:
                 raise KeyError(f'Expected parameter "{name}" is not provided!')
             collection_length = len(params[name])
-            param_length = len(params[name])
+            param_length = len(indexes)
             if collection_length != param_length:
                 raise ValueError(
                     f"Provided value length ({collection_length}) "
                     f"for parameter {name!r} does not match "
                     f"parameter indexes length ({param_length})"
                 )
+            # if not collection_length:
+            #     raise ValueError("Parameter must not be empty!")
 
         filled_params = self.params.copy()
         for name, idx in self.need_params.items():
