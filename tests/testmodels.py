@@ -17,6 +17,7 @@ from pydantic import BaseModel, ConfigDict
 from tortoise import fields
 from tortoise.exceptions import NoValuesFetched, ValidationError
 from tortoise.fields import NO_ACTION
+from tortoise.fields.db_defaults import RandomHex, SqlDefault
 from tortoise.indexes import Index
 from tortoise.manager import Manager
 from tortoise.models import Model
@@ -890,6 +891,28 @@ class DefaultModel(Model):
     datetime_default = fields.DatetimeField(
         db_default=datetime.datetime(year=2020, month=5, day=20, tzinfo=UTC)
     )
+
+
+class SqlDefaultModel(Model):
+    """Model with SqlDefault expressions for db_default."""
+
+    name = fields.CharField(max_length=100)
+    created_at = fields.DatetimeField(db_default=SqlDefault("CURRENT_TIMESTAMP"))
+    tracking_id = fields.CharField(max_length=36, null=True, db_default=RandomHex())
+
+    class Meta:
+        table = "sql_default_model"
+
+
+class NoFetchDefaultModel(Model):
+    """Model with fetch_db_defaults = False."""
+
+    int_val = fields.IntField(db_default=1)
+    char_val = fields.CharField(max_length=20, db_default="test")
+
+    class Meta:
+        table = "no_fetch_default"
+        fetch_db_defaults = False
 
 
 class RequiredPKModel(Model):

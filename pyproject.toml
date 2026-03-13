@@ -8,7 +8,7 @@ keywords = ["sql", "mysql", "postgres", "psql", "sqlite", "aiosqlite", "asyncpg"
 dynamic = ["version"]
 requires-python = ">=3.10"
 dependencies = [
-    "pypika-tortoise (>=0.6.3,<1.0.0)",
+    "pypika-tortoise (>=0.6.5,<1.0.0)",
     "iso8601 (>=2.1.0,<3.0.0); python_version < '4.0'",
     "aiosqlite (>=0.16.0,<1.0.0)",
     "anyio",

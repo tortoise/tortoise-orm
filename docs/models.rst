@@ -286,6 +286,26 @@ The ``Meta`` class
 
             ordering = ["name", "-score"]
 
+    .. attribute:: fetch_db_defaults
+        :annotation: = True
+
+        When ``True`` (the default), after an INSERT on a non-RETURNING backend
+        (e.g. MySQL), Tortoise will issue a follow-up ``SELECT`` to fetch
+        database-applied default values for fields declared with ``db_default``.
+
+        Set to ``False`` to skip the extra query when you don't need the
+        database-generated values back on the Python instance immediately.
+        On RETURNING backends (PostgreSQL, SQLite) the values are always
+        returned in the INSERT response regardless of this setting.
+
+        .. code-block:: python3
+
+            class MyModel(Model):
+                score = fields.IntField(db_default=0)
+
+                class Meta:
+                    fetch_db_defaults = False
+
     .. attribute:: manager
         :annotation: = tortoise.manager.Manager
 

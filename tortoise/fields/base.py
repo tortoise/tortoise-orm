@@ -41,6 +41,38 @@ class _DB_DEFAULT_NOT_SET:
 DB_DEFAULT_NOT_SET = _DB_DEFAULT_NOT_SET()
 
 
+class DatabaseDefault:
+    """Sentinel indicating that the database should apply its default value.
+
+    When a field has ``db_default`` and the user does not provide a value,
+    this object is set as the attribute value on the model instance.
+
+    During INSERT compilation it is detected via ``isinstance()`` checks:
+    - Single-insert path: columns with DatabaseDefault are omitted from the
+      INSERT statement, so the DB applies its DEFAULT.
+    - Bulk-insert path: columns where *all* instances hold DatabaseDefault
+      are omitted; mixed usage raises ``OperationalError``.
+    """
+
+    def __init__(self, field: Field) -> None:
+        self.field = field
+
+    def __repr__(self) -> str:
+        return f"DatabaseDefault({self.field.model_field_name!r})"
+
+    def __str__(self) -> str:
+        return "<DB_DEFAULT>"
+
+    def __bool__(self) -> bool:
+        """Returns False so that ``if instance.field:`` is falsy for unset db_default fields.
+
+        This is consistent with "no value has been set yet". Users who need to
+        distinguish between DatabaseDefault and other falsy values should use
+        ``isinstance(value, DatabaseDefault)``.
+        """
+        return False
+
+
 class OnDelete(StrEnum):
     CASCADE = "CASCADE"
     RESTRICT = "RESTRICT"
@@ -318,7 +350,18 @@ class Field(Generic[VALUE], metaclass=_FieldMeta):
 
         It needs to be non-nullable and not have a default or be DB-generated to be required.
         """
-        return self.default is None and not self.null and not self.generated
+        return (
+            self.default is None
+            and not self.null
+            and not self.generated
+            and not self.has_db_default()
+        )
+
+    def get_db_default_value(self) -> DatabaseDefault | None:
+        """Return a DatabaseDefault instance if this field has a db_default, else None."""
+        if self.has_db_default():
+            return DatabaseDefault(self)
+        return None
 
     @property
     def constraints(self) -> dict:
