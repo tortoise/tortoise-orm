@@ -14,6 +14,7 @@ These tests verify that fields with db_default:
 import datetime
 from decimal import Decimal
 
+import pydantic
 import pytest
 
 from tests.testmodels import DefaultModel, NoFetchDefaultModel, SqlDefaultModel
@@ -254,8 +255,20 @@ class TestMetaInfo:
 
 class TestPydanticDbDefault:
     @pytest.mark.asyncio
-    async def test_pydantic_model_db_default_field_optional(self, db):
-        PydanticDefault = pydantic_model_creator(DefaultModel)
-        # Should not raise -- db_default fields are optional
-        instance = PydanticDefault(id=1)
-        assert instance.int_default is None
+    async def test_pydantic_no_fetch_requires_refresh(self, db):
+        PydanticNoFetch = pydantic_model_creator(NoFetchDefaultModel)
+
+        instance = await NoFetchDefaultModel.create()
+        conn = instance._meta.db
+
+        if not conn.capabilities.support_returning:
+            # Without RETURNING, unfetched db_default fields are DatabaseDefault sentinels
+            # and pydantic validation will fail
+            with pytest.raises(pydantic.ValidationError):
+                await PydanticNoFetch.from_tortoise_orm(instance)
+
+        # After refreshing from db, pydantic model succeeds
+        refreshed = await NoFetchDefaultModel.get(pk=instance.pk)
+        pydantic_instance = await PydanticNoFetch.from_tortoise_orm(refreshed)
+        assert pydantic_instance.int_val == 1
+        assert pydantic_instance.char_val == "test"

@@ -413,10 +413,8 @@ class PydanticModelCreator:
                     PydanticField(default=field.default, **fconfig),
                 )
             else:
-                if (
-                    json_schema_extra.get("nullable")
-                    or field.has_db_default()
-                    or (self._exclude_read_only and json_schema_extra.get("readOnly"))
+                if json_schema_extra.get("nullable") or (
+                    self._exclude_read_only and json_schema_extra.get("readOnly")
                 ):
                     # see: https://docs.pydantic.dev/latest/migration/#required-optional-and-nullable-fields
                     fconfig["default"] = None
