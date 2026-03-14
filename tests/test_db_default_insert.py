@@ -11,10 +11,17 @@ These tests verify that fields with db_default:
 7. Work with Meta.fetch_db_defaults = False
 """
 
+import datetime
+from decimal import Decimal
+
 import pytest
 
+from tests.testmodels import DefaultModel, NoFetchDefaultModel, SqlDefaultModel
 from tortoise import fields
+from tortoise.contrib.pydantic import pydantic_model_creator
+from tortoise.exceptions import OperationalError
 from tortoise.fields.base import DatabaseDefault
+from tortoise.timezone import UTC
 
 
 class TestDatabaseDefaultSentinel:
@@ -57,7 +64,6 @@ class TestGetDbDefaultValue:
 class TestModelInitDbDefault:
     @pytest.mark.asyncio
     async def test_init_sets_database_default(self, db):
-        from tests.testmodels import DefaultModel
 
         instance = DefaultModel()
         assert isinstance(instance.int_default, DatabaseDefault)
@@ -67,7 +73,6 @@ class TestModelInitDbDefault:
 
     @pytest.mark.asyncio
     async def test_init_with_explicit_value(self, db):
-        from tests.testmodels import DefaultModel
 
         instance = DefaultModel(int_default=42)
         assert instance.int_default == 42
@@ -77,7 +82,6 @@ class TestModelInitDbDefault:
 class TestConstructWithDbDefault:
     @pytest.mark.asyncio
     async def test_construct_sets_database_default(self, db):
-        from tests.testmodels import DefaultModel
 
         instance = DefaultModel.construct()
         assert isinstance(instance.int_default, DatabaseDefault)
@@ -87,7 +91,6 @@ class TestConstructWithDbDefault:
 class TestCreateWithDbDefault:
     @pytest.mark.asyncio
     async def test_create_no_args_applies_db_defaults_and_persists(self, db):
-        from tests.testmodels import DefaultModel
 
         instance = await DefaultModel.create()
         assert instance.pk is not None
@@ -104,7 +107,6 @@ class TestCreateWithDbDefault:
 
     @pytest.mark.asyncio
     async def test_create_with_partial_override(self, db):
-        from tests.testmodels import DefaultModel
 
         instance = await DefaultModel.create(int_default=99, char_default="custom")
         assert instance.int_default == 99
@@ -118,12 +120,6 @@ class TestCreateWithDbDefault:
     @pytest.mark.asyncio
     async def test_create_all_explicit_values(self, db):
         """When all values are provided, cached query path is used (no DEFAULT keyword)."""
-        import datetime
-        from decimal import Decimal
-
-        from tests.testmodels import DefaultModel
-        from tortoise.timezone import UTC
-
         instance = await DefaultModel.create(
             int_default=10,
             float_default=2.5,
@@ -142,7 +138,6 @@ class TestCreateWithDbDefault:
 class TestBulkCreateWithDbDefault:
     @pytest.mark.asyncio
     async def test_bulk_create_all_defaults(self, db):
-        from tests.testmodels import DefaultModel
 
         instances = [DefaultModel() for _ in range(3)]
         await DefaultModel.bulk_create(instances)
@@ -155,7 +150,6 @@ class TestBulkCreateWithDbDefault:
     @pytest.mark.asyncio
     async def test_bulk_create_all_explicit_values(self, db):
         """When all instances provide explicit values for a db_default field, column is included."""
-        from tests.testmodels import DefaultModel
 
         inst1 = DefaultModel(int_default=99)
         inst2 = DefaultModel(int_default=77)
@@ -167,9 +161,6 @@ class TestBulkCreateWithDbDefault:
     @pytest.mark.asyncio
     async def test_bulk_create_mixed_raises(self, db):
         """Mixed usage (some default, some explicit) for same field raises OperationalError."""
-        from tests.testmodels import DefaultModel
-        from tortoise.exceptions import OperationalError
-
         inst1 = DefaultModel(int_default=99)
         inst2 = DefaultModel()  # int_default is DatabaseDefault
         with pytest.raises(OperationalError, match="Cannot use bulk_create"):
@@ -178,8 +169,6 @@ class TestBulkCreateWithDbDefault:
     @pytest.mark.asyncio
     async def test_bulk_create_sql_default_all_defaults_omits_column(self, db):
         """bulk_create with SqlDefault fields where all use default should omit the column."""
-        from tests.testmodels import SqlDefaultModel
-
         instances = [SqlDefaultModel(name="test1"), SqlDefaultModel(name="test2")]
         await SqlDefaultModel.bulk_create(instances)
         all_inst = await SqlDefaultModel.all()
@@ -191,8 +180,6 @@ class TestBulkCreateWithDbDefault:
     @pytest.mark.asyncio
     async def test_bulk_create_allowed_with_fetch_false(self, db):
         """bulk_create with db_default fields on fetch_db_defaults=False model should work."""
-        from tests.testmodels import NoFetchDefaultModel
-
         instances = [NoFetchDefaultModel() for _ in range(3)]
         await NoFetchDefaultModel.bulk_create(instances)
         all_inst = await NoFetchDefaultModel.all()
@@ -205,7 +192,6 @@ class TestBulkCreateWithDbDefault:
 class TestSaveUpdateWithDbDefault:
     @pytest.mark.asyncio
     async def test_update_skips_database_default_fields(self, db):
-        from tests.testmodels import DefaultModel
 
         instance = await DefaultModel.create()
 
@@ -227,15 +213,28 @@ class TestSaveUpdateWithDbDefault:
 class TestNoFetchDbDefaults:
     @pytest.mark.asyncio
     async def test_create_with_no_fetch(self, db):
-        """Models with fetch_db_defaults=False still emit DEFAULT keyword."""
-        from tests.testmodels import NoFetchDefaultModel
+        """Models with fetch_db_defaults=False still emit DEFAULT keyword.
+
+        On RETURNING backends (sqlite, pg), values are populated via RETURNING
+        regardless of fetch_db_defaults.
+        On non-RETURNING backends (mysql), values remain DatabaseDefault on the
+        in-memory instance since the post-INSERT SELECT is skipped.
+        """
+        conn = db.db()
 
         instance = await NoFetchDefaultModel.create()
         assert instance.pk is not None
-        # On RETURNING backends (sqlite, pg), values should be fetched despite fetch_db_defaults=False
-        # because RETURNING is always used.
-        # On non-RETURNING backends, values remain DatabaseDefault.
-        # For SQLite (used in tests), values should be populated.
+
+        if conn.capabilities.support_returning:
+            # RETURNING populates values regardless of fetch_db_defaults
+            assert instance.int_val == 1
+            assert instance.char_val == "test"
+        else:
+            # Non-RETURNING backends skip the post-INSERT SELECT
+            assert isinstance(instance.int_val, DatabaseDefault)
+            assert isinstance(instance.char_val, DatabaseDefault)
+
+        # A fresh SELECT always returns the real values
         refreshed = await NoFetchDefaultModel.get(pk=instance.pk)
         assert refreshed.int_val == 1
         assert refreshed.char_val == "test"
@@ -244,8 +243,6 @@ class TestNoFetchDbDefaults:
 class TestMetaInfo:
     @pytest.mark.asyncio
     async def test_db_default_meta_attributes(self, db):
-        from tests.testmodels import DefaultModel, NoFetchDefaultModel
-
         meta = DefaultModel._meta
         assert len(meta.db_default_db_columns) > 0
         assert "int_default" in meta.db_default_db_columns
@@ -258,9 +255,6 @@ class TestMetaInfo:
 class TestPydanticDbDefault:
     @pytest.mark.asyncio
     async def test_pydantic_model_db_default_field_optional(self, db):
-        from tests.testmodels import DefaultModel
-        from tortoise.contrib.pydantic import pydantic_model_creator
-
         PydanticDefault = pydantic_model_creator(DefaultModel)
         # Should not raise -- db_default fields are optional
         instance = PydanticDefault(id=1)

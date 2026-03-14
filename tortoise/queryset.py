@@ -22,6 +22,7 @@ from tortoise.exceptions import (
     ParamsError,
 )
 from tortoise.expressions import Expression, Q, RawSQL, ResolveContext, ResolveResult
+from tortoise.fields.base import DatabaseDefault
 from tortoise.fields.relational import (
     ForeignKeyFieldInstance,
     OneToOneFieldInstance,
@@ -2042,7 +2043,6 @@ class BulkCreateQuery(AwaitableQuery, Generic[MODEL]):
         use DatabaseDefault for that field). Raises OperationalError if a
         field has mixed usage (some instances provide a value, others don't).
         """
-        from tortoise.fields.base import DatabaseDefault
 
         fields_map = self.model._meta.fields_map
         db_default_field_names = [fn for fn in columns if fields_map[fn].has_db_default()]
@@ -2077,87 +2077,72 @@ class BulkCreateQuery(AwaitableQuery, Generic[MODEL]):
         table = self.model._meta.basetable
         return str(self._db.query_class.into(table).default_values())
 
+    def _filter_columns(self, omit_fields: set[str], include_generated: bool = False) -> list[str]:
+        """Prepare INSERT columns, filtering out omitted db_default fields."""
+        _, columns = self._executor._prepare_insert_columns(include_generated=include_generated)
+        if not omit_fields:
+            return columns
+        field_names = (
+            self._executor.regular_columns_all
+            if include_generated
+            else self._executor.regular_columns
+        )
+        return [c for fn, c in zip(field_names, columns) if fn not in omit_fields]
+
+    def _apply_on_conflict(
+        self,
+        insert_query: QueryBuilder,
+        insert_query_all: QueryBuilder,
+        update_fields: Iterable[str],
+        omit_fields: set[str],
+    ) -> tuple[QueryBuilder, QueryBuilder]:
+        """Apply ON CONFLICT ... DO UPDATE to both query variants."""
+        effective_update_fields = (
+            [f for f in update_fields if f not in omit_fields]
+            if omit_fields
+            else list(update_fields)
+        )
+        alias = f"new_{self.model._meta.db_table}"
+        insert_query = insert_query.as_(alias).on_conflict(*(self._on_conflict or []))
+        insert_query_all = insert_query_all.as_(alias).on_conflict(*(self._on_conflict or []))
+        for update_field in effective_update_fields:
+            insert_query = insert_query.do_update(update_field)
+            insert_query_all = insert_query_all.do_update(update_field)
+        return insert_query, insert_query_all
+
     def _make_queries(self, omit_fields: set[str] | None = None) -> tuple[str, str]:
         if omit_fields is None:
             omit_fields = set()
 
-        if self._ignore_conflicts or self._update_fields:
-            _, columns = self._executor._prepare_insert_columns()
-            if omit_fields:
-                columns = [
-                    c
-                    for fn, c in zip(self._executor.regular_columns, columns)
-                    if fn not in omit_fields
-                ]
-            if columns:
-                insert_query = self._executor._prepare_insert_statement(
-                    columns, ignore_conflicts=self._ignore_conflicts
-                )
-            else:
-                return self._build_default_values_sql(), self._build_default_values_sql()
-            insert_query_all = insert_query
-            if self.model._meta.generated_db_fields:
-                _, columns_all = self._executor._prepare_insert_columns(include_generated=True)
-                if omit_fields:
-                    columns_all = [
-                        c
-                        for fn, c in zip(self._executor.regular_columns_all, columns_all)
-                        if fn not in omit_fields
-                    ]
-                if columns_all:
-                    insert_query_all = self._executor._prepare_insert_statement(
-                        columns_all,
-                        has_generated=False,
-                        ignore_conflicts=self._ignore_conflicts,
-                    )
-                else:
-                    return self._build_default_values_sql(), self._build_default_values_sql()
-            if self._update_fields:
-                effective_update_fields = (
-                    [f for f in self._update_fields if f not in omit_fields]
-                    if omit_fields
-                    else list(self._update_fields)
-                )
-                alias = f"new_{self.model._meta.db_table}"
-                insert_query_all = insert_query_all.as_(alias).on_conflict(
-                    *(self._on_conflict or [])
-                )
-                insert_query = insert_query.as_(alias).on_conflict(*(self._on_conflict or []))
-                for update_field in effective_update_fields:
-                    insert_query_all = insert_query_all.do_update(update_field)
-                    insert_query = insert_query.do_update(update_field)
-            return insert_query.get_sql(), insert_query_all.get_sql()
-        else:
-            if omit_fields:
-                _, columns = self._executor._prepare_insert_columns()
-                columns = [
-                    c
-                    for fn, c in zip(self._executor.regular_columns, columns)
-                    if fn not in omit_fields
-                ]
-                if columns:
-                    insert_sql = str(self._executor._prepare_insert_statement(columns))
-                else:
-                    insert_sql = self._build_default_values_sql()
-
-                insert_sql_all = insert_sql
-                if self.model._meta.generated_db_fields:
-                    _, columns_all = self._executor._prepare_insert_columns(include_generated=True)
-                    columns_all = [
-                        c
-                        for fn, c in zip(self._executor.regular_columns_all, columns_all)
-                        if fn not in omit_fields
-                    ]
-                    if columns_all:
-                        insert_sql_all = str(
-                            self._executor._prepare_insert_statement(
-                                columns_all, has_generated=False
-                            )
-                        )
-                    else:
-                        insert_sql_all = self._build_default_values_sql()
-                return insert_sql, insert_sql_all
+        if not (self._ignore_conflicts or self._update_fields) and not omit_fields:
             return self._executor.insert_query, self._executor.insert_query_all
+
+        default_sql = self._build_default_values_sql()
+
+        columns = self._filter_columns(omit_fields)
+        if not columns:
+            return default_sql, default_sql
+        insert_query = self._executor._prepare_insert_statement(
+            columns, ignore_conflicts=self._ignore_conflicts
+        )
+
+        insert_query_all = insert_query
+        if self.model._meta.generated_db_fields:
+            columns_all = self._filter_columns(omit_fields, include_generated=True)
+            if not columns_all:
+                return default_sql, default_sql
+            insert_query_all = self._executor._prepare_insert_statement(
+                columns_all,
+                has_generated=False,
+                ignore_conflicts=self._ignore_conflicts,
+            )
+
+        if self._update_fields:
+            insert_query, insert_query_all = self._apply_on_conflict(
+                insert_query, insert_query_all, self._update_fields, omit_fields
+            )
+
+        return insert_query.get_sql(), insert_query_all.get_sql()
 
     async def _execute_many(
         self,

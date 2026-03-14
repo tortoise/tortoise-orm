@@ -12,6 +12,7 @@ from pypika_tortoise.queries import QueryBuilder
 
 from tortoise.exceptions import OperationalError
 from tortoise.expressions import Expression, ResolveContext
+from tortoise.fields.base import DatabaseDefault
 from tortoise.fields.relational import (
     BackwardFKRelation,
     BackwardOneToOneRelation,
@@ -187,7 +188,6 @@ class BaseExecutor:
 
     def _has_db_default_values(self, instance: Model, columns: list[str]) -> bool:
         """Check whether any column on the instance still holds a DatabaseDefault sentinel."""
-        from tortoise.fields.base import DatabaseDefault
 
         if not self.model._meta.db_default_db_columns:
             return False
@@ -210,7 +210,6 @@ class BaseExecutor:
         - *db_default_columns* lists the DB column names that were omitted from
           the INSERT (they will use the DB-level DEFAULT).
         """
-        from tortoise.fields.base import DatabaseDefault
 
         if columns is None:
             columns = self.regular_columns
@@ -333,7 +332,6 @@ class BaseExecutor:
         were set to DEFAULT in the INSERT.
         Guarded by Meta.fetch_db_defaults.
         """
-        from tortoise.fields.base import DatabaseDefault
 
         if not self.model._meta.fetch_db_defaults:
             return
@@ -428,7 +426,6 @@ class BaseExecutor:
     async def execute_update(
         self, instance: type[Model] | Model, update_fields: Iterable[str] | None
     ) -> int:
-        from tortoise.fields.base import DatabaseDefault
 
         user_specified = update_fields is not None
         source_fields: list[str] = (
