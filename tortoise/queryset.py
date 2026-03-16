@@ -2236,6 +2236,36 @@ class BulkCreateQuery(AwaitableQuery, Generic[MODEL]):
         return ";".join([insert_sql, insert_sql_all])
 
 
+class UnionCountQuery(AwaitableQuery):
+    __slots__ = ("_union_query", "_db", "_query_cls")
+
+    def __init__(
+        self,
+        model: type[MODEL],
+        db: BaseDBAsyncClient,
+        union_query: QueryBuilder,
+        query_cls: type,
+    ) -> None:
+        super().__init__(model)
+        self._union_query = union_query
+        self._db = db
+        self._query_cls = query_cls
+
+    def _make_query(self) -> None:
+        self.query = self._query_cls.from_(self._union_query).select(Count(Star()))
+
+    def __await__(self) -> Generator[Any, None, int]:
+        self._choose_db_if_not_chosen()
+        self._make_query()
+        return self._execute().__await__()
+
+    async def _execute(self) -> int:
+        _, result = await self._db.execute_query(*self.query.get_parameterized_sql())
+        if not result:
+            return 0
+        return list(dict(result[0]).values())[0]
+
+
 class UnionQuery(AwaitableQuery[MODEL]):
     __slots__ = (
         "model",
@@ -2390,18 +2420,16 @@ class UnionQuery(AwaitableQuery[MODEL]):
         union._limit = limit
         return union
 
-    def count(self) -> CountQuery:
+    def count(self) -> UnionCountQuery:
         """
-        Return count of objects in queryset instead of objects.
+        Return count of objects in union query.
         """
-        return CountQuery(
-            db=self._db,
+        self._choose_db_if_not_chosen()
+        self._make_query()
+        query_cls = self._qs[0].query.QUERY_CLS
+        return UnionCountQuery(
             model=self.model,
-            q_objects=[],
-            annotations={},
-            custom_filters={},
-            limit=self._limit,
-            offset=None,
-            force_indexes=set(),
-            use_indexes=set(),
+            db=self._db,
+            union_query=self._union_query,
+            query_cls=query_cls,
         )

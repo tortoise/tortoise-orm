@@ -1002,11 +1002,12 @@ async def test_union_chained(db):
 @pytest.mark.asyncio
 async def test_union_count(db):
     await Tournament.create(name="T1")
+    await Reporter.create(name="R1")
     await Tournament.create(name="T2")
-    await Tournament.create(name="T3")
+    await Reporter.create(name="R2")
 
-    qs1 = Tournament.filter(name="T1")
-    qs2 = Tournament.filter(name="T2")
+    qs1 = Tournament.filter(name="T1").only("id")
+    qs2 = Reporter.filter(name="R1").only("id")
 
     assert await qs1.union(qs2).count() == 2
 
