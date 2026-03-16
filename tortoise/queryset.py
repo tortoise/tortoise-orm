@@ -2239,8 +2239,8 @@ class BulkCreateQuery(AwaitableQuery, Generic[MODEL]):
 class UnionQuery(AwaitableQuery[MODEL]):
     __slots__ = (
         "model",
-        "models",
-        "union_query",
+        "_models",
+        "_union_query",
         "_selects",
         "_db",
         "_qs",
@@ -2260,8 +2260,8 @@ class UnionQuery(AwaitableQuery[MODEL]):
         all: bool = False,
     ):
         super().__init__(model)
-        self.models = {model, *(qs.model for qs in querysets)}
-        self.union_query = None
+        self._models = {model, *(qs.model for qs in querysets)}
+        self._union_query = None
         self._selects = None
         self._db = db
         self._qs = querysets
@@ -2286,16 +2286,16 @@ class UnionQuery(AwaitableQuery[MODEL]):
             qs = qs.annotate(**model_annotations)
             qs._make_query()
             qs.query.wrap_set_operation_queries = False
-            if not self.union_query:
-                self.union_query = qs.query
+            if not self._union_query:
+                self._union_query = qs.query
                 self._selects = self._get_selects(qs)
             else:
                 if self._get_selects(qs) != self._selects:
                     raise ValueError("Union queries must have the same select fields")
-                self.union_query = (
-                    self.union_query.union_all(qs.query)
+                self._union_query = (
+                    self._union_query.union_all(qs.query)
                     if self._all
-                    else self.union_query.union(qs.query)
+                    else self._union_query.union(qs.query)
                 )
 
         if self._orderings:
@@ -2303,10 +2303,10 @@ class UnionQuery(AwaitableQuery[MODEL]):
                 if field_name not in self._selects:
                     raise ParamsError("Order by field must be in the select list for union queries")
 
-                self.union_query = self.union_query.orderby(field_name, order=order)
+                self._union_query = self._union_query.orderby(field_name, order=order)
 
         if self._limit is not None:
-            self.union_query._limit = self.union_query._wrapper_cls(self._limit)
+            self._union_query._limit = self._union_query._wrapper_cls(self._limit)
 
     def __await__(self) -> Generator[Any, None, Sequence[dict]]:
         self._choose_db_if_not_chosen()
@@ -2318,19 +2318,18 @@ class UnionQuery(AwaitableQuery[MODEL]):
             yield val
 
     async def _execute(self) -> Sequence[MODEL]:
-        sql = self.union_query.get_sql(self._qs[0].query.QUERY_CLS.SQL_CONTEXT)
-        print(sql)
+        sql = self._union_query.get_sql(self._qs[0].query.QUERY_CLS.SQL_CONTEXT)
         instance_list = await self._db.executor_class(
             model=self.model,
             db=self._db,
-        ).execute_union(sql, self.TORTOISE_APP_FIELD, self.TORTOISE_MODEL_FIELD, self.models)
+        ).execute_union(sql, self.TORTOISE_APP_FIELD, self.TORTOISE_MODEL_FIELD, self._models)
         return instance_list
 
     def _clone(self) -> UnionQuery[MODEL]:
         union = self.__class__.__new__(self.__class__)
         union.model = self.model
-        union.models = self.models
-        union.union_query = self.union_query
+        union._models = self._models
+        union._union_query = self._union_query
         union._selects = self._selects
         union._db = self._db
         union._qs = self._qs
@@ -2341,12 +2340,6 @@ class UnionQuery(AwaitableQuery[MODEL]):
 
     @classmethod
     def _parse_orderings(cls, orderings: tuple[str, ...]) -> list[tuple[str, Order]]:
-        """
-        Convert ordering from strings to standard items for queryset.
-
-        :param orderings: What columns/order to order by
-        :return: standard ordering for QuerySet.
-        """
         new_ordering = []
         for ordering in orderings:
             new_ordering.append(QuerySet._resolve_ordering_string(ordering))
@@ -2362,6 +2355,7 @@ class UnionQuery(AwaitableQuery[MODEL]):
         :return: A new UnionQuery representing the union of all QuerySets.
         """
         union = self._clone()
+        union._models = {*union._models, *(qs.model for qs in other_qs)}
         union._qs = [*union._qs, *other_qs]
         union._all = all
         return union

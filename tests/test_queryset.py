@@ -901,3 +901,146 @@ def test_multiple_objects_returned():
     exp_cls: type[NotExistOrMultiple] = MultipleObjectsReturned
     assert str(exp_cls("old format")) == "old format"
     assert str(exp_cls(Tournament)) == exp_cls.TEMPLATE.format(Tournament.__name__)
+
+
+@pytest.mark.asyncio
+async def test_union_basic(db):
+    t1 = await Tournament.create(name="T1")
+    t2 = await Tournament.create(name="T2")
+    t3 = await Tournament.create(name="T3")
+    await Tournament.create(name="T4")
+
+    qs1 = Tournament.filter(name__in=["T1", "T2"])
+    qs2 = Tournament.filter(name="T3")
+
+    result = await qs1.union(qs2)
+    assert set(result) == {t1, t2, t3}
+
+
+@pytest.mark.asyncio
+async def test_union_all(db):
+    t1 = await Tournament.create(name="T1")
+    await Tournament.create(name="T2")
+
+    qs1 = Tournament.filter(name="T1")
+    qs2 = Tournament.filter(name="T1")
+
+    result = await qs1.union(qs2, all=True)
+    assert list(result) == [t1, t1]
+
+
+@pytest.mark.asyncio
+async def test_union_mixed_models(db):
+    r1 = await Reporter.create(name="R1")
+    r2 = await Reporter.create(name="R2")
+    await Reporter.create(name="R3")
+    t1 = await Tournament.create(name="T1")
+    await Tournament.create(name="T2")
+
+    qs1 = Tournament.filter(name="T1").only("id", "name")
+    qs2 = Reporter.filter(name__in=["R1", "R2"]).only("id", "name")
+
+    result = await qs1.union(qs2)
+    assert set(result) == {t1, r1, r2}
+
+
+@pytest.mark.parametrize(
+    "orderings,expected",
+    [
+        ("id", [1, 3, 6]),
+        ("-id", [6, 3, 1]),
+        ("name,-id", [3, 1, 6]),
+    ],
+)
+@pytest.mark.asyncio
+async def test_union_order_by(db, orderings, expected):
+    await Tournament.create(id=1, name="C")
+    await Reporter.create(id=2, name="A")
+    await Tournament.create(id=3, name="B")
+    await Reporter.create(id=4, name="D")
+    await Tournament.create(id=5, name="E")
+    await Reporter.create(id=6, name="F")
+
+    qs1 = Tournament.filter(id__in=[1, 3]).only("id", "name")
+    qs2 = Reporter.filter(id=6).only("id", "name")
+
+    result = await qs1.union(qs2).order_by(*orderings.split(","))
+    actual = [r.id for r in result]
+    assert actual == expected
+
+
+@pytest.mark.asyncio
+async def test_union_limit(db):
+    r1 = await Reporter.create(name="B")
+    t1 = await Tournament.create(name="A")
+    await Reporter.create(name="D")
+    await Tournament.create(name="C")
+
+    qs1 = Tournament.all().only("id", "name")
+    qs2 = Reporter.all().only("id", "name")
+
+    result = await qs1.union(qs2).order_by("name").limit(2)
+    assert list(result) == [t1, r1]
+
+
+@pytest.mark.asyncio
+async def test_union_chained(db):
+    t1 = await Tournament.create(name="T1")
+    t2 = await Tournament.create(name="T2")
+    await Tournament.create(name="T3")
+    r1 = await Reporter.create(name="R1")
+    await Reporter.create(name="R2")
+
+    qs1 = Tournament.filter(name="T1").only("id", "name")
+    qs2 = Tournament.filter(name="T2").only("id", "name")
+    qs3 = Reporter.filter(name="R1").only("id", "name")
+
+    result = await qs1.union(qs2).union(qs3)
+    assert set(result) == {t1, t2, r1}
+
+
+@pytest.mark.asyncio
+async def test_union_count(db):
+    await Tournament.create(name="T1")
+    await Tournament.create(name="T2")
+    await Tournament.create(name="T3")
+
+    qs1 = Tournament.filter(name="T1")
+    qs2 = Tournament.filter(name="T2")
+
+    assert await qs1.union(qs2).count() == 2
+
+
+@pytest.mark.asyncio
+async def test_union_different_select_fields_raises(db):
+    await Tournament.create(name="T1")
+
+    qs1 = Tournament.filter(name="T1").only("name")
+    qs2 = Tournament.filter(name="T1").only("desc")
+
+    with pytest.raises(ValueError, match="Union queries must have the same select fields"):
+        await qs1.union(qs2)
+
+
+@pytest.mark.asyncio
+async def test_union_different_fields__in_different_models_raises(db):
+    await Tournament.create(name="T1")
+    await Reporter.create(name="R1")
+
+    qs1 = Tournament.all()
+    qs2 = Reporter.all()
+
+    with pytest.raises(ValueError, match="Union queries must have the same select fields"):
+        await qs1.union(qs2)
+
+
+@pytest.mark.asyncio
+async def test_union_order_by_field_not_in_select_raises(db):
+    await Tournament.create(name="T1")
+
+    qs1 = Tournament.filter(name="T1").only("id", "name")
+    qs2 = Tournament.filter(name="T1").only("id", "name")
+
+    qs = qs1.union(qs2)
+    with pytest.raises(ParamsError, match="Order by field must be in the select list"):
+        await qs.order_by("desc")
