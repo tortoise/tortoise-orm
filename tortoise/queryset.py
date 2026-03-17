@@ -2235,7 +2235,7 @@ class BulkCreateQuery(AwaitableQuery, Generic[MODEL]):
 
 
 class UnionCountQuery(AwaitableQuery):
-    __slots__ = ("_union_query", "_db", "_query_cls")
+    __slots__ = ("_union_query", "_db", "_query_cls", "_query_string")
 
     def __init__(
         self,
@@ -2250,7 +2250,8 @@ class UnionCountQuery(AwaitableQuery):
         self._query_cls = query_cls
 
     def _make_query(self) -> None:
-        self.query = self._query_cls.from_(self._union_query).select(Count(Star()))  # type: ignore[attr-defined]
+        ctx = self.query.QUERY_CLS.SQL_CONTEXT
+        self._query_string = f"SELECT COUNT(*) FROM ({self._union_query.get_sql(ctx)})"  # nosec: B608
 
     def __await__(self) -> Generator[Any, None, int]:
         self._choose_db_if_not_chosen()
@@ -2258,7 +2259,7 @@ class UnionCountQuery(AwaitableQuery):
         return self._execute().__await__()
 
     async def _execute(self) -> int:
-        _, result = await self._db.execute_query(*self.query.get_parameterized_sql())
+        _, result = await self._db.execute_query(self._query_string)
         if not result:
             return 0
         return list(dict(result[0]).values())[0]
