@@ -349,3 +349,23 @@ You can view full example here:  :ref:`example_prefetching`
 
 .. autoclass:: tortoise.query_utils.Prefetch
     :members:
+
+.. _union:
+
+Union
+=====
+
+Tortoise ORM supports SQL ``UNION`` queries to combine results from multiple QuerySets.
+
+Example usage:
+
+.. code-block:: python3
+
+    qs1 = Tournament.filter(name__in=["T1", "T2"]).only("id", "name")
+    qs2 = Reporter.filter(name__in=["R1", "R2"]).only("id", "name")
+
+    result = await qs1.union(qs2)
+
+.. autoclass:: tortoise.queryset.UnionQuery
+    :members:
+    :inherited-members:

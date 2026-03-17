@@ -8,6 +8,13 @@ Changelog
 1.1
 ===
 
+1.1.7
+-----
+
+Added
+^^^^^
+- ``QuerySet.union()`` — SQL UNION query support for combining results from multiple QuerySets, including support for union across different models, ``union(all=True)`` for duplicates, ``order_by()``, ``limit()``, and ``count()``.
+
 1.1.6
 -----
 
