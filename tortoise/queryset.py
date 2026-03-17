@@ -2251,7 +2251,7 @@ class UnionCountQuery(AwaitableQuery):
 
     def _make_query(self) -> None:
         ctx = self.query.QUERY_CLS.SQL_CONTEXT
-        self._query_string = f"SELECT COUNT(*) FROM ({self._union_query.get_sql(ctx)})"  # nosec: B608
+        self._query_string = f"SELECT COUNT(*) FROM ({self._union_query.get_sql(ctx)} AS sq1)"  # nosec: B608
 
     def __await__(self) -> Generator[Any, None, int]:
         self._choose_db_if_not_chosen()
