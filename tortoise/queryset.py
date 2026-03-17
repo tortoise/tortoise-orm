@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import types
 from collections import defaultdict
-from collections.abc import AsyncIterator, Callable, Collection, Generator, Iterable
+from collections.abc import AsyncIterator, Callable, Collection, Generator, Iterable, Sequence
 from copy import copy
 from typing import TYPE_CHECKING, Any, Generic, Literal, Protocol, TypeVar, cast, overload
 
@@ -21,7 +21,7 @@ from tortoise.exceptions import (
     OperationalError,
     ParamsError,
 )
-from tortoise.expressions import Expression, Q, RawSQL, ResolveContext, ResolveResult
+from tortoise.expressions import Expression, Q, RawSQL, ResolveContext, ResolveResult, Value
 from tortoise.fields.base import DatabaseDefault
 from tortoise.fields.relational import (
     ForeignKeyFieldInstance,
@@ -585,6 +585,17 @@ class QuerySet(AwaitableQuery[MODEL]):
         queryset = self._clone()
         queryset._distinct = True
         return queryset
+
+    def union(
+        self, *other_qs: QuerySet[Model] | UnionQuery[Model], all: bool = False
+    ) -> UnionQuery[MODEL]:
+        """
+        Return the union of QuerySets.
+
+        :param other_qs: Another QuerySet(s) to union with.
+        :return: A new UnionQuery representing the union of both QuerySets.
+        """
+        return UnionQuery(self.model, self._db, self, *other_qs, all=all)
 
     def select_for_update(
         self,
@@ -2223,3 +2234,180 @@ class BulkCreateQuery(AwaitableQuery, Generic[MODEL]):
             return insert_sql
 
         return ";".join([insert_sql, insert_sql_all])
+
+
+class UnionQuery(AwaitableQuery[MODEL]):
+    __slots__ = (
+        "model",
+        "models",
+        "union_query",
+        "_selects",
+        "_db",
+        "_qs",
+        "_all",
+        "_orderings",
+        "_limit",
+    )
+
+    TORTOISE_APP_FIELD = "tortoise_app"
+    TORTOISE_MODEL_FIELD = "tortoise_model"
+
+    def __init__(
+        self,
+        model: type[MODEL],
+        db: BaseDBAsyncClient,
+        *querysets: QuerySet[Model] | UnionQuery[Model],
+        all: bool = False,
+    ):
+        super().__init__(model)
+        self.models = {model, *(qs.model for qs in querysets)}
+        self.union_query = None
+        self._selects = None
+        self._db = db
+        self._qs = querysets
+        self._all = all
+        self._orderings: list[tuple[str, Order]] | None = None
+        self._limit: int | None = None
+
+    @classmethod
+    def _get_selects(cls, qs: QuerySet[Model] | UnionQuery[Model]) -> list[str]:
+        return [
+            select.name
+            for select in qs.query._selects
+            if getattr(select, "alias") not in [cls.TORTOISE_APP_FIELD, cls.TORTOISE_MODEL_FIELD]
+        ]
+
+    def _make_query(self) -> None:
+        for qs in self._qs:
+            model_annotations = {
+                self.TORTOISE_APP_FIELD: Value(qs.model._meta.app),
+                self.TORTOISE_MODEL_FIELD: Value(qs.model._meta._model.__name__),
+            }
+            qs = qs.annotate(**model_annotations)
+            qs._make_query()
+            qs.query.wrap_set_operation_queries = False
+            if not self.union_query:
+                self.union_query = qs.query
+                self._selects = self._get_selects(qs)
+            else:
+                if self._get_selects(qs) != self._selects:
+                    raise ValueError("Union queries must have the same select fields")
+                self.union_query = (
+                    self.union_query.union_all(qs.query)
+                    if self._all
+                    else self.union_query.union(qs.query)
+                )
+
+        if self._orderings:
+            for field_name, order in self._orderings:
+                if field_name not in self._selects:
+                    raise ParamsError("Order by field must be in the select list for union queries")
+
+                self.union_query = self.union_query.orderby(field_name, order=order)
+
+        if self._limit is not None:
+            self.union_query._limit = self.union_query._wrapper_cls(self._limit)
+
+    def __await__(self) -> Generator[Any, None, Sequence[dict]]:
+        self._choose_db_if_not_chosen()
+        self._make_query()
+        return self._execute().__await__()
+
+    async def __aiter__(self: UnionQuery[Any]) -> AsyncIterator[Any]:
+        for val in await self:
+            yield val
+
+    async def _execute(self) -> Sequence[MODEL]:
+        sql = self.union_query.get_sql(self._qs[0].query.QUERY_CLS.SQL_CONTEXT)
+        print(sql)
+        instance_list = await self._db.executor_class(
+            model=self.model,
+            db=self._db,
+        ).execute_union(sql, self.TORTOISE_APP_FIELD, self.TORTOISE_MODEL_FIELD, self.models)
+        return instance_list
+
+    def _clone(self) -> UnionQuery[MODEL]:
+        union = self.__class__.__new__(self.__class__)
+        union.model = self.model
+        union.models = self.models
+        union.union_query = self.union_query
+        union._selects = self._selects
+        union._db = self._db
+        union._qs = self._qs
+        union._all = self._all
+        union._orderings = self._orderings
+        union._limit = self._limit
+        return union
+
+    @classmethod
+    def _parse_orderings(cls, orderings: tuple[str, ...]) -> list[tuple[str, Order]]:
+        """
+        Convert ordering from strings to standard items for queryset.
+
+        :param orderings: What columns/order to order by
+        :return: standard ordering for QuerySet.
+        """
+        new_ordering = []
+        for ordering in orderings:
+            new_ordering.append(QuerySet._resolve_ordering_string(ordering))
+        return new_ordering
+
+    def union(
+        self, *other_qs: QuerySet[Model] | UnionQuery[Model], all: bool = False
+    ) -> UnionQuery[MODEL]:
+        """
+        Return the union of QuerySets.
+
+        :param other_qs: Another QuerySet(s) to union with.
+        :return: A new UnionQuery representing the union of all QuerySets.
+        """
+        union = self._clone()
+        union._qs = [*union._qs, *other_qs]
+        union._all = all
+        return union
+
+    def order_by(self, *orderings: str) -> UnionQuery[MODEL]:
+        """
+        Accept args to filter by in format like this:
+
+        .. code-block:: python3
+
+            .order_by('name', '-id')
+
+        Supports ordering by related models too.
+        A '-' before the name will result in descending sort order, default is ascending.
+
+        :raises FieldError: If unknown field has been provided.
+        """
+        union = self._clone()
+        union._orderings = self._parse_orderings(orderings)
+        return union
+
+    def limit(self, limit: int) -> UnionQuery[MODEL]:
+        """
+        Limits UnionQuery to given length.
+
+        :raises ParamsError: Limit should be non-negative number.
+        """
+        if limit < 0:
+            raise ParamsError("Limit should be non-negative number")
+
+        union = self._clone()
+        union._limit = limit
+        return union
+
+    def count(self) -> CountQuery:
+        """
+        Return count of objects in queryset instead of objects.
+        """
+        return CountQuery(
+            db=self._db,
+            model=self.model,
+            q_objects=[],
+            annotations={},
+            custom_filters={},
+            limit=self._limit,
+            offset=None,
+            force_indexes=set(),
+            use_indexes=set(),
+        )
