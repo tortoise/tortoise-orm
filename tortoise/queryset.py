@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, Any, Generic, Literal, Protocol, TypeVar, cast
 from pypika_tortoise import JoinType, Order, Table
 from pypika_tortoise.analytics import Count
 from pypika_tortoise.functions import Cast
-from pypika_tortoise.queries import QueryBuilder
+from pypika_tortoise.queries import QueryBuilder, _SetOperation
 from pypika_tortoise.terms import Case, Field, Star, Term, ValueWrapper
 
 from tortoise.backends.base.client import BaseDBAsyncClient, Capabilities
@@ -586,16 +586,14 @@ class QuerySet(AwaitableQuery[MODEL]):
         queryset._distinct = True
         return queryset
 
-    def union(
-        self, *other_qs: QuerySet[Model] | UnionQuery[Model], all: bool = False
-    ) -> UnionQuery[MODEL]:
+    def union(self, *other_qs: QuerySet[Model], all: bool = False) -> UnionQuery[MODEL]:
         """
         Return the union of QuerySets.
 
         :param other_qs: Another QuerySet(s) to union with.
         :return: A new UnionQuery representing the union of both QuerySets.
         """
-        return UnionQuery(self.model, self._db, self, *other_qs, all=all)
+        return UnionQuery(self.model, self._db, self, *other_qs, all=all)  # type: ignore[arg-type]
 
     def select_for_update(
         self,
@@ -2243,7 +2241,7 @@ class UnionCountQuery(AwaitableQuery):
         self,
         model: type[MODEL],
         db: BaseDBAsyncClient,
-        union_query: QueryBuilder,
+        union_query: QueryBuilder | _SetOperation,
         query_cls: type,
     ) -> None:
         super().__init__(model)
@@ -2252,7 +2250,7 @@ class UnionCountQuery(AwaitableQuery):
         self._query_cls = query_cls
 
     def _make_query(self) -> None:
-        self.query = self._query_cls.from_(self._union_query).select(Count(Star()))
+        self.query = self._query_cls.from_(self._union_query).select(Count(Star()))  # type: ignore[attr-defined]
 
     def __await__(self) -> Generator[Any, None, int]:
         self._choose_db_if_not_chosen()
@@ -2286,13 +2284,13 @@ class UnionQuery(AwaitableQuery[MODEL]):
         self,
         model: type[MODEL],
         db: BaseDBAsyncClient,
-        *querysets: QuerySet[Model] | UnionQuery[Model],
+        *querysets: QuerySet[Model],
         all: bool = False,
     ):
         super().__init__(model)
-        self._models = {model, *(qs.model for qs in querysets)}
-        self._union_query = None
-        self._selects = None
+        self._models: set[type[Model]] = {model, *(qs.model for qs in querysets)}
+        self._union_query: QueryBuilder | _SetOperation | None = None
+        self._selects: list[str] = []
         self._db = db
         self._qs = querysets
         self._all = all
@@ -2328,6 +2326,9 @@ class UnionQuery(AwaitableQuery[MODEL]):
                     else self._union_query.union(qs.query)
                 )
 
+        if self._union_query is None:
+            return
+
         if self._orderings:
             for field_name, order in self._orderings:
                 if field_name not in self._selects:
@@ -2338,7 +2339,7 @@ class UnionQuery(AwaitableQuery[MODEL]):
         if self._limit is not None:
             self._union_query._limit = self._union_query._wrapper_cls(self._limit)
 
-    def __await__(self) -> Generator[Any, None, Sequence[dict]]:
+    def __await__(self) -> Generator[Any, None, Sequence[MODEL]]:
         self._choose_db_if_not_chosen()
         self._make_query()
         return self._execute().__await__()
@@ -2348,6 +2349,9 @@ class UnionQuery(AwaitableQuery[MODEL]):
             yield val
 
     async def _execute(self) -> Sequence[MODEL]:
+        if self._union_query is None:
+            return []
+
         sql = self._union_query.get_sql(self._qs[0].query.QUERY_CLS.SQL_CONTEXT)
         instance_list = await self._db.executor_class(
             model=self.model,
@@ -2375,9 +2379,7 @@ class UnionQuery(AwaitableQuery[MODEL]):
             new_ordering.append(QuerySet._resolve_ordering_string(ordering))
         return new_ordering
 
-    def union(
-        self, *other_qs: QuerySet[Model] | UnionQuery[Model], all: bool = False
-    ) -> UnionQuery[MODEL]:
+    def union(self, *other_qs: QuerySet[Model], all: bool = False) -> UnionQuery[MODEL]:
         """
         Return the union of QuerySets.
 
@@ -2386,7 +2388,7 @@ class UnionQuery(AwaitableQuery[MODEL]):
         """
         union = self._clone()
         union._models = {*union._models, *(qs.model for qs in other_qs)}
-        union._qs = [*union._qs, *other_qs]
+        union._qs = union._qs + other_qs
         union._all = all
         return union
 
@@ -2426,6 +2428,10 @@ class UnionQuery(AwaitableQuery[MODEL]):
         """
         self._choose_db_if_not_chosen()
         self._make_query()
+
+        if self._union_query is None:
+            raise RuntimeError("Couldn't generate union query")
+
         query_cls = self._qs[0].query.QUERY_CLS
         return UnionCountQuery(
             model=self.model,
