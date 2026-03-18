@@ -2235,19 +2235,17 @@ class BulkCreateQuery(AwaitableQuery, Generic[MODEL]):
 
 
 class UnionCountQuery(AwaitableQuery):
-    __slots__ = ("_union_query", "_db", "_query_cls", "_query_string")
+    __slots__ = ("_union_query", "_db")
 
     def __init__(
         self,
         model: type[MODEL],
         db: BaseDBAsyncClient,
         union_query: QueryBuilder | _SetOperation,
-        query_cls: type,
     ) -> None:
         super().__init__(model)
         self._union_query = union_query
         self._db = db
-        self._query_cls = query_cls
 
     def _make_query(self) -> None:
         self.query = self.query.QUERY_CLS.from_(self._union_query).select(Count(Star()))
@@ -2437,5 +2435,4 @@ class UnionQuery(AwaitableQuery[MODEL]):
             model=self.model,
             db=self._db,
             union_query=self._union_query,
-            query_cls=query_cls,
         )
