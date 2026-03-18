@@ -2354,6 +2354,7 @@ class UnionQuery(AwaitableQuery[MODEL]):
             return []
 
         sql = self._union_query.get_sql(self._qs[0].query.QUERY_CLS.SQL_CONTEXT)
+        print("DEBUG SQL:", sql)
         instance_list = await self._db.executor_class(
             model=self.model,
             db=self._db,
