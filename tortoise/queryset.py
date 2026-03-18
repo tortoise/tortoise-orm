@@ -2430,7 +2430,6 @@ class UnionQuery(AwaitableQuery[MODEL]):
         if self._union_query is None:
             raise RuntimeError("Couldn't generate union query")
 
-        query_cls = self._qs[0].query.QUERY_CLS
         return UnionCountQuery(
             model=self.model,
             db=self._db,
