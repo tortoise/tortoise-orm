@@ -945,30 +945,57 @@ async def test_union_mixed_models(db):
 
 
 @pytest.mark.parametrize(
-    "orderings,expected",
+    "orderings,expected_instances",
     [
-        ("id", [1, 3, 6]),
-        ("-id", [6, 3, 1]),
-        ("name,-id", [3, 1, 6]),
+        ("name", ["t2", "t1", "r1"]),
+        ("-name", ["r1", "t1", "t2"]),
     ],
 )
 @pytest.mark.asyncio
-async def test_union_order_by(db, orderings, expected):
-    await Tournament.create(id=1, name="C")
-    await Reporter.create(id=2, name="A")
-    await Tournament.create(id=3, name="B")
-    await Reporter.create(id=4, name="D")
-    await Tournament.create(id=5, name="E")
-    await Reporter.create(id=6, name="F")
+async def test_union_order_by(db, orderings, expected_instances):
+    t1 = await Tournament.create(name="C")
+    await Reporter.create(name="A")
+    t2 = await Tournament.create(name="B")
+    await Reporter.create(name="D")
+    await Tournament.create(name="E")
+    r1 = await Reporter.create(name="F")
 
-    qs1 = Tournament.filter(id__in=[1, 3]).only("id", "name")
-    qs2 = Reporter.filter(id=6).only("id", "name")
+    qs1 = Tournament.filter(id__in=[t1.id, t2.id]).only("id", "name")
+    qs2 = Reporter.filter(id=r1.id).only("id", "name")
 
     result = await qs1.union(qs2).order_by(*orderings.split(","))
-    actual = [r.id for r in result]
-    assert actual == expected
+
+    instance_map = {"t1": t1, "t2": t2, "r1": r1}
+    expected = [instance_map[k] for k in expected_instances]
+
+    assert result == expected
 
 
+@pytest.mark.asyncio
+async def test_union_order_by_multiple_fields(db):
+    t1 = await Tournament.create(name="C")
+    t2 = await Tournament.create(name="B")
+    r1 = await Reporter.create(name="C")
+    await Tournament.create(name="Z")
+    await Reporter.create(name="Z")
+
+    qs1 = Tournament.filter(id__in=[t1.id, t2.id]).only("id", "name")
+    qs2 = Reporter.filter(id=r1.id).only("id", "name")
+
+    result = await qs1.union(qs2).order_by("name", "id")
+
+    if r1.id == t1.id:
+        return
+
+    if r1.id > t1.id:
+        expected = [t2, t1, r1]
+    else:
+        expected = [t2, r1, t1]
+
+    assert result == expected
+
+
+@requireCapability(dialect=NotEQ("mssql"))
 @pytest.mark.asyncio
 async def test_union_limit(db):
     r1 = await Reporter.create(name="B")

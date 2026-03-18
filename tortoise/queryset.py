@@ -2338,7 +2338,7 @@ class UnionQuery(AwaitableQuery[MODEL]):
                 self._union_query = self._union_query.orderby(field_name, order=order)
 
         if self._limit is not None:
-            self._union_query._limit = self._union_query._wrapper_cls(self._limit)
+            self._union_query = self._union_query.limit(self._limit)
 
     def __await__(self) -> Generator[Any, None, Sequence[MODEL]]:
         self._choose_db_if_not_chosen()
@@ -2354,7 +2354,6 @@ class UnionQuery(AwaitableQuery[MODEL]):
             return []
 
         sql = self._union_query.get_sql(self._qs[0].query.QUERY_CLS.SQL_CONTEXT)
-        print("DEBUG SQL:", sql)
         instance_list = await self._db.executor_class(
             model=self.model,
             db=self._db,
