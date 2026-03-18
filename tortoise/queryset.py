@@ -2250,8 +2250,7 @@ class UnionCountQuery(AwaitableQuery):
         self._query_cls = query_cls
 
     def _make_query(self) -> None:
-        ctx = self.query.QUERY_CLS.SQL_CONTEXT
-        self._query_string = f"SELECT COUNT(*) FROM ({self._union_query.get_sql(ctx)}) AS sq1"  # nosec: B608
+        self.query = self.query.QUERY_CLS.from_(self._union_query).select(Count(Star()))
 
     def __await__(self) -> Generator[Any, None, int]:
         self._choose_db_if_not_chosen()
@@ -2259,7 +2258,7 @@ class UnionCountQuery(AwaitableQuery):
         return self._execute().__await__()
 
     async def _execute(self) -> int:
-        _, result = await self._db.execute_query(self._query_string)
+        _, result = await self._db.execute_query(self.query.get_sql())
         if not result:
             return 0
         return list(dict(result[0]).values())[0]
