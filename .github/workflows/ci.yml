@@ -262,8 +262,6 @@ jobs:
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y unixodbc unixodbc-dev libaio1t64
-          sudo ln -sf /usr/lib/x86_64-linux-gnu/libaio.so.1t64 \
-                      /usr/lib/x86_64-linux-gnu/libaio.so.1
       - uses: gvenzl/setup-oracle-free@v1
         with:
           app-user: test_db
