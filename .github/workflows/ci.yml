@@ -268,24 +268,26 @@ jobs:
           app-user: test_db
           app-user-password: ${{ env.TORTOISE_ORACLE_PASS }}
       - uses: iamazeem/setup-oracle-instant-client-action@v2
-      - name: Install Oracle Instant Client ODBC and register driver
+      - name: Locate Oracle ODBC driver
         run: |
+          DRIVER_PATH=$(find $HOME -name "libsqora.so*" | head -n 1)
+
+          echo "Found driver at: $DRIVER_PATH"
+
+          if [ -z "$DRIVER_PATH" ]; then
+            echo "ERROR: libsqora.so not found"
+            exit 1
+          fi
+
+          echo "DRIVER_PATH=$DRIVER_PATH" >> $GITHUB_ENV
       - name: Configure ODBC
         run: |
-          # Detect actual folder dynamically
-          ORACLE_DIR=$(ls -d /opt/oracle/instantclient_*)
-          echo "Oracle dir: $ORACLE_DIR"
-
-          # Persist for later steps
-          echo "ORACLE_DIR=$ORACLE_DIR" >> $GITHUB_ENV
-          echo "LD_LIBRARY_PATH=$ORACLE_DIR" >> $GITHUB_ENV
-
           echo "[OracleODBC]" | sudo tee /etc/odbcinst.ini
-          echo "Driver=$ORACLE_DIR/libsqora.so.21.1" | sudo tee -a /etc/odbcinst.ini
+          echo "Driver=$DRIVER_PATH" | sudo tee -a /etc/odbcinst.ini
 
           echo "[OracleDB]" | sudo tee /etc/odbc.ini
           echo "Driver=OracleODBC" | sudo tee -a /etc/odbc.ini
-          echo "ServerName=localhost:1521/FREEPDB1" | sudo tee -a /etc/odbc.ini
+          echo "ServerName=127.0.0.1:1521/FREEPDB1" | sudo tee -a /etc/odbc.ini
           echo "User=system" | sudo tee -a /etc/odbc.ini
           echo "Password=oracle" | sudo tee -a /etc/odbc.ini
       - uses: actions/setup-python@v6
