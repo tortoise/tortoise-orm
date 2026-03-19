@@ -303,6 +303,12 @@ jobs:
             fi
             sleep 5
           done
+      - name: Delete the user with the DB name
+        run: |
+          sqlplus -S ${TORTOISE_ORACLE_USER}/${TORTOISE_ORACLE_PASS}@127.0.0.1:1521/${TORTOISE_ORACLE_DB} as sysdba <<EOF
+          DROP USER ${TORTOISE_ORACLE_DB} CASCADE;
+          EXIT;
+          EOF
       - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
