@@ -269,6 +269,7 @@ jobs:
         with:
           app-user: appuser
           app-user-password: 123456
+          oracle-password: ${{ env.TORTOISE_ORACLE_PASS }}
       - uses: iamazeem/setup-oracle-instant-client-action@v2
       - name: Locate Oracle ODBC driver
         run: |
