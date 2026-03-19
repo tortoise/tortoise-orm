@@ -252,7 +252,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       TORTOISE_TEST_MODULES: tests.testmodels
-      TORTOISE_ORACLE_PASS: 123456
+      TORTOISE_ORACLE_PASS: oracle
       TORTOISE_ORACLE_DRIVER: OracleODBC
     strategy:
       matrix:
