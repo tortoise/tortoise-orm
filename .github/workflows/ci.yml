@@ -290,6 +290,16 @@ jobs:
           echo "ServerName=127.0.0.1:1521/FREEPDB1" | sudo tee -a /etc/odbc.ini
           echo "User=system" | sudo tee -a /etc/odbc.ini
           echo "Password=oracle" | sudo tee -a /etc/odbc.ini
+      - name: Wait for Oracle
+        run: |
+          for i in {1..15}; do
+            echo "Checking Oracle service..."
+            if echo "SELECT 1 FROM dual;" | sqlplus system/oracle@127.0.0.1:1521/FREEPDB1 &>/dev/null; then
+              echo "Oracle ready!"
+              break
+            fi
+            sleep 5
+          done
       - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
