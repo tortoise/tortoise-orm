@@ -248,8 +248,46 @@ jobs:
           if-no-files-found: error
           include-hidden-files: true
 
+  test-oracle:
+    runs-on: ubuntu-latest
+    env:
+      TORTOISE_TEST_MODULES: tests.testmodels
+      TORTOISE_ORACLE_PASS: 123456
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
+    steps:
+      - uses: actions/checkout@v6
+      - uses: gvenzl/setup-oracle-free@v1
+        with:
+          app-user: test_db
+          app-user-password: ${{ env.TORTOISE_ORACLE_PASS }}
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+      - uses: astral-sh/setup-uv@v7
+      - uses: actions/cache@v5
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/uv.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+      - name: Install dependencies
+        run: make deps
+      - name: Test Oracle
+        run: make test_oracle
+        env:
+          PYTHONDEVMODE: 1
+      - name: Upload coverage artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-oracle-${{ matrix.python-version }}
+          path: .coverage
+          if-no-files-found: error
+          include-hidden-files: true
+
   coverage:
-    needs: [test-sqlite, test-postgres, test-mysql, test-mssql]
+    needs: [test-sqlite, test-postgres, test-mysql, test-mssql, test-oracle]
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v6
