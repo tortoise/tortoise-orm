@@ -252,6 +252,8 @@ jobs:
     runs-on: ubuntu-latest
     env:
       TORTOISE_TEST_MODULES: tests.testmodels
+      TORTOISE_ORACLE_DB: FREEPDB1
+      TORTOISE_ORACLE_USER: test
       TORTOISE_ORACLE_PASS: oracle
       TORTOISE_ORACLE_DRIVER: OracleODBC
     strategy:
@@ -265,7 +267,7 @@ jobs:
           sudo apt-get install -y unixodbc unixodbc-dev libaio1t64
       - uses: gvenzl/setup-oracle-free@v1
         with:
-          app-user: test_db
+          app-user: ${{ env.TORTOISE_ORACLE_USER }}
           app-user-password: ${{ env.TORTOISE_ORACLE_PASS }}
       - uses: iamazeem/setup-oracle-instant-client-action@v2
       - name: Locate Oracle ODBC driver
