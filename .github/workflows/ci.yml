@@ -303,9 +303,9 @@ jobs:
             fi
             sleep 5
           done
-      - name: Delete the user with the DB name
+      - name: Delete the role with the DB name
         run: |
-          echo "DROP USER ${TORTOISE_ORACLE_DB} CASCADE;" | sqlplus ${TORTOISE_ORACLE_USER}/${TORTOISE_ORACLE_PASS}@127.0.0.1:1521/${TORTOISE_ORACLE_DB}
+          echo "EXECUTE IMMEDIATE 'DROP ROLE ${TORTOISE_ORACLE_DB}';" | sqlplus ${TORTOISE_ORACLE_USER}/${TORTOISE_ORACLE_PASS}@127.0.0.1:1521/${TORTOISE_ORACLE_DB}
       - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
