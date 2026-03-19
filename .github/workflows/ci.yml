@@ -253,6 +253,7 @@ jobs:
     env:
       TORTOISE_TEST_MODULES: tests.testmodels
       TORTOISE_ORACLE_PASS: 123456
+      TORTOISE_ORACLE_DRIVER: cx_Oracle # Oracle Instant Client
     strategy:
       matrix:
         python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
@@ -262,6 +263,15 @@ jobs:
         with:
           app-user: test_db
           app-user-password: ${{ env.TORTOISE_ORACLE_PASS }}
+      - uses: iamazeem/setup-oracle-instant-client-action@v2
+#        id: oracle-client
+#      - name: Configure Oracle ODBC driver
+#        run: |
+#          ORACLE_HOME=$(find /opt -name "instantclient*" -type d 2>/dev/null | head -1)
+#          echo "[Oracle Instant Client]" | sudo tee /etc/odbcinst.ini
+#          echo "Description = Oracle ODBC Driver" | sudo tee -a /etc/odbcinst.ini
+#          echo "Driver = ${ORACLE_HOME}/libsqora.so.21.1" | sudo tee -a /etc/odbcinst.ini
+#          cat /etc/odbcinst.ini
       - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
