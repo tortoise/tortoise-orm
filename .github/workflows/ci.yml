@@ -253,6 +253,7 @@ jobs:
     env:
       TORTOISE_TEST_MODULES: tests.testmodels
       TORTOISE_ORACLE_PASS: 123456
+      TORTOISE_ORACLE_DRIVER: OracleODBC
     strategy:
       matrix:
         python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
@@ -269,48 +270,16 @@ jobs:
       - uses: iamazeem/setup-oracle-instant-client-action@v2
       - name: Install Oracle Instant Client ODBC and register driver
         run: |
-          echo "── Locating action-installed Instant Client ─"
-          # Scope find to $RUNNER_TEMP to avoid hitting the Oracle Free
-          # container overlay, which also contains libclntsh.so.
-          LIBCLNTSH=$(find "$RUNNER_TEMP" -name "libclntsh.so*" 2>/dev/null | head -1)
-          echo "libclntsh found : $LIBCLNTSH"
-          IC_LIB=$(dirname "$LIBCLNTSH")
-          echo "IC lib dir      : $IC_LIB"
- 
-          echo "── Locating libsqora.so from Oracle Free container overlay ──"
-          # gvenzl/setup-oracle-free pulls a container whose layers are
-          # unpacked under ~/.local/share/containers/storage/overlay/
-          SQORA=$(find /home/runner/.local/share/containers -name "libsqora.so*" \
-                  2>/dev/null | head -1)
-          echo "libsqora found  : $SQORA"
-          ORACLE_FREE_LIB=$(dirname "$SQORA")
-          echo "Oracle Free lib : $ORACLE_FREE_LIB"
- 
-          echo "── Copying ODBC library into IC lib dir ────"
-          sudo cp "$ORACLE_FREE_LIB"/libsqora.so* "$IC_LIB/"
-          ls "$IC_LIB"/libsqora*
- 
-          echo "── Registering driver with unixODBC ────────"
-          # Write the driver entry directly — no odbc_update_ini.sh needed.
-          IC_VER=$(echo "$LIBCLNTSH" | grep -oP '\d+(?=\.\d+$)' | head -1)
-          DRIVER_NAME="Oracle ${IC_VER}c ODBC driver"
-          echo "Driver name: $DRIVER_NAME"
- 
-          sudo odbcinst -i -d -r << EOF
-          [${DRIVER_NAME}]
-          Description=Oracle ODBC driver for Oracle ${IC_VER}c
-          Driver=${IC_LIB}/libsqora.so.${IC_VER}.1
-          Setup=${IC_LIB}/libsqora.so.${IC_VER}.1
-          FileUsage=1
-          EOF
- 
-          echo "── /etc/odbcinst.ini ───────────────────────"
-          cat /etc/odbcinst.ini
- 
-          echo "── Registered ODBC drivers ─────────────────"
-          odbcinst -q -d
- 
-          echo "TORTOISE_ORACLE_DRIVER=${DRIVER_NAME}" >> "$GITHUB_ENV"
+      - name: Configure ODBC
+        run: |
+          echo "[OracleODBC]" | sudo tee /etc/odbcinst.ini
+          echo "Driver=/opt/oracle/libsqora.so.21.1" | sudo tee -a /etc/odbcinst.ini
+
+          echo "[OracleDB]" | sudo tee /etc/odbc.ini
+          echo "Driver=OracleODBC" | sudo tee -a /etc/odbc.ini
+          echo "ServerName=localhost:1521/FREEPDB1" | sudo tee -a /etc/odbc.ini
+          echo "User=system" | sudo tee -a /etc/odbc.ini
+          echo "Password=oracle" | sudo tee -a /etc/odbc.ini
       - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
