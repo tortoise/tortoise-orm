@@ -272,8 +272,16 @@ jobs:
         run: |
       - name: Configure ODBC
         run: |
+          # Detect actual folder dynamically
+          ORACLE_DIR=$(ls -d /opt/oracle/instantclient_*)
+          echo "Oracle dir: $ORACLE_DIR"
+
+          # Persist for later steps
+          echo "ORACLE_DIR=$ORACLE_DIR" >> $GITHUB_ENV
+          echo "LD_LIBRARY_PATH=$ORACLE_DIR" >> $GITHUB_ENV
+
           echo "[OracleODBC]" | sudo tee /etc/odbcinst.ini
-          echo "Driver=/opt/oracle/libsqora.so.21.1" | sudo tee -a /etc/odbcinst.ini
+          echo "Driver=$ORACLE_DIR/libsqora.so.21.1" | sudo tee -a /etc/odbcinst.ini
 
           echo "[OracleDB]" | sudo tee /etc/odbc.ini
           echo "Driver=OracleODBC" | sudo tee -a /etc/odbc.ini
