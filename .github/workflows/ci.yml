@@ -269,19 +269,49 @@ jobs:
       - uses: iamazeem/setup-oracle-instant-client-action@v2
       - name: Install Oracle Instant Client ODBC and register driver
         run: |
-          # Discover the version installed by the action (e.g. "21" or "23")
-          IC_VER=$(ls /usr/lib/oracle/ | sort -V | tail -1)
-          echo "Detected Instant Client version: $IC_VER"
-          # Install the matching ODBC package from the same Oracle apt repo
-          sudo apt-get install -y "oracle-instantclient${IC_VER}-odbc"
-          IC_LIB="/usr/lib/oracle/${IC_VER}/client64/lib"
-          # Register the driver with unixODBC.
-          # odbc_update_ini.sh creates an entry like [Oracle <N>c ODBC driver]
-          # in /etc/odbcinst.ini using the system unixODBC installation.
+          echo "── Locating Instant Client installation ────"
+          echo "sqlplus path    : $(which sqlplus || echo 'not in PATH')"
+          echo "LD_LIBRARY_PATH : $LD_LIBRARY_PATH"
+ 
+          # Find libclntsh.so to locate the lib dir regardless of install path.
+          # This is robust whether the action installs to /usr/lib/oracle/,
+          # /opt/oracle/, or any other location.
+          LIBCLNTSH=$(find / -name "libclntsh.so*" -not -path "*/proc/*" 2>/dev/null | head -1)
+          echo "libclntsh found : $LIBCLNTSH"
+          IC_LIB=$(dirname "$LIBCLNTSH")
+          echo "Instant Client lib dir: $IC_LIB"
+ 
+          echo "── Instant Client lib dir contents ─────────"
+          ls "$IC_LIB"
+ 
+          # Derive the numeric major version from the path if it follows the
+          # standard RPM layout, e.g. /usr/lib/oracle/21/client64/lib → 21
+          IC_VER=$(echo "$IC_LIB" | grep -oP '(?<=/oracle/)\d+(?=/)' || true)
+          echo "Detected version (from path): ${IC_VER:-unknown}"
+ 
+          echo "── Installing ODBC package ─────────────────"
+          # Try versioned package name first (RPM-based layout), then unversioned
+          if [ -n "$IC_VER" ]; then
+            sudo apt-get install -y "oracle-instantclient${IC_VER}-odbc" \
+              || sudo apt-get install -y oracle-instantclient-odbc
+          else
+            sudo apt-get install -y oracle-instantclient-odbc
+          fi
+ 
+          echo "── Instant Client lib dir after ODBC install"
+          ls "$IC_LIB"
+ 
+          echo "── Registering driver with unixODBC ────────"
           sudo "${IC_LIB}/odbc_update_ini.sh" /usr
-          # Confirm registration and capture the exact driver name
+ 
+          echo "── /etc/odbcinst.ini ───────────────────────"
+          cat /etc/odbcinst.ini
+ 
+          echo "── Registered ODBC drivers ─────────────────"
+          odbcinst -q -d
+ 
           DRIVER_NAME=$(odbcinst -q -d | grep -oP '(?<=\[)[^\]]+' | grep -i oracle | head -1)
-          echo "Registered ODBC driver: $DRIVER_NAME"
+          echo "Captured driver name: '$DRIVER_NAME'"
           echo "TORTOISE_ORACLE_DRIVER=${DRIVER_NAME}" >> "$GITHUB_ENV"
       - uses: actions/setup-python@v6
         with:
