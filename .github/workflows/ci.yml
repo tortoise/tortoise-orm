@@ -253,25 +253,38 @@ jobs:
     env:
       TORTOISE_TEST_MODULES: tests.testmodels
       TORTOISE_ORACLE_PASS: 123456
-      TORTOISE_ORACLE_DRIVER: cx_Oracle # Oracle Instant Client
     strategy:
       matrix:
         python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
     steps:
       - uses: actions/checkout@v6
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y unixodbc unixodbc-dev libaio1t64
+          sudo ln -sf /usr/lib/x86_64-linux-gnu/libaio.so.1t64 \
+                      /usr/lib/x86_64-linux-gnu/libaio.so.1
       - uses: gvenzl/setup-oracle-free@v1
         with:
           app-user: test_db
           app-user-password: ${{ env.TORTOISE_ORACLE_PASS }}
       - uses: iamazeem/setup-oracle-instant-client-action@v2
-#        id: oracle-client
-#      - name: Configure Oracle ODBC driver
-#        run: |
-#          ORACLE_HOME=$(find /opt -name "instantclient*" -type d 2>/dev/null | head -1)
-#          echo "[Oracle Instant Client]" | sudo tee /etc/odbcinst.ini
-#          echo "Description = Oracle ODBC Driver" | sudo tee -a /etc/odbcinst.ini
-#          echo "Driver = ${ORACLE_HOME}/libsqora.so.21.1" | sudo tee -a /etc/odbcinst.ini
-#          cat /etc/odbcinst.ini
+      - name: Install Oracle Instant Client ODBC and register driver
+        run: |
+          # Discover the version installed by the action (e.g. "21" or "23")
+          IC_VER=$(ls /usr/lib/oracle/ | sort -V | tail -1)
+          echo "Detected Instant Client version: $IC_VER"
+          # Install the matching ODBC package from the same Oracle apt repo
+          sudo apt-get install -y "oracle-instantclient${IC_VER}-odbc"
+          IC_LIB="/usr/lib/oracle/${IC_VER}/client64/lib"
+          # Register the driver with unixODBC.
+          # odbc_update_ini.sh creates an entry like [Oracle <N>c ODBC driver]
+          # in /etc/odbcinst.ini using the system unixODBC installation.
+          sudo "${IC_LIB}/odbc_update_ini.sh" /usr
+          # Confirm registration and capture the exact driver name
+          DRIVER_NAME=$(odbcinst -q -d | grep -oP '(?<=\[)[^\]]+' | grep -i oracle | head -1)
+          echo "Registered ODBC driver: $DRIVER_NAME"
+          echo "TORTOISE_ORACLE_DRIVER=${DRIVER_NAME}" >> "$GITHUB_ENV"
       - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
