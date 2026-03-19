@@ -269,40 +269,40 @@ jobs:
       - uses: iamazeem/setup-oracle-instant-client-action@v2
       - name: Install Oracle Instant Client ODBC and register driver
         run: |
-          echo "── Locating Instant Client installation ────"
-          echo "sqlplus path    : $(which sqlplus || echo 'not in PATH')"
-          echo "LD_LIBRARY_PATH : $LD_LIBRARY_PATH"
- 
-          # Find libclntsh.so to locate the lib dir regardless of install path.
-          # This is robust whether the action installs to /usr/lib/oracle/,
-          # /opt/oracle/, or any other location.
-          LIBCLNTSH=$(find / -name "libclntsh.so*" -not -path "*/proc/*" 2>/dev/null | head -1)
+          echo "── Locating action-installed Instant Client ─"
+          # Scope find to $RUNNER_TEMP to avoid hitting the Oracle Free
+          # container overlay, which also contains libclntsh.so.
+          LIBCLNTSH=$(find "$RUNNER_TEMP" -name "libclntsh.so*" 2>/dev/null | head -1)
           echo "libclntsh found : $LIBCLNTSH"
           IC_LIB=$(dirname "$LIBCLNTSH")
-          echo "Instant Client lib dir: $IC_LIB"
+          echo "IC lib dir      : $IC_LIB"
  
-          echo "── Instant Client lib dir contents ─────────"
-          ls "$IC_LIB"
+          echo "── Locating libsqora.so from Oracle Free container overlay ──"
+          # gvenzl/setup-oracle-free pulls a container whose layers are
+          # unpacked under ~/.local/share/containers/storage/overlay/
+          SQORA=$(find /home/runner/.local/share/containers -name "libsqora.so*" \
+                  2>/dev/null | head -1)
+          echo "libsqora found  : $SQORA"
+          ORACLE_FREE_LIB=$(dirname "$SQORA")
+          echo "Oracle Free lib : $ORACLE_FREE_LIB"
  
-          # Derive the numeric major version from the path if it follows the
-          # standard RPM layout, e.g. /usr/lib/oracle/21/client64/lib → 21
-          IC_VER=$(echo "$IC_LIB" | grep -oP '(?<=/oracle/)\d+(?=/)' || true)
-          echo "Detected version (from path): ${IC_VER:-unknown}"
- 
-          echo "── Installing ODBC package ─────────────────"
-          # Try versioned package name first (RPM-based layout), then unversioned
-          if [ -n "$IC_VER" ]; then
-            sudo apt-get install -y "oracle-instantclient${IC_VER}-odbc" \
-              || sudo apt-get install -y oracle-instantclient-odbc
-          else
-            sudo apt-get install -y oracle-instantclient-odbc
-          fi
- 
-          echo "── Instant Client lib dir after ODBC install"
-          ls "$IC_LIB"
+          echo "── Copying ODBC library into IC lib dir ────"
+          sudo cp "$ORACLE_FREE_LIB"/libsqora.so* "$IC_LIB/"
+          ls "$IC_LIB"/libsqora*
  
           echo "── Registering driver with unixODBC ────────"
-          sudo "${IC_LIB}/odbc_update_ini.sh" /usr
+          # Write the driver entry directly — no odbc_update_ini.sh needed.
+          IC_VER=$(echo "$LIBCLNTSH" | grep -oP '\d+(?=\.\d+$)' | head -1)
+          DRIVER_NAME="Oracle ${IC_VER}c ODBC driver"
+          echo "Driver name: $DRIVER_NAME"
+ 
+          sudo odbcinst -i -d -r << EOF
+          [${DRIVER_NAME}]
+          Description=Oracle ODBC driver for Oracle ${IC_VER}c
+          Driver=${IC_LIB}/libsqora.so.${IC_VER}.1
+          Setup=${IC_LIB}/libsqora.so.${IC_VER}.1
+          FileUsage=1
+          EOF
  
           echo "── /etc/odbcinst.ini ───────────────────────"
           cat /etc/odbcinst.ini
@@ -310,8 +310,6 @@ jobs:
           echo "── Registered ODBC drivers ─────────────────"
           odbcinst -q -d
  
-          DRIVER_NAME=$(odbcinst -q -d | grep -oP '(?<=\[)[^\]]+' | grep -i oracle | head -1)
-          echo "Captured driver name: '$DRIVER_NAME'"
           echo "TORTOISE_ORACLE_DRIVER=${DRIVER_NAME}" >> "$GITHUB_ENV"
       - uses: actions/setup-python@v6
         with:
