@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 
+from tortoise.fields.base import Field
 from tortoise.migrations.schema_editor.base import BaseSchemaEditor
 from tortoise.models import Model
 
@@ -51,6 +52,23 @@ class BasePostgresSchemaEditor(BaseSchemaEditor):
         if sql:
             return "\n" + sql
         return ""
+
+    async def _alter_column_comment(
+        self, model: type[Model], old_field: Field, new_field: Field
+    ) -> None:
+        """Emit COMMENT ON COLUMN for PostgreSQL."""
+        db_field = new_field.source_field or new_field.model_field_name
+        qualified_table = self._qualify_table_name(model._meta.db_table, model._meta.schema)
+        if new_field.description:
+            comment = self._escape_comment(new_field.description)
+            await self._run_sql(
+                self.COLUMN_COMMENT_TEMPLATE.format(
+                    table=qualified_table, column=db_field, comment=comment
+                )
+            )
+        else:
+            # Remove comment: SET NULL
+            await self._run_sql(f'COMMENT ON COLUMN {qualified_table}."{db_field}" IS NULL;')
 
     def _get_index_sql(
         self,

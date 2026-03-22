@@ -334,8 +334,8 @@ class DeleteModel(TortoiseOperation):
 
             models_to_reload.add(state.apps.split_reference(field.model_name))
 
-        state.reload_models(models_to_reload)
         state.apps.unregister_model(app_label, self.name)
+        state.reload_models(models_to_reload)
 
     async def database_forward(
         self,

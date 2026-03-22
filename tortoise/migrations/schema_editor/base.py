@@ -82,6 +82,12 @@ class BaseSchemaEditor(SchemaQuotingMixin):
         # Databases have their own way of supporting comments for column level
         raise NotImplementedError()  # pragma: nocoverage
 
+    async def _alter_column_comment(
+        self, model: type[Model], old_field: Field, new_field: Field
+    ) -> None:
+        """Alter column comment. Override in backends that support column comments."""
+        pass
+
     def _table_generate_extra(self, table: str) -> str:
         return ""
 
@@ -644,8 +650,7 @@ class BaseSchemaEditor(SchemaQuotingMixin):
                 await self.remove_constraint(model, constraint)
 
         if old_field.description != new_field.description:
-            # TODO description management
-            pass
+            await self._alter_column_comment(model, old_field, new_field)
 
         old_has_db_default = old_field.has_db_default()
         new_has_db_default = new_field.has_db_default()

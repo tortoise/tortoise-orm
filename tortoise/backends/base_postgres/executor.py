@@ -6,6 +6,7 @@ from functools import partial
 from typing import TYPE_CHECKING, cast
 
 from pypika_tortoise.dialects import PostgreSQLQueryBuilder
+from pypika_tortoise.queries import QueryBuilder
 from pypika_tortoise.terms import Term, ValueWrapper
 
 from tortoise import Model
@@ -86,9 +87,22 @@ class BasePostgresExecutor(BaseExecutor):
             query = query.on_conflict().do_nothing()
         return query
 
+    def _add_returning_to_insert(
+        self,
+        query: QueryBuilder,
+        has_generated: bool,
+        db_default_columns: list[str],
+    ) -> QueryBuilder:
+        returning_fields = self._get_returning_fields(has_generated, db_default_columns)
+        if returning_fields:
+            query = query.returning(*returning_fields)  # type: ignore[operator]
+        return query
+
     async def _process_insert_result(self, instance: Model, results: dict | None) -> None:
         if results:
-            generated_fields = self.model._meta.generated_db_fields
             db_projection = instance._meta.fields_db_projection_reverse
-            for key, val in zip(generated_fields, results):
-                setattr(instance, db_projection[key], val)
+            for key, val in results.items():
+                if key in db_projection:
+                    model_field = db_projection[key]
+                    field_object = self.model._meta.fields_map[model_field]
+                    setattr(instance, model_field, field_object.to_python_value(val))
