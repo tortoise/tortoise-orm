@@ -2317,7 +2317,7 @@ class UnionQuery(AwaitableQuery[MODEL]):
                 self._selects = self._get_selects(qs)
             else:
                 if self._get_selects(qs) != self._selects:
-                    raise ValueError("Union queries must have the same select fields")
+                    raise ParamsError("Union queries must have the same select fields")
                 self._union_query = (
                     self._union_query.union_all(qs.query)
                     if self._all
@@ -2387,7 +2387,7 @@ class UnionQuery(AwaitableQuery[MODEL]):
         union = self._clone()
         union._models = {*union._models, *(qs.model for qs in other_qs)}
         union._qs = union._qs + other_qs
-        union._all = all
+        union._all = union._all or all
         return union
 
     def order_by(self, *orderings: str) -> UnionQuery[MODEL]:
@@ -2398,7 +2398,6 @@ class UnionQuery(AwaitableQuery[MODEL]):
 
             .order_by('name', '-id')
 
-        Supports ordering by related models too.
         A '-' before the name will result in descending sort order, default is ascending.
 
         :raises FieldError: If unknown field has been provided.

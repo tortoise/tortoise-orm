@@ -1046,7 +1046,7 @@ async def test_union_different_select_fields_raises(db):
     qs1 = Tournament.filter(name="T1").only("name")
     qs2 = Tournament.filter(name="T1").only("desc")
 
-    with pytest.raises(ValueError, match="Union queries must have the same select fields"):
+    with pytest.raises(ParamsError, match="Union queries must have the same select fields"):
         await qs1.union(qs2)
 
 
@@ -1058,7 +1058,7 @@ async def test_union_different_fields__in_different_models_raises(db):
     qs1 = Tournament.all()
     qs2 = Reporter.all()
 
-    with pytest.raises(ValueError, match="Union queries must have the same select fields"):
+    with pytest.raises(ParamsError, match="Union queries must have the same select fields"):
         await qs1.union(qs2)
 
 
