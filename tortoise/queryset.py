@@ -2273,6 +2273,7 @@ class UnionQuery(AwaitableQuery[MODEL]):
         "_all",
         "_orderings",
         "_limit",
+        "_offset",
     )
 
     TORTOISE_APP_FIELD = "tortoise_app"
@@ -2294,6 +2295,7 @@ class UnionQuery(AwaitableQuery[MODEL]):
         self._all = all
         self._orderings: list[tuple[str, Order]] | None = None
         self._limit: int | None = None
+        self._offset: int | None = None
 
     @classmethod
     def _get_selects(cls, qs: QuerySet[Model] | UnionQuery[Model]) -> list[str]:
@@ -2339,6 +2341,9 @@ class UnionQuery(AwaitableQuery[MODEL]):
         if self._limit is not None:
             self._union_query = self._union_query.limit(self._limit)
 
+        if self._offset is not None:
+            self._union_query = self._union_query.offset(self._offset)
+
     def __await__(self) -> Generator[Any, None, Sequence[MODEL]]:
         self._choose_db_if_not_chosen()
         self._make_query()
@@ -2363,13 +2368,14 @@ class UnionQuery(AwaitableQuery[MODEL]):
         union = self.__class__.__new__(self.__class__)
         union.model = self.model
         union._models = self._models
-        union._union_query = self._union_query
+        union._union_query = None
         union._selects = self._selects
         union._db = self._db
         union._qs = self._qs
         union._all = self._all
         union._orderings = self._orderings
         union._limit = self._limit
+        union._offset = self._offset
         return union
 
     @classmethod
@@ -2419,6 +2425,19 @@ class UnionQuery(AwaitableQuery[MODEL]):
 
         union = self._clone()
         union._limit = limit
+        return union
+
+    def offset(self, offset: int) -> UnionQuery[MODEL]:
+        """
+        Query offset for UnionQuery.
+
+        :raises ParamsError: Offset should be non-negative number.
+        """
+        if offset < 0:
+            raise ParamsError("Offset should be non-negative number")
+
+        union = self._clone()
+        union._offset = offset
         return union
 
     def count(self) -> UnionCountQuery:

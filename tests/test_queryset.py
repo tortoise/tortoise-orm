@@ -1011,6 +1011,29 @@ async def test_union_limit(db):
 
 
 @pytest.mark.asyncio
+async def test_union_offset(db):
+    await Tournament.create(name="T1")
+    await Tournament.create(name="T2")
+    t3 = await Tournament.create(name="T3")
+    t4 = await Tournament.create(name="T4")
+
+    qs1 = Tournament.filter(name__in=["T1", "T2"]).only("id", "name")
+    qs2 = Tournament.filter(name__in=["T3", "T4"]).only("id", "name")
+
+    result = await qs1.union(qs2).order_by("name").limit(4).offset(2)
+    assert list(result) == [t3, t4]
+
+
+@pytest.mark.asyncio
+async def test_union_offset_negative_raises(db):
+    qs1 = Tournament.all().only("id", "name")
+    qs2 = Tournament.all().only("id", "name")
+
+    with pytest.raises(ParamsError, match="Offset should be non-negative number"):
+        await qs1.union(qs2).offset(-1)
+
+
+@pytest.mark.asyncio
 async def test_union_chained(db):
     t1 = await Tournament.create(name="T1")
     t2 = await Tournament.create(name="T2")
