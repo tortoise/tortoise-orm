@@ -2241,14 +2241,15 @@ class UnionCountQuery(AwaitableQuery):
         self,
         model: type[MODEL],
         db: BaseDBAsyncClient,
-        union_query: QueryBuilder | _SetOperation,
+        union_query: UnionQuery[MODEL],
     ) -> None:
         super().__init__(model)
         self._union_query = union_query
         self._db = db
 
     def _make_query(self) -> None:
-        self.query = self.query.QUERY_CLS.from_(self._union_query).select(Count(Star()))
+        self._union_query._make_query()
+        self.query = self.query.QUERY_CLS.from_(self._union_query._union_query).select(Count(Star()))
 
     def __await__(self) -> Generator[Any, None, int]:
         self._choose_db_if_not_chosen()
@@ -2445,13 +2446,10 @@ class UnionQuery(AwaitableQuery[MODEL]):
         Return count of objects in union query.
         """
         self._choose_db_if_not_chosen()
-        self._make_query()
-
-        if self._union_query is None:
-            raise RuntimeError("Couldn't generate union query")
+        union_query_clone = self._clone()
 
         return UnionCountQuery(
             model=self.model,
             db=self._db,
-            union_query=self._union_query,
+            union_query=union_query_clone,
         )
