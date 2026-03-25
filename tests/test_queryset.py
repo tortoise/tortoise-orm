@@ -24,7 +24,7 @@ from tortoise.exceptions import (
     NotExistOrMultiple,
     ParamsError,
 )
-from tortoise.expressions import F, RawSQL, Subquery
+from tortoise.expressions import F, RawSQL, Subquery, Value
 from tortoise.functions import Avg
 
 # TODO: Test the many exceptions in QuerySet
@@ -1072,3 +1072,23 @@ async def test_union_order_by_field_not_in_select_raises(db):
     qs = qs1.union(qs2)
     with pytest.raises(ParamsError, match="Order by field must be in the select list"):
         await qs.order_by("desc")
+
+
+@pytest.mark.asyncio
+async def test_union_with_annotate_raises(db):
+    await Tournament.create(name="T1")
+    await Reporter.create(name="R1")
+
+    qs1 = (
+        Tournament.filter(name="T1")
+        .annotate(annotated_value=Value(1))
+        .only("id", "name", "annotated_value")
+    )
+    qs2 = (
+        Reporter.filter(name="R1")
+        .annotate(annotated_value=Value(1))
+        .only("id", "name", "annotated_value")
+    )
+
+    with pytest.raises(ParamsError, match="Union queries do not support annotations"):
+        await qs1.union(qs2)

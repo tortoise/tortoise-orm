@@ -2305,6 +2305,8 @@ class UnionQuery(AwaitableQuery[MODEL]):
 
     def _make_query(self) -> None:
         for qs in self._qs:
+            if qs._annotations:
+                raise ParamsError("Union queries do not support annotations")
             model_annotations = {
                 self.TORTOISE_APP_FIELD: Value(qs.model._meta.app),
                 self.TORTOISE_MODEL_FIELD: Value(qs.model._meta._model.__name__),
