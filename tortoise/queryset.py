@@ -2249,7 +2249,9 @@ class UnionCountQuery(AwaitableQuery):
 
     def _make_query(self) -> None:
         self._union_query._make_query()
-        self.query = self.query.QUERY_CLS.from_(self._union_query._union_query).select(Count(Star()))
+        self.query = self.query.QUERY_CLS.from_(self._union_query._union_query).select(  # type:ignore[arg-type]
+            Count(Star())
+        )
 
     def __await__(self) -> Generator[Any, None, int]:
         self._choose_db_if_not_chosen()
