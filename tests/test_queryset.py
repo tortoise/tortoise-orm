@@ -1010,6 +1010,7 @@ async def test_union_limit(db):
     assert list(result) == [t1, r1]
 
 
+@requireCapability(dialect=NotEQ("mssql"))
 @pytest.mark.asyncio
 async def test_union_offset(db):
     await Tournament.create(name="T1")
