@@ -435,7 +435,7 @@ class ManyToManyFieldInstance(RelationalField[MODEL]):
 
 @overload
 def OneToOneField(
-    to: type[Model] | str,
+    to: type[MODEL] | str,
     related_name: str | None | Literal[False] = None,
     on_delete: OnDelete = CASCADE,
     db_constraint: bool = True,
@@ -447,7 +447,7 @@ def OneToOneField(
 
 @overload
 def OneToOneField(
-    to: type[Model] | str,
+    to: type[MODEL] | str,
     related_name: str | None | Literal[False] = None,
     on_delete: OnDelete = CASCADE,
     db_constraint: bool = True,
@@ -457,7 +457,7 @@ def OneToOneField(
 
 
 def OneToOneField(
-    to: type[Model] | str,
+    to: type[MODEL] | str,
     related_name: str | None | Literal[False] = None,
     on_delete: OnDelete = CASCADE,
     db_constraint: bool = True,
@@ -510,7 +510,7 @@ def OneToOneField(
 
 @overload
 def ForeignKeyField(
-    to: type[Model] | str,
+    to: type[MODEL] | str,
     related_name: str | None | Literal[False] = None,
     on_delete: OnDelete = CASCADE,
     db_constraint: bool = True,
@@ -522,7 +522,7 @@ def ForeignKeyField(
 
 @overload
 def ForeignKeyField(
-    to: type[Model] | str,
+    to: type[MODEL] | str,
     related_name: str | None | Literal[False] = None,
     on_delete: OnDelete = CASCADE,
     db_constraint: bool = True,
@@ -532,7 +532,7 @@ def ForeignKeyField(
 
 
 def ForeignKeyField(
-    to: type[Model] | str,
+    to: type[MODEL] | str,
     related_name: str | None | Literal[False] = None,
     on_delete: OnDelete = CASCADE,
     db_constraint: bool = True,
