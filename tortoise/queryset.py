@@ -1391,7 +1391,19 @@ class DeleteQuery(AwaitableQuery):
                 annotations=self._annotations,
             )
         self.resolve_filters()
-        self.query._delete_from = True
+        if self._joined_tables:
+            table = self.model._meta.basetable
+            pk_attr = self.model._meta.pk_attr
+            source_pk = self.model._meta.fields_map[pk_attr].source_field or pk_attr
+            self.query._selects = []
+            self.query._select_other(Field(source_pk, table=table))
+            subquery = self.query
+            self.query = self._db.query_class.from_(table).where(
+                Field(source_pk, table=table).isin(subquery)
+            )
+            self.query._delete_from = True
+        else:
+            self.query._delete_from = True
         return
 
     def __await__(self) -> Generator[Any, None, int]:
