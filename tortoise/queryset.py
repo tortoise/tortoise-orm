@@ -808,6 +808,18 @@ class QuerySet(AwaitableQuery[MODEL]):
             use_indexes=self._use_indexes,
         )
 
+    def contains(self, obj: MODEL) -> ContainsQuery:
+        return ContainsQuery(
+            db=self._db,
+            model=self.model,
+            q_objects=self._q_objects,
+            annotations=self._annotations,
+            custom_filters=self._custom_filters,
+            force_indexes=self._force_indexes,
+            use_indexes=self._use_indexes,
+            obj=obj,
+        )
+
     def all(self) -> QuerySet[MODEL]:
         """
         Return the whole QuerySet.
@@ -1450,6 +1462,23 @@ class ExistsQuery(AwaitableQuery):
     ) -> bool:
         result, _ = await self._db.execute_query(*self.query.get_parameterized_sql())
         return bool(result)
+
+
+class ContainsQuery(ExistsQuery):
+    def __init__(
+        self,
+        obj: MODEL,
+        **kwargs,
+    ) -> None:
+        super().__init__(**kwargs)
+        self._obj = obj
+
+    def _make_query(self) -> None:
+        super()._make_query()
+        pk_attr = self.model._meta.pk_attr
+        source_pk_attr = self.model._meta.fields_map[pk_attr].source_field or pk_attr
+        pk = Field(source_pk_attr)
+        self.query = self.query.where(pk.eq(self._obj.pk))
 
 
 class CountQuery(AwaitableQuery):

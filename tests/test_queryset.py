@@ -60,6 +60,16 @@ async def test_exists(db, intfields_data):
 
 
 @pytest.mark.asyncio
+async def test_contains(db, intfields_data):
+    obj = await IntFields.filter(intnum=10).first()
+    assert await IntFields.all().contains(obj)
+
+    assert await IntFields.filter(intnum__lt=50).contains(obj)
+
+    assert not await IntFields.filter(intnum__gt=50).contains(obj)
+
+
+@pytest.mark.asyncio
 async def test_limit_count(db, intfields_data):
     assert await IntFields.all().limit(10).count() == 10
 
