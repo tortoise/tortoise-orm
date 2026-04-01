@@ -95,6 +95,19 @@ It's also possible to filter your queries with ``.exclude()``:
 
     await Team.exclude(name__icontains='junior')
 
+You can also check if a specific object exists in a queryset:
+
+.. code-block:: python3
+
+    obj = await Team.filter(name='My Team').first()
+    exists = await Team.all().contains(obj)
+
+Or simply check if any record matches a filter:
+
+.. code-block:: python3
+
+    exists = await Team.filter(name='My Team').exists()
+
 As more interesting case, when you are working with related data, you could also build your
 query around related entities:
 

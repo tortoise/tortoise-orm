@@ -8,6 +8,10 @@ Changelog
 1.1
 ===
 
+1.1.8
+-----
+- Add ``QuerySet.contains()`` method to check if an object exists in a queryset.
+
 1.1.7
 -----
 
