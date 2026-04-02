@@ -809,6 +809,12 @@ class QuerySet(AwaitableQuery[MODEL]):
         )
 
     def contains(self, obj: MODEL) -> ContainsQuery:
+        """
+        Check if the QuerySet contains the given instance.
+
+        :param obj: The model instance to check for.
+        :return: True if the QuerySet contains the instance, False otherwise.
+        """
         return ContainsQuery(
             db=self._db,
             model=self.model,
