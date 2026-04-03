@@ -8,6 +8,13 @@ Changelog
 1.1
 ===
 
+1.1.8
+-----
+
+Added
+^^^^^
+- Added comprehensive EXPLAIN support for MySQL and PostgreSQL.
+
 1.1.7
 -----
 
