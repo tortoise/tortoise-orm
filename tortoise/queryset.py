@@ -1042,7 +1042,7 @@ class QuerySet(AwaitableQuery[MODEL]):
                 queryset._prefetch_map[first_level_field].add(forwarded_prefetch)
         return queryset
 
-    async def explain(self) -> Any:
+    async def explain(self, output_fmt: str | None = None, **options: bool) -> Any:
         """Fetch and return information about the query execution plan.
 
         This is done by executing an ``EXPLAIN`` query whose exact prefix depends
@@ -1060,7 +1060,7 @@ class QuerySet(AwaitableQuery[MODEL]):
         self._choose_db_if_not_chosen()
         self._make_query()
         return await self._db.executor_class(model=self.model, db=self._db).execute_explain(
-            self.query.get_sql()
+            self.query.get_sql(), output_fmt, **options
         )
 
     def using_db(self, _db: BaseDBAsyncClient | None) -> QuerySet[MODEL]:
