@@ -2,6 +2,7 @@
 Test some PostgreSQL-specific features
 """
 
+import json
 import os
 import ssl
 import xml.etree.ElementTree as ET
@@ -139,12 +140,20 @@ async def test_application_name(db_isolated):
             await Tortoise._drop_databases()
 
 
+def _get_query_plan(result: list):
+    query_plan = result[0]["QUERY PLAN"]
+    if isinstance(query_plan, str):
+        query_plan = json.loads(query_plan)
+    return query_plan[0]
+
+
 @requireCapability(dialect="postgres")
 @pytest.mark.asyncio
 async def test_explain(db_simple):
     await Tournament.create(name="Test")
     result = await Tournament.all().explain()
-    assert "Plan" in result[0]["QUERY PLAN"][0]
+    query_plan = _get_query_plan(result)
+    assert "Plan" in query_plan
 
 
 @requireCapability(dialect="postgres")
@@ -185,8 +194,9 @@ async def test_explain_unsupported_format(db_simple):
 async def test_explain_analyze(db_simple):
     await Tournament.create(name="Test")
     result = await Tournament.all().explain(analyze=True)
-    assert "Plan" in result[0]["QUERY PLAN"][0]
-    assert "Actual Loops" in result[0]["QUERY PLAN"][0]["Plan"]
+    query_plan = _get_query_plan(result)
+    assert "Plan" in query_plan
+    assert "Actual Loops" in query_plan["Plan"]
 
 
 @requireCapability(dialect="postgres")
@@ -194,8 +204,9 @@ async def test_explain_analyze(db_simple):
 async def test_explain_costs(db_simple):
     await Tournament.create(name="Test")
     result = await Tournament.all().explain(costs=True)
-    assert "Plan" in result[0]["QUERY PLAN"][0]
-    assert "Total Cost" in result[0]["QUERY PLAN"][0]["Plan"]
+    query_plan = _get_query_plan(result)
+    assert "Plan" in query_plan
+    assert "Total Cost" in query_plan["Plan"]
 
 
 @requireCapability(dialect="postgres")
@@ -203,8 +214,9 @@ async def test_explain_costs(db_simple):
 async def test_explain_buffers(db_simple):
     await Tournament.create(name="Test")
     result = await Tournament.all().explain(buffers=True)
-    assert "Plan" in result[0]["QUERY PLAN"][0]
-    assert "Shared Hit Blocks" in result[0]["QUERY PLAN"][0]["Plan"]
+    query_plan = _get_query_plan(result)
+    assert "Plan" in query_plan
+    assert "Shared Hit Blocks" in query_plan["Plan"]
 
 
 @requireCapability(dialect="postgres")
@@ -212,8 +224,9 @@ async def test_explain_buffers(db_simple):
 async def test_explain_timing(db_simple):
     await Tournament.create(name="Test")
     result = await Tournament.all().explain(analyze=True, timing=True)
-    assert "Plan" in result[0]["QUERY PLAN"][0]
-    assert "Actual Total Time" in result[0]["QUERY PLAN"][0]["Plan"]
+    query_plan = _get_query_plan(result)
+    assert "Plan" in query_plan
+    assert "Actual Total Time" in query_plan["Plan"]
 
 
 @requireCapability(dialect="postgres")
@@ -221,8 +234,9 @@ async def test_explain_timing(db_simple):
 async def test_explain_memory(db_simple):
     await Tournament.create(name="Test")
     result = await Tournament.all().explain(memory=True)
-    assert "Plan" in result[0]["QUERY PLAN"][0]
-    assert "Memory" in result[0]["QUERY PLAN"][0] or "Memory" in str(result[0]["QUERY PLAN"])
+    query_plan = _get_query_plan(result)
+    assert "Plan" in query_plan
+    assert "Memory" in query_plan or "Memory" in str(query_plan)
 
 
 @requireCapability(dialect="postgres")
@@ -230,7 +244,8 @@ async def test_explain_memory(db_simple):
 async def test_explain_settings(db_simple):
     await Tournament.create(name="Test")
     result = await Tournament.all().explain(settings=True)
-    assert "Plan" in result[0]["QUERY PLAN"][0]
+    query_plan = _get_query_plan(result)
+    assert "Plan" in query_plan
 
 
 @requireCapability(dialect="postgres")
@@ -238,8 +253,9 @@ async def test_explain_settings(db_simple):
 async def test_explain_summary(db_simple):
     await Tournament.create(name="Test")
     result = await Tournament.all().explain(summary=True)
-    assert "Plan" in result[0]["QUERY PLAN"][0]
-    assert "Planning Time" in result[0]["QUERY PLAN"][0]
+    query_plan = _get_query_plan(result)
+    assert "Plan" in query_plan
+    assert "Planning Time" in query_plan
 
 
 @requireCapability(dialect="postgres")
@@ -247,10 +263,11 @@ async def test_explain_summary(db_simple):
 async def test_explain_multiple_options(db_simple):
     await Tournament.create(name="Test")
     result = await Tournament.all().explain(analyze=True, costs=True, buffers=True)
-    assert "Plan" in result[0]["QUERY PLAN"][0]
-    assert "Actual Loops" in result[0]["QUERY PLAN"][0]["Plan"]
-    assert "Total Cost" in result[0]["QUERY PLAN"][0]["Plan"]
-    assert "Shared Hit Blocks" in result[0]["QUERY PLAN"][0]["Plan"]
+    query_plan = _get_query_plan(result)
+    assert "Plan" in query_plan
+    assert "Actual Loops" in query_plan["Plan"]
+    assert "Total Cost" in query_plan["Plan"]
+    assert "Shared Hit Blocks" in query_plan["Plan"]
 
 
 @requireCapability(dialect="postgres")
@@ -267,5 +284,6 @@ async def test_explain_unsupported_option(db_simple):
 async def test_explain_option_false(db_simple):
     await Tournament.create(name="Test")
     result = await Tournament.all().explain(analyze=False)
-    assert "Plan" in result[0]["QUERY PLAN"][0]
-    assert "Actual Loops" not in str(result[0]["QUERY PLAN"])
+    query_plan = _get_query_plan(result)
+    assert "Plan" in query_plan
+    assert "Actual Loops" not in query_plan["Plan"]
