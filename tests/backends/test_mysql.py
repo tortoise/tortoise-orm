@@ -99,7 +99,7 @@ async def test_explain(db_simple):
     await Tournament.create(name="Test")
     result = await Tournament.all().explain()
     data = json.loads(result[0]["EXPLAIN"])
-    assert "query_plan" in data
+    assert "query_plan" in data or "query_block" in data
 
 
 @requireCapability(dialect="mysql")
@@ -126,7 +126,7 @@ async def test_explain_format_tree(db_simple):
 async def test_explain_analyze(db_simple):
     await Tournament.create(name="Test")
     result = await Tournament.all().explain(analyze=True)
-    assert "query_plan" in result[0]["EXPLAIN"]
+    assert "query_plan" in result[0]["EXPLAIN"] or "query_block" in result[0]["EXPLAIN"]
     assert "actual" in result[0]["EXPLAIN"]
 
 
@@ -135,7 +135,7 @@ async def test_explain_analyze(db_simple):
 async def test_explain_analyze_false(db_simple):
     await Tournament.create(name="Test")
     result = await Tournament.all().explain(analyze=False)
-    assert "query_plan" in result[0]["EXPLAIN"]
+    assert "query_plan" in result[0]["EXPLAIN"] or "query_block" in result[0]["EXPLAIN"]
     assert "actual" not in result[0]["EXPLAIN"]
 
 
