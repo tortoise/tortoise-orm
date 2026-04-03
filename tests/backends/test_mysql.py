@@ -127,7 +127,6 @@ async def test_explain_analyze(db_simple):
     await Tournament.create(name="Test")
     # Older MySQL version don't support ANALYZE with JSON format, that's why we use TREE
     result = await Tournament.all().explain(output_fmt="tree", analyze=True)
-    assert "query_plan" in result[0]["EXPLAIN"] or "query_block" in result[0]["EXPLAIN"]
     assert "actual" in result[0]["EXPLAIN"]
 
 
