@@ -8,6 +8,13 @@ Changelog
 1.1
 ===
 
+1.1.8
+-----
+
+Added
+^^^^^
+- Built-in ``DomainNameValidator``, ``URLValidator``, and ``EmailValidator`` classes for common validation patterns. (#2162)
+
 1.1.7
 -----
 

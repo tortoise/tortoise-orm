@@ -194,6 +194,7 @@ class DomainNameValidator(Validator):
 
 
 validate_domain_name = DomainNameValidator()
+validate_domain_name.__doc__ = "Pre-configured DomainNameValidator instance."
 
 
 class InvalidURL(ValidationError):
@@ -281,6 +282,7 @@ class URLValidator(Validator):
 
 
 validate_url = URLValidator()
+validate_url.__doc__ = "Pre-configured URLValidator instance."
 
 
 class InvalidEmailAddress(ValidationError):
@@ -361,6 +363,7 @@ class EmailValidator(Validator):
 
 
 validate_email = EmailValidator()
+validate_email.__doc__ = "Pre-configured EmailValidator instance."
 
 
 def validate_ipv4_address(value: Any) -> None:
