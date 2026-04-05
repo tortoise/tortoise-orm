@@ -133,9 +133,6 @@ class ODBCClient(BaseDBAsyncClient, ABC):
                     raise
                 else:
                     await cursor.commit()
-                    # Drain any result sets to avoid "Connection is busy" on the next command
-                    while await cursor.nextset():
-                        pass
 
     @translate_exceptions
     async def execute_query(self, query: str, values: list | None = None) -> tuple[int, list[dict]]:
