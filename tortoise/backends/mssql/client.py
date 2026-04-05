@@ -135,3 +135,11 @@ class TransactionWrapper(ODBCTransactionWrapper, MSSQLClient):
             raise TransactionManagementError("No savepoint to rollback to")
         self._savepoint = None
         self._finalized = True
+
+    @translate_exceptions
+    async def execute_many(self, query: str, values: list) -> None:
+        async with self.acquire_connection() as connection:
+            self.log.debug("%s: %s", query, values)
+            cursor = await connection.cursor()
+            for row_values in values:
+                await cursor.execute(f"SET NOCOUNT ON; {query}", row_values)
