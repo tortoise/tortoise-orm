@@ -127,7 +127,7 @@ class ODBCClient(BaseDBAsyncClient, ABC):
             self.log.debug("%s: %s", query, values)
             async with connection.cursor() as cursor:
                 try:
-                    await cursor.executemany(query, values)
+                    await cursor.executemany(f"SET NOCOUNT ON; {query}", values)
                 except Exception:
                     await cursor.rollback()
                     raise
