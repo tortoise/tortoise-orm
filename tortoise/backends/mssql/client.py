@@ -68,6 +68,20 @@ class MSSQLClient(ODBCClient):
                 await cursor.execute(f"SET NOCOUNT ON; {query}; SELECT @@IDENTITY", values)
                 return (await cursor.fetchone())[0]
 
+    @translate_exceptions
+    async def execute_many(self, query: str, values: list) -> None:
+        async with self.acquire_connection() as connection:
+            self.log.debug("%s: %s", query, values)
+            async with connection.cursor() as cursor:
+                try:
+                    for row_values in values:
+                        await cursor.execute(f"SET NOCOUNT ON; {query}", row_values)
+                except Exception:
+                    await cursor.rollback()
+                    raise
+                else:
+                    await cursor.commit()
+
     async def db_delete(self) -> None:
         if not self.database:
             return
