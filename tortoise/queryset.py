@@ -1120,7 +1120,7 @@ class QuerySet(AwaitableQuery[MODEL]):
         fetch_to_fields = defaultdict(list)
         # the order is important here, we need to process the shallowest fields first
         # because we want to populate _select_related_idx with actual items that need to be
-        # selected, not "filler" items tha just tell the executor that an empty instance has
+        # selected, not "filler" items than just tell the executor that an empty instance has
         # to be created
         for expression in sorted(only_lookup_expressions, key=lambda x: x.count("__")):
             fetch_fields_lookup, __, field_name = expression.rpartition("__")

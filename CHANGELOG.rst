@@ -1050,7 +1050,7 @@ Removals:
 
 0.15.15
 -------
-- Add ability to suppply a ``to_field=`` parameter for FK/O2O to a non-PK but still uniquely indexed remote field. (#287)
+- Add ability to supply a ``to_field=`` parameter for FK/O2O to a non-PK but still uniquely indexed remote field. (#287)
 
 0.15.14
 -------
@@ -1601,7 +1601,7 @@ Docs/examples:
 
 0.10.9
 ------
-- Uses macros on SQLite driver to minimise syncronisation. ``aiosqlite>=0.7.0``
+- Uses macros on SQLite driver to minimise synchronisation. ``aiosqlite>=0.7.0``
 - Uses prepared statements for insert, large insert performance increase.
 - Pre-generate base pypika query object per model, providing general purpose speedup.
 
@@ -1721,7 +1721,7 @@ Docs/examples:
 
 - Fixed ``DatetimeField`` and ``DateField`` to work as expected on SQLite.
 - Added ``PyLint`` plugin.
-- Added test class to mange DB state for testing isolation.
+- Added test class to manage DB state for testing isolation.
 
 0.8.0
 -----
