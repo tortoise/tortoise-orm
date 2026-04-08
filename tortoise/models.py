@@ -213,6 +213,8 @@ class MetaInfo:
         "db_native_fields",
         "db_default_fields",
         "db_complex_fields",
+        "db_default_db_columns",
+        "fetch_db_defaults",
         "_default_ordering",
         "_ordering_validated",
     )
@@ -255,6 +257,8 @@ class MetaInfo:
         self.db_native_fields: list[tuple[str, str, Field]] = []
         self.db_default_fields: list[tuple[str, str, Field]] = []
         self.db_complex_fields: list[tuple[str, str, Field]] = []
+        self.db_default_db_columns: tuple[str, ...] = ()
+        self.fetch_db_defaults: bool = getattr(meta, "fetch_db_defaults", True)
 
     @property
     def full_name(self) -> str:
@@ -339,6 +343,13 @@ class MetaInfo:
             if field.generated
         ]
         self.generated_db_fields = tuple(generated_fields)
+
+        db_default_cols = [
+            (field.source_field or field.model_field_name)
+            for field in self.fields_map.values()
+            if field.has_db_default() and not field.generated
+        ]
+        self.db_default_db_columns = tuple(db_default_cols)
 
         self._ordering_validated = True
         for field_name, _ in self._default_ordering:
@@ -738,10 +749,15 @@ class Model(metaclass=ModelMeta):
                 setattr(self, key, field_default())
             else:
                 default = field_object.default
-                if default is None or isinstance(default, (int, float, str, bool, bytes)):
-                    setattr(self, key, default)
+                if default is not None:
+                    if isinstance(default, (int, float, str, bool, bytes)):
+                        setattr(self, key, default)
+                    else:
+                        setattr(self, key, deepcopy(default))
+                elif field_object.has_db_default():
+                    setattr(self, key, field_object.get_db_default_value())
                 else:
-                    setattr(self, key, deepcopy(default))
+                    setattr(self, key, None)
 
     def __setattr__(self, key, value) -> None:
         # set field value override async default function
@@ -1037,6 +1053,8 @@ class Model(metaclass=ModelMeta):
                 _setattr(self, key, field_default())
             elif field_default is not None:
                 _setattr(self, key, field_default)
+            elif default_field.has_db_default():
+                _setattr(self, key, default_field.get_db_default_value())
             else:
                 _setattr(self, key, None)
 
@@ -1446,12 +1464,22 @@ class Model(metaclass=ModelMeta):
                 User(name="...", email="...")
             ])
 
+        **db_default behaviour:** Fields with ``db_default`` that are not explicitly
+        set will use the database DEFAULT. However, within a single ``bulk_create``
+        call, each ``db_default`` field must be treated consistently across *all*
+        instances — either every instance provides an explicit value, or none of
+        them do.  Mixing explicit values and database defaults for the same field
+        raises :exc:`~tortoise.exceptions.OperationalError`.
+
         :param on_conflict: On conflict index name
         :param update_fields: Update fields when conflicts
         :param ignore_conflicts: Ignore conflicts when inserting
         :param objects: List of objects to bulk create
         :param batch_size: How many objects are created in a single query
         :param using_db: Specific DB connection to use instead of default bound
+
+        :raises OperationalError: If a ``db_default`` field has mixed usage across
+            instances (some provide a value, others rely on the database default).
         """
         return cls._db_queryset(using_db, for_write=True).bulk_create(
             objects, batch_size, ignore_conflicts, update_fields, on_conflict

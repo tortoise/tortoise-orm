@@ -131,8 +131,11 @@ class MySQLExecutor(BaseExecutor):
         if (
             isinstance(pk_field_object, (SmallIntField, IntField, BigIntField))
             and pk_field_object.generated
+            and not instance._custom_generated_pk
         ):
             instance.pk = results
+        if self.model._meta.db_default_db_columns:
+            await self._fetch_db_defaults_after_insert(instance)
 
         # MySQL can only generate a single ROWID
         #   so if any other primary key, it won't generate what we want.

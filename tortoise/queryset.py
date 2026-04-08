@@ -18,9 +18,11 @@ from tortoise.exceptions import (
     FieldError,
     IntegrityError,
     MultipleObjectsReturned,
+    OperationalError,
     ParamsError,
 )
 from tortoise.expressions import Expression, Q, RawSQL, ResolveContext, ResolveResult
+from tortoise.fields.base import DatabaseDefault
 from tortoise.fields.relational import (
     ForeignKeyFieldInstance,
     OneToOneFieldInstance,
@@ -881,6 +883,10 @@ class QuerySet(AwaitableQuery[MODEL]):
         This method inserts the provided list of objects into the database in an efficient manner
         (generally only 1 query, no matter how many objects there are).
 
+        Fields with ``db_default`` that are not explicitly set will use the database
+        DEFAULT.  Within a single call, each ``db_default`` field must be treated
+        consistently: either **all** instances supply a value or **none** do.
+
         :param on_conflict: On conflict index name
         :param update_fields: Update fields when conflicts
         :param ignore_conflicts: Ignore conflicts when inserting
@@ -888,6 +894,8 @@ class QuerySet(AwaitableQuery[MODEL]):
         :param batch_size: How many objects are created in a single query
 
         :raises ValueError: If params do not meet specifications
+        :raises OperationalError: If a ``db_default`` field has mixed usage across
+            instances (some provide a value, others rely on the database default).
         """
         if ignore_conflicts and update_fields:
             raise ValueError(
@@ -1103,7 +1111,7 @@ class QuerySet(AwaitableQuery[MODEL]):
         fetch_to_fields = defaultdict(list)
         # the order is important here, we need to process the shallowest fields first
         # because we want to populate _select_related_idx with actual items that need to be
-        # selected, not "filler" items tha just tell the executor that an empty instance has
+        # selected, not "filler" items than just tell the executor that an empty instance has
         # to be created
         for expression in sorted(only_lookup_expressions, key=lambda x: x.count("__")):
             fetch_fields_lookup, __, field_name = expression.rpartition("__")
@@ -2028,71 +2036,185 @@ class BulkCreateQuery(AwaitableQuery, Generic[MODEL]):
         self._update_fields = update_fields
         self._on_conflict = on_conflict
 
-    def _make_queries(self) -> tuple[str, str]:
-        self._executor = self._db.executor_class(model=self.model, db=self._db)
-        if self._ignore_conflicts or self._update_fields:
-            _, columns = self._executor._prepare_insert_columns()
-            insert_query = self._executor._prepare_insert_statement(
-                columns, ignore_conflicts=self._ignore_conflicts
-            )
-            insert_query_all = insert_query
-            if self.model._meta.generated_db_fields:
-                _, columns_all = self._executor._prepare_insert_columns(include_generated=True)
-                insert_query_all = self._executor._prepare_insert_statement(
-                    columns_all,
-                    has_generated=False,
-                    ignore_conflicts=self._ignore_conflicts,
-                )
-            if self._update_fields:
-                alias = f"new_{self.model._meta.db_table}"
-                insert_query_all = insert_query_all.as_(alias).on_conflict(
-                    *(self._on_conflict or [])
-                )
-                insert_query = insert_query.as_(alias).on_conflict(*(self._on_conflict or []))
-                for update_field in self._update_fields:
-                    insert_query_all = insert_query_all.do_update(update_field)
-                    insert_query = insert_query.do_update(update_field)
-            return insert_query.get_sql(), insert_query_all.get_sql()
-        else:
+    def _analyze_db_default_fields(self, columns: list[str]) -> set[str]:
+        """Classify each db_default field across all instances.
+
+        Returns a set of field names to omit from the INSERT (all instances
+        use DatabaseDefault for that field). Raises OperationalError if a
+        field has mixed usage (some instances provide a value, others don't).
+        """
+
+        fields_map = self.model._meta.fields_map
+        db_default_field_names = [fn for fn in columns if fields_map[fn].has_db_default()]
+        if not db_default_field_names:
+            return set()
+
+        omit_fields: set[str] = set()
+        for field_name in db_default_field_names:
+            has_default = False
+            has_value = False
+            for instance in self._objects:
+                if isinstance(getattr(instance, field_name), DatabaseDefault):
+                    has_default = True
+                else:
+                    has_value = True
+                if has_default and has_value:
+                    raise OperationalError(
+                        f"Cannot use bulk_create() when field '{field_name}' has "
+                        f"db_default and some instances provide explicit values while "
+                        f"others rely on the database default. Either: "
+                        f"(a) set the value explicitly on ALL instances, "
+                        f"(b) omit it from ALL instances to use the database default, or "
+                        f"(c) split into separate bulk_create() calls."
+                    )
+            if has_default and not has_value:
+                omit_fields.add(field_name)
+
+        return omit_fields
+
+    def _build_default_values_sql(self) -> str:
+        """Build INSERT SQL for when all columns are omitted."""
+        table = self.model._meta.basetable
+        return str(self._db.query_class.into(table).default_values())
+
+    def _filter_columns(self, omit_fields: set[str], include_generated: bool = False) -> list[str]:
+        """Prepare INSERT columns, filtering out omitted db_default fields."""
+        _, columns = self._executor._prepare_insert_columns(include_generated=include_generated)
+        if not omit_fields:
+            return columns
+        field_names = (
+            self._executor.regular_columns_all
+            if include_generated
+            else self._executor.regular_columns
+        )
+        return [c for fn, c in zip(field_names, columns) if fn not in omit_fields]
+
+    def _apply_on_conflict(
+        self,
+        insert_query: QueryBuilder,
+        insert_query_all: QueryBuilder,
+        update_fields: Iterable[str],
+        omit_fields: set[str],
+    ) -> tuple[QueryBuilder, QueryBuilder]:
+        """Apply ON CONFLICT ... DO UPDATE to both query variants."""
+        effective_update_fields = (
+            [f for f in update_fields if f not in omit_fields]
+            if omit_fields
+            else list(update_fields)
+        )
+        alias = f"new_{self.model._meta.db_table}"
+        insert_query = insert_query.as_(alias).on_conflict(*(self._on_conflict or []))
+        insert_query_all = insert_query_all.as_(alias).on_conflict(*(self._on_conflict or []))
+        for update_field in effective_update_fields:
+            insert_query = insert_query.do_update(update_field)
+            insert_query_all = insert_query_all.do_update(update_field)
+        return insert_query, insert_query_all
+
+    def _make_queries(self, omit_fields: set[str] | None = None) -> tuple[str, str]:
+        if omit_fields is None:
+            omit_fields = set()
+
+        if not (self._ignore_conflicts or self._update_fields) and not omit_fields:
             return self._executor.insert_query, self._executor.insert_query_all
 
-    async def _execute_many(self, insert_sql: str, insert_sql_all: str) -> None:
+        default_sql = self._build_default_values_sql()
+
+        columns = self._filter_columns(omit_fields)
+        if not columns:
+            return default_sql, default_sql
+        insert_query = self._executor._prepare_insert_statement(
+            columns, ignore_conflicts=self._ignore_conflicts
+        )
+
+        insert_query_all = insert_query
+        if self.model._meta.generated_db_fields:
+            columns_all = self._filter_columns(omit_fields, include_generated=True)
+            if not columns_all:
+                return default_sql, default_sql
+            insert_query_all = self._executor._prepare_insert_statement(
+                columns_all,
+                has_generated=False,
+                ignore_conflicts=self._ignore_conflicts,
+            )
+
+        if self._update_fields:
+            insert_query, insert_query_all = self._apply_on_conflict(
+                insert_query, insert_query_all, self._update_fields, omit_fields
+            )
+
+        return insert_query.get_sql(), insert_query_all.get_sql()
+
+    async def _execute_many(
+        self,
+        insert_sql: str,
+        insert_sql_all: str,
+        effective_columns: list[str],
+        effective_columns_all: list[str],
+    ) -> None:
         fields_map = self.model._meta.fields_map
         for instance_chunk in chunk(self._objects, self._batch_size):
             values_lists_all = []
             values_lists = []
+            count_default_all = 0
+            count_default = 0
             for instance in instance_chunk:
                 if instance._custom_generated_pk:
-                    values_lists_all.append(
-                        [
-                            fields_map[field_name].to_db_value(
-                                getattr(instance, field_name), instance
-                            )
-                            for field_name in self._executor.regular_columns_all
-                        ]
-                    )
+                    if effective_columns_all:
+                        values_lists_all.append(
+                            [
+                                fields_map[field_name].to_db_value(
+                                    getattr(instance, field_name), instance
+                                )
+                                for field_name in effective_columns_all
+                            ]
+                        )
+                    else:
+                        count_default_all += 1
                 else:
-                    values_lists.append(
-                        [
-                            fields_map[field_name].to_db_value(
-                                getattr(instance, field_name), instance
-                            )
-                            for field_name in self._executor.regular_columns
-                        ]
-                    )
+                    if effective_columns:
+                        values_lists.append(
+                            [
+                                fields_map[field_name].to_db_value(
+                                    getattr(instance, field_name), instance
+                                )
+                                for field_name in effective_columns
+                            ]
+                        )
+                    else:
+                        count_default += 1
             if values_lists_all:
                 await self._db.execute_many(insert_sql_all, values_lists_all)
             if values_lists:
                 await self._db.execute_many(insert_sql, values_lists)
+            # When all columns are omitted, execute DEFAULT VALUES individually
+            for _ in range(count_default_all):
+                await self._db.execute_insert(insert_sql_all, [])
+            for _ in range(count_default):
+                await self._db.execute_insert(insert_sql, [])
 
     def __await__(self) -> Generator[Any, None, None]:
         self._choose_db_if_not_chosen(True)
-        insert_sql, insert_sql_all = self._make_queries()
-        return self._execute_many(insert_sql, insert_sql_all).__await__()
+        self._executor = self._db.executor_class(model=self.model, db=self._db)
+        self._objects = list(self._objects)  # materialize for multi-pass
+
+        omit_fields = self._analyze_db_default_fields(self._executor.regular_columns)
+
+        insert_sql, insert_sql_all = self._make_queries(omit_fields)
+        effective_columns = [c for c in self._executor.regular_columns if c not in omit_fields]
+        effective_columns_all = [
+            c for c in self._executor.regular_columns_all if c not in omit_fields
+        ]
+        return self._execute_many(
+            insert_sql, insert_sql_all, effective_columns, effective_columns_all
+        ).__await__()
 
     def sql(self, params_inline=False) -> str:
         self._choose_db_if_not_chosen()
-        insert_sql, insert_sql_all = self._make_queries()
+        self._executor = self._db.executor_class(model=self.model, db=self._db)
+        self._objects = list(self._objects)
+
+        omit_fields = self._analyze_db_default_fields(self._executor.regular_columns)
+        insert_sql, insert_sql_all = self._make_queries(omit_fields)
 
         if all(o._custom_generated_pk for o in self._objects):
             return insert_sql_all

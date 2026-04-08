@@ -3,7 +3,7 @@ Comprehensive Migrations Project
 ===================================
 
 This example demonstrates Tortoise ORM's complete migration system through a realistic ERP schema that evolves
-through 14 migrations. It covers all field types, migration operations (CreateModel, AddField, AlterField, 
+through 14 migrations. It covers all field types, migration operations (CreateModel, AddField, AlterField,
 RemoveField, RenameField, RunPython, RunSQL, indexes, constraints), and fully reversible migrations.
 
 Usage
