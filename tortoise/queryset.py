@@ -81,7 +81,30 @@ class QuerySetSingle(Protocol[T_co]):
     ) -> ValuesQuery[Literal[True]]: ...  # pragma: nocoverage
 
 
-class AwaitableQuery(Generic[MODEL]):
+class _ChooseDBMixin(Generic[MODEL]):
+    _db: BaseDBAsyncClient | None
+    model: type[MODEL]
+
+    def _choose_db(self, for_write: bool = False) -> BaseDBAsyncClient:
+        """
+        Return the connection that will be used if this query is executed now.
+
+        :return: BaseDBAsyncClient:
+        """
+        if self._db:
+            return self._db
+        if for_write:
+            db = router.db_for_write(self.model)
+        else:
+            db = router.db_for_read(self.model)
+        return db or self.model._meta.db
+
+    def _choose_db_if_not_chosen(self, for_write: bool = False) -> None:
+        if self._db is None:
+            self._db = self._choose_db(for_write)
+
+
+class AwaitableQuery(_ChooseDBMixin[MODEL], Generic[MODEL]):
     __slots__ = (
         "query",
         "model",
@@ -112,24 +135,6 @@ class AwaitableQuery(Generic[MODEL]):
     @capabilities.setter
     def capabilities(self, value: Capabilities) -> None:
         self._capabilities = value
-
-    def _choose_db(self, for_write: bool = False) -> BaseDBAsyncClient:
-        """
-        Return the connection that will be used if this query is executed now.
-
-        :return: BaseDBAsyncClient:
-        """
-        if self._db:
-            return self._db
-        if for_write:
-            db = router.db_for_write(self.model)
-        else:
-            db = router.db_for_read(self.model)
-        return db or self.model._meta.db
-
-    def _choose_db_if_not_chosen(self, for_write: bool = False) -> None:
-        if self._db is None:
-            self._db = self._choose_db(for_write)  # type: ignore
 
     def resolve_filters(self, fields_for_select: Collection[str] | None = None) -> None:
         """Builds the common filters for a QuerySet."""
@@ -2265,9 +2270,10 @@ class UnionCountQuery(AwaitableQuery):
         return list(dict(result[0]).values())[0]
 
 
-class UnionQuery(AwaitableQuery[MODEL]):
+class UnionQuery(_ChooseDBMixin[MODEL], Generic[MODEL]):
     __slots__ = (
         "model",
+        "query",
         "_models",
         "_union_query",
         "_selects",
@@ -2289,7 +2295,8 @@ class UnionQuery(AwaitableQuery[MODEL]):
         *querysets: QuerySet[Model],
         all: bool = False,
     ):
-        super().__init__(model)
+        self.model = model
+        self.query = QUERY
         self._models: set[type[Model]] = {model, *(qs.model for qs in querysets)}
         self._union_query: QueryBuilder | _SetOperation | None = None
         self._selects: list[str] = []
@@ -2362,9 +2369,9 @@ class UnionQuery(AwaitableQuery[MODEL]):
             return []
 
         sql = self._union_query.get_sql(self._qs[0].query.QUERY_CLS.SQL_CONTEXT)
-        instance_list = await self._db.executor_class(
+        instance_list = await self._db.executor_class(  # type: ignore[union-attr]
             model=self.model,
-            db=self._db,
+            db=self._db,  # type: ignore[arg-type]
         ).execute_union(sql, self.TORTOISE_APP_FIELD, self.TORTOISE_MODEL_FIELD, self._models)
         return instance_list
 
@@ -2453,6 +2460,6 @@ class UnionQuery(AwaitableQuery[MODEL]):
 
         return UnionCountQuery(
             model=self.model,
-            db=self._db,
+            db=self._db,  # type: ignore[arg-type]
             union_query=union_query_clone,
         )
