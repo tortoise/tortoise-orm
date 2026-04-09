@@ -172,8 +172,8 @@ class BaseExecutor:
                     and model._meta._model.__name__ == row[model_field]
                 ):
                     row = {
-                        field: value
-                        for field, value in row.items()
+                        field: row[field]
+                        for field in row.keys()
                         if field not in [model_field, app_field]
                     }
                     instance_list.append(model._init_from_db(**row))
