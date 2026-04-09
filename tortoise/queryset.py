@@ -2309,6 +2309,7 @@ class UnionQuery(AwaitableQuery[MODEL]):
         ]
 
     def _make_query(self) -> None:
+        self._union_query = None
         for qs in self._qs:
             if qs._annotations:
                 raise ParamsError("Union queries do not support annotations")
