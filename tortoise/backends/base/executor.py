@@ -171,6 +171,11 @@ class BaseExecutor:
                     model._meta.app == row[app_field]
                     and model._meta._model.__name__ == row[model_field]
                 ):
+                    row = {
+                        field: value
+                        for field, value in row.items()
+                        if field not in [model_field, app_field]
+                    }
                     instance_list.append(model._init_from_db(**row))
                     break
 
