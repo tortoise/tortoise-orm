@@ -154,6 +154,33 @@ class BaseExecutor:
         await self._execute_prefetch_queries(instance_list)
         return instance_list
 
+    async def execute_union(
+        self, sql: str, app_field: str, model_field: str, models: set[type[Model]]
+    ) -> list:
+        _, raw_results = await self.db.execute_query(sql)
+        instance_list = []
+
+        for row_idx, row in enumerate(raw_results):
+            if row_idx != 0 and row_idx % CHUNK_SIZE == 0:
+                # Forcibly yield to the event loop to avoid blocking the event loop
+                # when selecting a large number of rows
+                await asyncio.sleep(0)
+
+            for model in models:
+                if (
+                    model._meta.app == row[app_field]
+                    and model._meta._model.__name__ == row[model_field]
+                ):
+                    row = {
+                        field: row[field]
+                        for field in row.keys()
+                        if field not in [model_field, app_field]
+                    }
+                    instance_list.append(model._init_from_db(**row))
+                    break
+
+        return instance_list
+
     def _prepare_insert_columns(
         self, include_generated: bool = False
     ) -> tuple[list[str], list[str]]:

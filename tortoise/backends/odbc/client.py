@@ -186,8 +186,8 @@ class ODBCTransactionWrapper(TransactionalDBClient):
     async def execute_many(self, query: str, values: list) -> None:
         async with self.acquire_connection() as connection:
             self.log.debug("%s: %s", query, values)
-            cursor = await connection.cursor()
-            await cursor.executemany(query, values)
+            async with connection.cursor() as cursor:
+                await cursor.executemany(query, values)
 
     async def begin(self) -> None:
         self._finalized = False

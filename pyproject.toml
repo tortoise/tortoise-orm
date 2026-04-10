@@ -236,3 +236,6 @@ exclude_dirs = [
     "examples/postgres_full_text_search.py",
     "examples/postgres.py",
 ]
+
+[tool.codespell]
+ignore-words-list = "notin,NotIn,brin,BRIN,astroid"
