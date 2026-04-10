@@ -1,0 +1,30 @@
+ci:
+  autoupdate_schedule: monthly
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+    -   id: check-added-large-files
+    -   id: check-toml
+    -   id: check-yaml
+        args:
+        -   --unsafe
+    -   id: end-of-file-fixer
+        files: tortoise/
+    -   id: trailing-whitespace
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: 'v0.15.9'
+    hooks:
+      - id: ruff
+        args: [--fix, --exit-non-zero-on-fix, --show-fixes, tortoise/, examples/, tests/, conftest.py]
+        pass_filenames: false
+      - id: ruff-format
+        args: [tortoise/, examples/, tests/, conftest.py]
+        pass_filenames: false
+
+  - repo: https://github.com/codespell-project/codespell
+    rev: v2.4.2
+    hooks:
+      - id: codespell  # See pyproject.toml for args
+        additional_dependencies:
+          - tomli
