@@ -10,6 +10,7 @@ Changelog
 
 1.1.8
 -----
+- ``QuerySet.union()`` — SQL UNION query support for combining results from multiple QuerySets, including support for union across different models, ``union(all=True)`` for duplicates, ``order_by()``, ``limit()``, and ``count()``.
 - Add ``QuerySet.contains()`` method to check if an object exists in a queryset.
 
 1.1.7
@@ -17,7 +18,6 @@ Changelog
 
 Added
 ^^^^^
-- ``QuerySet.union()`` — SQL UNION query support for combining results from multiple QuerySets, including support for union across different models, ``union(all=True)`` for duplicates, ``order_by()``, ``limit()``, and ``count()``.
 - Tests for model validators. (#2137)
 
 Fixed
