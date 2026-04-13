@@ -8,6 +8,12 @@ Changelog
 1.1
 ===
 
+1.1.8 (unreleased)
+-----
+Changed
+^^^^^
+- Improved typing for relational field factories. ``ForeignKeyField()``, ``OneToOneField()``, and ``ManyToManyField()`` now infer the concrete related model type when passed a model class, while string-based model references remain backward-compatible and now fall back to ``Model`` instead of ``Any`` when no more specific type can be inferred.
+
 1.1.7
 -----
 
