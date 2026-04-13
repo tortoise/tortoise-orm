@@ -2,9 +2,10 @@ from __future__ import annotations
 
 import warnings
 from collections.abc import AsyncGenerator, Generator, Iterator
-from typing import TYPE_CHECKING, Any, Generic, Literal, TypeVar, overload
+from typing import TYPE_CHECKING, Any, Generic, Literal, TypeVar, cast, overload
 
 from pypika_tortoise import Table
+from typing_extensions import TypeVar as DefaultTypeVar
 
 from tortoise.exceptions import ConfigurationError, NoValuesFetched, OperationalError
 from tortoise.fields.base import CASCADE, SET_NULL, Field, OnDelete
@@ -15,6 +16,7 @@ if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.queryset import Q, QuerySet
 
 MODEL = TypeVar("MODEL", bound="Model")
+MODEL_DEFAULT = DefaultTypeVar("MODEL_DEFAULT", bound="Model", default="Model")
 
 
 class _NoneAwaitable:
@@ -315,7 +317,7 @@ class RelationalField(Field[MODEL]):
 class ForeignKeyFieldInstance(RelationalField[MODEL]):
     def __init__(
         self,
-        model_name: type[Model] | str,
+        model_name: type[MODEL] | str,
         related_name: str | None | Literal[False] = None,
         on_delete: OnDelete = CASCADE,
         **kwargs: Any,
@@ -358,7 +360,7 @@ class BackwardFKRelation(RelationalField[MODEL]):
 class OneToOneFieldInstance(ForeignKeyFieldInstance[MODEL]):
     def __init__(
         self,
-        model_name: type[Model] | str,
+        model_name: type[MODEL] | str,
         related_name: str | None | Literal[False] = None,
         on_delete: OnDelete = CASCADE,
         **kwargs: Any,
@@ -381,7 +383,7 @@ class ManyToManyFieldInstance(RelationalField[MODEL]):
 
     def __init__(
         self,
-        model_name: type[Model] | str,
+        model_name: type[MODEL] | str,
         through: str | None = None,
         forward_key: str | None = None,
         backward_key: str = "",
@@ -435,7 +437,7 @@ class ManyToManyFieldInstance(RelationalField[MODEL]):
 
 @overload
 def OneToOneField(
-    to: type[Model] | str,
+    to: type[MODEL],
     related_name: str | None | Literal[False] = None,
     on_delete: OnDelete = CASCADE,
     db_constraint: bool = True,
@@ -447,7 +449,7 @@ def OneToOneField(
 
 @overload
 def OneToOneField(
-    to: type[Model] | str,
+    to: type[MODEL],
     related_name: str | None | Literal[False] = None,
     on_delete: OnDelete = CASCADE,
     db_constraint: bool = True,
@@ -456,14 +458,42 @@ def OneToOneField(
 ) -> OneToOneRelation[MODEL]: ...
 
 
+@overload
 def OneToOneField(
-    to: type[Model] | str,
+    to: str,
+    related_name: str | None | Literal[False] = None,
+    on_delete: OnDelete = CASCADE,
+    db_constraint: bool = True,
+    *,
+    null: Literal[True],
+    **kwargs: Any,
+) -> OneToOneNullableRelation[MODEL_DEFAULT]: ...
+
+
+@overload
+def OneToOneField(
+    to: str,
+    related_name: str | None | Literal[False] = None,
+    on_delete: OnDelete = CASCADE,
+    db_constraint: bool = True,
+    null: Literal[False] = False,
+    **kwargs: Any,
+) -> OneToOneRelation[MODEL_DEFAULT]: ...
+
+
+def OneToOneField(
+    to: type[MODEL] | str,
     related_name: str | None | Literal[False] = None,
     on_delete: OnDelete = CASCADE,
     db_constraint: bool = True,
     null: bool = False,
     **kwargs: Any,
-) -> OneToOneRelation[MODEL] | OneToOneNullableRelation[MODEL]:
+) -> (
+    OneToOneRelation[MODEL]
+    | OneToOneNullableRelation[MODEL]
+    | OneToOneRelation[Model]
+    | OneToOneNullableRelation[Model]
+):
     """
     OneToOne relation field.
 
@@ -503,14 +533,18 @@ def OneToOneField(
         The default is True, and that’s almost certainly what you want; setting this to False can be very bad for data integrity.
     """
 
-    return OneToOneFieldInstance(
-        to, related_name, on_delete, db_constraint=db_constraint, null=null, **kwargs
+    field = cast(
+        OneToOneFieldInstance[MODEL],
+        OneToOneFieldInstance(
+            to, related_name, on_delete, db_constraint=db_constraint, null=null, **kwargs
+        ),
     )
+    return field
 
 
 @overload
 def ForeignKeyField(
-    to: type[Model] | str,
+    to: type[MODEL],
     related_name: str | None | Literal[False] = None,
     on_delete: OnDelete = CASCADE,
     db_constraint: bool = True,
@@ -522,7 +556,7 @@ def ForeignKeyField(
 
 @overload
 def ForeignKeyField(
-    to: type[Model] | str,
+    to: type[MODEL],
     related_name: str | None | Literal[False] = None,
     on_delete: OnDelete = CASCADE,
     db_constraint: bool = True,
@@ -531,14 +565,42 @@ def ForeignKeyField(
 ) -> ForeignKeyRelation[MODEL]: ...
 
 
+@overload
 def ForeignKeyField(
-    to: type[Model] | str,
+    to: str,
+    related_name: str | None | Literal[False] = None,
+    on_delete: OnDelete = CASCADE,
+    db_constraint: bool = True,
+    *,
+    null: Literal[True],
+    **kwargs: Any,
+) -> ForeignKeyNullableRelation[MODEL_DEFAULT]: ...
+
+
+@overload
+def ForeignKeyField(
+    to: str,
+    related_name: str | None | Literal[False] = None,
+    on_delete: OnDelete = CASCADE,
+    db_constraint: bool = True,
+    null: Literal[False] = False,
+    **kwargs: Any,
+) -> ForeignKeyRelation[MODEL_DEFAULT]: ...
+
+
+def ForeignKeyField(
+    to: type[MODEL] | str,
     related_name: str | None | Literal[False] = None,
     on_delete: OnDelete = CASCADE,
     db_constraint: bool = True,
     null: bool = False,
     **kwargs: Any,
-) -> ForeignKeyRelation[MODEL] | ForeignKeyNullableRelation[MODEL]:
+) -> (
+    ForeignKeyRelation[MODEL]
+    | ForeignKeyNullableRelation[MODEL]
+    | ForeignKeyRelation[Model]
+    | ForeignKeyNullableRelation[Model]
+):
     """
     ForeignKey relation field.
 
@@ -578,13 +640,18 @@ def ForeignKeyField(
         The default is True, and that’s almost certainly what you want; setting this to False can be very bad for data integrity.
     """
 
-    return ForeignKeyFieldInstance(
-        to, related_name, on_delete, db_constraint=db_constraint, null=null, **kwargs
+    field = cast(
+        ForeignKeyFieldInstance[MODEL],
+        ForeignKeyFieldInstance(
+            to, related_name, on_delete, db_constraint=db_constraint, null=null, **kwargs
+        ),
     )
+    return field
 
 
+@overload
 def ManyToManyField(
-    to: type[Model] | str,
+    to: type[MODEL],
     through: str | None = None,
     forward_key: str | None = None,
     backward_key: str = "",
@@ -593,7 +660,34 @@ def ManyToManyField(
     db_constraint: bool = True,
     unique: bool = True,
     **kwargs: Any,
-) -> ManyToManyRelation[Any]:
+) -> ManyToManyRelation[MODEL]: ...
+
+
+@overload
+def ManyToManyField(
+    to: str,
+    through: str | None = None,
+    forward_key: str | None = None,
+    backward_key: str = "",
+    related_name: str = "",
+    on_delete: OnDelete = CASCADE,
+    db_constraint: bool = True,
+    unique: bool = True,
+    **kwargs: Any,
+) -> ManyToManyRelation[MODEL_DEFAULT]: ...
+
+
+def ManyToManyField(
+    to: type[MODEL] | str,
+    through: str | None = None,
+    forward_key: str | None = None,
+    backward_key: str = "",
+    related_name: str = "",
+    on_delete: OnDelete = CASCADE,
+    db_constraint: bool = True,
+    unique: bool = True,
+    **kwargs: Any,
+) -> ManyToManyRelation[MODEL] | ManyToManyRelation[Model]:
     """
     ManyToMany relation field.
 
@@ -641,16 +735,19 @@ def ManyToManyField(
         Controls whether or not a unique index should be created in the database to speed up select queries.
         The default is True. If you want to allow repeat records, set this to False.
     """
-    return ManyToManyFieldInstance(  # type: ignore
-        to,
-        through,
-        forward_key,
-        backward_key,
-        related_name,
-        on_delete=on_delete,
-        db_constraint=db_constraint,
-        unique=unique,
-        **kwargs,
+    return cast(
+        ManyToManyRelation[MODEL] | ManyToManyRelation[Model],
+        ManyToManyFieldInstance(
+            to,
+            through,
+            forward_key,
+            backward_key,
+            related_name,
+            on_delete=on_delete,
+            db_constraint=db_constraint,
+            unique=unique,
+            **kwargs,
+        ),
     )
 
 
