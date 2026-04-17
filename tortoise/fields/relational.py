@@ -736,7 +736,7 @@ def ManyToManyField(
         The default is True. If you want to allow repeat records, set this to False.
     """
     return cast(
-        ManyToManyRelation[MODEL] | ManyToManyRelation[Model],
+        ManyToManyRelation[MODEL],
         ManyToManyFieldInstance(
             to,
             through,
