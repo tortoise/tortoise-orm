@@ -74,7 +74,13 @@ class MigrationRecorder:
         return [MigrationKey(app_label=row["app"], name=row["name"]) for row in rows]
 
     async def record_applied(self, app: str, name: str) -> None:
-        applied_at = datetime.now(timezone.utc).isoformat()
+        now = datetime.now(timezone.utc)
+        if self._dialect == "mysql":
+            # MySQL DATETIME does not support timezone or ISO 8601 with offset
+            applied_at = now.strftime("%Y-%m-%d %H:%M:%S.%f")
+        else:
+            # Preserve timezone-aware format for databases that support it (e.g. PostgreSQL)
+            applied_at = now.isoformat()
         query = (
             f"INSERT INTO {self._quote(self.table_name)} "  # nosec B608
             f"({self._quote('app')}, {self._quote('name')}, {self._quote('applied_at')}) "

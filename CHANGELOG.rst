@@ -8,6 +8,13 @@ Changelog
 1.1
 ===
 
+1.1.8
+-----
+
+Fixed
+^^^^^
+- Fix MySQL DATETIME incompatibility in migration recorder.
+
 1.1.7
 -----
 
