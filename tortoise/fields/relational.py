@@ -4,7 +4,7 @@ import warnings
 from collections.abc import AsyncGenerator, Generator, Iterator
 from typing import TYPE_CHECKING, Any, Generic, Literal, TypeVar, overload
 
-from pypika_tortoise import Table
+from pypika_tortoise.queries import Table
 
 from tortoise.exceptions import ConfigurationError, NoValuesFetched, OperationalError
 from tortoise.fields.base import CASCADE, SET_NULL, Field, OnDelete
