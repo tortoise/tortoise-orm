@@ -8,6 +8,13 @@ Changelog
 1.1
 ===
 
+1.1.8
+-----
+
+Fixed
+^^^^^
+- ``MigrationRecorder`` now uses parameterized queries; fixes MariaDB/MySQL rejecting ISO-8601 ``applied_at`` values. (#2132)
+
 1.1.7
 -----
 

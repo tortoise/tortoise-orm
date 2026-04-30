@@ -124,3 +124,20 @@ async def test_recorder_sqlite_placeholders() -> None:
     delete_query = connection.queries[0][0]
     assert '"app" = ?' in delete_query
     assert '"name" = ?' in delete_query
+
+
+@pytest.mark.asyncio
+async def test_recorder_oracle_placeholders() -> None:
+    connection = FakeConnection("oracle")
+    recorder = MigrationRecorder(connection)
+
+    await recorder.record_applied("app", "0001_initial")
+    await recorder.record_unapplied("app", "0001_initial")
+
+    insert_query = connection.inserts[0][0]
+    assert 'INSERT INTO "tortoise_migrations"' in insert_query
+    assert "VALUES (?, ?, ?)" in insert_query
+
+    delete_query = connection.queries[0][0]
+    assert '"app" = ?' in delete_query
+    assert '"name" = ?' in delete_query

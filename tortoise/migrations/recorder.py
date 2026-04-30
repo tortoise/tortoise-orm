@@ -6,15 +6,6 @@ from tortoise import fields
 from tortoise.migrations.graph import MigrationKey
 from tortoise.models import Model
 
-# Parameter placeholder per dialect.
-_DIALECT_PLACEHOLDER: dict[str, str] = {
-    "mysql": "%s",
-    "sqlite": "?",
-    "postgres": "${}",
-    "mssql": "?",
-    "oracle": "?",
-}
-
 
 class MigrationRecorder:
     def __init__(self, connection, *, table_name: str = "tortoise_migrations") -> None:
@@ -35,14 +26,12 @@ class MigrationRecorder:
         return f'"{name}"'
 
     def _placeholder(self, pos: int) -> str:
-        """Return a positional parameter placeholder suitable for the current dialect.
-
-        ``pos`` is 1-based (first parameter is 1).
-        """
-        template = _DIALECT_PLACEHOLDER.get(self._dialect, "?")
-        if "{}" in template:
-            return template.format(pos)
-        return template
+        if self._dialect == "mysql":
+            return "%s"
+        if self._dialect == "postgres":
+            return f"${pos}"
+        # sqlite, mssql, oracle: ?-style (native or via ODBC)
+        return "?"
 
     def _make_model(self, table_name: str) -> type[Model]:
         class MigrationRecord(Model):
@@ -108,7 +97,3 @@ class MigrationRecorder:
             f"AND {self._quote('name')} = {self._placeholder(2)}"
         )
         await self.connection.execute_query(query, [app, name])
-
-    @staticmethod
-    def _escape(value: str) -> str:
-        return value.replace("'", "''")
