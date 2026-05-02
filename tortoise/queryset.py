@@ -1067,7 +1067,7 @@ class QuerySet(AwaitableQuery[MODEL]):
             - MySQL: ``json``, ``traditional``, ``tree`` (default: ``json``)
             - SQLite, MSSQL, Oracle: Not supported (raises UnSupportedError)
         :param options: Additional options for EXPLAIN (database-specific).
-            - PostgreSQL: ``analyze``, ``buffers``, ``costs``, ``memory``, ``settings``, ``summary``, ``timing``, ``verbose``, ``wal``, ``generic_plan``, ``serialize``
+            - PostgreSQL: ``analyze``, ``buffers``, ``costs``, ``memory``, ``settings``, ``summary``, ``timing``, ``verbose``, ``wal``, ``generic_plan``, ``serialize`` (if not provided default is ``verbose``)
             - MySQL: ``analyze``
             - SQLite, MSSQL, Oracle: Not supported (raises UnSupportedError)
 

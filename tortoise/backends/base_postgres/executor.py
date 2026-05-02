@@ -131,12 +131,14 @@ class BasePostgresExecutor(BaseExecutor):
         if output_fmt.upper() not in self.EXPLAIN_SUPPORTED_FORMATS:
             raise UnSupportedError(f"Unsupported explain format: {output_fmt}")
 
+        options = options or {"verbose": True}
+
         required_options = set(option.upper() for option, required in options.items() if required)
         if unsupported_options := (required_options - self.EXPLAIN_SUPPORTED_OPTIONS):
             raise UnSupportedError(f"Unsupported options: {unsupported_options}")
 
         required_options.add("FORMAT " + output_fmt.upper())
-        postrges_options = ", ".join(required_options)
-        explain_statement = self.EXPLAIN_PREFIX.format(postrges_options)
+        postgres_options = ", ".join(required_options)
+        explain_statement = self.EXPLAIN_PREFIX.format(postgres_options)
         sql = " ".join((explain_statement, sql))
         return (await self.db.execute_query(sql))[1]

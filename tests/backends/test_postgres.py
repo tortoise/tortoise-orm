@@ -287,3 +287,13 @@ async def test_explain_option_false(db_simple):
     query_plan = _get_query_plan(result)
     assert "Plan" in query_plan
     assert "Actual Loops" not in query_plan["Plan"]
+
+
+@requireCapability(dialect="postgres")
+@pytest.mark.asyncio
+async def test_explain_default_verbose(db_simple):
+    await Tournament.create(name="Test")
+    result = await Tournament.all().explain()
+    query_plan = _get_query_plan(result)
+    assert "Plan" in query_plan
+    assert "Output" in query_plan["Plan"]
