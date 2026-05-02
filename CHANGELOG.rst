@@ -16,11 +16,16 @@ Added
 - ``QuerySet.union()`` — SQL UNION query support for combining results from multiple QuerySets, including support for union across different models, ``union(all=True)`` for duplicates, ``order_by()``, ``limit()``, and ``count()``.
 - Added comprehensive EXPLAIN support for MySQL and PostgreSQL.
 
+Fixed
+^^^^^
+- ``MigrationRecorder`` now uses parameterized queries; fixes MariaDB/MySQL rejecting ISO-8601 ``applied_at`` values. (#2132)
+
 1.1.7
 -----
 
 Added
 ^^^^^
+- ``QuerySet.union()`` — SQL UNION query support for combining results from multiple QuerySets, including support for union across different models, ``union(all=True)`` for duplicates, ``order_by()``, ``limit()``, and ``count()``.
 - Tests for model validators. (#2137)
 
 Fixed
