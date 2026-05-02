@@ -126,7 +126,6 @@ class MySQLExecutor(BaseExecutor):
         json_filter: mysql_json_filter,
         posix_regex: mysql_posix_regex,
     }
-    EXPLAIN_PREFIX = "EXPLAIN {}"
     EXPLAIN_SUPPORTED_FORMATS = ["JSON", "TRADITIONAL", "TREE"]
 
     async def execute_explain(
