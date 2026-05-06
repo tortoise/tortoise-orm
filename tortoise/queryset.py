@@ -1074,25 +1074,32 @@ class QuerySet(AwaitableQuery[MODEL]):
                 queryset._prefetch_map[first_level_field].add(forwarded_prefetch)
         return queryset
 
-    async def explain(self) -> Any:
+    async def explain(self, output_fmt: str | None = None, **options: bool) -> Any:
         """Fetch and return information about the query execution plan.
 
         This is done by executing an ``EXPLAIN`` query whose exact prefix depends
         on the database backend, as documented below.
 
-        - PostgreSQL: ``EXPLAIN (FORMAT JSON, VERBOSE) ...``
-        - SQLite: ``EXPLAIN QUERY PLAN ...``
-        - MySQL: ``EXPLAIN FORMAT=JSON ...``
+        :param output_fmt: The output format for the EXPLAIN result.
+            - PostgreSQL: ``text``, ``json``, ``xml``, ``yaml`` (default: ``json``)
+            - MySQL: ``json``, ``traditional``, ``tree`` (default: ``json``)
+            - SQLite, MSSQL, Oracle: Not supported (raises UnSupportedError)
+        :param options: Additional options for EXPLAIN (database-specific).
+            - PostgreSQL: ``analyze``, ``buffers``, ``costs``, ``memory``, ``settings``, ``summary``, ``timing``, ``verbose``, ``wal``, ``generic_plan``, ``serialize`` (if not provided default is ``verbose``)
+            - MySQL: ``analyze``
+            - SQLite, MSSQL, Oracle: Not supported (raises UnSupportedError)
 
         .. note::
             This is only meant to be used in an interactive environment for debugging
             and query optimization.
             **The output format may (and will) vary greatly depending on the database backend.**
+
+        :raises UnSupportedError: If the database does not support the requested format or options.
         """
         self._choose_db_if_not_chosen()
         self._make_query()
         return await self._db.executor_class(model=self.model, db=self._db).execute_explain(
-            self.query.get_sql()
+            self.query.get_sql(), output_fmt, **options
         )
 
     def using_db(self, _db: BaseDBAsyncClient | None) -> QuerySet[MODEL]:

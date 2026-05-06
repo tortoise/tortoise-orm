@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING, Any, cast
 from pypika_tortoise import JoinType, Parameter, Table
 from pypika_tortoise.queries import QueryBuilder
 
-from tortoise.exceptions import OperationalError
+from tortoise.exceptions import OperationalError, UnSupportedError
 from tortoise.expressions import Expression, ResolveContext
 from tortoise.fields.base import DatabaseDefault
 from tortoise.fields.relational import (
@@ -96,7 +96,15 @@ class BaseExecutor:
                 self.update_cache,
             ) = EXECUTOR_CACHE[key]
 
-    async def execute_explain(self, sql: str) -> Any:
+    async def execute_explain(
+        self, sql: str, output_fmt: str | None = None, **options: bool
+    ) -> Any:
+        if output_fmt:
+            raise UnSupportedError("This database does not support different explain formats")
+
+        if options:
+            raise UnSupportedError("This database does not support explain options")
+
         sql = " ".join((self.EXPLAIN_PREFIX, sql))
         return (await self.db.execute_query(sql))[1]
 

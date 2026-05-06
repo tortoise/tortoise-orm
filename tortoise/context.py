@@ -236,26 +236,6 @@ class TortoiseContext:
         """
         return self._routers
 
-    def _get_config_from_config_file(self, config_file: str) -> dict:
-        """Load configuration from a JSON or YAML file."""
-        import json
-        import os
-
-        _, extension = os.path.splitext(config_file)
-        if extension in (".yml", ".yaml"):
-            import yaml  # pylint: disable=C0415
-
-            with open(config_file) as f:
-                config = yaml.safe_load(f)
-        elif extension == ".json":
-            with open(config_file) as f:
-                config = json.load(f)
-        else:
-            raise ConfigurationError(
-                f"Unknown config extension {extension}, only .yml and .json are supported"
-            )
-        return config
-
     async def init(
         self,
         config: dict[str, Any] | TortoiseConfig | None = None,
@@ -303,26 +283,7 @@ class TortoiseContext:
         """
         from tortoise.apps import Apps
 
-        # Handle config_file: load it as config dict
-        if config_file is not None:
-            if config is not None:
-                raise ConfigurationError("Cannot specify both 'config' and 'config_file'")
-            config = self._get_config_from_config_file(config_file)
-
-        # Convert input to TortoiseConfig for typed access
-        typed_config: TortoiseConfig
-        if config is None:
-            if db_url is None or modules is None:
-                raise ConfigurationError(
-                    "Must provide either 'config', 'config_file', or both 'db_url' and 'modules'"
-                )
-            config_dict = generate_config(db_url, app_modules=modules)
-            typed_config = TortoiseConfig.from_dict(config_dict)
-        elif isinstance(config, TortoiseConfig):
-            typed_config = config
-        else:
-            typed_config = TortoiseConfig.from_dict(config)
-
+        typed_config = TortoiseConfig.resolve_args(config, config_file, db_url, modules)
         config_dict = typed_config.to_dict()
         connections_config = config_dict["connections"]
         apps_config = config_dict["apps"]
