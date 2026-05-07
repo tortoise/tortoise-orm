@@ -87,12 +87,11 @@ async def test_add_field_m2m_generates_table_sql() -> None:
             table = "tag"
             app = "models"
 
-
     class WidgetWithTags(Model):
         id = fields.IntField(pk=True)
         tags = fields.ManyToManyField(Tag, related_name="widgets")
 
-        class Meta: # type: ignore
+        class Meta:
             table = "widget"
             app = "models"
 

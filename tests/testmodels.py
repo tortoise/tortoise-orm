@@ -1152,9 +1152,7 @@ class Flavor(Model):
 class Drink(Model):
     id = fields.IntField(pk=True)
     name = fields.CharField(max_length=100)
-    flavors = fields.ManyToManyField(
-        Flavor, related_name="drinks", through="drink_flavor"
-    )
+    flavors = fields.ManyToManyField(Flavor, related_name="drinks", through="drink_flavor")
     toppings = fields.ManyToManyField(
         Flavor, related_name="topping_drinks", through="drink_topping"
     )
