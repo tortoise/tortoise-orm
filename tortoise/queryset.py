@@ -829,6 +829,10 @@ class QuerySet(AwaitableQuery[MODEL]):
         :param obj: The model instance to check for.
         :return: True if the QuerySet contains the instance, False otherwise.
         """
+
+        if not obj.pk:
+            raise ParamsError("The given object does not have a primary key.")
+
         return ContainsQuery(
             db=self._db,
             model=self.model,
@@ -1502,9 +1506,7 @@ class ContainsQuery(ExistsQuery):
 
     def _make_query(self) -> None:
         super()._make_query()
-        pk_attr = self.model._meta.pk_attr
-        source_pk_attr = self.model._meta.fields_map[pk_attr].source_field or pk_attr
-        pk = Field(source_pk_attr)
+        pk = Field(self.model._meta.db_pk_column)
         self.query = self.query.where(pk.eq(self._obj.pk))
 
 

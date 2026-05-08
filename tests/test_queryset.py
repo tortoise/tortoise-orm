@@ -70,6 +70,12 @@ async def test_contains(db, intfields_data):
 
 
 @pytest.mark.asyncio
+async def test_contains_when_no_pk(db, intfields_data):
+    with pytest.raises(ParamsError, match="The given object does not have a primary key."):
+        await IntFields.all().contains(IntFields(intnum=99))
+
+
+@pytest.mark.asyncio
 async def test_limit_count(db, intfields_data):
     assert await IntFields.all().limit(10).count() == 10
 
