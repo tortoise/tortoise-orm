@@ -1509,8 +1509,9 @@ class ContainsQuery(ExistsQuery):
 
     def _make_query(self) -> None:
         super()._make_query()
-        pk = Field(self.model._meta.db_pk_column)
-        self.query = self.query.where(pk.eq(self._obj.pk))
+        pk_field = Field(self.model._meta.db_pk_column)
+        pk_value = self.model._meta.pk.to_db_value(self._obj.pk, self._obj)
+        self.query = self.query.where(pk_field.eq(pk_value))
 
 
 class CountQuery(AwaitableQuery):
