@@ -830,6 +830,9 @@ class QuerySet(AwaitableQuery[MODEL]):
         :return: True if the QuerySet contains the instance, False otherwise.
         """
 
+        if not isinstance(obj, self.model):
+            raise ParamsError("The given object is not an instance of the queryset's model.")
+
         if not obj.pk:
             raise ParamsError("The given object does not have a primary key.")
 
