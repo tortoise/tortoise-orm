@@ -122,7 +122,7 @@ You could do it using ``.prefetch_related()``:
     # This will fetch tournament with their events and teams for each event
     tournament_list = await Tournament.all().prefetch_related('events__participants')
 
-    # Fetched result for m2m and backward fk relations are stored in list-like containe#r
+    # Fetched result for m2m and backward fk relations are stored in list-like container
     for tournament in tournament_list:
         print([e.name for e in tournament.events])
 
@@ -349,3 +349,23 @@ You can view full example here:  :ref:`example_prefetching`
 
 .. autoclass:: tortoise.query_utils.Prefetch
     :members:
+
+.. _union:
+
+Union
+=====
+
+Tortoise ORM supports SQL ``UNION`` queries to combine results from multiple QuerySets.
+
+Example usage:
+
+.. code-block:: python3
+
+    qs1 = Tournament.filter(name__in=["T1", "T2"]).only("id", "name")
+    qs2 = Reporter.filter(name__in=["R1", "R2"]).only("id", "name")
+
+    result = await qs1.union(qs2)
+
+.. autoclass:: tortoise.queryset.UnionQuery
+    :members:
+    :inherited-members:

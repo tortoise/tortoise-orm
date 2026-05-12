@@ -3,7 +3,7 @@ from __future__ import annotations
 import uuid
 from collections.abc import Callable, Sequence
 from functools import partial
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, Any, cast
 
 from pypika_tortoise.dialects import PostgreSQLQueryBuilder
 from pypika_tortoise.queries import QueryBuilder
@@ -28,6 +28,7 @@ from tortoise.contrib.postgres.regex import (
     postgres_posix_regex,
 )
 from tortoise.contrib.postgres.search import SearchCriterion
+from tortoise.exceptions import UnSupportedError
 from tortoise.filters import (
     array_contained_by,
     array_contains,
@@ -53,7 +54,23 @@ def postgres_search(
 
 
 class BasePostgresExecutor(BaseExecutor):
-    EXPLAIN_PREFIX = "EXPLAIN (FORMAT JSON, VERBOSE)"
+    EXPLAIN_PREFIX = "EXPLAIN ({})"
+    EXPLAIN_SUPPORTED_FORMATS = ["TEXT", "JSON", "XML", "YAML"]
+    EXPLAIN_SUPPORTED_OPTIONS = frozenset(
+        [
+            "ANALYZE",
+            "BUFFERS",
+            "COSTS",
+            "GENERIC_PLAN",
+            "MEMORY",
+            "SETTINGS",
+            "SERIALIZE",
+            "SUMMARY",
+            "TIMING",
+            "VERBOSE",
+            "WAL",
+        ]
+    )
     DB_NATIVE = BaseExecutor.DB_NATIVE | {bool, uuid.UUID}
     FILTER_FUNC_OVERRIDE = {
         array_contains: postgres_array_contains,
@@ -106,3 +123,22 @@ class BasePostgresExecutor(BaseExecutor):
                     model_field = db_projection[key]
                     field_object = self.model._meta.fields_map[model_field]
                     setattr(instance, model_field, field_object.to_python_value(val))
+
+    async def execute_explain(
+        self, sql: str, output_fmt: str | None = None, **options: bool
+    ) -> Any:
+        output_fmt = output_fmt or "JSON"
+        if output_fmt.upper() not in self.EXPLAIN_SUPPORTED_FORMATS:
+            raise UnSupportedError(f"Unsupported explain format: {output_fmt}")
+
+        options = options or {"verbose": True}
+
+        required_options = set(option.upper() for option, required in options.items() if required)
+        if unsupported_options := (required_options - self.EXPLAIN_SUPPORTED_OPTIONS):
+            raise UnSupportedError(f"Unsupported options: {unsupported_options}")
+
+        required_options.add("FORMAT " + output_fmt.upper())
+        postgres_options = ", ".join(required_options)
+        explain_statement = self.EXPLAIN_PREFIX.format(postgres_options)
+        sql = " ".join((explain_statement, sql))
+        return (await self.db.execute_query(sql))[1]

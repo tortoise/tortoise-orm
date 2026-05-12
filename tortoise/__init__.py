@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import importlib
-import json
 import logging
 import os
 import warnings
@@ -272,23 +271,6 @@ class Tortoise(metaclass=_TortoiseMeta):
         )
 
     @classmethod
-    def _get_config_from_config_file(cls, config_file: str) -> dict:
-        _, extension = os.path.splitext(config_file)
-        if extension in (".yml", ".yaml"):
-            import yaml  # pylint: disable=C0415
-
-            with open(config_file) as f:
-                config = yaml.safe_load(f)
-        elif extension == ".json":
-            with open(config_file) as f:
-                config = json.load(f)
-        else:
-            raise ConfigurationError(
-                f"Unknown config extension {extension}, only .yml and .json are supported"
-            )
-        return config
-
-    @classmethod
     def _build_initial_querysets(cls) -> None:
         if cls.apps:
             cls.apps._build_initial_querysets()
@@ -408,7 +390,7 @@ class Tortoise(metaclass=_TortoiseMeta):
         # Normalize config: handle config_file case
         normalized_config: dict[str, Any] | TortoiseConfig | None = config
         if config_file:
-            normalized_config = cls._get_config_from_config_file(config_file)
+            normalized_config = TortoiseConfig.from_config_file(config_file)
 
         # Debug logging
         if logger.isEnabledFor(logging.DEBUG) and normalized_config is not None:

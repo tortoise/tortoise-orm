@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING, Any, cast
 from pypika_tortoise import JoinType, Parameter, Table
 from pypika_tortoise.queries import QueryBuilder
 
-from tortoise.exceptions import OperationalError
+from tortoise.exceptions import OperationalError, UnSupportedError
 from tortoise.expressions import Expression, ResolveContext
 from tortoise.fields.base import DatabaseDefault
 from tortoise.fields.relational import (
@@ -96,7 +96,15 @@ class BaseExecutor:
                 self.update_cache,
             ) = EXECUTOR_CACHE[key]
 
-    async def execute_explain(self, sql: str) -> Any:
+    async def execute_explain(
+        self, sql: str, output_fmt: str | None = None, **options: bool
+    ) -> Any:
+        if output_fmt:
+            raise UnSupportedError("This database does not support different explain formats")
+
+        if options:
+            raise UnSupportedError("This database does not support explain options")
+
         sql = " ".join((self.EXPLAIN_PREFIX, sql))
         return (await self.db.execute_query(sql))[1]
 
@@ -152,6 +160,33 @@ class BaseExecutor:
                     object.__setattr__(instance, field, row[field])
             instance_list.append(instance)
         await self._execute_prefetch_queries(instance_list)
+        return instance_list
+
+    async def execute_union(
+        self, sql: str, app_field: str, model_field: str, models: set[type[Model]]
+    ) -> list:
+        _, raw_results = await self.db.execute_query(sql)
+        instance_list = []
+
+        for row_idx, row in enumerate(raw_results):
+            if row_idx != 0 and row_idx % CHUNK_SIZE == 0:
+                # Forcibly yield to the event loop to avoid blocking the event loop
+                # when selecting a large number of rows
+                await asyncio.sleep(0)
+
+            for model in models:
+                if (
+                    model._meta.app == row[app_field]
+                    and model._meta._model.__name__ == row[model_field]
+                ):
+                    row = {
+                        field: row[field]
+                        for field in row.keys()
+                        if field not in [model_field, app_field]
+                    }
+                    instance_list.append(model._init_from_db(**row))
+                    break
+
         return instance_list
 
     def _prepare_insert_columns(
