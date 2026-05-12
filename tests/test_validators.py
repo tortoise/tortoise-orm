@@ -137,6 +137,11 @@ async def test_update(db):
         "sub.example.com",
         "example.co.uk",
         "münchen.de",
+        "sub1.sub2.example.org",
+        "UPPER-CASE.is.ok.net",
+        "tortoise.github.io",
+        "example.space",
+        "❤️.website",
     ],
 )
 def test_domain_name_validator_valid(value):
@@ -149,6 +154,8 @@ def test_domain_name_validator_valid(value):
         "",
         "---.com",
         "example-.com",
+        "under_line.com",
+        "💻.tech",
     ],
 )
 def test_domain_name_validator_invalid(value):

@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 import abc
-import functools
 import ipaddress
 import re
 from decimal import Decimal
+from functools import cached_property
 from typing import Any
 from urllib.parse import urlsplit
 
@@ -163,11 +163,11 @@ class DomainNameValidator(Validator):
     )
     MAX_DOMAIN_LENGTH = 255
 
-    @functools.cached_property
+    @cached_property
     def _accept_idna_regex(self) -> re.Pattern[str]:
         return re.compile(r"^" + HOSTNAME_REGEX + DOMAIN_REGEX + TLD_REGEX + r"$", re.IGNORECASE)
 
-    @functools.cached_property
+    @cached_property
     def _do_not_accept_idna_regex(self) -> re.Pattern[str]:
         return re.compile(
             r"^"
@@ -243,7 +243,7 @@ class URLValidator(Validator):
     # that's used to indicate absolute names in DNS.
     MAX_HOSTNAME_LENGTH = 253
 
-    @functools.cached_property
+    @cached_property
     def _url_regex(self) -> re.Pattern[str]:
         return re.compile(self.URL_REGEX, re.IGNORECASE)
 
@@ -318,18 +318,18 @@ class EmailValidator(Validator):
         r"\[([A-F0-9:.]+)\]\Z"
     )
 
-    @functools.cached_property
+    @cached_property
     def _user_regex(self) -> re.Pattern[str]:
         return re.compile(self.USER_REGEX, re.IGNORECASE)
 
-    @functools.cached_property
+    @cached_property
     def _domain_regex(self) -> re.Pattern[str]:
         print("evaluating domain regex!!!")
         return re.compile(
             r"^" + HOSTNAME_REGEX + DOMAIN_REGEX + TLD_NO_FQDN_REGEX + r"\Z", re.IGNORECASE
         )
 
-    @functools.cached_property
+    @cached_property
     def _literal_regex(self) -> re.Pattern[str]:
         return re.compile(self.LITERAL_REGEX, re.IGNORECASE)
 
