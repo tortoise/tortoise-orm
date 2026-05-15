@@ -17,6 +17,7 @@ Added
 - ``QuerySet.contains()`` method to check if an object exists in a queryset.
 - Added comprehensive EXPLAIN support for MySQL and PostgreSQL.
 - Built-in ``DomainNameValidator``, ``URLValidator``, and ``EmailValidator`` classes for common validation patterns. (#2162)
+- `AwaitableQuery.as_query()` was added back (#2194)
 
 Fixed
 ^^^^^
