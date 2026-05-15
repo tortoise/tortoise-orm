@@ -316,6 +316,12 @@ class AwaitableQuery(_ChooseDBMixin[MODEL], Generic[MODEL]):
             sql, _ = self.query.get_parameterized_sql()
         return sql
 
+    def as_query(self) -> QueryBuilder:
+        """Return the internal pypika query object."""
+        self._choose_db_if_not_chosen()
+        self._make_query()
+        return self.query
+
     def _make_query(self) -> None:
         raise NotImplementedError()  # pragma: nocoverage
 

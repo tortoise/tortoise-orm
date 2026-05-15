@@ -1140,3 +1140,42 @@ async def test_union_with_annotate_raises(db):
 
     with pytest.raises(ParamsError, match="Union queries do not support annotations"):
         await qs1.union(qs2)
+
+
+@pytest.mark.asyncio
+async def test_as_query_queryset(db):
+    sql = IntFields.all().as_query().get_sql()
+    assert sql.startswith("SELECT")
+
+
+@pytest.mark.asyncio
+async def test_as_query_update(db):
+    sql = IntFields.filter(intnum=10).update(intnum=99).as_query().get_sql()
+    assert sql.startswith("UPDATE")
+
+
+@pytest.mark.asyncio
+async def test_as_query_delete(db):
+    sql = IntFields.filter(intnum=10).delete().as_query().get_sql()
+    assert sql.startswith("DELETE")
+
+
+@pytest.mark.asyncio
+async def test_as_query_exists(db):
+    sql = IntFields.filter(intnum=10).exists().as_query().get_sql()
+    assert "SELECT 1" in sql
+
+
+@pytest.mark.asyncio
+async def test_as_query_count(db):
+    sql = IntFields.filter(intnum=10).count().as_query().get_sql()
+    assert "COUNT(*)" in sql
+
+
+@pytest.mark.asyncio
+async def test_as_query_union_count(db):
+    qs1 = IntFields.filter(intnum__gte=50).only("id", "intnum")
+    qs2 = IntFields.filter(intnum__lt=50).only("id", "intnum")
+    sql = qs1.union(qs2).count().as_query().get_sql()
+    assert "UNION" in sql
+    assert "COUNT(*)" in sql
