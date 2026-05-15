@@ -292,6 +292,37 @@ def test_writer_excludes_fk_source_field(tmp_path: Path, monkeypatch) -> None:
     _write_migration(tmp_path, monkeypatch, "0005_fk_source", operations, expected)
 
 
+def test_writer_includes_pk_with_source_field(tmp_path: Path, monkeypatch) -> None:
+    operations = [
+        CreateModel(
+            name="Widget",
+            fields=[
+                ("id", fields.IntField(primary_key=True, source_field="id")),
+                ("name", fields.CharField(max_length=100)),
+            ],
+        )
+    ]
+    expected = textwrap.dedent(
+        """\
+        from tortoise import migrations
+        from tortoise.migrations import operations as ops
+        from tortoise import fields
+
+        class Migration(migrations.Migration):
+            operations = [
+                ops.CreateModel(
+                    name='Widget',
+                    fields=[
+                        ('id', fields.IntField(source_field='id', generated=True, primary_key=True, unique=True, db_index=True)),
+                        ('name', fields.CharField(max_length=100)),
+                    ],
+                ),
+            ]
+        """
+    )
+    _write_migration(tmp_path, monkeypatch, "0011_pk_source", operations, expected)
+
+
 def test_writer_serializes_on_delete_enum(tmp_path: Path, monkeypatch) -> None:
     operations = [
         CreateModel(

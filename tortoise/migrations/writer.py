@@ -484,7 +484,7 @@ class MigrationWriter:
         for name, field in operation.fields:
             if field is None:
                 continue
-            if name in source_fields:
+            if name in source_fields and not getattr(field, "pk", False):
                 continue
             field_expr = self._render_field(field, imports)
             field_lines.append(f"{indent}        ({name!r}, {field_expr}),")

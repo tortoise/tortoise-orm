@@ -551,7 +551,7 @@ class Field(Generic[VALUE], metaclass=_FieldMeta):
         kwargs: dict[str, Any] = {}
         if self.source_field:
             kwargs["source_field"] = self.source_field
-        if self.generated:
+        if self.generated or self.pk:
             kwargs["generated"] = self.generated
         if self.pk:
             kwargs["primary_key"] = self.pk

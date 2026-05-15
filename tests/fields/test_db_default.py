@@ -213,6 +213,29 @@ def test_deconstruct_with_both_default_and_db_default():
     assert kwargs["db_default"] == 2
 
 
+def test_deconstruct_pk_generated_false():
+    f = fields.IntField(primary_key=True, generated=False)
+    f.model_field_name = "test_field"
+    path, args, kwargs = f.deconstruct()
+    assert kwargs.get("generated") is False
+    assert kwargs.get("primary_key") is True
+
+
+def test_deconstruct_pk_generated_default():
+    f = fields.IntField(primary_key=True)
+    f.model_field_name = "test_field"
+    path, args, kwargs = f.deconstruct()
+    assert kwargs.get("generated") is True
+    assert kwargs.get("primary_key") is True
+
+
+def test_deconstruct_non_pk_generated_false():
+    f = fields.IntField(generated=False)
+    f.model_field_name = "test_field"
+    path, args, kwargs = f.deconstruct()
+    assert "generated" not in kwargs
+
+
 # ============================================================================
 # Sentinel behavior
 # ============================================================================
