@@ -21,6 +21,7 @@ Added
 Fixed
 ^^^^^
 - ``MigrationRecorder`` now uses parameterized queries; fixes MariaDB/MySQL rejecting ISO-8601 ``applied_at`` values. (#2132)
+- ``db_default`` on ``ForeignKeyField``/``OneToOneField`` now propagates to the underlying ``<fk>_id`` column, so ``CREATE TABLE`` emits the ``DEFAULT`` clause for FK columns. (#2199)
 
 1.1.7
 -----
