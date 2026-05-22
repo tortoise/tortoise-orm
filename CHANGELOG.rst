@@ -21,6 +21,7 @@ Added
 Fixed
 ^^^^^
 - ``MigrationRecorder`` now uses parameterized queries; fixes MariaDB/MySQL rejecting ISO-8601 ``applied_at`` values. (#2132)
+- Fix migration ``deconstruct()`` and ``CreateModel`` serialization for PK fields with ``generated=False`` or ``source_field``. (#2195)
 
 1.1.7
 -----
