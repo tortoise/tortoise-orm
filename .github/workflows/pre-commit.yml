@@ -56,7 +56,7 @@ jobs:
             echo "No changes to commit"
           else
             git commit -m "refactor: auto format"
-            git push
+            git push origin "HEAD:${{ github.head_ref }}"
           fi
       - uses: pre-commit-ci/lite-action@5d6cc0eb514c891a40562a58a8e71576c5c7fb43 # v1.1.0
         if: env.HAS_SECRETS == 'false'
