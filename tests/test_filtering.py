@@ -14,9 +14,23 @@ from tests.testmodels import (
     Tournament,
 )
 from tortoise.contrib import test
-from tortoise.contrib.test.condition import In, NotEQ
+from tortoise.contrib.test import requireCapability
+from tortoise.contrib.test.condition import In, NotEQ, NotIn
 from tortoise.expressions import Case, F, Q, When
-from tortoise.functions import Coalesce, Count, Length, Lower, Max, Trim, Upper
+from tortoise.functions import (
+    Coalesce,
+    Count,
+    Length,
+    Lower,
+    LPad,
+    LTrim,
+    Max,
+    Replace,
+    RPad,
+    RTrim,
+    Trim,
+    Upper,
+)
 
 
 @pytest.mark.asyncio
@@ -377,6 +391,88 @@ async def test_filter_by_aggregation_field_trim(db):
     tournaments = await Tournament.annotate(trimmed_name=Trim("name")).filter(trimmed_name="1")
     assert len(tournaments) == 1
     assert {(t.name, t.trimmed_name) for t in tournaments} == {("  1 ", "1")}
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ["name", "trim_chars", "trimmed_name"],
+    [
+        ("xxxhellox", "x", "hello"),
+        ("ababhelloab", "ab", "hello"),
+    ],
+)
+async def test_filter_by_trim_with_chars(db, name, trim_chars, trimmed_name):
+    await Tournament.create(name=name)
+    tournaments = await Tournament.annotate(trimmed_name=Trim("name", trim_chars)).filter(
+        trimmed_name=trimmed_name
+    )
+
+    assert len(tournaments) == 1
+    assert {(t.name, t.trimmed_name) for t in tournaments} == {(name, trimmed_name)}
+
+
+@pytest.mark.asyncio
+async def test_filter_by_ltrim(db):
+    await Tournament.create(name="  hello ")
+    tournaments = await Tournament.annotate(trimmed_name=LTrim("name")).filter(
+        trimmed_name="hello "
+    )
+
+    assert len(tournaments) == 1
+    assert {(t.name, t.trimmed_name) for t in tournaments} == {("  hello ", "hello ")}
+
+
+@pytest.mark.asyncio
+async def test_filter_by_rtrim(db):
+    await Tournament.create(name="  hello ")
+    tournaments = await Tournament.annotate(trimmed_name=RTrim("name")).filter(
+        trimmed_name="  hello"
+    )
+
+    assert len(tournaments) == 1
+    assert {(t.name, t.trimmed_name) for t in tournaments} == {("  hello ", "  hello")}
+
+
+@requireCapability(dialect=NotIn("sqlite"))
+@pytest.mark.asyncio
+async def test_lpad(db):
+    await Tournament.create(name="hello")
+    await Tournament.create(name="my world")
+    tournaments = await Tournament.annotate(pad_name=LPad("name", 12, "x"))
+    result = set(tournament.pad_name for tournament in tournaments)
+    assert result == {"xxxxmy world", "xxxxxxxhello"}
+
+
+@requireCapability(dialect=NotIn("sqlite"))
+@pytest.mark.asyncio
+async def test_rpad(db):
+    await Tournament.create(name="hello")
+    await Tournament.create(name="my world")
+    tournaments = await Tournament.annotate(pad_name=RPad("name", 12, "x"))
+    result = set(tournament.pad_name for tournament in tournaments)
+    assert result == {"my worldxxxx", "helloxxxxxxx"}
+
+
+@pytest.mark.asyncio
+async def test_replace(db):
+    await Tournament.create(name="Tournament A")
+    await Tournament.create(name="Tournament B")
+    tournaments = await Tournament.annotate(replaced_name=Replace("name", "Tournament", "Contest"))
+    result = {t.replaced_name for t in tournaments}
+    assert result == {"Contest A", "Contest B"}
+
+
+@pytest.mark.asyncio
+async def test_filter_by_replace(db):
+    await Tournament.create(name="1st Tournament")
+    await Tournament.create(name="2nd Tournament")
+    await Tournament.create(name="3rd Place")
+
+    tournaments = await Tournament.annotate(
+        replaced_name=Replace("name", "Tournament", "Contest")
+    ).filter(replaced_name="1st Contest")
+    assert len(tournaments) == 1
+    assert {(t.name, t.replaced_name) for t in tournaments} == {("1st Tournament", "1st Contest")}
 
 
 @test.requireCapability(dialect=NotEQ("mssql"))
