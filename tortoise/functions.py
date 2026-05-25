@@ -50,44 +50,6 @@ class RTrim(Function):
     database_func = functions.RTrim
 
 
-class LPad(Function):
-    """
-    Pads the left side of a string with a specified character to reach a certain length.
-
-    :samp:`LPad("{FIELD_NAME}", length, fill_text)`
-    """
-
-    def __init__(
-        self,
-        field: str | F | CombinedExpression | Function | Term,
-        length: int,
-        fill_text: str = " ",
-        *default_values: Any,
-    ) -> None:
-        super().__init__(field, length, fill_text, *default_values)
-
-    database_func = functions.LPad
-
-
-class RPad(Function):
-    """
-    Pads the right side of a string with a specified character to reach a certain length.
-
-    :samp:`RPad("{FIELD_NAME}", length, fill_text)`
-    """
-
-    def __init__(
-        self,
-        field: str | F | CombinedExpression | Function | Term,
-        length: int,
-        fill_text: str = " ",
-        *default_values: Any,
-    ) -> None:
-        super().__init__(field, length, fill_text, *default_values)
-
-    database_func = functions.RPad
-
-
 class Replace(Function):
     """
     Replaces all occurrences of a search string with a replacement string.

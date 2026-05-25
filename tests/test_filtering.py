@@ -14,19 +14,16 @@ from tests.testmodels import (
     Tournament,
 )
 from tortoise.contrib import test
-from tortoise.contrib.test import requireCapability
-from tortoise.contrib.test.condition import In, NotEQ, NotIn
+from tortoise.contrib.test.condition import In, NotEQ
 from tortoise.expressions import Case, F, Q, When
 from tortoise.functions import (
     Coalesce,
     Count,
     Length,
     Lower,
-    LPad,
     LTrim,
     Max,
     Replace,
-    RPad,
     RTrim,
     Trim,
     Upper,
@@ -431,26 +428,6 @@ async def test_filter_by_rtrim(db):
 
     assert len(tournaments) == 1
     assert {(t.name, t.trimmed_name) for t in tournaments} == {("  hello ", "  hello")}
-
-
-@requireCapability(dialect=NotIn("sqlite"))
-@pytest.mark.asyncio
-async def test_lpad(db):
-    await Tournament.create(name="hello")
-    await Tournament.create(name="my world")
-    tournaments = await Tournament.annotate(pad_name=LPad("name", 12, "x"))
-    result = set(tournament.pad_name for tournament in tournaments)
-    assert result == {"xxxxmy world", "xxxxxxxhello"}
-
-
-@requireCapability(dialect=NotIn("sqlite"))
-@pytest.mark.asyncio
-async def test_rpad(db):
-    await Tournament.create(name="hello")
-    await Tournament.create(name="my world")
-    tournaments = await Tournament.annotate(pad_name=RPad("name", 12, "x"))
-    result = set(tournament.pad_name for tournament in tournaments)
-    assert result == {"my worldxxxx", "helloxxxxxxx"}
 
 
 @pytest.mark.asyncio
