@@ -264,7 +264,7 @@ async def test_create_model_includes_db_default_on_fk() -> None:
 
     class App(Model):
         id = fields.IntField(pk=True)
-        dc = fields.ForeignKeyField("models.Dc", db_default=2)
+        dc: fields.ForeignKeyRelation[Dc] = fields.ForeignKeyField("models.Dc", db_default=2)
 
         class Meta:
             table = "app"
