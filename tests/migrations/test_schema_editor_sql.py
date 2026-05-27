@@ -256,14 +256,14 @@ async def test_create_model_includes_db_default_on_fk() -> None:
     """CreateModel should include DEFAULT clause for FK columns with db_default."""
 
     class Dc(Model):
-        id = fields.IntField(pk=True)
+        id = fields.IntField(primary_key=True)
 
         class Meta:
             table = "dc"
             app = "models"
 
     class App(Model):
-        id = fields.IntField(pk=True)
+        id = fields.IntField(primary_key=True)
         dc: fields.ForeignKeyRelation[Dc] = fields.ForeignKeyField("models.Dc", db_default=2)
 
         class Meta:
