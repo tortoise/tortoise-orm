@@ -7,11 +7,11 @@ from collections.abc import Callable, Iterable, Sequence
 from copy import copy
 from typing import TYPE_CHECKING, Any, cast
 
-from pypika_tortoise import Parameter
-from pypika_tortoise.queries import QueryBuilder
+from pypika_tortoise.queries import QueryBuilder, Table
+from pypika_tortoise.terms import Parameter
 
 from tortoise.exceptions import OperationalError, UnSupportedError
-from tortoise.expressions import Expression, RawSQL, ResolveContext
+from tortoise.expressions import Expression, ResolveContext
 from tortoise.fields.base import DatabaseDefault
 from tortoise.fields.relational import (
     BackwardFKRelation,
@@ -605,24 +605,44 @@ class BaseExecutor:
 
         field_object: ManyToManyFieldInstance = self.model._meta.fields_map[field]  # type: ignore
 
-        through = field_object.through
-        if field_object.through_schema:
-            through = f"{field_object.through_schema}.{through}"
+        model_pk = self.model._meta.pk
+        instance_pks = [model_pk.to_db_value(instance.pk, instance) for instance in instance_list]
 
         related_objects = await queryset.filter(
-            **{f"{field_object.related_name}__in": instance_list}
-        ).annotate(_backward_relation_key=RawSQL(f'"{through}"."{field_object.backward_key}"'))
+            **{f"{field_object.related_name}__in": instance_pks}
+        )
 
-        await self.__class__(
-            model=queryset.model, db=self.db, prefetch_map=queryset._prefetch_map
-        )._execute_prefetch_queries(related_objects)
-
-        model_pk = self.model._meta.pk
         relation_map: dict = {}
-        for obj in related_objects:
-            bk = model_pk.to_python_value(obj._backward_relation_key)
-            relation_map.setdefault(bk, []).append(obj)
-            del obj._backward_relation_key
+        if related_objects:
+            related_pk_map: dict = {obj.pk: obj for obj in related_objects}
+            related_model_pk = queryset.model._meta.pk
+            related_pks = [related_model_pk.to_db_value(pk, None) for pk in related_pk_map]
+            through_table = Table(field_object.through, schema=field_object.through_schema)
+            backward_field = through_table[field_object.backward_key]
+            forward_field = through_table[field_object.forward_key]
+
+            _, (_, through_rows) = await asyncio.gather(
+                self.__class__(
+                    model=queryset.model, db=self.db, prefetch_map=queryset._prefetch_map
+                )._execute_prefetch_queries(related_objects),
+                self.db.execute_query(
+                    *(
+                        self.db.query_class.from_(through_table)
+                        .select(backward_field, forward_field)
+                        .where(backward_field.isin(instance_pks))
+                        .where(forward_field.isin(related_pks))
+                        .get_parameterized_sql()
+                    )
+                ),
+            )
+
+            for row in through_rows:
+                backward_key_value = model_pk.to_python_value(row[field_object.backward_key])
+                related_object = related_pk_map.get(
+                    related_model_pk.to_python_value(row[field_object.forward_key])
+                )
+                if related_object is not None:
+                    relation_map.setdefault(backward_key_value, []).append(related_object)
 
         for instance in instance_list:
             getattr(instance, field)._set_result_for_query(
