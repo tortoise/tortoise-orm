@@ -616,7 +616,7 @@ class BaseExecutor:
 
         relation_map: dict = {}
         related_objects_by_pks = {
-            obj.pk: obj
+            related_model_pk.to_db_value(obj.pk, obj): obj
             for obj in await queryset.filter(**{f"{field_object.related_name}__in": instance_pks})
         }
         if related_objects_by_pks:
