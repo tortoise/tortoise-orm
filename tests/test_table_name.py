@@ -78,6 +78,7 @@ async def test_custom_table_and_db_table_name_match(table_name_db):
 
 def test_conflicting_table_and_db_table_names():
     with pytest.raises(ConfigurationError, match="Meta.table and Meta.db_table"):
+
         class ConflictingTableName(Model):
             id = fields.IntField(pk=True)
 
