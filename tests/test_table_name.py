@@ -12,13 +12,13 @@ def table_name_generator(model_cls: type[Model]):
 
 
 class Tournament(Model):
-    id = fields.IntField(pk=True)
+    id = fields.IntField(primary_key=True)
     name = fields.TextField()
     created_at = fields.DatetimeField(auto_now_add=True)
 
 
 class CustomTable(Model):
-    id = fields.IntField(pk=True)
+    id = fields.IntField(primary_key=True)
     name = fields.TextField()
 
     class Meta:
@@ -26,7 +26,7 @@ class CustomTable(Model):
 
 
 class CustomDBTable(Model):
-    id = fields.IntField(pk=True)
+    id = fields.IntField(primary_key=True)
     name = fields.TextField()
 
     class Meta:
@@ -34,7 +34,7 @@ class CustomDBTable(Model):
 
 
 class CustomTableAndDBTable(Model):
-    id = fields.IntField(pk=True)
+    id = fields.IntField(primary_key=True)
     name = fields.TextField()
 
     class Meta:
@@ -80,7 +80,7 @@ def test_conflicting_table_and_db_table_names():
     with pytest.raises(ConfigurationError, match="Meta.table and Meta.db_table"):
 
         class ConflictingTableName(Model):
-            id = fields.IntField(pk=True)
+            id = fields.IntField(primary_key=True)
 
             class Meta:
                 table = "first_table"
