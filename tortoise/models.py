@@ -85,6 +85,18 @@ def prepare_default_ordering(meta: Model.Meta) -> tuple[tuple[str, Order], ...]:
     return parsed_ordering
 
 
+def resolve_db_table(meta: Model.Meta) -> str:
+    table = getattr(meta, "table", "")
+    db_table = getattr(meta, "db_table", "")
+    if not db_table:
+        return table
+    if table and table != db_table:
+        raise ConfigurationError(
+            "Meta.table and Meta.db_table must have the same value, or set only one."
+        )
+    return db_table
+
+
 class FkSetterKwargs(TypedDict):
     _key: str
     relation_field: str
@@ -222,7 +234,7 @@ class MetaInfo:
     def __init__(self, meta: Model.Meta) -> None:
         self.abstract: bool = getattr(meta, "abstract", False)
         self.manager: Manager = getattr(meta, "manager", Manager())
-        self.db_table: str = getattr(meta, "table", "")
+        self.db_table: str = resolve_db_table(meta)
         self.schema: str | None = getattr(meta, "schema", None)
         self.app: str | None = getattr(meta, "app", None)
         self.unique_together: tuple[tuple[str, ...], ...] = get_together(meta, "unique_together")
