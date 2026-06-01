@@ -601,23 +601,29 @@ class BaseExecutor:
         field: str,
         related_query: tuple[str | None, QuerySet],
     ) -> Iterable[Model]:
-        to_attr, queryset = related_query
+        to_attr, related_queryset = related_query
 
         field_object: ManyToManyFieldInstance = self.model._meta.fields_map[field]  # type: ignore
 
-        model_pk = self.model._meta.pk
-        instance_pks = [model_pk.to_db_value(instance.pk, instance) for instance in instance_list]
+        pk_field = self.model._meta.pk
+        instance_id_set: set = {
+            pk_field.to_db_value(instance.pk, instance) for instance in instance_list
+        }
 
-        related_model_pk = queryset.model._meta.pk
-        model_field_name_pk = related_model_pk.model_field_name
-        fields_for_select = queryset._fields_for_select
-        if fields_for_select and model_field_name_pk not in fields_for_select:
-            queryset = queryset.only(*queryset._fields_for_select, model_field_name_pk)
+        related_pk_field = related_queryset.model._meta.pk
+        related_pk_field_name = related_pk_field.model_field_name
+        fields_for_select = related_queryset._fields_for_select
+        if fields_for_select and related_pk_field_name not in fields_for_select:
+            related_queryset = related_queryset.only(
+                *related_queryset._fields_for_select, related_pk_field_name
+            )
 
         relation_map: dict = {}
         related_objects_by_pks = {
-            related_model_pk.to_db_value(obj.pk, obj): obj
-            for obj in await queryset.filter(**{f"{field_object.related_name}__in": instance_pks})
+            related_pk_field.to_db_value(obj.pk, obj): obj
+            for obj in await related_queryset.filter(
+                **{f"{field_object.related_name}__in": instance_id_set}
+            )
         }
         if related_objects_by_pks:
             through_table = Table(field_object.through, schema=field_object.through_schema)
@@ -628,7 +634,7 @@ class BaseExecutor:
                 *(
                     self.db.query_class.from_(through_table)
                     .select(backward_field, forward_field)
-                    .where(backward_field.isin(instance_pks))
+                    .where(backward_field.isin(instance_id_set))
                     .where(forward_field.isin(tuple(related_objects_by_pks)))
                     .get_parameterized_sql()
                 )
@@ -636,8 +642,8 @@ class BaseExecutor:
 
             reverse_map: dict = {}
             for row in through_rows:
-                forward_key_value = related_model_pk.to_python_value(row[field_object.forward_key])
-                backward_key_value = model_pk.to_python_value(row[field_object.backward_key])
+                forward_key_value = related_pk_field.to_python_value(row[field_object.forward_key])
+                backward_key_value = pk_field.to_python_value(row[field_object.backward_key])
                 reverse_map.setdefault(forward_key_value, []).append(backward_key_value)
 
             for related_object in related_objects_by_pks.values():
@@ -645,9 +651,8 @@ class BaseExecutor:
                     relation_map.setdefault(instance_pk, []).append(related_object)
 
         for instance in instance_list:
-            getattr(instance, field)._set_result_for_query(
-                relation_map.get(instance.pk, []), to_attr
-            )
+            relation_container = getattr(instance, field)
+            relation_container._set_result_for_query(relation_map.get(instance.pk, []), to_attr)
         return instance_list
 
     async def _prefetch_direct_relation(
