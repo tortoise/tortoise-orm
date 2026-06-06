@@ -129,6 +129,17 @@ def test_q_equality():
     assert complex_q1 == complex_q2
 
 
+def test_q_inequality():
+    assert Q(moo="cow") != Q(moo="bull")
+    assert Q(moo="cow") != Q(moo="cow", join_type=Q.OR)
+    assert Q(moo="cow") != "not a q"
+
+
+def test_q_unhashable():
+    with pytest.raises(TypeError, match="unhashable type"):
+        hash(Q(moo="cow"))
+
+
 # =============================================================================
 # Tests for Q object resolution (requires database for model resolution)
 # =============================================================================
