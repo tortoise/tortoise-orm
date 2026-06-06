@@ -50,7 +50,6 @@ __all__ = (
     "TortoiseContext",
     "tortoise_test_context",
     "requireCapability",
-    "skipCapability",
     "truncate_all_models",
     "init_memory_sqlite",
     "SkipTest",
@@ -229,69 +228,6 @@ def requireCapability(
                 test_item,
                 name,
                 requireCapability(connection_name=connection_name, **conditions)(func),
-            )
-
-        return test_item
-
-    return decorator
-
-
-def skipCapability(
-    connection_name: str = "models", **conditions: typing.Any
-) -> Callable[[_FT], _FT]:
-    """
-    Skip a test if the specified capabilities are matched.
-
-    This is the inverse of :func:`requireCapability`.
-
-    Usage:
-
-    .. code-block:: python3
-
-        @skipCapability(dialect='postgres')
-        @pytest.mark.asyncio
-        async def test_skip_on_postgres(db):
-            ...
-
-    :param connection_name: name of the connection to retrieve capabilities from.
-    :param conditions: capability tests — if all match, the test is skipped.
-    """
-
-    def decorator(test_item: _FT) -> _FT:
-        if not isinstance(test_item, type):
-
-            def check_capabilities() -> None:
-                db = get_connection(connection_name)
-                if all(getattr(db.capabilities, key) == val for key, val in conditions.items()):
-                    raise SkipTest(f"Skipped because capabilities match: {conditions}")
-
-            if inspect.iscoroutinefunction(test_item):
-
-                @wraps(test_item)
-                async def skip_wrapper(*args: typing.Any, **kwargs: typing.Any) -> typing.Any:
-                    check_capabilities()
-                    return await test_item(*args, **kwargs)
-
-            else:
-
-                @wraps(test_item)
-                def skip_wrapper(*args: typing.Any, **kwargs: typing.Any) -> typing.Any:
-                    check_capabilities()
-                    return test_item(*args, **kwargs)
-
-            return cast(_FT, skip_wrapper)
-
-        # Assume a class is decorated
-        funcs = {
-            var: f
-            for var in dir(test_item)
-            if var.startswith("test_") and callable(f := getattr(test_item, var))
-        }
-        for name, func in funcs.items():
-            setattr(
-                test_item,
-                name,
-                skipCapability(connection_name=connection_name, **conditions)(func),
             )
 
         return test_item

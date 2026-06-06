@@ -2,6 +2,7 @@ import pytest
 
 from tests.testmodels import Tournament
 from tortoise.contrib import test
+from tortoise.contrib.test.condition import NotIn
 from tortoise.exceptions import OperationalError
 
 # ---------------------------------------------------------------------------
@@ -197,7 +198,7 @@ async def test_distinct_on_invalid_order_by(db):
         await Tournament.all().distinct("name").order_by("desc")
 
 
-@test.skipCapability(dialect="postgres")
+@test.requireCapability(dialect=NotIn("postgres"))
 @pytest.mark.asyncio
 async def test_distinct_on_not_supported_outside_postgres(db):
     with pytest.raises(OperationalError):
