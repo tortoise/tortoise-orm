@@ -1,17 +1,9 @@
 from __future__ import annotations
 
 import datetime
-import functools
 from typing import TYPE_CHECKING, Any, SupportsInt, cast
 
 import pyodbc
-
-try:
-    from ciso8601 import parse_datetime
-except ImportError:  # pragma: nocoverage
-    from iso8601 import parse_date
-
-    parse_datetime = functools.partial(parse_date, default_timezone=None)
 from pypika_tortoise import OracleQuery
 
 from tortoise.backends.base.client import (
@@ -28,7 +20,7 @@ from tortoise.backends.odbc.client import (
 )
 from tortoise.backends.oracle.executor import OracleExecutor
 from tortoise.backends.oracle.schema_generator import OracleSchemaGenerator
-from tortoise.timezone import UTC, get_use_tz
+from tortoise.timezone import UTC, get_use_tz, parse_datetime
 
 if TYPE_CHECKING:  # pragma: nocoverage
     import asyncodbc  # pylint: disable=W0611

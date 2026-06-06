@@ -1,5 +1,7 @@
 import contextlib
 import os
+import subprocess
+import sys
 from datetime import date, datetime, time, timedelta
 from datetime import timezone as dt_timezone
 from time import sleep
@@ -7,7 +9,6 @@ from unittest.mock import patch
 from zoneinfo import ZoneInfoNotFoundError
 
 import pytest
-from iso8601 import ParseError
 
 from tests import testmodels
 from tortoise import fields, timezone
@@ -673,7 +674,7 @@ async def test_date_str(db):
     obj0 = await model.create(date="2020-08-17")
     obj1 = await model.get(date="2020-08-17")
     assert obj0.date == obj1.date
-    with pytest.raises((ParseError, ValueError)):
+    with pytest.raises(ValueError):
         await model.create(date="2020-08-xx")
     await model.filter(date="2020-08-17").update(date="2020-08-18")
     obj2 = await model.get(date="2020-08-18")
@@ -756,6 +757,45 @@ def test_zoneinfo():
         parse_timezone("invalid-zone-name")
     with pytest.raises(ZoneInfoNotFoundError):
         parse_timezone("Invalid/Zonename")
+
+
+def test_parse_datetime_fallback():
+    assert timezone._parse_datetime("2020-08-17") == datetime(2020, 8, 17)
+    assert timezone._parse_datetime("2020-08-17T00:00:00Z") == datetime(2020, 8, 17, tzinfo=UTC)
+    assert timezone._parse_datetime("2020-230T12:34:56Z") == datetime(
+        2020, 8, 17, 12, 34, 56, tzinfo=UTC
+    )
+    assert timezone._parse_datetime("2020-230t12:34:56") == datetime(2020, 8, 17, 12, 34, 56)
+    assert timezone._parse_datetime("2020230T123456") == datetime(2020, 8, 17, 12, 34, 56)
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        "2020-08-17",
+        "20200817",
+        "2020-08-17T12:34:56",
+        "2020-08-17t12:34:56",
+        "2020-08-17 12:34:56",
+        "20200817T123456",
+        "2020-08-17T12:34:56Z",
+        "2020-08-17T12:34:56z",
+        "2020-08-17T12:34:56+08",
+        "2020-08-17T12:34:56+0800",
+        "2020-08-17T12:34:56+08:00",
+        "2020-W34-1",
+        "2020W341",
+        "2020-230",
+        "2020230",
+        "2020-230T12:34:56",
+        "2020-230t12:34:56",
+        "2020230T123456",
+    ],
+)
+def test_parse_datetime_fallback_matches_ciso8601(value):
+    ciso8601 = pytest.importorskip("ciso8601")
+
+    assert timezone._parse_datetime(value) == ciso8601.parse_datetime(value)
 
 
 def test_timezone(tz_env):

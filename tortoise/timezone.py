@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import functools
 import os
+import re
 import sys
+from collections.abc import Callable
 from datetime import datetime, time, tzinfo
 from zoneinfo import ZoneInfo as _ZoneInfo
 from zoneinfo import ZoneInfoNotFoundError
@@ -13,6 +15,29 @@ else:
     from datetime import timezone
 
     UTC = timezone.utc
+
+_ORDINAL_DATE_RE = re.compile(r"^(\d{4})-?(\d{3})(?=$|[Tt ])")
+
+
+def _parse_datetime(value: str) -> datetime:
+    if value.endswith(("Z", "z")):
+        value = f"{value[:-1]}+00:00"
+    try:
+        return datetime.fromisoformat(value)
+    except ValueError:
+        # Match ordinal dates accepted by ciso8601, such as 2020-230 or 2020230.
+        if m := _ORDINAL_DATE_RE.match(value):
+            date_format = "%Y-%j" if "-" in m.group() else "%Y%j"
+            date_value = datetime.strptime(m.group(), date_format).date()
+            return datetime.fromisoformat(f"{date_value.isoformat()}{value[m.end():]}")
+        raise
+
+
+parse_datetime: Callable[[str], datetime]
+try:
+    from ciso8601 import parse_datetime as parse_datetime
+except ImportError:  # pragma: nocoverage
+    parse_datetime = _parse_datetime
 
 
 class ZoneInfo(_ZoneInfo):
