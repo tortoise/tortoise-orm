@@ -29,7 +29,7 @@ def _parse_datetime(value: str) -> datetime:
         if m := _ORDINAL_DATE_RE.match(value):
             date_format = "%Y-%j" if "-" in m.group() else "%Y%j"
             date_value = datetime.strptime(m.group(), date_format).date()
-            return datetime.fromisoformat(f"{date_value.isoformat()}{value[m.end():]}")
+            return datetime.fromisoformat(f"{date_value.isoformat()}{value[m.end() :]}")
         raise
 
 

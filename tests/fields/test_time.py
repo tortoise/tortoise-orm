@@ -1,7 +1,5 @@
 import contextlib
 import os
-import subprocess
-import sys
 from datetime import date, datetime, time, timedelta
 from datetime import timezone as dt_timezone
 from time import sleep
