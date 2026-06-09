@@ -29,3 +29,7 @@ tests.py
 main.py
 -------
 .. literalinclude::  ../../examples/fastapi/main.py
+
+config.py
+-------
+.. literalinclude::  ../../examples/fastapi/config.py
