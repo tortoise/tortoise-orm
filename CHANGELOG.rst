@@ -23,6 +23,10 @@ Fixed
 - ``MigrationRecorder`` now uses parameterized queries; fixes MariaDB/MySQL rejecting ISO-8601 ``applied_at`` values. (#2132)
 - ``QuerySet.count()`` now matches the limited query result for the LIMIT/OFFSET edge cases: it returns ``0`` (instead of a negative number) when ``offset()`` exceeds the total row count, and ``0`` (instead of the total) for ``limit(0)``. (#2208)
 
+Changed
+^^^^^^^
+- Removed the mandatory ``iso8601`` runtime dependency. Datetime parsing now prefers ``ciso8601`` when available and falls back to an internal parser for common ISO 8601 forms; ``ciso8601`` is also available via the ``accel`` extra on Windows CPython. (#2213)
+
 1.1.7
 -----
 
