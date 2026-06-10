@@ -128,6 +128,7 @@ DB_LOOKUP: dict[str, dict[str, Any]] = {
 }
 # Create an alias for backwards compatibility
 DB_LOOKUP["postgres"] = DB_LOOKUP["asyncpg"]
+# "postgresql" is the scheme accepted by libpq and pydantic's PostgresDsn
 DB_LOOKUP["postgresql"] = DB_LOOKUP["asyncpg"]
 
 
