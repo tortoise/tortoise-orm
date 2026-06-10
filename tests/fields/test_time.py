@@ -10,6 +10,7 @@ import pytest
 
 from tests import testmodels
 from tortoise import fields, timezone
+from tortoise._iso8601 import parse_datetime as parse_datetime_fallback
 from tortoise.contrib import test
 from tortoise.contrib.test.condition import NotIn
 from tortoise.exceptions import ConfigurationError, IntegrityError
@@ -758,13 +759,15 @@ def test_zoneinfo():
 
 
 def test_parse_datetime_fallback():
-    assert timezone._parse_datetime("2020-08-17") == datetime(2020, 8, 17)
-    assert timezone._parse_datetime("2020-08-17T00:00:00Z") == datetime(2020, 8, 17, tzinfo=UTC)
-    assert timezone._parse_datetime("2020-230T12:34:56Z") == datetime(
+    assert parse_datetime_fallback("2020-08-17") == datetime(2020, 8, 17)
+    assert parse_datetime_fallback("2020-08-17T00:00:00Z") == datetime(
+        2020, 8, 17, tzinfo=UTC
+    )
+    assert parse_datetime_fallback("2020-230T12:34:56Z") == datetime(
         2020, 8, 17, 12, 34, 56, tzinfo=UTC
     )
-    assert timezone._parse_datetime("2020-230t12:34:56") == datetime(2020, 8, 17, 12, 34, 56)
-    assert timezone._parse_datetime("2020230T123456") == datetime(2020, 8, 17, 12, 34, 56)
+    assert parse_datetime_fallback("2020-230t12:34:56") == datetime(2020, 8, 17, 12, 34, 56)
+    assert parse_datetime_fallback("2020230T123456") == datetime(2020, 8, 17, 12, 34, 56)
 
 
 @pytest.mark.parametrize(
@@ -793,7 +796,7 @@ def test_parse_datetime_fallback():
 def test_parse_datetime_fallback_matches_ciso8601(value):
     ciso8601 = pytest.importorskip("ciso8601")
 
-    assert timezone._parse_datetime(value) == ciso8601.parse_datetime(value)
+    assert parse_datetime_fallback(value) == ciso8601.parse_datetime(value)
 
 
 def test_timezone(tz_env):
