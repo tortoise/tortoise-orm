@@ -1428,18 +1428,55 @@ class DeleteQuery(AwaitableQuery):
 
     def _make_query(self) -> None:
         self.query = copy(self.model._meta.basequery)
-        if self.capabilities.support_update_limit_order_by and self._limit:
-            self.query._limit = self.query._wrapper_cls(self._limit)
+        self.resolve_filters()
+        
+        # If joins are detected, rewrite into an IN subquery to avoid JOINs in DELETE
+        if self._joined_tables:
+            pk_column = self.model._meta.db_pk_column
+            
+            # Create a pristine, completely separate SELECT query builder
+            subquery = self._db.query_class.from_(self.model._meta.basetable).select(
+                self.model._meta.basetable[pk_column]
+            )
+            
+            # Transfer the resolved wheres and havings criteria from our filter resolution
+            subquery._wheres = self.query._wheres
+            subquery._havings = self.query._havings
+            
+            # Apply joins directly to the subquery builder
+            subquery._joins = self.query._joins
+            
+            # Re-apply limits and sorting to the subquery if needed
+            if self._limit:
+                subquery._limit = subquery._wrapper_cls(self._limit)
+                
             self.resolve_ordering(
                 model=self.model,
                 table=self.model._meta.basetable,
                 orderings=self._orderings,
                 annotations=self._annotations,
             )
-        self.resolve_filters()
+            subquery._orderbys = self.query._orderbys
+            
+            # Reconstruct clean pristine delete statement pointing to our subquery
+            self.query = copy(self.model._meta.basequery)
+            self.query = self.query.where(
+                self.model._meta.basetable[pk_column].isin(subquery)
+            )
+        else:
+            # Traditional optimization path if no backward relations/joins exist
+            if self.capabilities.support_update_limit_order_by and self._limit:
+                self.query._limit = self.query._wrapper_cls(self._limit)
+                self.resolve_ordering(
+                    model=self.model,
+                    table=self.model._meta.basetable,
+                    orderings=self._orderings,
+                    annotations=self._annotations,
+                )
+
         self.query._delete_from = True
         return
-
+    
     def __await__(self) -> Generator[Any, None, int]:
         self._choose_db_if_not_chosen(True)
         self._make_query()
