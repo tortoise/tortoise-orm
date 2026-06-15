@@ -7,7 +7,7 @@ import warnings
 from collections.abc import Callable
 from enum import Enum
 from functools import reduce
-from typing import TYPE_CHECKING, Any, Generic, TypeVar, overload
+from typing import TYPE_CHECKING, Any, Generic, TypedDict, TypeVar, overload
 
 from pypika_tortoise.terms import Term
 
@@ -88,6 +88,76 @@ RESTRICT = OnDelete.RESTRICT
 SET_NULL = OnDelete.SET_NULL
 SET_DEFAULT = OnDelete.SET_DEFAULT
 NO_ACTION = OnDelete.NO_ACTION
+
+
+class _FieldKwargsCommon(TypedDict, total=False):
+    """:class:`Field` constructor arguments that are never declared as explicit parameters.
+
+    Used with :data:`typing.Unpack` to give ``**kwargs`` explicit type hints. This is the
+    smallest set; fields that declare ``unique``/``db_index``/``primary_key`` explicitly
+    (e.g. ``TextField``) unpack this directly to avoid PEP 692 parameter-name collisions.
+    """
+
+    source_field: str | None
+    generated: bool
+    default: Any
+    db_default: Any
+    description: str | None
+    model: Model | None
+    validators: list[Validator | Callable]
+    pk: bool  # deprecated alias for primary_key
+    index: bool  # deprecated alias for db_index
+
+
+class _FieldKwargsNoPk(_FieldKwargsCommon, total=False):
+    """Common arguments excluding ``primary_key`` and ``null``.
+
+    For constructors that declare ``primary_key`` and ``null`` as explicit parameters
+    (e.g. ``IntField``).
+    """
+
+    unique: bool
+    db_index: bool | None
+
+
+class FieldKwargs(_FieldKwargsNoPk, total=False):
+    """Common arguments excluding ``null``.
+
+    For constructors that declare only ``null`` as an explicit parameter (the majority).
+    """
+
+    primary_key: bool | None
+
+
+class JSONFieldKwargs(FieldKwargs, total=False):
+    """Constructor arguments for :class:`JSONField`.
+
+    ``JSONField`` declares neither ``null`` nor ``primary_key`` explicitly, and also accepts
+    a custom ``field_type`` (e.g. a Pydantic model class).
+    """
+
+    null: bool
+    field_type: Any
+
+class RelationalFieldKwargs(FieldKwargs, total=False):
+    """Constructor arguments for :func:`ForeignKeyField` and :func:`OneToOneField`.
+
+    Extends the common :class:`~tortoise.fields.base.FieldKwargs` with ``to_field``.
+    ``null`` is declared as an explicit parameter on those constructors, so it is omitted.
+    """
+
+    to_field: str | None
+
+
+class ManyToManyFieldKwargs(_FieldKwargsCommon, total=False):
+    """Constructor arguments for :func:`ManyToManyField`.
+
+    ``unique`` is declared as an explicit parameter, so it is omitted here; the deprecated
+    ``create_unique_index`` alias is still accepted.
+    """
+
+    create_unique_index: bool  # deprecated alias for unique
+
 
 
 class _FieldMeta(type):
