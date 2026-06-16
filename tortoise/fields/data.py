@@ -395,6 +395,12 @@ class DecimalField(Field[T_DECIMAL], Decimal):  # type: ignore
         def function_cast(self, term: Term) -> Term:
             return functions.Cast(term, SqlTypes.NUMERIC)
 
+    class _db_libsql:
+        SQL_TYPE = "VARCHAR(40)"
+
+        def function_cast(self, term: Term) -> Term:
+            return functions.Cast(term, SqlTypes.NUMERIC)
+
 
 # In case of queryset with filter `__year`/`__month`/`__day` ..., value can be int, float or str. Example:
 # `await MyModel.filter(created_at__year=2024)`

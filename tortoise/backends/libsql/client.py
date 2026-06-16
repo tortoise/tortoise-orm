@@ -47,7 +47,10 @@ def _convert_param(value: Any) -> Any:
     if isinstance(value, datetime.time):
         return value.isoformat()
     if isinstance(value, Decimal):
-        return str(value)
+        # Convert to float so numeric comparisons (WHERE x > 2) work correctly.
+        # libsql doesn't support sqlite3.register_adapter, and storing as string
+        # would break SQL comparisons like decimal > integer.
+        return float(value)
     if isinstance(value, bytes):
         return value  # libsql supports bytes as BLOB
     return value
@@ -199,6 +202,10 @@ class LibsqlClient(BaseDBAsyncClient):
                 self.sync_url,
             )
             self._connection = None
+
+    async def _expire_connections(self) -> None:
+        """No-op for single-connection backends like libsql."""
+        pass
 
     async def db_create(self) -> None:
         # DB's are automatically created once accessed

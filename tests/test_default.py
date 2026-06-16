@@ -10,6 +10,11 @@ from tortoise.backends.asyncpg import AsyncpgDBClient
 from tortoise.backends.mysql import MySQLClient
 from tortoise.backends.psycopg import PsycopgClient
 from tortoise.backends.sqlite import SqliteClient
+
+try:
+    from tortoise.backends.libsql import LibsqlClient
+except ImportError:
+    LibsqlClient = None  # type: ignore[misc,assignment]
 from tortoise.timezone import UTC
 
 # Optional imports for database clients that require system dependencies
@@ -32,7 +37,7 @@ async def default_row(db):
         await db_conn.execute_query(
             "insert into defaultmodel (`int_default`,`float_default`,`decimal_default`,`bool_default`,`char_default`,`date_default`,`datetime_default`) values (DEFAULT,DEFAULT,DEFAULT,DEFAULT,DEFAULT,DEFAULT,DEFAULT)",
         )
-    elif isinstance(db_conn, SqliteClient):
+    elif isinstance(db_conn, SqliteClient) or (LibsqlClient is not None and isinstance(db_conn, LibsqlClient)):
         await db_conn.execute_query(
             "insert into defaultmodel default values",
         )
