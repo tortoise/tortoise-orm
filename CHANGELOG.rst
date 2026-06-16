@@ -43,11 +43,6 @@ Added
 - ``QuerySet.union()`` — SQL UNION query support for combining results from multiple QuerySets, including support for union across different models, ``union(all=True)`` for duplicates, ``order_by()``, ``limit()``, and ``count()``.
 - Tests for model validators. (#2137)
 
-=======
-1.1.7
------
-
->>>>>>> bad19073a48af627c0e7e6475faf41c159e5f99e
 Fixed
 ^^^^^
 - Reorder delete model operations in migrations to avoid foreign key constraint errors. (#2145)
@@ -1312,7 +1307,7 @@ Breaking Changes:
 0.13.6
 ------
 - Fix minor bug in ``Model.__init__`` where we raise the wrong error on setting RFK/M2M values directly.
-- Fields in ``Queryset.values_list()`` isow in the defined Model order.
+- Fields in ``Queryset.values_list()`` is now in the defined Model order.
 - Fields in ``Queryset.values()`` is now in the defined Model order.
 
 0.13.5
@@ -1335,7 +1330,7 @@ Breaking Changes:
 - ``fetch_related(…)`` now correctly encodes non-integer keys.
 - ``ForeignKey`` fields of type ``UUIDField`` are now escaped consistently.
 - Pre-generated ForeignKey fields (e.g. UUIDField) is now checked for persistence correctly.
-- Duplicate M2M ``.add(…)`` now checks using consiste encoding.
+- Duplicate M2M ``.add(…)`` now checks using consistent field encoding.
 - ``source_field`` Fields are now handled correctly for ordering.
 - ``source_field`` Fields are now handled correctly for updating.
 
@@ -1351,7 +1346,7 @@ Breaking Changes:
   - Partial update is now ~3× faster
   - Delete is now ~2.7x faster
 
-- Fix generated Schema Primary Key for ``BigId`` for MySQL and PostgreSQL.
+- Fix generated Schema Primary Key for ``BigIntField`` for MySQL and PostgreSQL.
 - Added support for using a ``SmallIntField`` as a auto-gen Primary Key.
 - Ensure that default PK is added to the top of the attrs.
 
@@ -1490,7 +1485,7 @@ Docs/examples:
 
   If you don't define a primary key, we will create a primary key of type ``IntField`` with name of ``id`` for you.
 
-  Any of thesere valid primary key definitions in a Model:
+  Any of these are valid primary key definitions in a Model:
 
   .. code-block:: python3
 
@@ -1536,7 +1531,8 @@ Docs/examples:
 0.11.7
 ------
 - Fixed ``unique_together`` for foreign keys (#114)
-- Fixed Field.to_db_value method to handle Enum (#113 #115 #116
+- Fixed Field.to_db_value method to handle Enum (#113 #115 #116)
+
 0.11.6
 ------
 - Added ability to use ``unique_together`` meta Model option
@@ -1696,7 +1692,7 @@ Docs/examples:
           #  also specify the app name of "models"
           #  which contain models from "app.models"
           await Tortoise.init(
-              db_url='sqlit//db.sqlite3',
+              db_url='sqlite://db.sqlite3',
               modules={'models': ['app.models']}
           )
           # Generate the schema
