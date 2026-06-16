@@ -16,6 +16,7 @@ urlparse.uses_netloc.append("sqlite")
 urlparse.uses_netloc.append("mysql")
 urlparse.uses_netloc.append("oracle")
 urlparse.uses_netloc.append("mssql")
+urlparse.uses_netloc.append("libsql")
 DB_LOOKUP: dict[str, dict[str, Any]] = {
     "psycopg": {
         "engine": "tortoise.backends.psycopg",
@@ -69,6 +70,16 @@ DB_LOOKUP: dict[str, dict[str, Any]] = {
         "cast": {
             "journal_size_limit": int,
             "install_regexp_functions": bool,
+        },
+    },
+    "libsql": {
+        "engine": "tortoise.backends.libsql",
+        "skip_first_char": False,
+        "vmap": {"path": "file_path", "hostname": "sync_url_host", "password": "auth_token"},
+        "defaults": {"journal_mode": "WAL", "journal_size_limit": 16384, "file_path": ":memory:"},
+        "cast": {
+            "journal_size_limit": int,
+            "sync_interval": int,
         },
     },
     "mysql": {
@@ -180,7 +191,7 @@ def expand_db_url(db_url: str, testing: bool = False) -> dict:
         path = url.netloc + url.path
 
     if not path:
-        if db_backend == "sqlite":
+        if db_backend in {"sqlite", "libsql"}:
             raise ConfigurationError("No path specified for DB_URL")
         # Other database backend accepts database name being None (but not empty string).
         path = None
@@ -200,7 +211,16 @@ def expand_db_url(db_url: str, testing: bool = False) -> dict:
     vmap.update(db["vmap"])
     params[vmap["path"]] = path
     if vmap.get("hostname"):
-        params[vmap["hostname"]] = url.hostname or None
+        # For libsql, build the full sync_url from the original URL scheme
+        if db_backend == "libsql" and url.hostname:
+            sync_url = f"libsql://{url.hostname}"
+            if url.port:
+                sync_url += f":{url.port}"
+            if url.path and url.path != "/":
+                sync_url += url.path
+            params["sync_url"] = sync_url
+        else:
+            params[vmap["hostname"]] = url.hostname or None
     try:
         if vmap.get("port") and url.port:
             params[vmap["port"]] = int(url.port)
@@ -212,11 +232,20 @@ def expand_db_url(db_url: str, testing: bool = False) -> dict:
         params[vmap["username"]] = url.username or None
     if vmap.get("password"):
         # asyncpg accepts None for password, but aiomysql not
-        params[vmap["password"]] = (
-            None
-            if (not url.password and db_backend in {"postgres", "postgresql", "asyncpg", "psycopg"})
-            else urlparse.unquote(url.password or "")
-        )
+        if db_backend == "libsql":
+            # For libsql, password in URL = auth_token
+            # Also check query params for auth_token
+            query_params = urlparse.parse_qs(url.query)
+            params["auth_token"] = (
+                urlparse.unquote(url.password or "")
+                or query_params.get("auth_token", [None])[0]
+            )
+        else:
+            params[vmap["password"]] = (
+                None
+                if (not url.password and db_backend in {"postgres", "postgresql", "asyncpg", "psycopg"})
+                else urlparse.unquote(url.password or "")
+            )
 
     return {"engine": db["engine"], "credentials": params}
 
