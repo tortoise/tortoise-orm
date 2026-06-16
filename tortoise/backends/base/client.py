@@ -41,6 +41,7 @@ class Capabilities:
     :param support_json_attributes: indicated if the db supports accessing json attributes
     :param can_rollback_ddl: Whether the database supports transactional DDL.
         Used to determine if migrations can be run atomically.
+    :param support_returning: Indicates that this DB supports INSERT ... RETURNING.
     """
 
     def __init__(
@@ -62,6 +63,7 @@ class Capabilities:
         support_for_posix_regex_queries: bool = False,
         support_json_attributes: bool = False,
         can_rollback_ddl: bool = False,
+        support_returning: bool = False,
     ) -> None:
         super().__setattr__("_mutable", True)
 
@@ -77,6 +79,7 @@ class Capabilities:
         self.support_for_posix_regex_queries = support_for_posix_regex_queries
         self.support_json_attributes = support_json_attributes
         self.can_rollback_ddl = can_rollback_ddl
+        self.support_returning = support_returning
         super().__setattr__("_mutable", False)
 
     def __setattr__(self, attr: str, value: Any) -> None:

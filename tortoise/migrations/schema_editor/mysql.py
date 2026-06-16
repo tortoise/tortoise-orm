@@ -287,30 +287,63 @@ class MySQLSchemaEditor(MySQLQuotingMixin, BaseSchemaEditor):
             )
         )
 
+    def _build_modify_column_sql(
+        self, model: type[Model], field: Field, qualified_table: str
+    ) -> str:
+        """Build a complete MODIFY COLUMN clause including DEFAULT and COMMENT."""
+        db_field = field.source_field or field.model_field_name
+        sql_type = field.get_for_dialect(self.DIALECT, "SQL_TYPE")
+        nullable = "NULL" if field.null else "NOT NULL"
+        default = ""
+        if field.has_db_default():
+            if hasattr(field.db_default, "get_sql"):
+                default_sql = field.db_default.get_sql(dialect=self.DIALECT)
+            else:
+                db_val = field.to_db_value(field.db_default, model)
+                default_sql = self._escape_default_value(db_val)
+            default = f" DEFAULT {default_sql}"
+        comment = ""
+        if field.description:
+            comment = f" COMMENT '{self._escape_comment(field.description)}'"
+        return (
+            f"ALTER TABLE {qualified_table} MODIFY COLUMN"
+            f" {self.quote(db_field)} {sql_type} {nullable}{default}{comment}"
+        )
+
     async def _alter_field(self, model: type[Model], old_field: Field, new_field: Field) -> None:
         # MySQL does not support ALTER COLUMN ... SET/DROP NOT NULL or ALTER COLUMN ... TYPE.
         # It requires MODIFY COLUMN with the full column type specification.
+        # MODIFY COLUMN resets the entire column definition, so we must include
+        # all attributes (type, nullability, DEFAULT, COMMENT) in a single statement.
         old_sql_type = old_field.get_for_dialect(self.DIALECT, "SQL_TYPE")
         new_sql_type = new_field.get_for_dialect(self.DIALECT, "SQL_TYPE")
         null_changed = old_field.null != new_field.null
         type_changed = old_sql_type != new_sql_type
 
         if null_changed or type_changed:
-            db_field = new_field.source_field or new_field.model_field_name
             qualified_table = self._qualify_table_name(model._meta.db_table, model._meta.schema)
-            nullable = "NULL" if new_field.null else "NOT NULL"
-            await self._run_sql(
-                f"ALTER TABLE {qualified_table} MODIFY COLUMN"
-                f" {self.quote(db_field)} {new_sql_type} {nullable}"
-            )
-            # Patch old_field copy so base skips the null and type changes
+            await self._run_sql(self._build_modify_column_sql(model, new_field, qualified_table))
+            # Patch old_field copy so base skips changes already handled by MODIFY
             old_field = copy(old_field)
             old_field.null = new_field.null
+            old_field.db_default = new_field.db_default
+            old_field.description = new_field.description
             for attr in ("max_length", "max_digits", "decimal_places"):
                 if hasattr(new_field, attr):
                     setattr(old_field, attr, getattr(new_field, attr))
 
         await super()._alter_field(model, old_field, new_field)
+
+    async def _alter_column_comment(
+        self, model: type[Model], old_field: Field, new_field: Field
+    ) -> None:
+        """Emit MODIFY COLUMN with full column definition for MySQL.
+
+        MySQL has no standalone COMMENT ON COLUMN statement, so changing the
+        comment requires re-issuing MODIFY COLUMN with all attributes.
+        """
+        qualified_table = self._qualify_table_name(model._meta.db_table, model._meta.schema)
+        await self._run_sql(self._build_modify_column_sql(model, new_field, qualified_table))
 
     async def add_constraint(self, model, constraint) -> None:
         from tortoise.migrations.constraints import CheckConstraint

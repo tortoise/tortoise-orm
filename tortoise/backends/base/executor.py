@@ -12,6 +12,7 @@ from pypika_tortoise.queries import QueryBuilder
 
 from tortoise.exceptions import OperationalError
 from tortoise.expressions import Expression, ResolveContext
+from tortoise.fields.base import DatabaseDefault
 from tortoise.fields.relational import (
     BackwardFKRelation,
     BackwardOneToOneRelation,
@@ -19,7 +20,6 @@ from tortoise.fields.relational import (
     RelationalField,
 )
 from tortoise.query_utils import QueryModifier
-from tortoise.utils import chunk
 
 if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.backends.base.client import BaseDBAsyncClient
@@ -186,58 +186,193 @@ class BaseExecutor:
     def parameter(self, pos: int) -> Parameter:
         return Parameter(idx=pos + 1)
 
+    def _has_db_default_values(self, instance: Model, columns: list[str]) -> bool:
+        """Check whether any column on the instance still holds a DatabaseDefault sentinel."""
+
+        if not self.model._meta.db_default_db_columns:
+            return False
+        for field_name in columns:
+            if isinstance(getattr(instance, field_name, None), DatabaseDefault):
+                return True
+        return False
+
+    def _build_insert_with_defaults(
+        self,
+        instance: Model,
+        columns: list[str] | None = None,
+        has_generated: bool = True,
+        ignore_conflicts: bool = False,
+    ) -> tuple[str, list[Any], list[str]]:
+        """Build an INSERT query where DatabaseDefault fields are omitted.
+
+        Returns ``(sql_string, values_list, db_default_columns)`` where:
+        - *values_list* only contains bind values for non-DatabaseDefault fields.
+        - *db_default_columns* lists the DB column names that were omitted from
+          the INSERT (they will use the DB-level DEFAULT).
+        """
+
+        if columns is None:
+            columns = self.regular_columns
+
+        active_db_columns: list[str] = []
+        values: list[Any] = []
+        db_default_columns: list[str] = []
+
+        for field_name in columns:
+            field_object = self.model._meta.fields_map[field_name]
+            value = getattr(instance, field_name)
+            db_col = self.model._meta.fields_db_projection[field_name]
+            if isinstance(value, DatabaseDefault):
+                db_default_columns.append(db_col)
+            else:
+                active_db_columns.append(db_col)
+                values.append(field_object.to_db_value(value, instance))
+
+        table = self.model._meta.basetable
+
+        if active_db_columns:
+            insert_terms = [self.parameter(i) for i in range(len(active_db_columns))]
+            query = (
+                self.db.query_class.into(table).columns(*active_db_columns).insert(*insert_terms)
+            )
+        else:
+            query = self.db.query_class.into(table).default_values()
+
+        query = self._add_returning_to_insert(query, has_generated, db_default_columns)
+        if ignore_conflicts:
+            query = query.on_conflict().do_nothing()
+        return str(query), values, db_default_columns
+
+    def _get_returning_fields(
+        self,
+        has_generated: bool,
+        db_default_columns: list[str],
+    ) -> list[str]:
+        """Compute the list of column names for a RETURNING clause.
+
+        Combines generated fields (when *has_generated* is True) with
+        *db_default_columns*, deduplicating in order.
+        """
+        returning_fields: list[str] = []
+        if has_generated and (generated_fields := self.model._meta.generated_db_fields):
+            returning_fields.extend(generated_fields)
+        for col in db_default_columns:
+            if col not in returning_fields:
+                returning_fields.append(col)
+        return returning_fields
+
+    def _add_returning_to_insert(
+        self,
+        query: QueryBuilder,
+        has_generated: bool,
+        db_default_columns: list[str],
+    ) -> QueryBuilder:
+        """Hook for backends to add RETURNING clause.
+
+        Base implementation does nothing (backends without RETURNING support).
+        Override in PostgreSQL and SQLite executors.
+        """
+        return query
+
+    async def _execute_insert_dynamic(
+        self,
+        instance: Model,
+        columns: list[str],
+        has_generated: bool,
+    ) -> Any:
+        """Execute a dynamic INSERT (with DEFAULT keywords) and return the raw result.
+
+        Calls ``_build_insert_with_defaults`` to produce the SQL, then
+        executes it via the DB client.
+        """
+        query, values, _db_default_columns = self._build_insert_with_defaults(
+            instance, columns=columns, has_generated=has_generated
+        )
+        return await self.db.execute_insert(query, values)
+
     async def execute_insert(self, instance: Model) -> None:
         if not instance._custom_generated_pk:
-            values = [
-                self.model._meta.fields_map[field_name].to_db_value(
-                    getattr(instance, field_name), instance
+            has_db_defaults = self._has_db_default_values(instance, self.regular_columns)
+
+            if has_db_defaults:
+                insert_result = await self._execute_insert_dynamic(
+                    instance, self.regular_columns, has_generated=True
                 )
-                for field_name in self.regular_columns
-            ]
-            insert_result = await self.db.execute_insert(self.insert_query, values)
+            else:
+                values = [
+                    self.model._meta.fields_map[field_name].to_db_value(
+                        getattr(instance, field_name), instance
+                    )
+                    for field_name in self.regular_columns
+                ]
+                insert_result = await self.db.execute_insert(self.insert_query, values)
             await self._process_insert_result(instance, insert_result)
 
         else:
-            values = [
-                self.model._meta.fields_map[field_name].to_db_value(
-                    getattr(instance, field_name), instance
+            has_db_defaults = self._has_db_default_values(instance, self.regular_columns_all)
+
+            if has_db_defaults:
+                insert_result = await self._execute_insert_dynamic(
+                    instance, self.regular_columns_all, has_generated=False
                 )
-                for field_name in self.regular_columns_all
-            ]
-            await self.db.execute_insert(self.insert_query_all, values)
-
-    async def execute_bulk_insert(
-        self,
-        instances: Iterable[Model],
-        batch_size: int | None = None,
-    ) -> None:
-        for instance_chunk in chunk(instances, batch_size):
-            values_lists_all = []
-            values_lists = []
-            for instance in instance_chunk:
-                if instance._custom_generated_pk:
-                    values_lists_all.append(
-                        [
-                            self.model._meta.fields_map[field_name].to_db_value(
-                                getattr(instance, field_name), instance
-                            )
-                            for field_name in self.regular_columns_all
-                        ]
+                await self._process_insert_result(instance, insert_result)
+            else:
+                values = [
+                    self.model._meta.fields_map[field_name].to_db_value(
+                        getattr(instance, field_name), instance
                     )
-                else:
-                    values_lists.append(
-                        [
-                            self.model._meta.fields_map[field_name].to_db_value(
-                                getattr(instance, field_name), instance
-                            )
-                            for field_name in self.regular_columns
-                        ]
-                    )
+                    for field_name in self.regular_columns_all
+                ]
+                await self.db.execute_insert(self.insert_query_all, values)
 
-            if values_lists_all:
-                await self.db.execute_many(self.insert_query_all, values_lists_all)
-            if values_lists:
-                await self.db.execute_many(self.insert_query, values_lists)
+    async def _fetch_db_defaults_after_insert(self, instance: Model) -> None:
+        """Fetch DB-applied default values via SELECT after INSERT.
+
+        Called only for non-RETURNING backends when db_default fields
+        were set to DEFAULT in the INSERT.
+        Guarded by Meta.fetch_db_defaults.
+        """
+
+        if not self.model._meta.fetch_db_defaults:
+            return
+
+        db_default_db_columns = self.model._meta.db_default_db_columns
+        if not db_default_db_columns:
+            return
+
+        # Determine which fields still have DatabaseDefault (not populated by RETURNING)
+        fields_to_fetch = []
+        db_projection_reverse = self.model._meta.fields_db_projection_reverse
+        for db_col in db_default_db_columns:
+            model_field = db_projection_reverse.get(db_col, db_col)
+            if isinstance(getattr(instance, model_field, None), DatabaseDefault):
+                fields_to_fetch.append(db_col)
+
+        if not fields_to_fetch:
+            return
+
+        # Need PK to SELECT
+        if instance.pk is None:
+            return
+
+        # Build SELECT via pypika for proper quoting
+        table = self.model._meta.basetable
+        pk_col = self.model._meta.db_pk_column
+        query = (
+            self.db.query_class.from_(table)
+            .select(*fields_to_fetch)
+            .where(table[pk_col] == self.parameter(0))
+        )
+        pk_value = self.model._meta.pk.to_db_value(instance.pk, instance)
+        _, rows = await self.db.execute_query(str(query), [pk_value])
+
+        if rows:
+            row = rows[0]
+            for db_col in fields_to_fetch:
+                model_field = db_projection_reverse.get(db_col, db_col)
+                field_object = self.model._meta.fields_map[model_field]
+                raw_value = row.get(db_col)
+                setattr(instance, model_field, field_object.to_python_value(raw_value))
 
     def get_update_sql(
         self,
@@ -291,28 +426,48 @@ class BaseExecutor:
     async def execute_update(
         self, instance: type[Model] | Model, update_fields: Iterable[str] | None
     ) -> int:
-        values = []
-        expressions = {}
-        for field in update_fields or self.model._meta.fields_db_projection.keys():
+
+        user_specified = update_fields is not None
+        source_fields: list[str] = (
+            list(update_fields)
+            if update_fields is not None
+            else list(self.model._meta.fields_db_projection.keys())
+        )
+
+        effective_fields: list[str] = []
+        for field in source_fields:
             field_obj = self.model._meta.fields_map[field]
             if field_obj.pk:
-                if update_fields:
+                if user_specified:
                     raise OperationalError(
                         f"Can't update pk field, use `{self.model.__name__}.create` instead."
                     )
                 continue
             if field_obj.generated:
-                if update_fields:
+                if user_specified:
                     raise OperationalError(f"Can't update generated field {field}")
                 continue
+            instance_field = getattr(instance, field)
+            if isinstance(instance_field, DatabaseDefault):
+                continue
+            effective_fields.append(field)
+
+        if not effective_fields:
+            return 0
+
+        values = []
+        expressions = {}
+        for field in effective_fields:
             instance_field = getattr(instance, field)
             if isinstance(instance_field, Expression):
                 expressions[field] = instance_field
             else:
+                field_obj = self.model._meta.fields_map[field]
                 values.append(field_obj.to_db_value(instance_field, instance))
+
         values.append(self.model._meta.pk.to_db_value(instance.pk, instance))
         return (
-            await self.db.execute_query(self.get_update_sql(update_fields, expressions), values)
+            await self.db.execute_query(self.get_update_sql(effective_fields, expressions), values)
         )[0]
 
     async def execute_delete(self, instance: type[Model] | Model) -> int:

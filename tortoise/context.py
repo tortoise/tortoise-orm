@@ -146,7 +146,6 @@ class TortoiseContext:
     """
 
     def __init__(self) -> None:
-        """Initialize a new TortoiseContext with empty state."""
         self._connections: ConnectionHandler | None = None
         self._apps: Apps | None = None
         self._inited: bool = False

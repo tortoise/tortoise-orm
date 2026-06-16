@@ -21,6 +21,13 @@ async def test_validator_max_length(db):
 
 
 @pytest.mark.asyncio
+async def test_validator_min_length(db):
+    with pytest.raises(ValidationError, match="Length of 'aa' 2 < 3"):
+        await ValidatorModel.create(min_length="aa")
+    await ValidatorModel.create(min_length="aaaa")
+
+
+@pytest.mark.asyncio
 async def test_validator_min_value(db):
     # min value is 10
     with pytest.raises(ValidationError):
@@ -58,6 +65,14 @@ async def test_validator_ipv6(db):
     with pytest.raises(ValidationError):
         await ValidatorModel.create(ipv6="aaaaaa")
     await ValidatorModel.create(ipv6="::")
+
+
+@pytest.mark.asyncio
+async def test_validator_ipv46(db):
+    with pytest.raises(ValidationError, match="'aaaaaa' is not a valid IPv4 or IPv6 address."):
+        await ValidatorModel.create(ipv46="aaaaaa")
+    await ValidatorModel.create(ipv46="::")
+    await ValidatorModel.create(ipv46="8.8.8.8")
 
 
 @pytest.mark.asyncio

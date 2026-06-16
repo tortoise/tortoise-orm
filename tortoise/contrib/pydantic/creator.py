@@ -177,7 +177,7 @@ def pydantic_queryset_creator(
     )
     model.__doc__ = _cleandoc(cls)
     model.model_config["title"] = name or f"{submodel.model_config['title']}_list"
-    model.model_config["submodel"] = submodel  # type: ignore
+    model.model_config["submodel"] = submodel  # type: ignore[typeddict-unknown-key]
     return model
 
 
@@ -378,7 +378,7 @@ class PydanticModelCreator:
             **common_fields,
         )
         model.__doc__ = _cleandoc(self._cls)
-        model.model_config["orig_model"] = self._cls  # type: ignore
+        model.model_config["orig_model"] = self._cls  # type: ignore[typeddict-unknown-key]
         _MODEL_INDEX[self._hash] = model
         return model
 
