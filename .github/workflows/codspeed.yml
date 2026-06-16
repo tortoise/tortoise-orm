@@ -20,7 +20,7 @@ jobs:
           # 3.12 is the minimum required version for profiling enabled
           python-version: "3.12"
 
-      - uses: astral-sh/setup-uv@v7
+      - uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
 
       - name: Build dists
         run: make build

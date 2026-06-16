@@ -266,7 +266,7 @@ async def test_update_or_create_with_defaults(tournament_model):
     assert created is False
     assert defaults["desc"] == updated_mdl.desc
     assert mdl.desc != updated_mdl.desc
-    # Hint query: use defauts to update without checking conflict
+    # Hint query: use defaults to update without checking conflict
     mdl2, created = await Tournament.update_or_create(
         id=oldid, desc=desc, defaults=dict(mdl_dict, desc="new desc")
     )

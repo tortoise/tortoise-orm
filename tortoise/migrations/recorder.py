@@ -25,6 +25,14 @@ class MigrationRecorder:
             return f"[{name}]"
         return f'"{name}"'
 
+    def _placeholder(self, pos: int) -> str:
+        if self._dialect == "mysql":
+            return "%s"
+        if self._dialect == "postgres":
+            return f"${pos}"
+        # sqlite, mssql, oracle: ?-style (native or via ODBC)
+        return "?"
+
     def _make_model(self, table_name: str) -> type[Model]:
         class MigrationRecord(Model):
             id = fields.IntField(pk=True)
@@ -74,22 +82,18 @@ class MigrationRecorder:
         return [MigrationKey(app_label=row["app"], name=row["name"]) for row in rows]
 
     async def record_applied(self, app: str, name: str) -> None:
-        applied_at = datetime.now(timezone.utc).isoformat()
+        applied_at = datetime.now(timezone.utc)
         query = (
             f"INSERT INTO {self._quote(self.table_name)} "  # nosec B608
             f"({self._quote('app')}, {self._quote('name')}, {self._quote('applied_at')}) "
-            f"VALUES ('{self._escape(app)}', '{self._escape(name)}', '{applied_at}')"
+            f"VALUES ({self._placeholder(1)}, {self._placeholder(2)}, {self._placeholder(3)})"
         )
-        await self.connection.execute_script(query)
+        await self.connection.execute_insert(query, [app, name, applied_at])
 
     async def record_unapplied(self, app: str, name: str) -> None:
         query = (
             f"DELETE FROM {self._quote(self.table_name)} "  # nosec B608
-            f"WHERE {self._quote('app')} = '{self._escape(app)}' "
-            f"AND {self._quote('name')} = '{self._escape(name)}'"
+            f"WHERE {self._quote('app')} = {self._placeholder(1)} "
+            f"AND {self._quote('name')} = {self._placeholder(2)}"
         )
-        await self.connection.execute_script(query)
-
-    @staticmethod
-    def _escape(value: str) -> str:
-        return value.replace("'", "''")
+        await self.connection.execute_query(query, [app, name])

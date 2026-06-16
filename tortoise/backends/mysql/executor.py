@@ -1,4 +1,5 @@
 import enum
+from typing import Any
 
 from pypika_tortoise import SqlContext, functions
 from pypika_tortoise.enums import SqlTypes
@@ -14,6 +15,7 @@ from tortoise.contrib.mysql.json_functions import (
     mysql_json_filter,
 )
 from tortoise.contrib.mysql.search import SearchCriterion
+from tortoise.exceptions import UnSupportedError
 from tortoise.fields import BigIntField, IntField, SmallIntField
 from tortoise.filters import (
     Like,
@@ -124,7 +126,26 @@ class MySQLExecutor(BaseExecutor):
         json_filter: mysql_json_filter,
         posix_regex: mysql_posix_regex,
     }
-    EXPLAIN_PREFIX = "EXPLAIN FORMAT=JSON"
+    EXPLAIN_SUPPORTED_FORMATS = ["JSON", "TRADITIONAL", "TREE"]
+
+    async def execute_explain(
+        self, sql: str, output_fmt: str | None = None, **options: bool
+    ) -> Any:
+        output_fmt = output_fmt or "JSON"
+        if output_fmt.upper() not in self.EXPLAIN_SUPPORTED_FORMATS:
+            raise UnSupportedError(f"Unsupported explain format: {output_fmt}")
+
+        if options and not all(k == "analyze" for k in options):
+            unsupported = [k for k in options if k != "analyze"]
+            raise UnSupportedError(f"Unsupported options: {set(unsupported)}")
+
+        explain_parts = []
+        if options.get("analyze"):
+            explain_parts.append("ANALYZE")
+        explain_parts.append(f"FORMAT={output_fmt.upper()}")
+
+        explain_statement = "EXPLAIN " + " ".join(explain_parts)
+        return (await self.db.execute_query(f"{explain_statement} {sql}"))[1]
 
     async def _process_insert_result(self, instance: Model, results: int) -> None:
         pk_field_object = self.model._meta.pk
