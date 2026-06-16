@@ -30,7 +30,6 @@ if TYPE_CHECKING:  # pragma: nocoverage
 MODEL = TypeVar("MODEL", bound="Model")
 
 
-
 class _NoneAwaitable:
     __slots__ = ()
 

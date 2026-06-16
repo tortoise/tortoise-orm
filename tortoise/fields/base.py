@@ -139,6 +139,7 @@ class JSONFieldKwargs(FieldKwargs, total=False):
     null: bool
     field_type: Any
 
+
 class RelationalFieldKwargs(FieldKwargs, total=False):
     """Constructor arguments for :func:`ForeignKeyField` and :func:`OneToOneField`.
 
@@ -157,7 +158,6 @@ class ManyToManyFieldKwargs(_FieldKwargsCommon, total=False):
     """
 
     create_unique_index: bool  # deprecated alias for unique
-
 
 
 class _FieldMeta(type):
