@@ -284,12 +284,34 @@ class TextField(Field[str], str):  # type: ignore
     indexable = False
     SQL_TYPE = "TEXT"
 
+    @overload
+    def __init__(
+        self,
+        *,
+        primary_key: bool | None = None,
+        unique: bool = False,
+        db_index: bool = False,
+        null: Literal[False] = False,
+        **kwargs: Unpack[_FieldKwargsCommon],
+    ) -> None: ...
+
+    @overload
+    def __init__(
+        self,
+        *,
+        primary_key: bool | None = None,
+        unique: bool = False,
+        db_index: bool = False,
+        null: Literal[True],
+        **kwargs: Unpack[_FieldKwargsCommon],
+    ) -> None: ...
+
     def __init__(
         self,
         primary_key: bool | None = None,
         unique: bool = False,
         db_index: bool = False,
-        **kwargs: Unpack[_FieldKwargsCommon],
+        **kwargs: Any,
     ) -> None:
         if primary_key or kwargs.get("pk"):
             warnings.warn(
