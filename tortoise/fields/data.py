@@ -276,7 +276,7 @@ class CharField(Field[T_STR]):
             return f"NVARCHAR2({self.field.max_length})"
 
 
-class TextField(Field[str], str):  # type: ignore
+class TextField(Field[T_STR], str):  # type: ignore
     """
     Large Text field.
     """
@@ -286,7 +286,7 @@ class TextField(Field[str], str):  # type: ignore
 
     @overload
     def __init__(
-        self,
+        self: TextField[str],
         *,
         primary_key: bool | None = None,
         unique: bool = False,
@@ -297,7 +297,7 @@ class TextField(Field[str], str):  # type: ignore
 
     @overload
     def __init__(
-        self,
+        self: TextField[str | None],
         *,
         primary_key: bool | None = None,
         unique: bool = False,
