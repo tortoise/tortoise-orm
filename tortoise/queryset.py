@@ -102,7 +102,7 @@ class _ChooseDBMixin(Generic[MODEL]):
             db = router.db_for_read(self.model)
         return db or self.model._meta.db
 
-    def _apply_db(self, db: BaseDBAsyncClient) -> None:
+    def _apply_db(self, db: BaseDBAsyncClient | None) -> None:
         """
         Set the database connection for this query and update the query builder dialect.
 
@@ -291,6 +291,63 @@ class AwaitableQuery(_ChooseDBMixin[MODEL], Generic[MODEL]):
 
                 self.query = self.query.orderby(field, order=ordering[1])
 
+    def resolve_distinct(
+        self,
+        distinct: bool,
+        distinct_on: list[str],
+        orderings: Iterable[tuple[str, str | Order]],
+        annotations: dict[str, Term | Expression],
+    ) -> None:
+        if not distinct:
+            return
+        if not orderings and self.model._meta.ordering and not annotations:
+            orderings = self.model._meta.ordering
+        self.query._distinct = True
+        if distinct_on:
+            if not isinstance(self.query, PostgreSQLQueryBuilder):
+                raise OperationalError("DISTINCT ON is only supported by PostgreSQL")
+            ordering_fields = [ordering[0] for ordering in orderings]
+            len_ordering_fields = len(ordering_fields)
+            for i, field in enumerate(distinct_on):
+                if ordering_fields and (i >= len_ordering_fields or ordering_fields[i] != field):
+                    raise OperationalError(
+                        f"DISTINCT ON fields must match the leading ORDER BY fields. "
+                        f"Expected ORDER BY to start with {distinct_on!r}."
+                    )
+            self.query._distinct_on = []
+            distinct_on_by_source_field = []
+            for field_name in distinct_on:
+                field_object = self.model._meta.fields_map.get(field_name)
+                part_after = field_name
+                related_table = self.model._meta.basetable
+                related_model: type[Model] = self.model
+                while part_after:
+                    related_field_name, __, part_after = part_after.partition("__")
+                    if related_field_name in related_model._meta.fetch_fields:
+                        related_field = cast(
+                            RelationalField, self.model._meta.fields_map[related_field_name]
+                        )
+                        related_table = self._join_table_by_field(
+                            related_table, related_field_name, related_field
+                        )
+                        related_model = related_field.model
+                    else:
+                        field_object = related_model._meta.fields_map.get(related_field_name)
+
+                        if not field_object:
+                            raise FieldError(
+                                f"Unknown field {related_field_name} for model {related_model.__name__}"
+                            )
+                        related_table_field = related_table[
+                            field_object.source_field or related_field_name
+                        ]
+                        if func := field_object.get_for_dialect(
+                            related_model._meta.db.capabilities.dialect, "function_cast"
+                        ):
+                            related_table_field = func(field_object, related_table_field)
+                        distinct_on_by_source_field.append(related_table_field)
+            self.query.distinct_on(*distinct_on_by_source_field)
+
     def _resolve_annotate(self, fields_for_select: Collection[str] | None = None) -> bool:
         if not self._annotations:
             return False
@@ -405,7 +462,7 @@ class QuerySet(AwaitableQuery[MODEL]):
         queryset._prefetch_queries = copy(self._prefetch_queries)
         queryset._single = self._single
         queryset._raise_does_not_exist = self._raise_does_not_exist
-        queryset._db = self._db
+        queryset._apply_db(self._db)
         queryset._limit = self._limit
         queryset._offset = self._offset
         queryset._fields_for_select = self._fields_for_select
@@ -627,16 +684,10 @@ class QuerySet(AwaitableQuery[MODEL]):
 
         :param args: Field names for ``DISTINCT ON`` (PostgreSQL only). Omit for plain
             ``DISTINCT``.
-        :raises OperationalError: If field arguments are given on a non-PostgreSQL database,
-            or if ``ORDER BY`` is specified but does not start with the ``DISTINCT ON`` fields.
         """
         queryset = self._clone()
         queryset._distinct = True
-        if args:
-            if isinstance(self.query, PostgreSQLQueryBuilder):
-                queryset._distinct_on = list(args)
-            else:
-                raise OperationalError("DISTINCT ON is only supported by PostgreSQL")
+        queryset._distinct_on = list(args)
         return queryset
 
     def union(self, *other_qs: QuerySet[Model], all: bool = False) -> UnionQuery[MODEL]:
@@ -1314,25 +1365,16 @@ class QuerySet(AwaitableQuery[MODEL]):
             self._fields_for_select,
         )
         self.resolve_filters()
+        self.resolve_distinct(
+            self._distinct,
+            self._distinct_on,
+            self._orderings,
+            self._annotations,
+        )
         if self._limit is not None:
             self.query._limit = self.query._wrapper_cls(self._limit)
         if self._offset is not None:
             self.query._offset = self.query._wrapper_cls(self._offset)
-        if self._distinct:
-            self.query._distinct = True
-            if isinstance(self.query, PostgreSQLQueryBuilder) and self._distinct_on:
-                ordering_fields = [ordering[0] for ordering in self._orderings]
-                len_ordering_fields = len(ordering_fields)
-                for i, field in enumerate(self._distinct_on):
-                    if ordering_fields and (
-                        i >= len_ordering_fields or ordering_fields[i] != field
-                    ):
-                        raise OperationalError(
-                            f"DISTINCT ON fields must match the leading ORDER BY fields. "
-                            f"Expected ORDER BY to start with {self._distinct_on!r}."
-                        )
-                self.query._distinct_on = []
-                self.query.distinct_on(*self._distinct_on)
         if self._select_for_update:
             self.query = self.query.for_update(
                 self._select_for_update_nowait,
@@ -1828,25 +1870,16 @@ class ValuesListQuery(FieldSelectQuery, Generic[SINGLE]):
             fields_for_select=self._fields_for_select_list,
         )
         self.resolve_filters(self._fields_to_select_sql)
+        self.resolve_distinct(
+            self._distinct,
+            self._distinct_on,
+            self._orderings,
+            self._annotations,
+        )
         if self._limit:
             self.query._limit = self.query._wrapper_cls(self._limit)
         if self._offset:
             self.query._offset = self.query._wrapper_cls(self._offset)
-        if self._distinct:
-            self.query._distinct = True
-            if isinstance(self.query, PostgreSQLQueryBuilder) and self._distinct_on:
-                ordering_fields = [ordering[0] for ordering in self._orderings]
-                len_ordering_fields = len(ordering_fields)
-                for i, field in enumerate(self._distinct_on):
-                    if ordering_fields and (
-                        i >= len_ordering_fields or ordering_fields[i] != field
-                    ):
-                        raise OperationalError(
-                            f"DISTINCT ON fields must match the leading ORDER BY fields. "
-                            f"Expected ORDER BY to start with {self._distinct_on!r}."
-                        )
-                self.query._distinct_on = []
-                self.query.distinct_on(*self._distinct_on)
         if self._group_bys:
             self.query._groupbys = self._resolve_group_bys(*self._group_bys)
 
@@ -1966,6 +1999,12 @@ class ValuesQuery(FieldSelectQuery, Generic[SINGLE]):
             fields_for_select=self._fields_for_select.keys(),
         )
         self.resolve_filters()
+        self.resolve_distinct(
+            self._distinct,
+            self._distinct_on,
+            self._orderings,
+            self._annotations,
+        )
 
         # remove annotations that are not in fields_for_select
         self.query._selects = [
@@ -1976,21 +2015,6 @@ class ValuesQuery(FieldSelectQuery, Generic[SINGLE]):
             self.query._limit = self.query._wrapper_cls(self._limit)
         if self._offset:
             self.query._offset = self.query._wrapper_cls(self._offset)
-        if self._distinct:
-            self.query._distinct = True
-            if isinstance(self.query, PostgreSQLQueryBuilder) and self._distinct_on:
-                ordering_fields = [ordering[0] for ordering in self._orderings]
-                len_ordering_fields = len(ordering_fields)
-                for i, field in enumerate(self._distinct_on):
-                    if ordering_fields and (
-                        i >= len_ordering_fields or ordering_fields[i] != field
-                    ):
-                        raise OperationalError(
-                            f"DISTINCT ON fields must match the leading ORDER BY fields. "
-                            f"Expected ORDER BY to start with {self._distinct_on!r}."
-                        )
-                self.query._distinct_on = []
-                self.query.distinct_on(*self._distinct_on)
         if self._group_bys:
             self.query._groupbys = self._resolve_group_bys(*self._group_bys)
 
@@ -2521,7 +2545,7 @@ class UnionQuery(_ChooseDBMixin[MODEL], Generic[MODEL]):
         union._models = self._models
         union._union_query = None
         union._selects = self._selects
-        union._db = self._db
+        union._apply_db(self._db)
         union._qs = self._qs
         union._all = self._all
         union._orderings = self._orderings
