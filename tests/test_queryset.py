@@ -89,6 +89,14 @@ async def test_limit_count(db, intfields_data):
 
 
 @pytest.mark.asyncio
+async def test_limit_zero_count(db, intfields_data):
+    # limit(0) means zero rows, so count() must be 0 (not the total), matching
+    # the actual limited query.
+    assert await IntFields.all().limit(0).count() == 0
+    assert await IntFields.all().limit(0).count() == len(await IntFields.all().limit(0))
+
+
+@pytest.mark.asyncio
 async def test_limit_negative(db, intfields_data):
     with pytest.raises(ParamsError, match="Limit should be non-negative number"):
         await IntFields.all().limit(-10)
@@ -104,6 +112,14 @@ async def test_limit_zero(db, intfields_data):
 @pytest.mark.asyncio
 async def test_offset_count(db, intfields_data):
     assert await IntFields.all().offset(10).count() == 20
+
+
+@pytest.mark.asyncio
+async def test_offset_count_beyond_total(db, intfields_data):
+    # An offset past the total must report 0, not a negative count (the SQL
+    # LIMIT/OFFSET would return zero rows).
+    assert await IntFields.all().offset(100).count() == 0
+    assert await IntFields.all().offset(100).count() == len(await IntFields.all().offset(100))
 
 
 @pytest.mark.asyncio
