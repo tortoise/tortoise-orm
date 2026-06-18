@@ -21,6 +21,10 @@ Added
 Fixed
 ^^^^^
 - ``MigrationRecorder`` now uses parameterized queries; fixes MariaDB/MySQL rejecting ISO-8601 ``applied_at`` values. (#2132)
+- ``db_default`` on ``ForeignKeyField``/``OneToOneField`` now propagates to the underlying ``<fk>_id`` column, so ``CREATE TABLE`` emits the ``DEFAULT`` clause for FK columns. (#2199)
+- ``MigrationRecorder`` no longer emits tortoise's own ``pk`` field ``DeprecationWarning`` when applying migrations; it now builds its bookkeeping model with ``primary_key=True``. (#2203)
+- ``QuerySet.count()`` now matches the limited query result for the LIMIT/OFFSET edge cases: it returns ``0`` (instead of a negative number) when ``offset()`` exceeds the total row count, and ``0`` (instead of the total) for ``limit(0)``. (#2208)
+- Field declarations on models now resolve to their concrete type (e.g. ``CharField[str]``) in Pyright/Pylance instead of ``Field[Unknown]``; the ``Field.__new__`` type-check stub now returns ``Self``. (#2216)
 
 1.1.7
 -----
