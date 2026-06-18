@@ -87,14 +87,13 @@ def prepare_default_ordering(meta: Model.Meta) -> tuple[tuple[str, Order], ...]:
 
 def resolve_db_table(meta: Model.Meta) -> str:
     table = getattr(meta, "table", "")
-    db_table = getattr(meta, "db_table", "")
-    if not db_table:
+    if not hasattr(meta, "db_table"):
         return table
-    if table and table != db_table:
+    if table and table != meta.db_table:
         raise ConfigurationError(
             "Meta.table and Meta.db_table must have the same value, or set only one."
         )
-    return db_table
+    return meta.db_table
 
 
 class FkSetterKwargs(TypedDict):
@@ -925,7 +924,7 @@ class Model(metaclass=ModelMeta):
         try:
             return await cls.get(pk=key)
         except (DoesNotExist, ValueError):
-            raise ObjectDoesNotExistError(cls, cls._meta.pk_attr, key)
+            raise ObjectDoesNotExistError(cls, cls._meta.pk_attr, key) from None
 
     def clone(self: MODEL, pk: Any = EMPTY) -> MODEL:
         """
