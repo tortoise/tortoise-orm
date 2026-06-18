@@ -26,6 +26,10 @@ Fixed
 - ``QuerySet.count()`` now matches the limited query result for the LIMIT/OFFSET edge cases: it returns ``0`` (instead of a negative number) when ``offset()`` exceeds the total row count, and ``0`` (instead of the total) for ``limit(0)``. (#2208)
 - Field declarations on models now resolve to their concrete type (e.g. ``CharField[str]``) in Pyright/Pylance instead of ``Field[Unknown]``; the ``Field.__new__`` type-check stub now returns ``Self``. (#2216)
 
+Changed
+^^^^^^^
+- Accept a `pathlib.Path` instance as the `config_file` argument for TortoiseConfig's configuration-resolving functions. (#2184)
+
 1.1.7
 -----
 
