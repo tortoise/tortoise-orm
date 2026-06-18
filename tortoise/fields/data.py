@@ -25,11 +25,6 @@ from tortoise.fields.base import (
     _FieldKwargsCommon,
     _FieldKwargsNoPk,
 )
-
-if sys.version_info >= (3, 11):
-    from typing import Unpack
-else:  # pragma: no cover
-    from typing_extensions import Unpack
 from tortoise.timezone import get_default_timezone, get_timezone, get_use_tz, localtime
 from tortoise.validators import MaxLengthValidator
 
@@ -42,13 +37,21 @@ except ImportError:  # pragma: nocoverage
 
 try:
     from pydantic import BaseModel as _PydanticBaseModel
-    from pydantic._internal._model_construction import ModelMetaclass as _PydanticModelMetaclass
+    from pydantic._internal._model_construction import (
+        ModelMetaclass as _PydanticModelMetaclass,
+    )
 except ImportError:
     _PydanticBaseModel = None  # type: ignore[assignment,misc]
     _PydanticModelMetaclass = None  # type: ignore[assignment,misc]
 
 if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.models import Model
+
+
+if sys.version_info >= (3, 11):
+    from typing import Unpack
+else:  # pragma: no cover
+    from typing_extensions import Unpack
 
 __all__ = (
     "BigIntField",
@@ -357,12 +360,18 @@ class BooleanField(Field[T_BOOL]):
 
     @overload
     def __init__(
-        self: BooleanField[bool], *, null: Literal[False] = False, **kwargs: Unpack[FieldKwargs]
+        self: BooleanField[bool],
+        *,
+        null: Literal[False] = False,
+        **kwargs: Unpack[FieldKwargs],
     ) -> None: ...
 
     @overload
     def __init__(
-        self: BooleanField[bool | None], *, null: Literal[True], **kwargs: Unpack[FieldKwargs]
+        self: BooleanField[bool | None],
+        *,
+        null: Literal[True],
+        **kwargs: Unpack[FieldKwargs],
     ) -> None: ...
 
     def __init__(self, **kwargs: Any) -> None:
@@ -580,7 +589,10 @@ class DateField(Field[T_DATE], datetime.date):
 
     @overload
     def __init__(
-        self: DateField[datetime.date | None], *, null: Literal[True], **kwargs: Unpack[FieldKwargs]
+        self: DateField[datetime.date | None],
+        *,
+        null: Literal[True],
+        **kwargs: Unpack[FieldKwargs],
     ) -> None: ...
 
     def __init__(self, **kwargs: Any) -> None:
@@ -743,12 +755,18 @@ class FloatField(Field[T_FLOAT], float):
 
     @overload
     def __init__(
-        self: FloatField[float], *, null: Literal[False] = False, **kwargs: Unpack[FieldKwargs]
+        self: FloatField[float],
+        *,
+        null: Literal[False] = False,
+        **kwargs: Unpack[FieldKwargs],
     ) -> None: ...
 
     @overload
     def __init__(
-        self: FloatField[float | None], *, null: Literal[True], **kwargs: Unpack[FieldKwargs]
+        self: FloatField[float | None],
+        *,
+        null: Literal[True],
+        **kwargs: Unpack[FieldKwargs],
     ) -> None: ...
 
     def __init__(self, **kwargs: Any) -> None:
@@ -874,12 +892,18 @@ class UUIDField(Field[T_UUID], UUID):
 
     @overload
     def __init__(
-        self: UUIDField[UUID], *, null: Literal[False] = False, **kwargs: Unpack[FieldKwargs]
+        self: UUIDField[UUID],
+        *,
+        null: Literal[False] = False,
+        **kwargs: Unpack[FieldKwargs],
     ) -> None: ...
 
     @overload
     def __init__(
-        self: UUIDField[UUID | None], *, null: Literal[True], **kwargs: Unpack[FieldKwargs]
+        self: UUIDField[UUID | None],
+        *,
+        null: Literal[True],
+        **kwargs: Unpack[FieldKwargs],
     ) -> None: ...
 
     def __init__(self, **kwargs: Any) -> None:
@@ -909,12 +933,18 @@ class BinaryField(Field[T_BINARY], bytes):  # type: ignore
 
     @overload
     def __init__(
-        self: BinaryField[bytes], *, null: Literal[False] = False, **kwargs: Unpack[FieldKwargs]
+        self: BinaryField[bytes],
+        *,
+        null: Literal[False] = False,
+        **kwargs: Unpack[FieldKwargs],
     ) -> None: ...
 
     @overload
     def __init__(
-        self: BinaryField[bytes | None], *, null: Literal[True], **kwargs: Unpack[FieldKwargs]
+        self: BinaryField[bytes | None],
+        *,
+        null: Literal[True],
+        **kwargs: Unpack[FieldKwargs],
     ) -> None: ...
 
     def __init__(self, **kwargs: Any) -> None:
