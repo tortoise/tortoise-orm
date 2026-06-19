@@ -298,11 +298,13 @@ class AwaitableQuery(_ChooseDBMixin[MODEL], Generic[MODEL]):
         orderings: Iterable[tuple[str, str | Order]],
         annotations: dict[str, Term | Expression],
     ) -> None:
+        self.query._distinct = distinct
+        if isinstance(self.query, PostgreSQLQueryBuilder):
+            self.query._distinct_on = []
         if not distinct:
             return
         if not orderings and self.model._meta.ordering and not annotations:
             orderings = self.model._meta.ordering
-        self.query._distinct = True
         if distinct_on:
             if not isinstance(self.query, PostgreSQLQueryBuilder):
                 raise OperationalError("DISTINCT ON is only supported by PostgreSQL")
@@ -314,7 +316,6 @@ class AwaitableQuery(_ChooseDBMixin[MODEL], Generic[MODEL]):
                         f"DISTINCT ON fields must match the leading ORDER BY fields. "
                         f"Expected ORDER BY to start with {distinct_on!r}."
                     )
-            self.query._distinct_on = []
             distinct_on_by_source_field = []
             for field_name in distinct_on:
                 field_object = self.model._meta.fields_map.get(field_name)
