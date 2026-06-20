@@ -179,6 +179,17 @@ class AwaitableQuery(_ChooseDBMixin[MODEL], Generic[MODEL]):
             )
             self._joined_tables.append(table_criterio_tuple[0])
 
+    def _join_select_related_tables(self, lookup_expression: str) -> None:
+        """Add the JOINs requested by a ``select_related`` lookup without selecting
+        the related columns. Value queries (``.values()`` / ``.values_list()``) only
+        need the joins so that orderings, filters and annotations referencing the
+        related table resolve to a real alias instead of an unknown one (#2004).
+        """
+        table = self.model._meta.basetable
+        for field in expand_lookup_expression(self.model, lookup_expression):
+            field = cast(RelationalField, field)
+            table = self._join_table_by_field(table, field.model_field_name, field)
+
     @staticmethod
     def _resolve_ordering_string(ordering: str, reverse: bool = False) -> tuple[str, Order]:
         order_type = Order.asc
@@ -698,6 +709,7 @@ class QuerySet(AwaitableQuery[MODEL]):
             group_bys=self._group_bys,
             force_indexes=self._force_indexes,
             use_indexes=self._use_indexes,
+            select_related=self._select_related,
         )
 
     def values(self, *args: str, **kwargs: str) -> ValuesQuery[Literal[False]]:
@@ -753,6 +765,7 @@ class QuerySet(AwaitableQuery[MODEL]):
             group_bys=self._group_bys,
             force_indexes=self._force_indexes,
             use_indexes=self._use_indexes,
+            select_related=self._select_related,
         )
 
     def delete(self) -> DeleteQuery:
@@ -1709,6 +1722,7 @@ class ValuesListQuery(FieldSelectQuery, Generic[SINGLE]):
         "_force_indexes",
         "_use_indexes",
         "_fields_to_select_sql",
+        "_select_related",
     )
 
     def __init__(
@@ -1729,6 +1743,7 @@ class ValuesListQuery(FieldSelectQuery, Generic[SINGLE]):
         group_bys: tuple[str, ...],
         force_indexes: set[str],
         use_indexes: set[str],
+        select_related: set[str],
     ) -> None:
         super().__init__(model, annotations)
         if flat and (len(fields_for_select_list) != 1):
@@ -1750,6 +1765,7 @@ class ValuesListQuery(FieldSelectQuery, Generic[SINGLE]):
         self._group_bys = group_bys
         self._force_indexes = force_indexes
         self._use_indexes = use_indexes
+        self._select_related = select_related
         self._fields_to_select_sql = {
             *self._fields_for_select_list,
             *(key for key, value in self.fields.items() if value in self._fields_for_select_list),
@@ -1770,6 +1786,8 @@ class ValuesListQuery(FieldSelectQuery, Generic[SINGLE]):
             fields_for_select=self._fields_for_select_list,
         )
         self.resolve_filters(self._fields_to_select_sql)
+        for select_related in self._select_related:
+            self._join_select_related_tables(select_related)
         if self._limit:
             self.query._limit = self.query._wrapper_cls(self._limit)
         if self._offset:
@@ -1842,6 +1860,7 @@ class ValuesQuery(FieldSelectQuery, Generic[SINGLE]):
         "_group_bys",
         "_force_indexes",
         "_use_indexes",
+        "_select_related",
     )
 
     def __init__(
@@ -1861,6 +1880,7 @@ class ValuesQuery(FieldSelectQuery, Generic[SINGLE]):
         group_bys: tuple[str, ...],
         force_indexes: set[str],
         use_indexes: set[str],
+        select_related: set[str],
     ) -> None:
         super().__init__(model, annotations)
         self._fields_for_select = fields_for_select
@@ -1876,6 +1896,7 @@ class ValuesQuery(FieldSelectQuery, Generic[SINGLE]):
         self._group_bys = group_bys
         self._force_indexes = force_indexes
         self._use_indexes = use_indexes
+        self._select_related = select_related
 
     def _make_query(self) -> None:
         self._joined_tables = []
@@ -1892,6 +1913,8 @@ class ValuesQuery(FieldSelectQuery, Generic[SINGLE]):
             fields_for_select=self._fields_for_select.keys(),
         )
         self.resolve_filters()
+        for select_related in self._select_related:
+            self._join_select_related_tables(select_related)
 
         # remove annotations that are not in fields_for_select
         self.query._selects = [

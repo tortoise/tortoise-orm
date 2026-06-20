@@ -5,7 +5,7 @@ from tests.testmodels import Event, Team, Tournament
 from tortoise.contrib import test
 from tortoise.contrib.test.condition import In, NotEQ
 from tortoise.exceptions import FieldError
-from tortoise.expressions import Case, Function, Q, When
+from tortoise.expressions import Case, Function, Q, RawSQL, When
 from tortoise.functions import Length, Trim
 
 
@@ -288,3 +288,42 @@ async def test_order_by_annotation_not_in_values_list(db):
         .values_list("name")
     )
     assert tournaments == [("1",), ("2",), ("3",)]
+
+
+@pytest.mark.asyncio
+async def test_select_related_join_preserved_in_values(db):
+    # Regression for #2004: a select_related() join must survive .values(), so an
+    # annotation/ordering that references the joined table still resolves instead
+    # of raising "no such column".
+    t_b = await Tournament.create(name="b")
+    t_a = await Tournament.create(name="a")
+    e1 = await Event.create(name="e1", tournament=t_b)
+    e2 = await Event.create(name="e2", tournament=t_a)
+
+    events = (
+        await Event.all()
+        .select_related("tournament")
+        .annotate(tournament_name=RawSQL("event__tournament.name"))
+        .order_by("tournament_name")
+        .values("event_id")
+    )
+    # ordered by the related tournament name: "a" (e2) before "b" (e1)
+    assert [e["event_id"] for e in events] == [e2.event_id, e1.event_id]
+
+
+@pytest.mark.asyncio
+async def test_select_related_join_preserved_in_values_list(db):
+    # Regression for #2004 (the .values_list() path).
+    t_b = await Tournament.create(name="b")
+    t_a = await Tournament.create(name="a")
+    e1 = await Event.create(name="e1", tournament=t_b)
+    e2 = await Event.create(name="e2", tournament=t_a)
+
+    events = (
+        await Event.all()
+        .select_related("tournament")
+        .annotate(tournament_name=RawSQL("event__tournament.name"))
+        .order_by("tournament_name")
+        .values_list("event_id", flat=True)
+    )
+    assert events == [e2.event_id, e1.event_id]
