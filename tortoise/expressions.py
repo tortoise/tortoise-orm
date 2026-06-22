@@ -326,6 +326,9 @@ class Q:
             and self.filters == other.filters
         )
 
+    def __bool__(self) -> bool:
+        return any((self.filters, *(children for children in self.children)))
+
     def negate(self) -> None:
         """
         Negates the current Q object. (mutation)
