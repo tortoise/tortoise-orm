@@ -333,9 +333,7 @@ class TextField(Field[T_STR], str):  # type: ignore
                 stacklevel=2,
             )
             if index or db_index:
-                raise ConfigurationError(
-                    "TextField can't be indexed, consider CharField"
-                )
+                raise ConfigurationError("TextField can't be indexed, consider CharField")
         elif db_index:
             raise ConfigurationError("TextField can't be indexed, consider CharField")
 
@@ -431,9 +429,7 @@ class DecimalField(Field[T_DECIMAL], Decimal):  # type: ignore
         super().__init__(**kwargs)
         self.max_digits = max_digits
         self.decimal_places = decimal_places
-        self.quant = Decimal(
-            "1" if decimal_places == 0 else f"1.{('0' * decimal_places)}"
-        )
+        self.quant = Decimal("1" if decimal_places == 0 else f"1.{('0' * decimal_places)}")
 
     def to_python_value(self, value: Any) -> Decimal | None:
         if value is not None:
@@ -458,9 +454,7 @@ class DecimalField(Field[T_DECIMAL], Decimal):  # type: ignore
 DatetimeFieldQueryValueType = TypeVar(
     "DatetimeFieldQueryValueType", datetime.datetime, int, float, str
 )
-DateFieldQueryValueType = TypeVar(
-    "DateFieldQueryValueType", datetime.date, int, float, str
-)
+DateFieldQueryValueType = TypeVar("DateFieldQueryValueType", datetime.date, int, float, str)
 
 
 class DatetimeField(Field[T_DATETIME], datetime.datetime):
@@ -510,9 +504,7 @@ class DatetimeField(Field[T_DATETIME], datetime.datetime):
         **kwargs: Unpack[FieldKwargs],
     ) -> None: ...
 
-    def __init__(
-        self, auto_now: bool = False, auto_now_add: bool = False, **kwargs: Any
-    ) -> None:
+    def __init__(self, auto_now: bool = False, auto_now_add: bool = False, **kwargs: Any) -> None:
         if auto_now_add and auto_now:
             raise ConfigurationError("You can choose only 'auto_now' or 'auto_now_add'")
         super().__init__(**kwargs)
@@ -652,9 +644,7 @@ class TimeField(Field[T_TIME], datetime.time):
         **kwargs: Unpack[FieldKwargs],
     ) -> None: ...
 
-    def __init__(
-        self, auto_now: bool = False, auto_now_add: bool = False, **kwargs: Any
-    ) -> None:
+    def __init__(self, auto_now: bool = False, auto_now_add: bool = False, **kwargs: Any) -> None:
         if auto_now_add and auto_now:
             raise ConfigurationError("You can choose only 'auto_now' or 'auto_now_add'")
         super().__init__(**kwargs)
@@ -753,9 +743,7 @@ class TimeDeltaField(Field[T_TIMEDELTA]):
 
         if value is None:
             return None
-        return (
-            (value.days * 86400000000) + (value.seconds * 1000000) + value.microseconds
-        )
+        return (value.days * 86400000000) + (value.seconds * 1000000) + value.microseconds
 
 
 class FloatField(Field[T_FLOAT], float):
@@ -919,9 +907,7 @@ class UUIDField(Field[T_UUID], UUID):
     ) -> None: ...
 
     def __init__(self, **kwargs: Any) -> None:
-        if (
-            kwargs.get("primary_key") or kwargs.get("pk", False)
-        ) and "default" not in kwargs:
+        if (kwargs.get("primary_key") or kwargs.get("pk", False)) and "default" not in kwargs:
             kwargs["default"] = uuid4
         super().__init__(**kwargs)
 
@@ -996,9 +982,7 @@ class IntEnumFieldInstance(SmallIntField):
 
         # Automatic description for the field if not specified by the user
         if description is None:
-            description = "\n".join([f"{e.name}: {int(e.value)}" for e in enum_type])[
-                :2048
-            ]
+            description = "\n".join([f"{e.name}: {int(e.value)}" for e in enum_type])[:2048]
 
         super().__init__(description=description, **kwargs)
         self.enum_type = enum_type
@@ -1007,9 +991,7 @@ class IntEnumFieldInstance(SmallIntField):
         value = self.enum_type(value) if value is not None else None
         return value
 
-    def to_db_value(
-        self, value: IntEnum | None | int, instance: type[Model] | Model
-    ) -> int | None:
+    def to_db_value(self, value: IntEnum | None | int, instance: type[Model] | Model) -> int | None:
         if isinstance(value, IntEnum):
             value = int(value.value)
         if isinstance(value, int):
@@ -1056,9 +1038,7 @@ class CharEnumFieldInstance(CharField):
     ) -> None:
         # Automatic description for the field if not specified by the user
         if description is None:
-            description = "\n".join([f"{e.name}: {str(e.value)}" for e in enum_type])[
-                :2048
-            ]
+            description = "\n".join([f"{e.name}: {str(e.value)}" for e in enum_type])[:2048]
 
         # Automatic CharField max_length
         if max_length == 0:
@@ -1073,9 +1053,7 @@ class CharEnumFieldInstance(CharField):
     def to_python_value(self, value: str | None) -> Enum | None:
         return self.enum_type(value) if value is not None else None
 
-    def to_db_value(
-        self, value: Enum | None | str, instance: type[Model] | Model
-    ) -> str | None:
+    def to_db_value(self, value: Enum | None | str, instance: type[Model] | Model) -> str | None:
         self.validate(value)
         if isinstance(value, Enum):
             return str(value.value)

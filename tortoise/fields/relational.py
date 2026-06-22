@@ -133,9 +133,7 @@ class ReverseRelation(Generic[MODEL]):
         """
         return self._query.offset(offset)
 
-    async def create(
-        self, using_db: BaseDBAsyncClient | None = None, **kwargs: Any
-    ) -> MODEL:
+    async def create(self, using_db: BaseDBAsyncClient | None = None, **kwargs: Any) -> MODEL:
         """
         Create a related record in the DB and returns the object, automatically setting the
         foreign key relationship to the parent instance.
@@ -167,9 +165,7 @@ class ReverseRelation(Generic[MODEL]):
         # Call remote model's create method
         return await self.remote_model.create(using_db=using_db, **kwargs)
 
-    def _set_result_for_query(
-        self, sequence: list[MODEL], attr: str | None = None
-    ) -> None:
+    def _set_result_for_query(self, sequence: list[MODEL], attr: str | None = None) -> None:
         self._fetched = True
         self.related_objects = sequence
         if attr:
@@ -187,18 +183,12 @@ class ManyToManyRelation(ReverseRelation[MODEL]):
     Many-to-many relation container for :func:`.ManyToManyField`.
     """
 
-    def __init__(
-        self, instance: Model, m2m_field: ManyToManyFieldInstance[MODEL]
-    ) -> None:
-        super().__init__(
-            m2m_field.related_model, m2m_field.related_name, instance, "pk"
-        )
+    def __init__(self, instance: Model, m2m_field: ManyToManyFieldInstance[MODEL]) -> None:
+        super().__init__(m2m_field.related_model, m2m_field.related_name, instance, "pk")
         self.field = m2m_field
         self.instance = instance
 
-    async def add(
-        self, *instances: MODEL, using_db: BaseDBAsyncClient | None = None
-    ) -> None:
+    async def add(self, *instances: MODEL, using_db: BaseDBAsyncClient | None = None) -> None:
         """
         Adds one or more of ``instances`` to the relation.
 
@@ -217,9 +207,7 @@ class ManyToManyRelation(ReverseRelation[MODEL]):
         pks_f: list = []
         for instance_to_add in instances:
             if not instance_to_add._saved_in_db:
-                raise OperationalError(
-                    f"You should first call .save() on {instance_to_add}"
-                )
+                raise OperationalError(f"You should first call .save() on {instance_to_add}")
             pk_f = related_pk_formatting_func(instance_to_add.pk, instance_to_add)
             pks_f.append(pk_f)
         through_table = Table(self.field.through, schema=self.field.through_schema)
@@ -229,13 +217,9 @@ class ManyToManyRelation(ReverseRelation[MODEL]):
             through_table[forward_key],
         )
         select_query = (
-            db.query_class.from_(through_table)
-            .where(backward_field == pk_b)
-            .select(forward_key)
+            db.query_class.from_(through_table).where(backward_field == pk_b).select(forward_key)
         )
-        criterion = (
-            forward_field == pks_f[0] if len(pks_f) == 1 else forward_field.isin(pks_f)
-        )
+        criterion = forward_field == pks_f[0] if len(pks_f) == 1 else forward_field.isin(pks_f)
         select_query = select_query.where(criterion)
 
         _, already_existing_relations_raw = await db.execute_query(
@@ -247,9 +231,7 @@ class ManyToManyRelation(ReverseRelation[MODEL]):
         }
 
         if pks_f_to_insert := set(pks_f) - already_existing_forward_pks:
-            query = db.query_class.into(through_table).columns(
-                forward_field, backward_field
-            )
+            query = db.query_class.into(through_table).columns(forward_field, backward_field)
             for pk_f in pks_f_to_insert:
                 query = query.insert(pk_f, pk_b)
             await db.execute_query(*query.get_parameterized_sql())
@@ -260,9 +242,7 @@ class ManyToManyRelation(ReverseRelation[MODEL]):
         """
         await self._remove_or_clear(using_db=using_db)
 
-    async def remove(
-        self, *instances: MODEL, using_db: BaseDBAsyncClient | None = None
-    ) -> None:
+    async def remove(self, *instances: MODEL, using_db: BaseDBAsyncClient | None = None) -> None:
         """
         Removes one or more of ``instances`` from the relation.
 
@@ -287,9 +267,9 @@ class ManyToManyRelation(ReverseRelation[MODEL]):
         if instances:
             related_pk_formatting_func = type(instances[0])._meta.pk.to_db_value
             if len(instances) == 1:
-                condition &= through_table[
-                    self.field.forward_key
-                ] == related_pk_formatting_func(instances[0].pk, instances[0])
+                condition &= through_table[self.field.forward_key] == related_pk_formatting_func(
+                    instances[0].pk, instances[0]
+                )
             else:
                 condition &= through_table[self.field.forward_key].isin(
                     [related_pk_formatting_func(i.pk, i) for i in instances]
@@ -317,9 +297,7 @@ class RelationalField(Field[MODEL]):
     if TYPE_CHECKING:
 
         @overload
-        def __get__(
-            self, instance: None, owner: type[Model]
-        ) -> RelationalField[MODEL]: ...
+        def __get__(self, instance: None, owner: type[Model]) -> RelationalField[MODEL]: ...
 
         @overload
         def __get__(self, instance: Model, owner: type[Model]) -> MODEL: ...
@@ -348,9 +326,7 @@ class RelationalField(Field[MODEL]):
                 ) from None
         elif len(model_name.split(".")) != 2:
             field_type = cls.__name__.replace("Instance", "")
-            raise ConfigurationError(
-                f'{field_type} accepts model name in format "app.Model"'
-            )
+            raise ConfigurationError(f'{field_type} accepts model name in format "app.Model"')
 
 
 class ForeignKeyFieldInstance(RelationalField[MODEL]):
@@ -370,9 +346,7 @@ class ForeignKeyFieldInstance(RelationalField[MODEL]):
                 "on_delete can only be CASCADE, RESTRICT, SET_NULL, SET_DEFAULT or NO_ACTION"
             )
         if on_delete == SET_NULL and not bool(kwargs.get("null")):
-            raise ConfigurationError(
-                "If on_delete is SET_NULL, then field must have null=True set"
-            )
+            raise ConfigurationError("If on_delete is SET_NULL, then field must have null=True set")
         self.on_delete = on_delete
 
     def describe(self, serializable: bool) -> dict:
