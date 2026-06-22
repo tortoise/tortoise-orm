@@ -252,6 +252,122 @@ async def test_create_model_includes_db_default() -> None:
 
 
 @pytest.mark.asyncio
+async def test_create_model_skips_fk_constraint_when_db_constraint_false() -> None:
+    """CreateModel must not emit a FOREIGN KEY constraint for ``db_constraint=False`` FKs.
+
+    Regression test for #2223: migrations ignored ``db_constraint=False`` and always
+    emitted the FK reference, unlike the runtime schema generator.
+    """
+
+    class Parent(Model):
+        id = fields.IntField(primary_key=True)
+
+        class Meta:
+            table = "parent"
+            app = "models"
+
+    class Child(Model):
+        id = fields.IntField(primary_key=True)
+        parent: fields.ForeignKeyRelation[Parent] = fields.ForeignKeyField(
+            "models.Parent", db_constraint=False, related_name="children"
+        )
+
+        class Meta:
+            table = "child"
+            app = "models"
+
+    init_apps(Parent, Child)
+
+    client = FakeClient("sql")
+    editor = TestSchemaEditor(client)
+
+    await editor.create_model(Child)
+
+    assert len(client.executed) == 1
+    sql = client.executed[0]
+    assert 'CREATE TABLE "child"' in sql
+    # The FK column itself is still created ...
+    assert '"parent_id" INT' in sql
+    # ... but without any physical FK constraint.
+    assert "REFERENCES" not in sql
+    assert "FOREIGN KEY" not in sql
+
+
+@pytest.mark.asyncio
+async def test_add_field_skips_fk_constraint_when_db_constraint_false() -> None:
+    """add_field must not emit a FOREIGN KEY constraint for ``db_constraint=False`` FKs."""
+
+    class Parent(Model):
+        id = fields.IntField(primary_key=True)
+
+        class Meta:
+            table = "parent"
+            app = "models"
+
+    class Child(Model):
+        id = fields.IntField(primary_key=True)
+        parent: fields.ForeignKeyRelation[Parent] = fields.ForeignKeyField(
+            "models.Parent", db_constraint=False, related_name="children"
+        )
+
+        class Meta:
+            table = "child"
+            app = "models"
+
+    init_apps(Parent, Child)
+
+    client = FakeClient("sql")
+    editor = TestSchemaEditor(client)
+
+    await editor.add_field(Child, "parent")
+
+    assert len(client.executed) == 1
+    sql = client.executed[0]
+    assert 'ALTER TABLE "child" ADD COLUMN' in sql
+    assert '"parent_id" INT' in sql
+    assert "REFERENCES" not in sql
+    assert "FOREIGN KEY" not in sql
+
+
+@pytest.mark.asyncio
+async def test_create_model_skips_m2m_constraint_when_db_constraint_false() -> None:
+    """M2M through table must not emit FOREIGN KEY constraints for ``db_constraint=False``."""
+
+    class Parent(Model):
+        id = fields.IntField(primary_key=True)
+
+        class Meta:
+            table = "parent"
+            app = "models"
+
+    class Child(Model):
+        id = fields.IntField(primary_key=True)
+        tags: fields.ManyToManyRelation[Parent] = fields.ManyToManyField(
+            "models.Parent",
+            db_constraint=False,
+            related_name="tagged",
+            through="child_parent",
+        )
+
+        class Meta:
+            table = "child"
+            app = "models"
+
+    init_apps(Parent, Child)
+
+    client = FakeClient("sql")
+    editor = TestSchemaEditor(client)
+
+    await editor.create_model(Child)
+
+    m2m_sql = next(sql for sql in client.executed if 'CREATE TABLE "child_parent"' in sql)
+    assert '"child_id" INT' in m2m_sql
+    assert '"parent_id" INT' in m2m_sql
+    assert "REFERENCES" not in m2m_sql
+    assert "FOREIGN KEY" not in m2m_sql
+
+
+@pytest.mark.asyncio
 async def test_create_model_includes_db_default_on_fk() -> None:
     """CreateModel should include DEFAULT clause for FK columns with db_default."""
 

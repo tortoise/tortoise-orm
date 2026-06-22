@@ -31,6 +31,12 @@ class BaseSchemaEditor(SchemaQuotingMixin):
         ' ("{forward_field}") ON DELETE CASCADE\n'
         "){extra}{comment};"
     )
+    M2M_TABLE_NO_CONSTRAINT_TEMPLATE = (
+        "CREATE TABLE {table_name} (\n"
+        '    "{backward_key}" {backward_type} NOT NULL,\n'
+        '    "{forward_key}" {forward_type} NOT NULL\n'
+        "){extra}{comment};"
+    )
     RENAME_TABLE_TEMPLATE = "ALTER TABLE {old_table} RENAME TO {new_table}"
     DELETE_TABLE_TEMPLATE = "DROP TABLE {table} CASCADE"
     ADD_FIELD_TEMPLATE = "ALTER TABLE {table} ADD COLUMN {definition}"
@@ -232,7 +238,14 @@ class BaseSchemaEditor(SchemaQuotingMixin):
         if not related_model:
             return None
         m2m_schema = model._meta.schema
-        m2m_create_string = self.M2M_TABLE_TEMPLATE.format(
+        # Respect db_constraint=False: build the through table without FK constraints,
+        # mirroring the runtime schema generator (see base/schema_generator.py).
+        template = (
+            self.M2M_TABLE_TEMPLATE
+            if field.db_constraint
+            else self.M2M_TABLE_NO_CONSTRAINT_TEMPLATE
+        )
+        m2m_create_string = template.format(
             table_name=self._qualify_table_name(field.through, m2m_schema),
             backward_table=self._qualify_table_name(model._meta.db_table, model._meta.schema),
             forward_table=self._qualify_table_name(
@@ -290,21 +303,25 @@ class BaseSchemaEditor(SchemaQuotingMixin):
             unique=key_field.unique,
             is_pk=key_field.pk,
             comment="",
-        ) + self._get_fk_reference_string(
-            constraint_name=self._generate_fk_name(
-                model._meta.db_table,
-                db_field,
-                related_model._meta.db_table,
-                to_field_name,
-            ),
-            db_field=db_field,
-            table=self._qualify_table_name(
-                related_model._meta.db_table, related_model._meta.schema
-            ),
-            field=to_field_name,
-            on_delete=fk_field.on_delete,
-            comment=comment,
         )
+        # Respect db_constraint=False: emit the plain column without a FK constraint,
+        # mirroring the runtime schema generator (see base/schema_generator.py).
+        if fk_field.db_constraint:
+            field_creation_string += self._get_fk_reference_string(
+                constraint_name=self._generate_fk_name(
+                    model._meta.db_table,
+                    db_field,
+                    related_model._meta.db_table,
+                    to_field_name,
+                ),
+                db_field=db_field,
+                table=self._qualify_table_name(
+                    related_model._meta.db_table, related_model._meta.schema
+                ),
+                field=to_field_name,
+                on_delete=fk_field.on_delete,
+                comment=comment,
+            )
         return field_creation_string
 
     def _get_model_sql_data(self, model: type[Model]) -> ModelSqlData:
