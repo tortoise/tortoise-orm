@@ -56,17 +56,21 @@ jobs:
         run: make test_sqlite_regexp
         env:
           PYTHONDEVMODE: 1
-      - name: Test FastAPI/Blacksheep/Sanic Examples
+      - name: Test FastAPI/Blacksheep/Sanic/Starlette Examples
         run: |
           PYTHONPATH=$DEST_FASTAPI uv run --frozen tortoise -c config.TORTOISE_ORM migrate
           PYTHONPATH=$DEST_FASTAPI uv run --frozen pytest $PYTEST_ARGS_SEQ $DEST_FASTAPI/_tests.py
           rm -f $DEST_FASTAPI/db.sqlite3
           PYTHONPATH=$DEST_BLACKSHEEP uv run --frozen pytest $PYTEST_ARGS $DEST_BLACKSHEEP/_tests.py
           PYTHONPATH=$DEST_SANIC uv run --frozen pytest $PYTEST_ARGS $DEST_SANIC/_tests.py
+          PYTHONPATH=$DEST_STARLETTE uv run --frozen pytest $PYTEST_ARGS $DEST_STARLETTE/_tests.py
+          uv pip install "starlette<1.0"
+          PYTHONPATH=$DEST_STARLETTE uv run --no-sync pytest $PYTEST_ARGS $DEST_STARLETTE/_tests.py
         env:
           DEST_FASTAPI: examples/fastapi
           DEST_BLACKSHEEP: examples/blacksheep
           DEST_SANIC: examples/sanic
+          DEST_STARLETTE: examples/starlette
           PYTHONDEVMODE: 1
           PYTEST_ARGS: "-n auto --cov=tortoise --cov-append --cov-branch --tb=native -q"
           PYTEST_ARGS_SEQ: "--cov=tortoise --cov-append --cov-branch --tb=native -q"

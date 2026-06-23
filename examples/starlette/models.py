@@ -7,3 +7,8 @@ class Users(models.Model):
 
     def __str__(self) -> str:
         return f"User {self.id}: {self.username}"
+
+    def __repr__(self) -> str:
+        fields = sorted(self._meta.db_fields)  # ['id', 'username']
+        values = ", ".join(f"{f}={getattr(self, f)!r}" for f in fields)
+        return f"{self.__class__.__name__}({values})"
