@@ -25,6 +25,7 @@ Fixed
 - ``MigrationRecorder`` no longer emits tortoise's own ``pk`` field ``DeprecationWarning`` when applying migrations; it now builds its bookkeeping model with ``primary_key=True``. (#2203)
 - ``QuerySet.count()`` now matches the limited query result for the LIMIT/OFFSET edge cases: it returns ``0`` (instead of a negative number) when ``offset()`` exceeds the total row count, and ``0`` (instead of the total) for ``limit(0)``. (#2208)
 - Field declarations on models now resolve to their concrete type (e.g. ``CharField[str]``) in Pyright/Pylance instead of ``Field[Unknown]``; the ``Field.__new__`` type-check stub now returns ``Self``. (#2216)
+- Migrations now honor ``db_constraint=False`` on ``ForeignKeyField``/``ManyToManyField``: the generated DDL emits the plain column (and through table) without a ``FOREIGN KEY`` constraint, matching the runtime schema generator. Previously the migration schema editor always emitted the FK reference regardless of the flag. (#2223)
 
 1.1.7
 -----
