@@ -13,7 +13,7 @@ Changelog
 
 Fixed
 ^^^^^
-- Fixed DELETE and UPDATE queries failing when filtering by related fields (foreign keys). Using a subquery pattern instead of JOIN for compatibility with MySQL and SQLite. (#283)
+- Fixed DELETE and UPDATE queries failing when filtering by related fields (foreign keys). Using a subquery pattern instead of JOIN for compatibility with MySQL and SQLite. (#2139)
 
 Added
 ^^^^^
