@@ -7,8 +7,9 @@ from tortoise.exceptions import ConfigurationError
 from tortoise.fields import Field
 
 
-class TSVectorField(Field):
+class TSVectorField(Field[str]):
     SQL_TYPE = "TSVECTOR"
+    field_type = str
     allows_generated = True
 
     def __init__(
