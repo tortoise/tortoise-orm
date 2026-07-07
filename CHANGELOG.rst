@@ -26,6 +26,7 @@ Fixed
 - ``QuerySet.count()`` now matches the limited query result for the LIMIT/OFFSET edge cases: it returns ``0`` (instead of a negative number) when ``offset()`` exceeds the total row count, and ``0`` (instead of the total) for ``limit(0)``. (#2208)
 - Field declarations on models now resolve to their concrete type (e.g. ``CharField[str]``) in Pyright/Pylance instead of ``Field[Unknown]``; the ``Field.__new__`` type-check stub now returns ``Self``. (#2216)
 - ``TransactionContext`` now returns a ``TransactionalDBClient`` instead of a raw database connection. This change gives the correct inferred type for the transaction context. (#2232)
+- ``GeometryField`` (MySQL) now declares a concrete ``field_type``; previously it was ``None`` (the ``_FieldMeta`` metaclass only auto-assigns it for multi-base fields), so ``to_python_value``/``to_db_value`` raised ``TypeError`` on any non-``None`` value. (#2238)
 
 
 1.1.7
