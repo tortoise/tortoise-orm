@@ -437,9 +437,10 @@ class Q:
             key in resolve_context.model._meta.fk_fields
             or key in resolve_context.model._meta.o2o_fields
         ):
-            field_object = resolve_context.model._meta.fields_map[key]
+            field_object = cast(RelationalField, resolve_context.model._meta.fields_map[key])
             filter_key = cast(str, field_object.source_field)
-            filter_value = getattr(value, "pk", value)
+            to_field_name = field_object.to_field_instance.model_field_name
+            filter_value = getattr(value, to_field_name, value)
         elif key in resolve_context.model._meta.m2m_fields:
             filter_value = getattr(value, "pk", value)
         elif (
