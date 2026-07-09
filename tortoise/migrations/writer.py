@@ -222,8 +222,15 @@ def render_value(value: Any, imports: ImportManager) -> str:
 def _render_call(path: str, args: list[Any], kwargs: dict[str, Any], imports: ImportManager) -> str:
     if path.startswith("tortoise.fields."):
         class_name = path.rsplit(".", 1)[1]
-        # Render FieldInstance classes as their public Field name
-        if class_name.endswith("FieldInstance"):
+        # Render FieldInstance classes as their public Field name. The enum fields are
+        # excluded: their public ``IntEnumField``/``CharEnumField`` names are factory
+        # functions typed to return the enum type (not a ``Field``), so rendering them
+        # produces migrations that fail ``mypy`` (see #2155). The concrete
+        # ``*EnumFieldInstance`` classes are real ``Field`` subclasses that type-check.
+        if class_name.endswith("FieldInstance") and class_name not in (
+            "IntEnumFieldInstance",
+            "CharEnumFieldInstance",
+        ):
             class_name = class_name.replace("FieldInstance", "Field")
             # For relational fields, move model_name to first positional arg
             if path.startswith("tortoise.fields.relational.") and "model_name" in kwargs:

@@ -20,6 +20,7 @@ Added
 
 Fixed
 ^^^^^
+- ``makemigrations`` now renders ``IntEnumField``/``CharEnumField`` as their concrete ``IntEnumFieldInstance``/``CharEnumFieldInstance`` classes, so generated migrations type-check under ``mypy`` instead of failing with ``incompatible type "tuple[str, ...]"``. (#2155)
 - ``MigrationRecorder`` now uses parameterized queries; fixes MariaDB/MySQL rejecting ISO-8601 ``applied_at`` values. (#2132)
 - ``db_default`` on ``ForeignKeyField``/``OneToOneField`` now propagates to the underlying ``<fk>_id`` column, so ``CREATE TABLE`` emits the ``DEFAULT`` clause for FK columns. (#2199)
 - ``MigrationRecorder`` no longer emits tortoise's own ``pk`` field ``DeprecationWarning`` when applying migrations; it now builds its bookkeeping model with ``primary_key=True``. (#2203)

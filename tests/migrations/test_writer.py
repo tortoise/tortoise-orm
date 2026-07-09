@@ -12,6 +12,7 @@ from tortoise.indexes import Index, PartialIndex
 from tortoise.migrations.constraints import UniqueConstraint
 from tortoise.migrations.operations import (
     AddConstraint,
+    AddField,
     AddIndex,
     AlterField,
     CreateModel,
@@ -485,7 +486,14 @@ def test_writer_handles_one_to_one_field(tmp_path: Path, monkeypatch) -> None:
 
 
 def test_writer_handles_enum_fields(tmp_path: Path, monkeypatch) -> None:
-    """Test that IntEnumField and CharEnumField are rendered correctly (not as FieldInstance)."""
+    """Test that IntEnumField and CharEnumField render as their concrete Field instances.
+
+    The public ``IntEnumField``/``CharEnumField`` names are factory functions typed to
+    return the enum type (so model attributes resolve to the enum), not a ``Field``.
+    Rendering them into a migration produced code that failed ``mypy`` (see #2155), so
+    the writer emits the concrete ``*FieldInstance`` classes, which are real ``Field``
+    subclasses and therefore type-check inside migration operations.
+    """
     operations = [
         CreateModel(
             name="Entity",
@@ -496,8 +504,6 @@ def test_writer_handles_enum_fields(tmp_path: Path, monkeypatch) -> None:
             ],
         ),
     ]
-    # The migration should use fields.IntEnumField and fields.CharEnumField
-    # NOT fields.IntEnumFieldInstance or fields.CharEnumFieldInstance
     expected = textwrap.dedent(
         """\
         from tortoise import migrations
@@ -511,14 +517,50 @@ def test_writer_handles_enum_fields(tmp_path: Path, monkeypatch) -> None:
                     name='Entity',
                     fields=[
                         ('id', fields.IntField(generated=True, primary_key=True, unique=True, db_index=True)),
-                        ('status', fields.IntEnumField(default=Status.ACTIVE, description='ACTIVE: 1\\nINACTIVE: 2', enum_type=Status, generated=False)),
-                        ('role', fields.CharEnumField(description='ADMIN: admin\\nUSER: user', enum_type=Role, max_length=5)),
+                        ('status', fields.IntEnumFieldInstance(default=Status.ACTIVE, description='ACTIVE: 1\\nINACTIVE: 2', enum_type=Status, generated=False)),
+                        ('role', fields.CharEnumFieldInstance(description='ADMIN: admin\\nUSER: user', enum_type=Role, max_length=5)),
                     ],
                 ),
             ]
         """
     )
     _write_migration(tmp_path, monkeypatch, "0010_enum_fields", operations, expected)
+
+
+def test_writer_enum_field_render_is_field_instance(tmp_path: Path, monkeypatch) -> None:
+    """Regression test for #2155.
+
+    ``AddField`` (and ``CreateModel``) previously rendered enum fields via the public
+    ``fields.CharEnumField``/``fields.IntEnumField`` factory functions, whose declared
+    return type is the enum type rather than a ``Field``. The generated migration then
+    failed ``mypy`` with ``incompatible type "tuple[str, ExampleEnum]"``. The writer now
+    emits the concrete ``*FieldInstance`` classes so the generated code type-checks.
+    """
+    operations = [
+        AddField(
+            model_name="Entity",
+            name="role",
+            field=fields.CharEnumField(Role),  # type: ignore[arg-type]
+        ),
+    ]
+    expected = textwrap.dedent(
+        """\
+        from tortoise import migrations
+        from tortoise.migrations import operations as ops
+        from tests.migrations.test_writer import Role
+        from tortoise import fields
+
+        class Migration(migrations.Migration):
+            operations = [
+                ops.AddField(
+                    model_name='Entity',
+                    name='role',
+                    field=fields.CharEnumFieldInstance(description='ADMIN: admin\\nUSER: user', enum_type=Role, max_length=5),
+                ),
+            ]
+        """
+    )
+    _write_migration(tmp_path, monkeypatch, "0011_add_enum_field", operations, expected)
 
 
 def _runpython_forward(apps, schema_editor) -> None:
