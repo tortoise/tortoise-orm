@@ -22,5 +22,5 @@ def test_geometry_field_to_python_value() -> None:
 
 def test_geometry_field_to_db_value() -> None:
     field = GeometryField()
-    assert field.to_db_value(None, None) is None
-    assert field.to_db_value("POINT(1 1)", None) == "POINT(1 1)"
+    assert field.to_db_value(None, None) is None  # type: ignore[arg-type]
+    assert field.to_db_value("POINT(1 1)", None) == "POINT(1 1)"  # type: ignore[arg-type]
