@@ -327,7 +327,9 @@ class Q:
         )
 
     def __bool__(self) -> bool:
-        return any((self.filters, *(children for children in self.children)))
+        if self.filters:
+            return True
+        return any(self.children)
 
     def negate(self) -> None:
         """
