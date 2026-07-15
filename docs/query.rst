@@ -170,6 +170,42 @@ QuerySet also supports aggregation and database functions through ``.annotate()`
 
 Check `examples <https://github.com/tortoise/tortoise-orm/tree/master/examples>`_ to see it all in work
 
+Complex queries
+===============
+
+You can combine annotations, filters and grouping to express more complex SQL.
+For example, a query that aggregates ``posts`` and ``fine`` per ``uid`` over the
+last 31 days can be written as:
+
+.. code-block:: python3
+
+    from datetime import datetime, timedelta
+    from tortoise.functions import Sum
+
+    since = datetime.utcnow() - timedelta(days=31)
+
+    results = await (
+        Statistic.filter(date__gte=since, date__lte=datetime.utcnow())
+        .annotate(post=Sum("posts"), fines=Sum("fine"))
+        .group_by("uid")
+        .order_by("-post")
+        .values("uid", "post", "fines", "date")
+    )
+
+This is roughly equivalent to the following SQL:
+
+.. code-block:: sql
+
+    SELECT uid, SUM(posts) AS post, SUM(fine) AS fines, date
+    FROM statistic
+    WHERE date >= NOW() - INTERVAL '31 days' AND date <= NOW()
+    GROUP BY uid
+    ORDER BY post DESC
+
+.. note::
+
+    ``.group_by()`` must be called before ``.values()`` or ``.values_list()``.
+
 .. _foreign_key:
 
 Foreign Key
