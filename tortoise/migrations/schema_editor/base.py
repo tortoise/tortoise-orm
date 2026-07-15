@@ -738,7 +738,8 @@ class BaseSchemaEditor(SchemaQuotingMixin):
         if index.name:
             return index.name
         index.resolve_expressions(model)
-        return self._generate_index_name("idx", model, list(index.field_names))
+        prefix = "uidx" if getattr(index, "unique", False) else "idx"
+        return self._generate_index_name(prefix, model, list(index.field_names))
 
     def _constraint_name_for_model(self, model: type[Model], constraint: UniqueConstraint) -> str:
         if constraint.name:
@@ -809,6 +810,8 @@ class BaseSchemaEditor(SchemaQuotingMixin):
             index_name=self._index_name_for_model(model, index),
             index_type=index.INDEX_TYPE,
             extra=index.extra,
+            unique=getattr(index, "unique", False),
+            nulls_not_distinct=getattr(index, "nulls_not_distinct", False),
         )
         if index_sql:
             await self._run_sql(index_sql)

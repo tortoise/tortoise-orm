@@ -10,7 +10,7 @@ from tortoise.models import Model
 class BasePostgresSchemaEditor(BaseSchemaEditor):
     DIALECT = "postgres"
     INDEX_CREATE_TEMPLATE = (
-        'CREATE INDEX "{index_name}" ON {table_name} {index_type}({fields}){extra};'
+        'CREATE INDEX "{index_name}" ON {table_name} {index_type}({fields}){nulls_not_distinct}{extra};'
     )
     UNIQUE_INDEX_CREATE_TEMPLATE = INDEX_CREATE_TEMPLATE.replace("INDEX", "UNIQUE INDEX")
     TABLE_COMMENT_TEMPLATE = "COMMENT ON TABLE {table} IS '{comment}';"
@@ -78,16 +78,23 @@ class BasePostgresSchemaEditor(BaseSchemaEditor):
         index_name: str | None = None,
         index_type: str | None = None,
         extra: str | None = None,
+        unique: bool = False,
+        nulls_not_distinct: bool = False,
     ) -> str:
         if index_type:
             index_type = f"USING {index_type}"
-        return super()._get_index_sql(
-            model,
-            list(field_names),
-            safe,
-            index_name=index_name,
-            index_type=index_type,
-            extra=extra,
+
+        nulls_not_distinct_sql = " NULLS NOT DISTINCT" if unique and nulls_not_distinct else ""
+        template = self.UNIQUE_INDEX_CREATE_TEMPLATE if unique else self.INDEX_CREATE_TEMPLATE
+        prefix = "uidx" if unique else "idx"
+
+        return template.format(
+            index_name=index_name or self._generate_index_name(prefix, model, field_names),
+            table_name=self._qualify_table_name(model._meta.db_table, model._meta.schema),
+            index_type=f"{index_type} " if index_type else "",
+            fields=self._format_index_fields(list(field_names)),
+            nulls_not_distinct=nulls_not_distinct_sql,
+            extra=f"{extra}" if extra else "",
         )
 
     def _escape_default_value(self, default: object) -> str:
@@ -103,6 +110,7 @@ class BasePostgresSchemaEditor(BaseSchemaEditor):
             table_name=self._qualify_table_name(table_name, schema),
             index_type="",
             fields=", ".join([self.quote(f) for f in field_names]),
+            nulls_not_distinct="",
             extra="",
         )
 
