@@ -179,33 +179,40 @@ last 31 days can be written as:
 
 .. code-block:: python3
 
-    from datetime import datetime, timedelta, timezone
+    from datetime import date, timedelta
     from tortoise.functions import Sum
 
-    now = datetime.now(timezone.utc)
-    since = now - timedelta(days=31)
+    today = date.today()
+    since = today - timedelta(days=31)
 
     results = await (
-        Statistic.filter(date__gte=since, date__lte=now)
+        Statistic.filter(date__gte=since, date__lte=today)
         .annotate(post=Sum("posts"), fines=Sum("fine"))
-        .group_by("uid", "date")
+        .group_by("uid")
         .order_by("-post")
-        .values("uid", "post", "fines", "date")
+        .values("uid", "post", "fines")
     )
 
 This is roughly equivalent to the following SQL:
 
 .. code-block:: sql
 
-    SELECT uid, SUM(posts) AS post, SUM(fine) AS fines, date
+    SELECT uid, SUM(posts) AS post, SUM(fine) AS fines
     FROM statistic
-    WHERE date >= NOW() - INTERVAL '31 days' AND date <= NOW()
-    GROUP BY uid, date
+    WHERE date >= CURRENT_DATE - INTERVAL '31 days' AND date <= CURRENT_DATE
+    GROUP BY uid
     ORDER BY post DESC
 
 .. note::
 
     ``.group_by()`` must be called before ``.values()`` or ``.values_list()``.
+
+    The original issue included ``date`` in the ``SELECT`` list while grouping
+    only by ``uid``. To aggregate per ``uid`` across the whole date range, the
+    example above omits ``date`` from both ``GROUP BY`` and ``values``. The
+    filter values are plain dates, which is appropriate when ``date`` is a
+    ``DateField``; use ``datetime.now()`` instead if your field is a
+    ``DateTimeField``.
 
 .. _foreign_key:
 
