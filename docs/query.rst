@@ -179,15 +179,16 @@ last 31 days can be written as:
 
 .. code-block:: python3
 
-    from datetime import datetime, timedelta
+    from datetime import datetime, timedelta, timezone
     from tortoise.functions import Sum
 
-    since = datetime.utcnow() - timedelta(days=31)
+    now = datetime.now(timezone.utc)
+    since = now - timedelta(days=31)
 
     results = await (
-        Statistic.filter(date__gte=since, date__lte=datetime.utcnow())
+        Statistic.filter(date__gte=since, date__lte=now)
         .annotate(post=Sum("posts"), fines=Sum("fine"))
-        .group_by("uid")
+        .group_by("uid", "date")
         .order_by("-post")
         .values("uid", "post", "fines", "date")
     )
@@ -199,7 +200,7 @@ This is roughly equivalent to the following SQL:
     SELECT uid, SUM(posts) AS post, SUM(fine) AS fines, date
     FROM statistic
     WHERE date >= NOW() - INTERVAL '31 days' AND date <= NOW()
-    GROUP BY uid
+    GROUP BY uid, date
     ORDER BY post DESC
 
 .. note::
