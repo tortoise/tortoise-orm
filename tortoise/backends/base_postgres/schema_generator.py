@@ -13,9 +13,7 @@ if TYPE_CHECKING:  # pragma: nocoverage
 
 class BasePostgresSchemaGenerator(BaseSchemaGenerator):
     DIALECT = "postgres"
-    INDEX_CREATE_TEMPLATE = (
-        'CREATE INDEX {exists}"{index_name}" ON {table_name} {index_type}({fields}){nulls_not_distinct}{extra};'
-    )
+    INDEX_CREATE_TEMPLATE = 'CREATE INDEX {exists}"{index_name}" ON {table_name} {index_type}({fields}){nulls_not_distinct}{extra};'
     UNIQUE_INDEX_CREATE_TEMPLATE = INDEX_CREATE_TEMPLATE.replace("INDEX", "UNIQUE INDEX")
     TABLE_COMMENT_TEMPLATE = "COMMENT ON TABLE {table} IS '{comment}';"
     COLUMN_COMMENT_TEMPLATE = "COMMENT ON COLUMN {table}.\"{column}\" IS '{comment}';"

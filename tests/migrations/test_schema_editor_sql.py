@@ -218,7 +218,9 @@ async def test_add_unique_index_generates_nulls_not_distinct_sql() -> None:
     await editor.add_index(Customer, index)
 
     assert client.executed
-    expected_name = editor._generate_index_name("uidx", Customer, ["shop_id", "phone_number", "deleted_at"])
+    expected_name = editor._generate_index_name(
+        "uidx", Customer, ["shop_id", "phone_number", "deleted_at"]
+    )
     assert (
         f'CREATE UNIQUE INDEX "{expected_name}" ON "customer"'
         f' ("shop_id", "phone_number", "deleted_at") NULLS NOT DISTINCT;'
@@ -252,7 +254,9 @@ async def test_add_partial_unique_index_generates_nulls_not_distinct_before_wher
     await editor.add_index(Customer, index)
 
     assert client.executed
-    expected_name = editor._generate_index_name("uidx", Customer, ["shop_id", "phone_number", "deleted_at"])
+    expected_name = editor._generate_index_name(
+        "uidx", Customer, ["shop_id", "phone_number", "deleted_at"]
+    )
     assert (
         f'CREATE UNIQUE INDEX "{expected_name}" ON "customer"'
         f' ("shop_id", "phone_number", "deleted_at") NULLS NOT DISTINCT WHERE shop_id = 1;'
