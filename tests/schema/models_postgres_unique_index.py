@@ -1,5 +1,4 @@
 from tortoise import Model, fields
-
 from tortoise.contrib.postgres.indexes import PostgreSQLIndex
 
 
