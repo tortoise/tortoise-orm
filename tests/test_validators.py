@@ -263,6 +263,21 @@ def test_email_validator_invalid_allowed_domains():
         validator("user@invalid..com")
 
 
+def test_email_validator_rejects_domain_outside_allowed_domains():
+    # a well-formed address whose domain is not allowlisted must be rejected
+    validator = EmailValidator(allowed_domains=["example.com"])
+    with pytest.raises(InvalidEmailAddress):
+        validator("attacker@evil.com")
+    with pytest.raises(InvalidEmailAddress):
+        validator("user@totally-unrelated.co.uk")
+
+
+def test_email_validator_allowed_domains_bypass_domain_syntax():
+    # an allowlisted domain is accepted even if it is not a valid public domain
+    validator = EmailValidator(allowed_domains=["localhost"])
+    validator("user@localhost")
+
+
 @pytest.mark.parametrize(
     "value",
     [

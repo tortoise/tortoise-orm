@@ -324,7 +324,6 @@ class EmailValidator(Validator):
 
     @cached_property
     def _domain_regex(self) -> re.Pattern[str]:
-        print("evaluating domain regex!!!")
         return re.compile(
             r"^" + HOSTNAME_REGEX + DOMAIN_REGEX + TLD_NO_FQDN_REGEX + r"\Z", re.IGNORECASE
         )
@@ -358,7 +357,10 @@ class EmailValidator(Validator):
         if not self._user_regex.match(user_part):
             raise InvalidEmailAddress()
 
-        if domain_part not in self.allowed_domains and not self._validate_domain_part(domain_part):
+        if self.allowed_domains:
+            if domain_part not in self.allowed_domains:
+                raise InvalidEmailAddress()
+        elif not self._validate_domain_part(domain_part):
             raise InvalidEmailAddress()
 
 
