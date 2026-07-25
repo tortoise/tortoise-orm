@@ -777,6 +777,19 @@ async def test_select_for_update(db, intfields_data):
 
 
 @pytest.mark.asyncio
+async def test_select_for_update_values(db, intfields_data):
+    qs = IntFields.filter(pk=1)
+    object.__setattr__(qs.capabilities, "_mutable", True)
+    qs.capabilities.support_for_update = True
+    sql_values = qs.select_for_update().values("id").sql()
+    sql_values_list = qs.select_for_update().values_list("id", flat=True).sql()
+
+    assert "FOR UPDATE" in sql_values
+    assert "FOR UPDATE" in sql_values_list
+
+
+
+@pytest.mark.asyncio
 async def test_select_related(db):
     tournament = await Tournament.create(name="1")
     reporter = await Reporter.create(name="Reporter")
