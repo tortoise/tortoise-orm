@@ -9,6 +9,7 @@ from tests.testmodels import (
     MinRelation,
     Node,
     Reporter,
+    Team,
     Tournament,
     Tree,
 )
@@ -225,6 +226,18 @@ async def test_distinct(db, intfields_data):
         {"intnum_null": -1},
         {"intnum_null": 80},
     ]
+
+
+@pytest.mark.asyncio
+async def test_distinct_count_with_m2m_join(db):
+    tournament = await Tournament.create(name="Tournament")
+    event = await Event.create(name="Event", tournament=tournament)
+    for name in ("Team A", "Team B", "Team C"):
+        await event.participants.add(await Team.create(name=name))
+
+    queryset = Event.filter(participants__name__in=["Team A", "Team B", "Team C"]).distinct()
+    assert len(await queryset) == 1
+    assert await queryset.count() == 1
 
 
 @pytest.mark.asyncio

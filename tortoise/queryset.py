@@ -9,8 +9,9 @@ from typing import TYPE_CHECKING, Any, Generic, Literal, Protocol, TypeVar, cast
 from pypika_tortoise import JoinType, Order, Table
 from pypika_tortoise.analytics import Count
 from pypika_tortoise.functions import Cast
+from pypika_tortoise.functions import Count as DistinctCount
 from pypika_tortoise.queries import QueryBuilder, _SetOperation
-from pypika_tortoise.terms import Case, Field, Star, Term, ValueWrapper
+from pypika_tortoise.terms import Case, Field, Function, Star, Term, ValueWrapper
 
 from tortoise.backends.base.client import BaseDBAsyncClient, Capabilities
 from tortoise.exceptions import (
@@ -806,6 +807,7 @@ class QuerySet(AwaitableQuery[MODEL]):
             offset=self._offset,
             force_indexes=self._force_indexes,
             use_indexes=self._use_indexes,
+            distinct=self._distinct,
         )
 
     def exists(self) -> ExistsQuery:
@@ -1520,6 +1522,7 @@ class CountQuery(AwaitableQuery):
         "_offset",
         "_force_indexes",
         "_use_indexes",
+        "_distinct",
     )
 
     def __init__(
@@ -1533,6 +1536,7 @@ class CountQuery(AwaitableQuery):
         offset: int | None,
         force_indexes: set[str],
         use_indexes: set[str],
+        distinct: bool = False,
     ) -> None:
         super().__init__(model)
         self._q_objects = q_objects
@@ -1543,13 +1547,23 @@ class CountQuery(AwaitableQuery):
         self._db = db
         self._force_indexes = force_indexes
         self._use_indexes = use_indexes
+        self._distinct = distinct
 
     def _make_query(self) -> None:
         self.query = copy(self.model._meta.basequery)
         self.resolve_filters()
-        count_term = Count(Star())
-        if self.query._groupbys:
-            count_term = count_term.over()
+        count_term: Function
+        if self._distinct and not self.query._groupbys:
+            # ``DISTINCT`` on the outer SELECT does not apply to ``COUNT(*)``,
+            # so rows duplicated by a join would still be counted. Count the
+            # distinct primary keys instead.
+            count_term = DistinctCount(
+                self.model._meta.basetable[self.model._meta.db_pk_column]
+            ).distinct()
+        else:
+            count_term = Count(Star())
+            if self.query._groupbys:
+                count_term = count_term.over()
 
         # remove annotations
         self.query._selects = []
