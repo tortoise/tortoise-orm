@@ -788,7 +788,6 @@ async def test_select_for_update_values(db, intfields_data):
     assert "FOR UPDATE" in sql_values_list
 
 
-
 @pytest.mark.asyncio
 async def test_select_related(db):
     tournament = await Tournament.create(name="1")
