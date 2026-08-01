@@ -7,23 +7,22 @@ import warnings
 from collections.abc import Callable
 from enum import Enum
 from functools import reduce
-from typing import TYPE_CHECKING, Any, Generic, TypedDict, TypeVar, overload
+from typing import TYPE_CHECKING, Any, Generic, TypeVar, overload
 
 from pypika_tortoise.terms import Term
 
 from tortoise.exceptions import ConfigurationError, ValidationError
-from tortoise.fields.db_defaults import SqlDefault
 from tortoise.validators import Validator
+from tortoise.fields.db_defaults import SqlDefault
 
 if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.models import Model
 
 if sys.version_info >= (3, 11):
-    from collections.abc import Awaitable
     from enum import StrEnum
-    from typing import Self
+    from typing import Self, Awaitable, TypedDict
 else:  # pragma: no cover
-    from typing_extensions import Self
+    from typing_extensions import Self, TypedDict
 
     class StrEnum(str, Enum):
         __str__ = str.__str__
