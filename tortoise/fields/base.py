@@ -90,7 +90,7 @@ SET_DEFAULT = OnDelete.SET_DEFAULT
 NO_ACTION = OnDelete.NO_ACTION
 
 
-class _FieldKwargsCommon(Generic[VALUE], TypedDict, total=False):
+class _FieldKwargsCommon(TypedDict, Generic[VALUE], total=False):
     """:class:`Field` constructor arguments that are never declared as explicit parameters.
 
     Used with :data:`typing.Unpack` to give ``**kwargs`` explicit type hints. This is the
