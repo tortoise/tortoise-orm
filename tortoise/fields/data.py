@@ -21,8 +21,8 @@ from tortoise.fields.base import (
     Field,
     FieldKwargs,
     JSONFieldKwargs,
+    _FieldKwargsCommon,
     _FieldKwargsNoPk,
-    _FieldKwargsCommon
 )
 from tortoise.timezone import get_default_timezone, get_timezone, get_use_tz, localtime
 from tortoise.validators import MaxLengthValidator
