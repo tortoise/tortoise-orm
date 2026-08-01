@@ -4,7 +4,7 @@ import inspect
 import operator
 import sys
 import warnings
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 from enum import Enum
 from functools import reduce
 from typing import TYPE_CHECKING, Any, Generic, TypeVar, overload
@@ -19,10 +19,11 @@ if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.models import Model
 
 if sys.version_info >= (3, 11):
-    from collections.abc import Awaitable
     from enum import StrEnum
     from typing import Self, TypedDict
 else:  # pragma: no cover
+    from collections.abc import Awaitable
+
     from typing_extensions import Self, TypedDict
 
     class StrEnum(str, Enum):
