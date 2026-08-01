@@ -12,15 +12,16 @@ from typing import TYPE_CHECKING, Any, Generic, TypeVar, overload
 from pypika_tortoise.terms import Term
 
 from tortoise.exceptions import ConfigurationError, ValidationError
-from tortoise.validators import Validator
 from tortoise.fields.db_defaults import SqlDefault
+from tortoise.validators import Validator
 
 if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.models import Model
 
 if sys.version_info >= (3, 11):
+    from collections.abc import Awaitable
     from enum import StrEnum
-    from typing import Self, Awaitable, TypedDict
+    from typing import Self, TypedDict
 else:  # pragma: no cover
     from typing_extensions import Self, TypedDict
 
@@ -130,6 +131,15 @@ class FieldKwargs(_FieldKwargsNoPk[VALUE], total=False):
     primary_key: bool | None
 
 
+class TextFieldKwargs(_FieldKwargsCommon[VALUE], total=False):
+    """Constructor arguments for :class:`TextField`.
+
+    ``TextField`` doesn't declare ``null`` explicitly, so it includes it here.
+    """
+
+    null: bool
+
+
 class JSONFieldKwargs(FieldKwargs[VALUE], total=False):
     """Constructor arguments for :class:`JSONField`.
 
@@ -138,7 +148,7 @@ class JSONFieldKwargs(FieldKwargs[VALUE], total=False):
     """
 
     null: bool
-    field_type: Any
+    field_type: VALUE
 
 
 class RelationalFieldKwargs(FieldKwargs[VALUE], total=False):
