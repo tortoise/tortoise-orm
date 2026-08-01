@@ -90,7 +90,7 @@ SET_DEFAULT = OnDelete.SET_DEFAULT
 NO_ACTION = OnDelete.NO_ACTION
 
 
-class _FieldKwargsCommon(TypedDict, total=False):
+class _FieldKwargsCommon(Generic[VALUE], TypedDict, total=False):
     """:class:`Field` constructor arguments that are never declared as explicit parameters.
 
     Used with :data:`typing.Unpack` to give ``**kwargs`` explicit type hints. This is the
@@ -100,8 +100,8 @@ class _FieldKwargsCommon(TypedDict, total=False):
 
     source_field: str | None
     generated: bool
-    default: Any
-    db_default: Any
+    default: VALUE
+    db_default: VALUE
     description: str | None
     model: Model | None
     validators: list[Validator | Callable]
@@ -109,7 +109,7 @@ class _FieldKwargsCommon(TypedDict, total=False):
     index: bool  # deprecated alias for db_index
 
 
-class _FieldKwargsNoPk(_FieldKwargsCommon, total=False):
+class _FieldKwargsNoPk(_FieldKwargsCommon[VALUE], total=False):
     """Common arguments excluding ``primary_key`` and ``null``.
 
     For constructors that declare ``primary_key`` and ``null`` as explicit parameters
@@ -120,7 +120,7 @@ class _FieldKwargsNoPk(_FieldKwargsCommon, total=False):
     db_index: bool | None
 
 
-class FieldKwargs(_FieldKwargsNoPk, total=False):
+class FieldKwargs(_FieldKwargsNoPk[VALUE], total=False):
     """Common arguments excluding ``null``.
 
     For constructors that declare only ``null`` as an explicit parameter (the majority).
@@ -129,7 +129,7 @@ class FieldKwargs(_FieldKwargsNoPk, total=False):
     primary_key: bool | None
 
 
-class JSONFieldKwargs(FieldKwargs, total=False):
+class JSONFieldKwargs(FieldKwargs[VALUE], total=False):
     """Constructor arguments for :class:`JSONField`.
 
     ``JSONField`` declares neither ``null`` nor ``primary_key`` explicitly, and also accepts
@@ -140,7 +140,7 @@ class JSONFieldKwargs(FieldKwargs, total=False):
     field_type: Any
 
 
-class RelationalFieldKwargs(FieldKwargs, total=False):
+class RelationalFieldKwargs(FieldKwargs[VALUE], total=False):
     """Constructor arguments for :func:`ForeignKeyField` and :func:`OneToOneField`.
 
     Extends the common :class:`~tortoise.fields.base.FieldKwargs` with ``to_field``.
@@ -150,7 +150,7 @@ class RelationalFieldKwargs(FieldKwargs, total=False):
     to_field: str | None
 
 
-class ManyToManyFieldKwargs(_FieldKwargsCommon, total=False):
+class ManyToManyFieldKwargs(_FieldKwargsCommon[VALUE], total=False):
     """Constructor arguments for :func:`ManyToManyField`.
 
     ``unique`` is declared as an explicit parameter, so it is omitted here; the deprecated
@@ -293,8 +293,8 @@ class Field(Generic[VALUE], metaclass=_FieldMeta):
         generated: bool = False,
         primary_key: bool | None = None,
         null: bool = False,
-        default: Any = None,
-        db_default: Any = DB_DEFAULT_NOT_SET,
+        default: VALUE = None,
+        db_default: VALUE = DB_DEFAULT_NOT_SET,
         unique: bool = False,
         db_index: bool | None = None,
         description: str | None = None,

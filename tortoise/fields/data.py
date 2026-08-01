@@ -122,7 +122,7 @@ class IntField(Field[T_INT], int):
         primary_key: bool | None = None,
         *,
         null: Literal[False] = False,
-        **kwargs: Unpack[_FieldKwargsNoPk],
+        **kwargs: Unpack[_FieldKwargsNoPk[T_INT]],
     ) -> None: ...
 
     @overload
@@ -131,7 +131,7 @@ class IntField(Field[T_INT], int):
         primary_key: bool | None = None,
         *,
         null: Literal[True],
-        **kwargs: Unpack[_FieldKwargsNoPk],
+        **kwargs: Unpack[_FieldKwargsNoPk[T_INT]],
     ) -> None: ...
 
     def __init__(self, primary_key: bool | None = None, **kwargs: Any) -> None:
@@ -241,7 +241,7 @@ class CharField(Field[T_STR]):
         max_length: int,
         *,
         null: Literal[False] = False,
-        **kwargs: Unpack[FieldKwargs],
+        **kwargs: Unpack[FieldKwargs[T_STR]],
     ) -> None: ...
 
     @overload
@@ -250,7 +250,7 @@ class CharField(Field[T_STR]):
         max_length: int,
         *,
         null: Literal[True],
-        **kwargs: Unpack[FieldKwargs],
+        **kwargs: Unpack[FieldKwargs[T_STR]],
     ) -> None: ...
 
     def __init__(self, max_length: int, **kwargs: Any) -> None:
@@ -279,7 +279,7 @@ class CharField(Field[T_STR]):
             return f"NVARCHAR2({self.field.max_length})"
 
 
-class TextField(Field[T_STR], str):  # type: ignore
+class TextField(Field[str], str):  # type: ignore
     """
     Large Text field.
     """
@@ -287,42 +287,19 @@ class TextField(Field[T_STR], str):  # type: ignore
     indexable = False
     SQL_TYPE = "TEXT"
 
-    @overload
-    def __init__(
-        self: TextField[str],
-        *,
-        primary_key: bool | None = None,
-        unique: bool = False,
-        db_index: bool = False,
-        null: Literal[False] = False,
-        **kwargs: Unpack[_FieldKwargsCommon],
-    ) -> None: ...
-
-    @overload
-    def __init__(
-        self: TextField[str | None],
-        *,
-        primary_key: bool | None = None,
-        unique: bool = False,
-        db_index: bool = False,
-        null: Literal[True],
-        **kwargs: Unpack[_FieldKwargsCommon],
-    ) -> None: ...
-
     def __init__(
         self,
-        primary_key: bool | None = None,
-        unique: bool = False,
-        db_index: bool = False,
-        **kwargs: Any,
+        **kwargs: Unpack[FieldKwargs],
     ) -> None:
-        if primary_key or kwargs.get("pk"):
+        db_index = kwargs.pop("db_index")
+
+        if kwargs.get("primary_key") or kwargs.get("pk"):
             warnings.warn(
                 "TextField as a PrimaryKey is Deprecated, use CharField instead",
                 DeprecationWarning,
                 stacklevel=2,
             )
-        if unique:
+        if kwargs.get("unique"):
             raise ConfigurationError(
                 "TextField doesn't support unique indexes, consider CharField or another strategy"
             )
@@ -337,7 +314,7 @@ class TextField(Field[T_STR], str):  # type: ignore
         elif db_index:
             raise ConfigurationError("TextField can't be indexed, consider CharField")
 
-        super().__init__(primary_key=primary_key, **kwargs)
+        super().__init__(**kwargs)
 
     class _db_mysql:
         SQL_TYPE = "LONGTEXT"
@@ -408,7 +385,7 @@ class DecimalField(Field[T_DECIMAL], Decimal):  # type: ignore
         decimal_places: int,
         *,
         null: Literal[False] = False,
-        **kwargs: Unpack[FieldKwargs],
+        **kwargs: Unpack[FieldKwargs[T_DECIMAL]],
     ) -> None: ...
 
     @overload
@@ -418,7 +395,7 @@ class DecimalField(Field[T_DECIMAL], Decimal):  # type: ignore
         decimal_places: int,
         *,
         null: Literal[True],
-        **kwargs: Unpack[FieldKwargs],
+        **kwargs: Unpack[FieldKwargs[T_DECIMAL]],
     ) -> None: ...
 
     def __init__(self, max_digits: int, decimal_places: int, **kwargs: Any) -> None:
@@ -491,7 +468,7 @@ class DatetimeField(Field[T_DATETIME], datetime.datetime):
         auto_now_add: bool = False,
         *,
         null: Literal[False] = False,
-        **kwargs: Unpack[FieldKwargs],
+        **kwargs: Unpack[FieldKwargs[T_DATETIME]],
     ) -> None: ...
 
     @overload
@@ -501,7 +478,7 @@ class DatetimeField(Field[T_DATETIME], datetime.datetime):
         auto_now_add: bool = False,
         *,
         null: Literal[True],
-        **kwargs: Unpack[FieldKwargs],
+        **kwargs: Unpack[FieldKwargs[T_DATETIME]],
     ) -> None: ...
 
     def __init__(self, auto_now: bool = False, auto_now_add: bool = False, **kwargs: Any) -> None:
@@ -584,7 +561,7 @@ class DateField(Field[T_DATE], datetime.date):
         self: DateField[datetime.date],
         *,
         null: Literal[False] = False,
-        **kwargs: Unpack[FieldKwargs],
+        **kwargs: Unpack[FieldKwargs[T_DATE]],
     ) -> None: ...
 
     @overload
@@ -592,7 +569,7 @@ class DateField(Field[T_DATE], datetime.date):
         self: DateField[datetime.date | None],
         *,
         null: Literal[True],
-        **kwargs: Unpack[FieldKwargs],
+        **kwargs: Unpack[FieldKwargs[T_DATE]],
     ) -> None: ...
 
     def __init__(self, **kwargs: Any) -> None:
@@ -714,7 +691,7 @@ class TimeDeltaField(Field[T_TIMEDELTA]):
         self: TimeDeltaField[datetime.timedelta],
         *,
         null: Literal[False] = False,
-        **kwargs: Unpack[FieldKwargs],
+        **kwargs: Unpack[FieldKwargs[T_TIMEDELTA]],
     ) -> None: ...
 
     @overload
@@ -722,7 +699,7 @@ class TimeDeltaField(Field[T_TIMEDELTA]):
         self: TimeDeltaField[datetime.timedelta | None],
         *,
         null: Literal[True],
-        **kwargs: Unpack[FieldKwargs],
+        **kwargs: Unpack[FieldKwargs[T_TIMEDELTA]],
     ) -> None: ...
 
     def __init__(self, **kwargs: Any) -> None:
@@ -758,7 +735,7 @@ class FloatField(Field[T_FLOAT], float):
         self: FloatField[float],
         *,
         null: Literal[False] = False,
-        **kwargs: Unpack[FieldKwargs],
+        **kwargs: Unpack[FieldKwargs[T_FLOAT]],
     ) -> None: ...
 
     @overload
@@ -766,7 +743,7 @@ class FloatField(Field[T_FLOAT], float):
         self: FloatField[float | None],
         *,
         null: Literal[True],
-        **kwargs: Unpack[FieldKwargs],
+        **kwargs: Unpack[FieldKwargs[T_FLOAT]],
     ) -> None: ...
 
     def __init__(self, **kwargs: Any) -> None:
@@ -819,7 +796,7 @@ class JSONField(Field[T], dict, list):  # type: ignore
         self,
         encoder: JsonDumpsFunc = JSON_DUMPS,
         decoder: JsonLoadsFunc = JSON_LOADS,
-        **kwargs: Unpack[JSONFieldKwargs],
+        **kwargs: Unpack[JSONFieldKwargs[T]],
     ) -> None:
         super().__init__(**kwargs)
         self.encoder = encoder
@@ -895,7 +872,7 @@ class UUIDField(Field[T_UUID], UUID):
         self: UUIDField[UUID],
         *,
         null: Literal[False] = False,
-        **kwargs: Unpack[FieldKwargs],
+        **kwargs: Unpack[FieldKwargs[T_UUID]],
     ) -> None: ...
 
     @overload
@@ -903,7 +880,7 @@ class UUIDField(Field[T_UUID], UUID):
         self: UUIDField[UUID | None],
         *,
         null: Literal[True],
-        **kwargs: Unpack[FieldKwargs],
+        **kwargs: Unpack[FieldKwargs[T_UUID]],
     ) -> None: ...
 
     def __init__(self, **kwargs: Any) -> None:
@@ -936,7 +913,7 @@ class BinaryField(Field[T_BINARY], bytes):  # type: ignore
         self: BinaryField[bytes],
         *,
         null: Literal[False] = False,
-        **kwargs: Unpack[FieldKwargs],
+        **kwargs: Unpack[FieldKwargs[T_BINARY]],
     ) -> None: ...
 
     @overload
@@ -944,7 +921,7 @@ class BinaryField(Field[T_BINARY], bytes):  # type: ignore
         self: BinaryField[bytes | None],
         *,
         null: Literal[True],
-        **kwargs: Unpack[FieldKwargs],
+        **kwargs: Unpack[FieldKwargs[T_BINARY]],
     ) -> None: ...
 
     def __init__(self, **kwargs: Any) -> None:
