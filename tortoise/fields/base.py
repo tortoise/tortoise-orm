@@ -149,7 +149,7 @@ class JSONFieldKwargs(FieldKwargs[VALUE], total=False):
     """
 
     null: bool
-    field_type: VALUE
+    field_type: type[Any]
 
 
 class RelationalFieldKwargs(FieldKwargs[VALUE], total=False):
