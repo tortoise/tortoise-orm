@@ -12,12 +12,14 @@ from typing import TYPE_CHECKING, Any, Generic, TypedDict, TypeVar, overload
 from pypika_tortoise.terms import Term
 
 from tortoise.exceptions import ConfigurationError, ValidationError
+from tortoise.fields.db_defaults import SqlDefault
 from tortoise.validators import Validator
 
 if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.models import Model
 
 if sys.version_info >= (3, 11):
+    from collections.abc import Awaitable
     from enum import StrEnum
     from typing import Self
 else:  # pragma: no cover
@@ -100,8 +102,8 @@ class _FieldKwargsCommon(TypedDict, Generic[VALUE], total=False):
 
     source_field: str | None
     generated: bool
-    default: VALUE
-    db_default: VALUE
+    default: VALUE | Callable[..., VALUE | Awaitable[VALUE]] | None
+    db_default: VALUE | SqlDefault | _DB_DEFAULT_NOT_SET
     description: str | None
     model: Model | None
     validators: list[Validator | Callable]
@@ -293,8 +295,8 @@ class Field(Generic[VALUE], metaclass=_FieldMeta):
         generated: bool = False,
         primary_key: bool | None = None,
         null: bool = False,
-        default: VALUE = None,
-        db_default: VALUE = DB_DEFAULT_NOT_SET,
+        default: VALUE | Callable[..., VALUE | Awaitable[VALUE]] | None = None,
+        db_default: VALUE | SqlDefault | _DB_DEFAULT_NOT_SET = DB_DEFAULT_NOT_SET,
         unique: bool = False,
         db_index: bool | None = None,
         description: str | None = None,

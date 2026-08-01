@@ -292,6 +292,7 @@ class TextField(Field[str], str):  # type: ignore
         primary_key: bool | None = None,
         unique: bool = False,
         db_index: bool = False,
+        null: bool = False,
         **kwargs: Unpack[_FieldKwargsCommon[str]],
     ) -> None:
         if primary_key or kwargs.get("pk"):
@@ -315,7 +316,7 @@ class TextField(Field[str], str):  # type: ignore
         elif db_index:
             raise ConfigurationError("TextField can't be indexed, consider CharField")
 
-        super().__init__(primary_key=primary_key, **kwargs)
+        super().__init__(primary_key=primary_key, null=null, **kwargs)
 
     class _db_mysql:
         SQL_TYPE = "LONGTEXT"
