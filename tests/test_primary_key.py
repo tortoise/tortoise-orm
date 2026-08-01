@@ -249,6 +249,9 @@ class TestPkIndexAliasText:
         with pytest.warns(DeprecationWarning, match=self.message):
             f = fields.TextField(primary_key=True)
         assert f.pk is True
+        with pytest.warns(DeprecationWarning, match=self.message):
+            f = fields.TextField(True)
+        assert f.pk is True
 
     @pytest.mark.asyncio
     async def test_pk_alias_warning(self):

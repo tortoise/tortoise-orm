@@ -22,6 +22,7 @@ from tortoise.fields.base import (
     FieldKwargs,
     JSONFieldKwargs,
     _FieldKwargsNoPk,
+    _FieldKwargsCommon
 )
 from tortoise.timezone import get_default_timezone, get_timezone, get_use_tz, localtime
 from tortoise.validators import MaxLengthValidator
@@ -288,12 +289,11 @@ class TextField(Field[str], str):  # type: ignore
 
     def __init__(
         self,
-        **kwargs: Unpack[FieldKwargs[str]],
+        primary_key: bool | None = None,
+        unique: bool = False,
+        db_index: bool = False,
+        **kwargs: Unpack[_FieldKwargsCommon[str]],
     ) -> None:
-        primary_key = kwargs.get("primary_key", None)
-        db_index = kwargs.get("db_index", False)
-        unique = kwargs.get("unique", False)
-
         if primary_key or kwargs.get("pk"):
             warnings.warn(
                 "TextField as a PrimaryKey is Deprecated, use CharField instead",
@@ -315,7 +315,7 @@ class TextField(Field[str], str):  # type: ignore
         elif db_index:
             raise ConfigurationError("TextField can't be indexed, consider CharField")
 
-        super().__init__(**kwargs)
+        super().__init__(primary_key=primary_key, **kwargs)
 
     class _db_mysql:
         SQL_TYPE = "LONGTEXT"
