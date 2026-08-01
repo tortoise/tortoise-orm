@@ -288,17 +288,19 @@ class TextField(Field[str], str):  # type: ignore
 
     def __init__(
         self,
-        **kwargs: Unpack[FieldKwargs],
+        **kwargs: Unpack[FieldKwargs[str]],
     ) -> None:
-        db_index = kwargs.pop("db_index")
+        primary_key = kwargs.get("primary_key", None)
+        db_index = kwargs.get("db_index", False)
+        unique = kwargs.get("unique", False)
 
-        if kwargs.get("primary_key") or kwargs.get("pk"):
+        if primary_key or kwargs.get("pk"):
             warnings.warn(
                 "TextField as a PrimaryKey is Deprecated, use CharField instead",
                 DeprecationWarning,
                 stacklevel=2,
             )
-        if kwargs.get("unique"):
+        if unique:
             raise ConfigurationError(
                 "TextField doesn't support unique indexes, consider CharField or another strategy"
             )
