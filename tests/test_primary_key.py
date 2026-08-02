@@ -249,6 +249,7 @@ class TestPkIndexAliasText:
         with pytest.warns(DeprecationWarning, match=self.message):
             f = fields.TextField(primary_key=True)
         assert f.pk is True
+        # Positional arg goes to primary_key, so only TextField as PK warning
         with pytest.warns(DeprecationWarning, match=self.message):
             f = fields.TextField(True)
         assert f.pk is True
