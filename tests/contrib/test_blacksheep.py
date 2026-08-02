@@ -21,7 +21,7 @@ async def test_register_tortoise_enables_global_fallback() -> None:
             modules={"models": ["__main__"]},
         )
 
-        await app.start()
+        await app.start()  # type: ignore[no-untyped-call]
         mocked_tortoise.init.assert_awaited_once_with(
             config=None,
             config_file=None,
@@ -30,5 +30,5 @@ async def test_register_tortoise_enables_global_fallback() -> None:
             _enable_global_fallback=True,
         )
 
-        await app.stop()
+        await app.stop()  # type: ignore[no-untyped-call]
         mocked_tortoise.close_connections.assert_awaited_once()
