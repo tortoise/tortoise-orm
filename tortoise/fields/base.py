@@ -23,8 +23,9 @@ if sys.version_info >= (3, 11):
     from typing import Self, TypedDict
 else:  # pragma: no cover
     from collections.abc import Awaitable
-
     from typing_extensions import Self, TypedDict
+    # Under python 3.11, typing.TypedDict does not support multiple inheritance woth non-TypedDict
+    # So for Generic, used typing-extensions for TypedDict
 
     class StrEnum(str, Enum):
         __str__ = str.__str__
