@@ -187,6 +187,36 @@ def test_writer_format_options_indexes_constraints(tmp_path: Path, monkeypatch) 
     _write_migration(tmp_path, monkeypatch, "0003_options", operations, expected)
 
 
+def test_writer_handles_tuple_indexes_in_options(tmp_path: Path, monkeypatch) -> None:
+    """Tuple-style indexes in options should be normalised to Index objects without crashing."""
+    operations = [
+        CreateModel(
+            name="Token",
+            fields=[
+                ("id", fields.IntField(primary_key=True)),
+                ("user_id", fields.IntField()),
+                ("revoked_at", fields.DatetimeField(null=True)),
+            ],
+            options={
+                "indexes": [
+                    ("user_id", "revoked_at"),
+                ],
+            },
+        ),
+    ]
+    module_path = _prepare_migration_package(tmp_path, "app")
+    monkeypatch.syspath_prepend(str(tmp_path))
+    writer = MigrationWriter(
+        "0001_initial",
+        "app",
+        operations,
+        migrations_module=module_path,
+    )
+    content = writer.as_string()
+    assert "Index(fields=['user_id', 'revoked_at'])" in content
+    assert "from tortoise.indexes import Index" in content
+
+
 def test_writer_renders_fk_field(tmp_path: Path, monkeypatch) -> None:
     operations = [
         CreateModel(

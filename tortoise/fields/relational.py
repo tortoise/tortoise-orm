@@ -4,7 +4,7 @@ import warnings
 from collections.abc import AsyncGenerator, Generator, Iterator
 from typing import TYPE_CHECKING, Any, Generic, Literal, TypeVar, overload
 
-from pypika_tortoise import Table
+from pypika_tortoise.queries import Table
 
 from tortoise.exceptions import ConfigurationError, NoValuesFetched, OperationalError
 from tortoise.fields.base import CASCADE, SET_NULL, Field, OnDelete
@@ -358,7 +358,7 @@ class BackwardFKRelation(RelationalField[MODEL]):
 class OneToOneFieldInstance(ForeignKeyFieldInstance[MODEL]):
     def __init__(
         self,
-        model_name: type[Model] | str,
+        model_name: type[MODEL] | str,
         related_name: str | None | Literal[False] = None,
         on_delete: OnDelete = CASCADE,
         **kwargs: Any,
@@ -381,7 +381,7 @@ class ManyToManyFieldInstance(RelationalField[MODEL]):
 
     def __init__(
         self,
-        model_name: type[Model] | str,
+        model_name: type[MODEL] | str,
         through: str | None = None,
         forward_key: str | None = None,
         backward_key: str = "",
@@ -421,7 +421,7 @@ class ManyToManyFieldInstance(RelationalField[MODEL]):
         if isinstance(self.model_name, str):
             model_name = self.model_name
         else:
-            model: type[Model] = self.model_name
+            model: type[MODEL] = self.model_name
             model_name = f"{model._meta.app}.{model.__name__}"
         desc["model_name"] = model_name
         desc["related_name"] = self.related_name
@@ -435,7 +435,7 @@ class ManyToManyFieldInstance(RelationalField[MODEL]):
 
 @overload
 def OneToOneField(
-    to: type[Model] | str,
+    to: type[MODEL] | str,
     related_name: str | None | Literal[False] = None,
     on_delete: OnDelete = CASCADE,
     db_constraint: bool = True,
@@ -447,7 +447,7 @@ def OneToOneField(
 
 @overload
 def OneToOneField(
-    to: type[Model] | str,
+    to: type[MODEL] | str,
     related_name: str | None | Literal[False] = None,
     on_delete: OnDelete = CASCADE,
     db_constraint: bool = True,
@@ -457,7 +457,7 @@ def OneToOneField(
 
 
 def OneToOneField(
-    to: type[Model] | str,
+    to: type[MODEL] | str,
     related_name: str | None | Literal[False] = None,
     on_delete: OnDelete = CASCADE,
     db_constraint: bool = True,
@@ -510,7 +510,7 @@ def OneToOneField(
 
 @overload
 def ForeignKeyField(
-    to: type[Model] | str,
+    to: type[MODEL] | str,
     related_name: str | None | Literal[False] = None,
     on_delete: OnDelete = CASCADE,
     db_constraint: bool = True,
@@ -522,7 +522,7 @@ def ForeignKeyField(
 
 @overload
 def ForeignKeyField(
-    to: type[Model] | str,
+    to: type[MODEL] | str,
     related_name: str | None | Literal[False] = None,
     on_delete: OnDelete = CASCADE,
     db_constraint: bool = True,
@@ -532,7 +532,7 @@ def ForeignKeyField(
 
 
 def ForeignKeyField(
-    to: type[Model] | str,
+    to: type[MODEL] | str,
     related_name: str | None | Literal[False] = None,
     on_delete: OnDelete = CASCADE,
     db_constraint: bool = True,
@@ -584,7 +584,7 @@ def ForeignKeyField(
 
 
 def ManyToManyField(
-    to: type[Model] | str,
+    to: type[MODEL] | str,
     through: str | None = None,
     forward_key: str | None = None,
     backward_key: str = "",
@@ -593,7 +593,7 @@ def ManyToManyField(
     db_constraint: bool = True,
     unique: bool = True,
     **kwargs: Any,
-) -> ManyToManyRelation[Any]:
+) -> ManyToManyRelation[MODEL]:
     """
     ManyToMany relation field.
 

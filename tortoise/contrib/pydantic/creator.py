@@ -177,7 +177,7 @@ def pydantic_queryset_creator(
     )
     model.__doc__ = _cleandoc(cls)
     model.model_config["title"] = name or f"{submodel.model_config['title']}_list"
-    model.model_config["submodel"] = submodel  # type: ignore
+    model.model_config["submodel"] = submodel  # type: ignore[typeddict-unknown-key]
     return model
 
 
@@ -331,6 +331,15 @@ class PydanticModelCreator:
                     self._model_description.backward_o2o_fields,
                 ):
                     self._field_map.field_map_update(fields, self.meta)
+            else:
+                # Include only explicitly annotated backward relations
+                for fields in (
+                    self._model_description.backward_fk_fields,
+                    self._model_description.backward_o2o_fields,
+                ):
+                    annotated = [f for f in fields if f.model_field_name in self._annotations]
+                    if annotated:
+                        self._field_map.field_map_update(annotated, self.meta)
             self._field_map.computed_field_map_update(self.meta.computed, self._cls)
         if self.meta.sort_alphabetically:
             self._field_map.sort_alphabetically()
@@ -369,7 +378,7 @@ class PydanticModelCreator:
             **common_fields,
         )
         model.__doc__ = _cleandoc(self._cls)
-        model.model_config["orig_model"] = self._cls  # type: ignore
+        model.model_config["orig_model"] = self._cls  # type: ignore[typeddict-unknown-key]
         _MODEL_INDEX[self._hash] = model
         return model
 

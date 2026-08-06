@@ -201,6 +201,7 @@ class MetaInfo:
         "basetable",
         "_filters",
         "unique_together",
+        "constraints",
         "manager",
         "indexes",
         "pk_attr",
@@ -212,6 +213,8 @@ class MetaInfo:
         "db_native_fields",
         "db_default_fields",
         "db_complex_fields",
+        "db_default_db_columns",
+        "fetch_db_defaults",
         "_default_ordering",
         "_ordering_validated",
     )
@@ -223,6 +226,7 @@ class MetaInfo:
         self.schema: str | None = getattr(meta, "schema", None)
         self.app: str | None = getattr(meta, "app", None)
         self.unique_together: tuple[tuple[str, ...], ...] = get_together(meta, "unique_together")
+        self.constraints: tuple = tuple(getattr(meta, "constraints", ()))
         self.indexes: tuple[tuple[str, ...] | Index, ...] = get_together(meta, "indexes")
         self._default_ordering: tuple[tuple[str, Order], ...] = prepare_default_ordering(meta)
         self._ordering_validated: bool = False
@@ -253,6 +257,8 @@ class MetaInfo:
         self.db_native_fields: list[tuple[str, str, Field]] = []
         self.db_default_fields: list[tuple[str, str, Field]] = []
         self.db_complex_fields: list[tuple[str, str, Field]] = []
+        self.db_default_db_columns: tuple[str, ...] = ()
+        self.fetch_db_defaults: bool = getattr(meta, "fetch_db_defaults", True)
 
     @property
     def full_name(self) -> str:
@@ -337,6 +343,13 @@ class MetaInfo:
             if field.generated
         ]
         self.generated_db_fields = tuple(generated_fields)
+
+        db_default_cols = [
+            (field.source_field or field.model_field_name)
+            for field in self.fields_map.values()
+            if field.has_db_default() and not field.generated
+        ]
+        self.db_default_db_columns = tuple(db_default_cols)
 
         self._ordering_validated = True
         for field_name, _ in self._default_ordering:
@@ -736,10 +749,15 @@ class Model(metaclass=ModelMeta):
                 setattr(self, key, field_default())
             else:
                 default = field_object.default
-                if default is None or isinstance(default, (int, float, str, bool, bytes)):
-                    setattr(self, key, default)
+                if default is not None:
+                    if isinstance(default, (int, float, str, bool, bytes)):
+                        setattr(self, key, default)
+                    else:
+                        setattr(self, key, deepcopy(default))
+                elif field_object.has_db_default():
+                    setattr(self, key, field_object.get_db_default_value())
                 else:
-                    setattr(self, key, deepcopy(default))
+                    setattr(self, key, None)
 
     def __setattr__(self, key, value) -> None:
         # set field value override async default function
@@ -919,6 +937,128 @@ class Model(metaclass=ModelMeta):
             obj.pk = pk
         obj._saved_in_db = False
         return obj
+
+    @classmethod
+    def construct(cls: type[MODEL], _saved_in_db: bool = False, **kwargs: Any) -> MODEL:
+        """
+        Create a model instance without validation, DB checks, or FK restrictions.
+
+        This creates a "detached" instance that has the right shape for reading
+        attributes and iterating relations, but is not part of the ORM lifecycle.
+        Useful for unit testing and serialization without a database connection.
+
+        Unlike ``__init__``, this method:
+        - Does NOT validate field values (nullability, type checks)
+        - Does NOT require FK objects to be saved to the database
+        - Does NOT prevent setting backward FK, backward O2O, or M2M fields
+        - Does NOT call ``to_python_value`` on data fields
+        - Skips async defaults (sets them to ``None``)
+
+        Backward FK and M2M fields are wrapped in ``ReverseRelation`` and
+        ``ManyToManyRelation`` respectively with ``_fetched=True`` so that
+        iteration, ``len()``, ``in``, and ``bool()`` work without raising
+        ``NoValuesFetched``.
+
+        Example::
+
+            tournament = Tournament.construct(id=1, name="Test")
+            event = Event.construct(
+                name="Game",
+                tournament=tournament,
+                participants=[
+                    Team.construct(id=1, name="Team A"),
+                    Team.construct(id=2, name="Team B"),
+                ],
+            )
+            assert event.tournament.name == "Test"
+            assert event.tournament_id == 1
+            assert len(event.participants) == 2
+
+        :param _saved_in_db: Whether to mark the instance as saved in DB.
+            Defaults to ``False``.
+        :param kwargs: Field values to set on the instance.
+        :return: A new model instance with the given field values.
+        """
+        self = cls.__new__(cls)
+        meta = self._meta
+        _setattr = object.__setattr__
+
+        _setattr(self, "_partial", False)
+        _setattr(self, "_saved_in_db", _saved_in_db)
+        _setattr(self, "_custom_generated_pk", False)
+        _setattr(self, "_await_when_save", {})
+
+        # Track source fields that are auto-populated from FK/O2O objects
+        # so that the default-setting loop doesn't overwrite them with None.
+        populated_source_fields: set[str] = set()
+
+        for key, value in kwargs.items():
+            if key in meta.backward_fk_fields:
+                # Backward FK: wrap in ReverseRelation with _fetched=True
+                backward_fk: BackwardFKRelation = meta.fields_map[key]  # type: ignore
+                rel = ReverseRelation(
+                    backward_fk.related_model,
+                    backward_fk.relation_field,
+                    self,
+                    backward_fk.to_field_instance.model_field_name,
+                )
+                rel._fetched = True
+                rel.related_objects = list(value)
+                _setattr(self, f"_{key}", rel)
+            elif key in meta.m2m_fields:
+                # M2M: wrap in ManyToManyRelation with _fetched=True
+                field_object: ManyToManyFieldInstance = meta.fields_map[key]  # type: ignore
+                m2m_rel = ManyToManyRelation(self, field_object)
+                m2m_rel._fetched = True
+                m2m_rel.related_objects = list(value)
+                _setattr(self, f"_{key}", m2m_rel)
+            elif key in meta.backward_o2o_fields:
+                # Backward O2O: store at _{key} for property getter
+                _setattr(self, f"_{key}", value)
+            elif key in meta.fk_fields or key in meta.o2o_fields:
+                # FK/O2O: store at _{key} for property getter, also set source field
+                _setattr(self, f"_{key}", value)
+                fk_field = meta.fields_map[key]
+                if (
+                    hasattr(fk_field, "to_field_instance")
+                    and fk_field.to_field_instance is not None
+                ):
+                    source_field = fk_field.source_field
+                    if source_field is not None:
+                        if value is not None:
+                            _setattr(
+                                self,
+                                source_field,
+                                getattr(value, fk_field.to_field_instance.model_field_name, None),
+                            )
+                        else:
+                            _setattr(self, source_field, None)
+                        populated_source_fields.add(source_field)
+            else:
+                # Data fields, source fields, or unknown fields: store directly
+                _setattr(self, key, value)
+
+        # Set defaults for unprovided non-relational fields
+        for key in meta.fields.difference(kwargs.keys()):
+            if key in meta.fetch_fields:
+                continue
+            if key in populated_source_fields:
+                continue
+            default_field = meta.fields_map[key]
+            field_default = default_field.default
+            if inspect.iscoroutinefunction(field_default):
+                # Async defaults are skipped in construct() since it is synchronous
+                _setattr(self, key, None)
+            elif callable(field_default):
+                _setattr(self, key, field_default())
+            elif field_default is not None:
+                _setattr(self, key, field_default)
+            elif default_field.has_db_default():
+                _setattr(self, key, default_field.get_db_default_value())
+            else:
+                _setattr(self, key, None)
+
+        return self
 
     def update_from_dict(self: MODEL, data: dict) -> MODEL:
         """
@@ -1324,12 +1464,22 @@ class Model(metaclass=ModelMeta):
                 User(name="...", email="...")
             ])
 
+        **db_default behaviour:** Fields with ``db_default`` that are not explicitly
+        set will use the database DEFAULT. However, within a single ``bulk_create``
+        call, each ``db_default`` field must be treated consistently across *all*
+        instances — either every instance provides an explicit value, or none of
+        them do.  Mixing explicit values and database defaults for the same field
+        raises :exc:`~tortoise.exceptions.OperationalError`.
+
         :param on_conflict: On conflict index name
         :param update_fields: Update fields when conflicts
         :param ignore_conflicts: Ignore conflicts when inserting
         :param objects: List of objects to bulk create
         :param batch_size: How many objects are created in a single query
         :param using_db: Specific DB connection to use instead of default bound
+
+        :raises OperationalError: If a ``db_default`` field has mixed usage across
+            instances (some provide a value, others rely on the database default).
         """
         return cls._db_queryset(using_db, for_write=True).bulk_create(
             objects, batch_size, ignore_conflicts, update_fields, on_conflict

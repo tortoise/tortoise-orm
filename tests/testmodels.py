@@ -4,17 +4,20 @@ This is the testing Models
 
 import binascii
 import datetime
+import json
 import os
 import re
 import uuid
 from decimal import Decimal
 from enum import Enum, IntEnum
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict
 
 from tortoise import fields
 from tortoise.exceptions import NoValuesFetched, ValidationError
 from tortoise.fields import NO_ACTION
+from tortoise.fields.db_defaults import Now, RandomHex, SqlDefault
 from tortoise.indexes import Index
 from tortoise.manager import Manager
 from tortoise.models import Model
@@ -23,10 +26,12 @@ from tortoise.timezone import UTC
 from tortoise.validators import (
     CommaSeparatedIntegerListValidator,
     MaxValueValidator,
+    MinLengthValidator,
     MinValueValidator,
     RegexValidator,
     validate_ipv4_address,
     validate_ipv6_address,
+    validate_ipv46_address,
 )
 
 
@@ -141,6 +146,32 @@ class ModelTestPydanticMetaBackwardRelations3(Model):
     two: fields.ForeignKeyRelation[ModelTestPydanticMetaBackwardRelations2] = (
         fields.ForeignKeyField(
             "models.ModelTestPydanticMetaBackwardRelations2", related_name="threes"
+        )
+    )
+
+
+class ModelTestPydanticAnnotatedBackwardRel(Model):
+    """Model with backward_relations=False but an annotated ReverseRelation."""
+
+    annotated_children: fields.ReverseRelation["ModelTestPydanticAnnotatedChild"]
+
+    class PydanticMeta:
+        backward_relations = False
+
+
+class ModelTestPydanticAnnotatedChild(Model):
+    parent: fields.ForeignKeyRelation[ModelTestPydanticAnnotatedBackwardRel] = (
+        fields.ForeignKeyField(
+            "models.ModelTestPydanticAnnotatedBackwardRel", related_name="annotated_children"
+        )
+    )
+
+
+class ModelTestPydanticUnannotatedChild(Model):
+    parent: fields.ForeignKeyRelation[ModelTestPydanticAnnotatedBackwardRel] = (
+        fields.ForeignKeyField(
+            "models.ModelTestPydanticAnnotatedBackwardRel",
+            related_name="unannotated_children",
         )
     )
 
@@ -333,6 +364,24 @@ def raise_if_not_dict_or_list(value: dict | list):
         raise ValidationError("Value must be a dict or list.")
 
 
+class DecimalEncoder(json.JSONEncoder):
+    def default(self, obj: Any) -> Any:
+        if isinstance(obj, Decimal):
+            return str(obj)
+        return super().default(obj)
+
+    @classmethod
+    def dumps(cls, obj: Any) -> str:
+        return json.dumps(obj, cls=cls)
+
+
+class IndexEncoder(DecimalEncoder):
+    def default(self, obj: Any) -> Any:
+        if isinstance(obj, Index):
+            return obj.describe()
+        return super().default(obj)
+
+
 class JSONFields(Model):
     """
     This model contains many JSON blobs
@@ -350,6 +399,10 @@ class JSONFields(Model):
     data_pydantic = fields.JSONField[TestSchemaForJSONField](
         default=json_pydantic_default, field_type=TestSchemaForJSONField
     )
+
+    # Test cases where encoders are provided
+    data_decimal = fields.JSONField[dict | list](null=True, encoder=DecimalEncoder.dumps)
+    data_index = fields.JSONField[dict | list](null=True, encoder=IndexEncoder.dumps)
 
 
 class UUIDFields(Model):
@@ -831,15 +884,38 @@ class DefaultUpdate(Model):
 
 
 class DefaultModel(Model):
-    int_default = fields.IntField(default=1)
-    float_default = fields.FloatField(default=1.5)
-    decimal_default = fields.DecimalField(max_digits=8, decimal_places=2, default=Decimal(1))
-    bool_default = fields.BooleanField(default=True)
-    char_default = fields.CharField(max_length=20, default="tortoise")
-    date_default = fields.DateField(default=datetime.date(year=2020, month=5, day=21))
+    int_default = fields.IntField(db_default=1)
+    float_default = fields.FloatField(db_default=1.5)
+    decimal_default = fields.DecimalField(max_digits=8, decimal_places=2, db_default=Decimal(1))
+    bool_default = fields.BooleanField(db_default=True)
+    char_default = fields.CharField(max_length=20, db_default="tortoise")
+    date_default = fields.DateField(db_default=datetime.date(year=2020, month=5, day=21))
     datetime_default = fields.DatetimeField(
-        default=datetime.datetime(year=2020, month=5, day=20, tzinfo=UTC)
+        db_default=datetime.datetime(year=2020, month=5, day=20, tzinfo=UTC)
     )
+
+
+class SqlDefaultModel(Model):
+    """Model with SqlDefault expressions for db_default."""
+
+    name = fields.CharField(max_length=100)
+    created_at = fields.DatetimeField(db_default=Now())
+    counter = fields.IntField(db_default=SqlDefault("0"))
+    tracking_id = fields.CharField(max_length=36, null=True, db_default=RandomHex())
+
+    class Meta:
+        table = "sql_default_model"
+
+
+class NoFetchDefaultModel(Model):
+    """Model with fetch_db_defaults = False."""
+
+    int_val = fields.IntField(db_default=1)
+    char_val = fields.CharField(max_length=20, db_default="test")
+
+    class Meta:
+        table = "no_fetch_default"
+        fetch_db_defaults = False
 
 
 class RequiredPKModel(Model):
@@ -850,8 +926,10 @@ class RequiredPKModel(Model):
 class ValidatorModel(Model):
     regex = fields.CharField(max_length=100, null=True, validators=[RegexValidator("abc.+", re.I)])
     max_length = fields.CharField(max_length=5, null=True)
+    min_length = fields.CharField(max_length=5, null=True, validators=[MinLengthValidator(3)])
     ipv4 = fields.CharField(max_length=100, null=True, validators=[validate_ipv4_address])
     ipv6 = fields.CharField(max_length=100, null=True, validators=[validate_ipv6_address])
+    ipv46 = fields.CharField(max_length=100, null=True, validators=[validate_ipv46_address])
     max_value = fields.IntField(null=True, validators=[MaxValueValidator(20.0)])
     min_value = fields.IntField(null=True, validators=[MinValueValidator(10.0)])
     max_value_decimal = fields.DecimalField(
@@ -1074,7 +1152,7 @@ class Flavor(Model):
 class Drink(Model):
     id = fields.IntField(pk=True)
     name = fields.CharField(max_length=100)
-    flavors = fields.ManyToManyField("models.Flavor", related_name="drinks", through="drink_flavor")
+    flavors = fields.ManyToManyField(Flavor, related_name="drinks", through="drink_flavor")
     toppings = fields.ManyToManyField(
-        "models.Flavor", related_name="topping_drinks", through="drink_topping"
+        Flavor, related_name="topping_drinks", through="drink_topping"
     )

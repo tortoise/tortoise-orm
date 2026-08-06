@@ -19,13 +19,60 @@ if TYPE_CHECKING:  # pragma: nocoverage
 
 if sys.version_info >= (3, 11):
     from enum import StrEnum
+    from typing import Self
 else:  # pragma: no cover
+    from typing_extensions import Self
 
     class StrEnum(str, Enum):
         __str__ = str.__str__
 
 
 VALUE = TypeVar("VALUE")
+
+
+class _DB_DEFAULT_NOT_SET:
+    """Sentinel indicating db_default was not provided."""
+
+    def __repr__(self) -> str:
+        return "NOT_PROVIDED"
+
+    def __bool__(self) -> bool:
+        return False
+
+
+DB_DEFAULT_NOT_SET = _DB_DEFAULT_NOT_SET()
+
+
+class DatabaseDefault:
+    """Sentinel indicating that the database should apply its default value.
+
+    When a field has ``db_default`` and the user does not provide a value,
+    this object is set as the attribute value on the model instance.
+
+    During INSERT compilation it is detected via ``isinstance()`` checks:
+    - Single-insert path: columns with DatabaseDefault are omitted from the
+      INSERT statement, so the DB applies its DEFAULT.
+    - Bulk-insert path: columns where *all* instances hold DatabaseDefault
+      are omitted; mixed usage raises ``OperationalError``.
+    """
+
+    def __init__(self, field: Field) -> None:
+        self.field = field
+
+    def __repr__(self) -> str:
+        return f"DatabaseDefault({self.field.model_field_name!r})"
+
+    def __str__(self) -> str:
+        return "<DB_DEFAULT>"
+
+    def __bool__(self) -> bool:
+        """Returns False so that ``if instance.field:`` is falsy for unset db_default fields.
+
+        This is consistent with "no value has been set yet". Users who need to
+        distinguish between DatabaseDefault and other falsy values should use
+        ``isinstance(value, DatabaseDefault)``.
+        """
+        return False
 
 
 class OnDelete(StrEnum):
@@ -69,6 +116,8 @@ class Field(Generic[VALUE], metaclass=_FieldMeta):
     :param default: A default value for the field if not specified on Model creation.
         This can also be a callable for dynamic defaults in which case we will call it.
         The default value will not be part of the schema.
+    :param db_default: A database-level default value. This can be a static value or an
+        instance of :class:`~tortoise.fields.db_defaults.SqlDefault`
     :param unique: Is this field unique?
     :param db_index: Should this field be indexed by itself?
     :param description: Field description. Will also appear in ``Tortoise.describe_model()``
@@ -155,7 +204,7 @@ class Field(Generic[VALUE], metaclass=_FieldMeta):
     # These methods are just to make IDE/Linters happy:
     if TYPE_CHECKING:
 
-        def __new__(cls, *args: Any, **kwargs: Any) -> Field[VALUE]:
+        def __new__(cls, *args: Any, **kwargs: Any) -> Self:
             return super().__new__(cls)
 
         @overload
@@ -175,6 +224,7 @@ class Field(Generic[VALUE], metaclass=_FieldMeta):
         primary_key: bool | None = None,
         null: bool = False,
         default: Any = None,
+        db_default: Any = DB_DEFAULT_NOT_SET,
         unique: bool = False,
         db_index: bool | None = None,
         description: str | None = None,
@@ -224,6 +274,11 @@ class Field(Generic[VALUE], metaclass=_FieldMeta):
         self.generated = generated
         self.pk = bool(primary_key)
         self.default = default
+        self.db_default = db_default
+        if self.has_db_default() and callable(self.db_default):
+            raise ConfigurationError(
+                f"{self.__class__.__name__}: db_default must be a static value or SqlDefault(...), not a callable"
+            )
         self.null = null
         self.unique = unique
         self.index = bool(db_index)
@@ -289,6 +344,9 @@ class Field(Generic[VALUE], metaclass=_FieldMeta):
             except ValidationError as exc:
                 raise ValidationError(f"{self.model_field_name}: {exc}")
 
+    def has_db_default(self) -> bool:
+        return not isinstance(self.db_default, _DB_DEFAULT_NOT_SET)
+
     @property
     def required(self) -> bool:
         """
@@ -296,7 +354,18 @@ class Field(Generic[VALUE], metaclass=_FieldMeta):
 
         It needs to be non-nullable and not have a default or be DB-generated to be required.
         """
-        return self.default is None and not self.null and not self.generated
+        return (
+            self.default is None
+            and not self.null
+            and not self.generated
+            and not self.has_db_default()
+        )
+
+    def get_db_default_value(self) -> DatabaseDefault | None:
+        """Return a DatabaseDefault instance if this field has a db_default, else None."""
+        if self.has_db_default():
+            return DatabaseDefault(self)
+        return None
 
     @property
     def constraints(self) -> dict:
@@ -452,6 +521,12 @@ class Field(Generic[VALUE], metaclass=_FieldMeta):
             return str(default)
 
         field_type = getattr(self, "related_model", self.field_type)
+
+        if self.has_db_default():
+            db_default_val = default_name(self.db_default) if serializable else self.db_default
+        else:
+            db_default_val = "__NOT_SET__" if serializable else DB_DEFAULT_NOT_SET
+
         desc = {
             "name": self.model_field_name,
             "field_type": self.__class__.__name__ if serializable else self.__class__,
@@ -462,6 +537,7 @@ class Field(Generic[VALUE], metaclass=_FieldMeta):
             "unique": self.unique,
             "indexed": self.index or self.unique,
             "default": default_name(self.default) if serializable else self.default,
+            "db_default": db_default_val,
             "description": self.description,
             "docstring": self.docstring,
             "constraints": self.constraints,
@@ -495,10 +571,12 @@ class Field(Generic[VALUE], metaclass=_FieldMeta):
             kwargs["db_constraint"] = getattr(self, "db_constraint")
         if hasattr(self, "to_field") and getattr(self, "to_field") is not None:
             kwargs["to_field"] = getattr(self, "to_field")
+        if self.has_db_default():
+            kwargs["db_default"] = self.db_default
 
         signature = inspect.signature(self.__class__.__init__)
         for name, param in signature.parameters.items():
-            if name in ("self", "args", "kwargs", "model", "validators"):
+            if name in ("self", "args", "kwargs", "model", "validators", "db_default"):
                 continue
             if name == "field_type" and self.__class__.__name__ == "ManyToManyFieldInstance":
                 continue

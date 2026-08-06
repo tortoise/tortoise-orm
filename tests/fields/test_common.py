@@ -27,3 +27,12 @@ async def test_if_has_non_null_default_then_not_required():
 @pytest.mark.asyncio
 async def test_if_null_default_then_required():
     assert fields.TextField(default=None).required is True
+
+
+def test_django_field_name_compatibility():
+    assert fields.IntegerField is fields.IntField
+    assert fields.BigIntegerField is fields.BigIntField
+    assert fields.SmallIntegerField is fields.SmallIntField
+    assert fields.DateTimeField is fields.DatetimeField
+    assert fields.DurationField is fields.TimeDeltaField
+    assert fields.ForeignKey is fields.ForeignKeyField

@@ -91,6 +91,7 @@ class ODBCClient(BaseDBAsyncClient, ABC):
             self._pool = await asyncodbc.create_pool(
                 **self._template,
             )
+            await self._post_connect()
             self.log.debug("Created connection %s pool with params: %s", self._pool, self._template)
         except pyodbc.InterfaceError:
             raise DBConnectionError(f"Can't establish connection to database {self.database}")
@@ -185,8 +186,8 @@ class ODBCTransactionWrapper(TransactionalDBClient):
     async def execute_many(self, query: str, values: list) -> None:
         async with self.acquire_connection() as connection:
             self.log.debug("%s: %s", query, values)
-            cursor = await connection.cursor()
-            await cursor.executemany(query, values)
+            async with connection.cursor() as cursor:
+                await cursor.executemany(query, values)
 
     async def begin(self) -> None:
         self._finalized = False

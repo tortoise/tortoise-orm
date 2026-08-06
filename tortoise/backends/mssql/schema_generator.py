@@ -17,6 +17,7 @@ class MSSQLSchemaGenerator(MSSQLQuotingMixin, BaseSchemaGenerator):
     TABLE_CREATE_TEMPLATE = "CREATE TABLE {table_name} ({fields}){extra};"
     FIELD_TEMPLATE = "[{name}] {type}{nullable}{unique}{primary}{default}"
     INDEX_CREATE_TEMPLATE = "CREATE INDEX [{index_name}] ON {table_name} ({fields});"
+    UNIQUE_CONSTRAINT_CREATE_TEMPLATE = "CONSTRAINT [{index_name}] UNIQUE ({fields})"
     GENERATED_PK_TEMPLATE = "[{field_name}] {generated_sql}"
     FK_TEMPLATE = (
         "{constraint}FOREIGN KEY ([{db_column}])"
@@ -55,15 +56,8 @@ class MSSQLSchemaGenerator(MSSQLQuotingMixin, BaseSchemaGenerator):
         table: str,
         column: str,
         default: Any,
-        auto_now_add: bool = False,
-        auto_now: bool = False,
     ) -> str:
-        default_str = " DEFAULT"
-        if not (auto_now or auto_now_add):
-            default_str += f" {default}"
-        if auto_now_add or auto_now:
-            default_str += " CURRENT_TIMESTAMP"
-        return default_str
+        return f" DEFAULT {default}"
 
     def _escape_default_value(self, default: Any):
         return encoders.get(type(default))(default)  # type: ignore

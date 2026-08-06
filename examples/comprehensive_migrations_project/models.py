@@ -11,6 +11,7 @@ from decimal import Decimal
 from enum import Enum, IntEnum
 
 from tortoise import fields, models
+from tortoise.fields import Now, RandomHex
 
 
 class OrderStatus(IntEnum):
@@ -116,7 +117,13 @@ class Product(models.Model):
     rating = fields.FloatField(null=True, description="Average customer rating 0.0-5.0")
     processing_time = fields.TimeDeltaField(null=True, description="Average time to fulfill")
     is_active = fields.BooleanField(default=True)
-    created_at = fields.DatetimeField(auto_now_add=True)
+    stock_quantity = fields.IntField(db_default=10)
+    tracking_id = fields.CharField(
+        max_length=36,
+        null=True,
+        db_default=RandomHex(),
+    )
+    created_at = fields.DatetimeField(db_default=Now())
 
     def __str__(self) -> str:
         return f"{self.product_code}: {self.name}"

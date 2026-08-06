@@ -71,7 +71,18 @@ Every model should be derived from ``Model`` or its subclasses. Custom ``Model``
 This model will not affect the schema, but it will be available for inheritance.
 
 
-Further we have field ``fields.DatetimeField(auto_now=True)``. Options ``auto_now`` and ``auto_now_add`` work like Django's options.
+Further we have field ``fields.DatetimeField(auto_now=True)``. Options ``auto_now`` and ``auto_now_add`` work like Django's options — they are handled purely in Python and do **not** add a ``DEFAULT`` clause to the database schema. If you need a database-level default timestamp, use ``db_default``:
+
+.. code-block:: python3
+
+    from tortoise.fields import DatetimeField, Now
+
+    class MyModel(Model):
+        # Python-only: value set by ORM on save, no DB DEFAULT
+        modified = DatetimeField(auto_now=True)
+
+        # DB-level: emits DEFAULT CURRENT_TIMESTAMP in the schema
+        created_at = DatetimeField(db_default=Now())
 
 Use of ``__models__``
 ---------------------
@@ -223,6 +234,47 @@ The ``Meta`` class
             indexes=(("field_a", "field_b"), )
             indexes=(("field_a", "field_b"), ("field_c", "field_d", "field_e"))
 
+    .. attribute:: constraints
+        :annotation: = None
+
+        Specify ``constraints`` to add named database constraints to the model.
+        Supports ``UniqueConstraint`` and ``CheckConstraint`` objects, which are
+        tracked by the migration autodetector and generate ``AddConstraint``,
+        ``RemoveConstraint``, and ``RenameConstraint`` operations automatically.
+
+        .. code-block:: python3
+
+            from tortoise.migrations.constraints import CheckConstraint, UniqueConstraint
+
+            class MyModel(Model):
+                name = fields.CharField(max_length=100)
+                category = fields.CharField(max_length=50)
+                score = fields.IntField()
+
+                class Meta:
+                    constraints = [
+                        UniqueConstraint(fields=("name", "category"), name="uid_name_category"),
+                        CheckConstraint(check="score >= 0", name="chk_score_positive"),
+                    ]
+
+        ``UniqueConstraint`` accepts:
+
+        - ``fields`` — tuple of field names (resolved to DB column names, including FK fields).
+        - ``name`` — explicit constraint name. Required for migration tracking.
+        - ``condition`` — *(PostgreSQL only)* a SQL ``WHERE`` clause for partial unique indexes.
+
+        ``CheckConstraint`` accepts:
+
+        - ``check`` — a raw SQL expression for the ``CHECK (...)`` clause.
+        - ``name`` — explicit constraint name. Required.
+
+        .. note::
+
+            ``unique_together`` is the legacy way to define compound unique indexes.
+            ``constraints`` with ``UniqueConstraint`` objects is preferred for new code,
+            as it supports explicit naming, partial indexes (PostgreSQL), and
+            is handled by the migration framework.
+
     .. attribute:: ordering
         :annotation: = None
 
@@ -233,6 +285,26 @@ The ``Meta`` class
         .. code-block:: python3
 
             ordering = ["name", "-score"]
+
+    .. attribute:: fetch_db_defaults
+        :annotation: = True
+
+        When ``True`` (the default), after an INSERT on a non-RETURNING backend
+        (e.g. MySQL), Tortoise will issue a follow-up ``SELECT`` to fetch
+        database-applied default values for fields declared with ``db_default``.
+
+        Set to ``False`` to skip the extra query when you don't need the
+        database-generated values back on the Python instance immediately.
+        On RETURNING backends (PostgreSQL, SQLite) the values are always
+        returned in the INSERT response regardless of this setting.
+
+        .. code-block:: python3
+
+            class MyModel(Model):
+                score = fields.IntField(db_default=0)
+
+                class Meta:
+                    fetch_db_defaults = False
 
     .. attribute:: manager
         :annotation: = tortoise.manager.Manager

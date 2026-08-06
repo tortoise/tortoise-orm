@@ -16,7 +16,6 @@ from tortoise.backends.base.client import (
     Capabilities,
     ConnectionWrapper,
     NestedTransactionContext,
-    T_conn,
     TransactionalDBClient,
     TransactionContext,
 )
@@ -61,6 +60,7 @@ class SqliteClient(BaseDBAsyncClient):
         support_for_update=False,
         support_update_limit_order_by=False,
         can_rollback_ddl=True,
+        support_returning=True,
     )
 
     def __init__(self, file_path: str, **kwargs: Any) -> None:
@@ -84,6 +84,7 @@ class SqliteClient(BaseDBAsyncClient):
             for pragma, val in self.pragmas.items():
                 cursor = await self._connection.execute(f"PRAGMA {pragma}={val}")
                 await cursor.close()
+            await self._post_connect()
             self.log.debug(
                 "Created connection %s with params: filename=%s %s",
                 self._connection,
@@ -189,7 +190,7 @@ class SqliteTransactionContext(TransactionContext):
             await self.connection._parent.create_connection(with_db=True)
             self.connection._connection = self.connection._parent._connection
 
-    async def __aenter__(self) -> T_conn:
+    async def __aenter__(self) -> TransactionalDBClient:
         await self._trxlock.acquire()
         await self.ensure_connection()
         self.token = get_connections().set(self.connection_name, self.connection)
@@ -285,6 +286,7 @@ class SqliteClientWithRegexpSupport(SqliteClient):
         support_update_limit_order_by=False,
         support_for_posix_regex_queries=True,
         can_rollback_ddl=True,
+        support_returning=True,
     )
 
     async def create_connection(self, with_db: bool) -> None:

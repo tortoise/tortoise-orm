@@ -28,12 +28,15 @@ import inspect
 import typing
 from collections.abc import Callable, Coroutine
 from functools import partial, wraps
-from typing import ParamSpec, TypeVar, cast
+from typing import TYPE_CHECKING, ParamSpec, TypeVar, cast
 from unittest import SkipTest, expectedFailure, skip, skipIf, skipUnless
 
 from tortoise import Tortoise
 from tortoise.connection import get_connection
 from tortoise.context import TortoiseContext, tortoise_test_context
+
+if TYPE_CHECKING:
+    from tortoise.models import Model
 
 T = TypeVar("T")
 P = ParamSpec("P")
@@ -70,19 +73,88 @@ async def truncate_all_models() -> None:
     This is a utility function for test cleanup that deletes all rows from
     all registered model tables.
 
-    Note: This is a naive implementation that may fail with M2M relations
-    and non-cascade foreign keys.
+    On PostgreSQL, uses ``TRUNCATE ... CASCADE`` for a single fast statement.
+    On other databases, deletes in topological (FK dependency) order so that
+    child rows are removed before parent rows they reference.
 
     Raises:
         ValueError: If Tortoise.apps is not loaded.
     """
     if not Tortoise.apps:
         raise ValueError("apps are not loaded")
-    for model in Tortoise.apps.get_models_iterable():
-        quote_char = model._meta.db.query_class.SQL_CONTEXT.quote_char
-        await model._meta.db.execute_script(
-            f"DELETE FROM {quote_char}{model._meta.db_table}{quote_char}"  # nosec
-        )
+
+    models = list(Tortoise.apps.get_models_iterable())
+
+    if not models:
+        return
+
+    db = models[0]._meta.db
+    dialect = db.capabilities.dialect
+
+    if dialect == "postgres":
+        # PostgreSQL supports TRUNCATE with CASCADE — single statement, fast
+        tables = ", ".join(f'"{m._meta.db_table}"' for m in models)
+        await db.execute_script(f"TRUNCATE {tables} CASCADE")
+    else:
+        # For other dialects, topologically sort by FK dependencies (children first)
+        sorted_models = _topological_sort_models(models)
+
+        # Disable FK checks to handle self-referential and circular FK constraints
+        if dialect == "mysql":
+            await db.execute_script("SET FOREIGN_KEY_CHECKS = 0")
+        elif dialect == "sqlite":
+            await db.execute_script("PRAGMA foreign_keys = OFF")
+
+        try:
+            for model in sorted_models:
+                quote_char = model._meta.db.query_class.SQL_CONTEXT.quote_char
+                await model._meta.db.execute_script(
+                    f"DELETE FROM {quote_char}{model._meta.db_table}{quote_char}"  # nosec
+                )
+        finally:
+            if dialect == "mysql":
+                await db.execute_script("SET FOREIGN_KEY_CHECKS = 1")
+            elif dialect == "sqlite":
+                await db.execute_script("PRAGMA foreign_keys = ON")
+
+
+def _topological_sort_models(models: list[type[Model]]) -> list[type[Model]]:
+    """Sort models so children come before parents (safe delete order).
+
+    Uses Kahn's algorithm on FK dependencies. Models that depend on others
+    via ForeignKey are placed *before* the models they reference, ensuring
+    child rows are deleted before parent rows.
+    """
+    from tortoise.fields.relational import ForeignKeyFieldInstance
+
+    model_set = set(models)
+    # Build adjacency for delete order: parent -> children that must be deleted first
+    # If Event has FK to Tournament, then Tournament depends on Event being deleted first
+    deps: dict[type[Model], set[type[Model]]] = {m: set() for m in models}
+    for model in models:
+        for field in model._meta.fields_map.values():
+            if isinstance(field, ForeignKeyFieldInstance):
+                related = field.related_model
+                if related in model_set and related is not model:
+                    deps[related].add(model)
+
+    # Kahn's algorithm — emit models whose deps are already emitted
+    sorted_models: list[type[Model]] = []
+    no_deps = [m for m in models if not deps[m]]
+    while no_deps:
+        m = no_deps.pop()
+        sorted_models.append(m)
+        for other in models:
+            deps[other].discard(m)
+            if not deps[other] and other not in sorted_models and other not in no_deps:
+                no_deps.append(other)
+
+    # Append any remaining (circular deps — fallback)
+    for m in models:
+        if m not in sorted_models:
+            sorted_models.append(m)
+
+    return sorted_models
 
 
 _FT = TypeVar("_FT", bound=Callable[..., typing.Any])

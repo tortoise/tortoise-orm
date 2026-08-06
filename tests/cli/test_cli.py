@@ -203,6 +203,7 @@ TORTOISE_ORM = {
 
 @pytest.mark.asyncio
 async def test_upgrade_alias(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    _write_package(tmp_path, "cli_app")
     module_name = _write_settings(
         tmp_path,
         """
@@ -234,6 +235,7 @@ TORTOISE_ORM = {
 
 @pytest.mark.asyncio
 async def test_downgrade_defaults_to_first(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    _write_package(tmp_path, "cli_app")
     module_name = _write_settings(
         tmp_path,
         """

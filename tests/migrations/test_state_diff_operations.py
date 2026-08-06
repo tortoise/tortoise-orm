@@ -10,7 +10,7 @@ from tortoise.contrib.postgres.fields import TSVectorField
 from tortoise.contrib.postgres.indexes import GinIndex
 from tortoise.fields.base import Field
 from tortoise.indexes import Index
-from tortoise.migrations.constraints import UniqueConstraint
+from tortoise.migrations.constraints import CheckConstraint, UniqueConstraint
 from tortoise.migrations.operations import (
     AddConstraint,
     AddField,
@@ -217,7 +217,9 @@ def test_generate_recreate_generated_field_restores_indexes_constraints() -> Non
     assert any(isinstance(op, AddField) for op in operations)
     assert any(isinstance(op, AddIndex) and op.index.INDEX_TYPE == "GIN" for op in operations)
     assert any(
-        isinstance(op, AddConstraint) and op.constraint.fields == ("title", "search_vector")
+        isinstance(op, AddConstraint)
+        and isinstance(op.constraint, UniqueConstraint)
+        and op.constraint.fields == ("title", "search_vector")
         for op in operations
     )
 
@@ -306,3 +308,159 @@ def test_generate_rename_constraint_explicit() -> None:
 
     operations = OperationGenerator(old_state, new_state).generate()
     assert any(isinstance(op, RenameConstraint) for op in operations)
+
+
+def test_detect_db_default_added() -> None:
+    OldWidget = make_model("Widget", "widget", id=fields.IntField(pk=True), value=fields.IntField())
+    NewWidget = make_model(
+        "Widget", "widget", id=fields.IntField(pk=True), value=fields.IntField(db_default=42)
+    )
+
+    old_state = build_state("models", OldWidget)
+    new_state = build_state("models", NewWidget)
+
+    operations = OperationGenerator(old_state, new_state).generate()
+    assert len(operations) == 1
+    assert isinstance(operations[0], AlterField)
+    assert operations[0].name == "value"
+
+
+def test_detect_db_default_changed() -> None:
+    OldWidget = make_model(
+        "Widget", "widget", id=fields.IntField(pk=True), value=fields.IntField(db_default=42)
+    )
+    NewWidget = make_model(
+        "Widget", "widget", id=fields.IntField(pk=True), value=fields.IntField(db_default=100)
+    )
+
+    old_state = build_state("models", OldWidget)
+    new_state = build_state("models", NewWidget)
+
+    operations = OperationGenerator(old_state, new_state).generate()
+    assert len(operations) == 1
+    assert isinstance(operations[0], AlterField)
+    assert operations[0].name == "value"
+
+
+def test_detect_db_default_removed() -> None:
+    OldWidget = make_model(
+        "Widget", "widget", id=fields.IntField(pk=True), value=fields.IntField(db_default=42)
+    )
+    NewWidget = make_model("Widget", "widget", id=fields.IntField(pk=True), value=fields.IntField())
+
+    old_state = build_state("models", OldWidget)
+    new_state = build_state("models", NewWidget)
+
+    operations = OperationGenerator(old_state, new_state).generate()
+    assert len(operations) == 1
+    assert isinstance(operations[0], AlterField)
+    assert operations[0].name == "value"
+
+
+def test_detect_check_constraint_added() -> None:
+    Widget = make_model("Widget", "widget", id=fields.IntField(pk=True), price=fields.IntField())
+
+    old_state = build_state("models", Widget)
+    new_state = build_state("models", Widget)
+
+    new_state.models[("models", "Widget")].options["constraints"] = (
+        CheckConstraint(check="price > 0", name="ck_price"),
+    )
+
+    operations = OperationGenerator(old_state, new_state).generate()
+    assert len(operations) == 1
+    assert isinstance(operations[0], AddConstraint)
+    assert isinstance(operations[0].constraint, CheckConstraint)
+    assert operations[0].constraint.name == "ck_price"
+
+
+def test_detect_check_constraint_removed() -> None:
+    Widget = make_model("Widget", "widget", id=fields.IntField(pk=True), price=fields.IntField())
+
+    old_state = build_state("models", Widget)
+    new_state = build_state("models", Widget)
+
+    old_state.models[("models", "Widget")].options["constraints"] = (
+        CheckConstraint(check="price > 0", name="ck_price"),
+    )
+
+    operations = OperationGenerator(old_state, new_state).generate()
+    assert len(operations) == 1
+    assert isinstance(operations[0], RemoveConstraint)
+    assert operations[0].name == "ck_price"
+
+
+def test_generate_alter_field_and_add_index_in_correct_order() -> None:
+    OldWidget = make_model("Widget", "widget", id=fields.IntField(pk=True))
+    NewWidget = make_model(
+        "Widget",
+        "widget",
+        {"indexes": [Index(fields=["value"])]},
+        id=fields.IntField(pk=True),
+        value=fields.IntField(),
+    )
+
+    old_state = build_state("models", OldWidget)
+    new_state = build_state("models", NewWidget)
+
+    operations = OperationGenerator(old_state, new_state).generate()
+    assert len(operations) == 2
+    assert isinstance(operations[0], AddField)
+    assert isinstance(operations[1], AddIndex)
+
+
+def test_generate_alter_field_and_add_constraint_in_correct_order() -> None:
+    OldWidget = make_model("Widget", "widget", id=fields.IntField(pk=True))
+    NewWidget = make_model(
+        "Widget",
+        "widget",
+        {"constraints": [UniqueConstraint(fields=("value",), name="uq_new")]},
+        id=fields.IntField(pk=True),
+        value=fields.IntField(),
+    )
+
+    old_state = build_state("models", OldWidget)
+    new_state = build_state("models", NewWidget)
+
+    operations = OperationGenerator(old_state, new_state).generate()
+    assert len(operations) == 2
+    assert isinstance(operations[0], AddField)
+    assert isinstance(operations[1], AddConstraint)
+
+
+def test_generate_alter_field_and_remove_index_in_correct_order() -> None:
+    OldWidget = make_model(
+        "Widget",
+        "widget",
+        {"indexes": [Index(fields=["value"])]},
+        id=fields.IntField(pk=True),
+        value=fields.IntField(),
+    )
+    NewWidget = make_model("Widget", "widget", id=fields.IntField(pk=True))
+
+    old_state = build_state("models", OldWidget)
+    new_state = build_state("models", NewWidget)
+
+    operations = OperationGenerator(old_state, new_state).generate()
+    assert len(operations) == 2
+    assert isinstance(operations[0], RemoveIndex)
+    assert isinstance(operations[1], RemoveField)
+
+
+def test_generate_alter_field_and_remove_constraint_in_correct_order() -> None:
+    OldWidget = make_model(
+        "Widget",
+        "widget",
+        {"constraints": [UniqueConstraint(fields=("value",), name="uq_new")]},
+        id=fields.IntField(pk=True),
+        value=fields.IntField(),
+    )
+    NewWidget = make_model("Widget", "widget", id=fields.IntField(pk=True))
+
+    old_state = build_state("models", OldWidget)
+    new_state = build_state("models", NewWidget)
+
+    operations = OperationGenerator(old_state, new_state).generate()
+    assert len(operations) == 2
+    assert isinstance(operations[0], RemoveConstraint)
+    assert isinstance(operations[1], RemoveField)

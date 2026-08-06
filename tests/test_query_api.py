@@ -278,6 +278,10 @@ async def test_execute_pypika_explicit_connection_with_multiple_configured() -> 
 
     class DummyClient:
         query_class = type("QueryClass", (), {"SQL_CONTEXT": None})
+        _bound_loop = None
+
+        def _check_loop(self) -> bool:
+            return True
 
         async def execute_query_dict_with_affected(self, query, values=None):
             return [], 0
