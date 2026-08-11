@@ -1188,3 +1188,72 @@ async def test_union_with_annotate_raises(db):
 
     with pytest.raises(ParamsError, match="Union queries do not support annotations"):
         await qs1.union(qs2)
+
+
+@pytest.mark.asyncio
+async def test_update_limit_order_by_with_join(db):
+    old_cap_val = Event._meta.db.capabilities.support_update_limit_order_by
+    object.__setattr__(Event._meta.db.capabilities, "_mutable", True)
+    Event._meta.db.capabilities.support_update_limit_order_by = True
+    try:
+        t1 = await Tournament.create(name="T1")
+        e1 = await Event.create(name="E1", tournament=t1)
+        e2 = await Event.create(name="E2", tournament=t1)
+
+        updated = (
+            await Event.filter(tournament__name="T1")
+            .order_by("event_id")
+            .limit(1)
+            .update(name="E1_updated")
+        )
+        assert updated == 1
+
+        await e1.refresh_from_db()
+        await e2.refresh_from_db()
+        assert e1.name == "E1_updated"
+        assert e2.name == "E2"
+    finally:
+        Event._meta.db.capabilities.support_update_limit_order_by = old_cap_val
+        object.__setattr__(Event._meta.db.capabilities, "_mutable", False)
+
+
+@pytest.mark.asyncio
+async def test_delete_limit_order_by_with_join(db):
+    old_cap_val = Event._meta.db.capabilities.support_update_limit_order_by
+    object.__setattr__(Event._meta.db.capabilities, "_mutable", True)
+    Event._meta.db.capabilities.support_update_limit_order_by = True
+    try:
+        t1 = await Tournament.create(name="T1")
+        await Event.create(name="E1", tournament=t1)
+        await Event.create(name="E2", tournament=t1)
+
+        deleted = await Event.filter(tournament__name="T1").order_by("event_id").limit(1).delete()
+        assert deleted == 1
+
+        count = await Event.all().count()
+        assert count == 1
+    finally:
+        Event._meta.db.capabilities.support_update_limit_order_by = old_cap_val
+        object.__setattr__(Event._meta.db.capabilities, "_mutable", False)
+
+
+def test_update_query_postgres_dialect_coverage(db):
+    from tortoise.backends.base.client import Capabilities
+
+    q = Event.filter(tournament__name="T1").limit(1).update(name="E1_updated")
+    q.capabilities = Capabilities("postgres", support_update_limit_order_by=False)
+    sql = q.sql()
+    assert "IN (SELECT " in sql
+    assert '"_t"' not in sql
+    assert "`_t`" not in sql
+
+
+def test_delete_query_postgres_dialect_coverage(db):
+    from tortoise.backends.base.client import Capabilities
+
+    q = Event.filter(tournament__name="T1").delete()
+    q.capabilities = Capabilities("postgres", support_update_limit_order_by=False)
+    sql = q.sql()
+    assert "IN (SELECT " in sql
+    assert '"_t"' not in sql
+    assert "`_t`" not in sql

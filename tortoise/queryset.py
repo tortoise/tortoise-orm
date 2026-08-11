@@ -1349,7 +1349,7 @@ class UpdateQuery(AwaitableQuery):
 
     def _make_query(self) -> None:
         table = self.model._meta.basetable
-        self.query = self._db.query_class.update(table)
+        self.query = copy(self.model._meta.basequery)
         if self.capabilities.support_update_limit_order_by and self._limit:
             self.query._limit = self.query._wrapper_cls(self._limit)
             self.resolve_ordering(self.model, table, self._orderings, self._annotations)
@@ -1359,21 +1359,26 @@ class UpdateQuery(AwaitableQuery):
             # If we have joins, we must use a subquery for update
             # because standard UPDATE does not support JOINs on many DBs.
             pk_column = self.model._meta.db_pk_column
-            subquery = self._db.query_class.from_(table).select(table[pk_column])
-            subquery._wheres = self.query._wheres
-            subquery._havings = self.query._havings
-            subquery._joins = self.query._joins
-            if hasattr(self.query, "_limit"):
-                subquery._limit = self.query._limit
-            if hasattr(self.query, "_orderbys"):
-                subquery._orderbys = self.query._orderbys
+            subquery = self.query.select(table[pk_column])
 
-            # To avoid MySQL Error 1093, we wrap the subquery in another SELECT
-            # To avoid MySQL Error 1235, the outer SELECT shouldn't have LIMIT
-            wrapper = self._db.query_class.from_(subquery.as_("_t")).select(Table("_t")[pk_column])
+            if self.capabilities.dialect == "mysql":
+                # To avoid MySQL Error 1093, we wrap the subquery in another SELECT
+                # To avoid MySQL Error 1235, the outer SELECT shouldn't have LIMIT
+                wrapper = self._db.query_class.from_(subquery.as_("_t")).select(
+                    Table("_t")[pk_column]
+                )
+            else:
+                wrapper = subquery
 
             self.query = self._db.query_class.update(table)
             self.query = self.query.where(table[pk_column].isin(wrapper))
+
+        else:
+            update_query = self._db.query_class.update(table)
+            update_query._wheres = self.query._wheres
+            update_query._limit = self.query._limit
+            update_query._orderbys = self.query._orderbys
+            self.query = update_query
 
         for key, value in self.update_kwargs.items():
             field_object = self.model._meta.fields_map.get(key)
@@ -1463,11 +1468,12 @@ class DeleteQuery(AwaitableQuery):
             pk_column = self.model._meta.db_pk_column
             subquery = self.query.select(self.model._meta.basetable[pk_column])
 
-            # To avoid MySQL Error 1093, we wrap the subquery in another SELECT
-            # To avoid MySQL Error 1235, the outer SELECT shouldn't have LIMIT
-            # We use the connection's query class directly to avoid carrying over
-            # the base table into the FROM clause.
-            wrapper = self._db.query_class.from_(subquery.as_("_t")).select(Table("_t")[pk_column])
+            if self.capabilities.dialect == "mysql":
+                wrapper = self._db.query_class.from_(subquery.as_("_t")).select(
+                    Table("_t")[pk_column]
+                )
+            else:
+                wrapper = subquery
 
             self.query = copy(self.model._meta.basequery)
             self.query = self.query.where(self.model._meta.basetable[pk_column].isin(wrapper))
