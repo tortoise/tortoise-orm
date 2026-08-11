@@ -8,6 +8,15 @@ Changelog
 1.1
 ===
 
+1.1.9
+-----
+
+Added
+^^^^^
+- PostgreSQL ``password`` credential now accepts a sync or async callable, resolved once per
+  new connection, to support short-lived credentials such as AWS RDS/Aurora IAM tokens and
+  Azure Entra ID tokens. (#2034)
+
 1.1.8
 -----
 

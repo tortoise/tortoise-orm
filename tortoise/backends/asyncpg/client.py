@@ -58,6 +58,7 @@ class AsyncpgDBClient(BasePostgresClient):
             **self.extra,
         }
         try:
+            # asyncpg resolves a callable password itself, once per new connection
             self._pool = await self.create_pool(password=self.password, **self._template)
             await self._post_connect()
             self.log.debug("Created connection pool %s with params: %s", self._pool, self._template)

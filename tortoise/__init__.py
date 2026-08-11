@@ -433,7 +433,9 @@ class Tortoise(metaclass=_TortoiseMeta):
         for name, info in connections_config.items():
             if isinstance(info, str):
                 info = expand_db_url(info)
-            if password := info.get("credentials", {}).get("password"):
+            if (password := info.get("credentials", {}).get("password")) and isinstance(
+                password, str
+            ):
                 passwords.append(password)
 
         str_connection_config = str(connections_config)
