@@ -201,9 +201,16 @@ class BaseSchemaEditor(SchemaQuotingMixin):
         index_name: str | None = None,
         index_type: str | None = None,
         extra: str | None = None,
+        unique: bool = False,
+        nulls_not_distinct: bool = False,
     ) -> str:
-        return self.INDEX_CREATE_TEMPLATE.format(
-            index_name=index_name or self._generate_index_name("idx", model, field_names),
+        # nulls_not_distinct is PostgreSQL-only (see BasePostgresSchemaEditor);
+        # accepted here so callers can pass it unconditionally, but it's a no-op.
+        _ = nulls_not_distinct
+        template = self.UNIQUE_INDEX_CREATE_TEMPLATE if unique else self.INDEX_CREATE_TEMPLATE
+        prefix = "uidx" if unique else "idx"
+        return template.format(
+            index_name=index_name or self._generate_index_name(prefix, model, field_names),
             table_name=self._qualify_table_name(model._meta.db_table, model._meta.schema),
             fields=self._format_index_fields(field_names),
             index_type=f"{index_type} " if index_type else "",

@@ -87,7 +87,7 @@ class BasePostgresSchemaEditor(BaseSchemaEditor):
         prefix = "uidx" if unique else "idx"
 
         return template.format(
-            index_name=index_name or self._generate_index_name(prefix, model, field_names),
+            index_name=index_name or self._generate_index_name(prefix, model, list(field_names)),
             table_name=self._qualify_table_name(model._meta.db_table, model._meta.schema),
             index_type=f"{index_type} " if index_type else "",
             fields=self._format_index_fields(list(field_names)),
