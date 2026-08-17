@@ -259,6 +259,9 @@ class CharField(Field[T_STR]):
 class TextField(Field[str], str):  # type: ignore
     """
     Large Text field.
+
+    PostgreSQL supports ``unique=True`` and ``db_index=True``. Other backends reject these
+    options when generating or migrating the database schema.
     """
 
     indexable = False
@@ -268,7 +271,7 @@ class TextField(Field[str], str):  # type: ignore
         self,
         primary_key: bool | None = None,
         unique: bool = False,
-        db_index: bool = False,
+        db_index: bool | None = None,
         **kwargs: Any,
     ) -> None:
         if primary_key or kwargs.get("pk"):
@@ -277,22 +280,10 @@ class TextField(Field[str], str):  # type: ignore
                 DeprecationWarning,
                 stacklevel=2,
             )
-        if unique:
-            raise ConfigurationError(
-                "TextField doesn't support unique indexes, consider CharField or another strategy"
-            )
-        if (index := kwargs.pop("index", None)) is not None:
-            warnings.warn(
-                "`index` is deprecated, please use `db_index` instead",
-                DeprecationWarning,
-                stacklevel=2,
-            )
-            if index or db_index:
-                raise ConfigurationError("TextField can't be indexed, consider CharField")
-        elif db_index:
-            raise ConfigurationError("TextField can't be indexed, consider CharField")
+        super().__init__(primary_key=primary_key, unique=unique, db_index=db_index, **kwargs)
 
-        super().__init__(primary_key=primary_key, **kwargs)
+    class _db_postgres:
+        indexable = True
 
     class _db_mysql:
         SQL_TYPE = "LONGTEXT"

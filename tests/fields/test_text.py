@@ -1,7 +1,7 @@
 import pytest
 
 from tests import testmodels
-from tortoise.exceptions import ConfigurationError, IntegrityError
+from tortoise.exceptions import IntegrityError
 from tortoise.fields import TextField
 
 
@@ -36,20 +36,13 @@ async def test_values_list(db):
     assert values == "baa"
 
 
-def test_unique_fail():
-    msg = "TextField can't be indexed, consider CharField"
-    with pytest.raises(ConfigurationError, match=msg):
-        with pytest.warns(
-            DeprecationWarning, match="`index` is deprecated, please use `db_index` instead"
-        ):
-            TextField(index=True)
-    with pytest.raises(ConfigurationError, match=msg):
-        TextField(db_index=True)
-
-
-def test_index_fail():
-    with pytest.raises(ConfigurationError, match="can't be indexed, consider CharField"):
-        TextField(index=True)
+def test_index_options_are_deferred_to_the_database_dialect():
+    assert TextField(unique=True).unique is True
+    assert TextField(db_index=True).index is True
+    with pytest.warns(
+        DeprecationWarning, match="`index` is deprecated, please use `db_index` instead"
+    ):
+        assert TextField(index=True).index is True
 
 
 def test_pk_deprecated():
