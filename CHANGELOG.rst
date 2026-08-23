@@ -8,6 +8,13 @@ Changelog
 1.1
 ===
 
+1.1.9
+-----
+
+Added
+^^^^^
+- ``Q.__bool__()`` so ``Q`` objects with no filters/children (including nested empty ``Q`` children) are falsy.
+
 1.1.8
 -----
 
@@ -21,7 +28,6 @@ Added
 - ``QuerySet.contains()`` method to check if an object exists in a queryset. (#2163)
 - Added comprehensive EXPLAIN support for MySQL and PostgreSQL. (#2165)
 - Built-in ``DomainNameValidator``, ``URLValidator``, and ``EmailValidator`` classes for common validation patterns. (#2167)
-- ``Q.__bool__()`` so ``Q`` objects with no filters/children (including nested empty ``Q`` children) are falsy.
 
 Fixed
 ^^^^^
