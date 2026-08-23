@@ -1571,8 +1571,13 @@ class CountQuery(AwaitableQuery):
         _, result = await self._db.execute_query(*self.query.get_parameterized_sql())
         if not result:
             return 0
-        count = list(dict(result[0]).values())[0] - self._offset
-        if self._limit and count > self._limit:
+        # COUNT(*) ignores LIMIT/OFFSET, so the offset is applied here. Clamp at
+        # 0: when the offset is past the total, SQL would return 0 rows, not a
+        # negative count.
+        count = max(0, list(dict(result[0]).values())[0] - self._offset)
+        # Use ``is not None`` so an explicit ``limit(0)`` clamps to 0 instead of
+        # being treated as "no limit" by a truthiness check.
+        if self._limit is not None and count > self._limit:
             return self._limit
         return count
 

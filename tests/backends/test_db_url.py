@@ -7,6 +7,7 @@ from tortoise.exceptions import ConfigurationError
 
 _postgres_scheme_engines = {
     "postgres": "tortoise.backends.asyncpg",
+    "postgresql": "tortoise.backends.asyncpg",
     "asyncpg": "tortoise.backends.asyncpg",
     "psycopg": "tortoise.backends.psycopg",
 }

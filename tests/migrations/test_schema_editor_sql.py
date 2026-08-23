@@ -249,3 +249,36 @@ async def test_create_model_includes_db_default() -> None:
     sql = client.executed[0]
     assert 'CREATE TABLE "widget"' in sql
     assert "DEFAULT 'active'" in sql
+
+
+@pytest.mark.asyncio
+async def test_create_model_includes_db_default_on_fk() -> None:
+    """CreateModel should include DEFAULT clause for FK columns with db_default."""
+
+    class Dc(Model):
+        id = fields.IntField(primary_key=True)
+
+        class Meta:
+            table = "dc"
+            app = "models"
+
+    class App(Model):
+        id = fields.IntField(primary_key=True)
+        dc: fields.ForeignKeyRelation[Dc] = fields.ForeignKeyField("models.Dc", db_default=2)
+
+        class Meta:
+            table = "app"
+            app = "models"
+
+    init_apps(Dc, App)
+
+    client = FakeClient("sql")
+    editor = TestSchemaEditor(client)
+
+    await editor.create_model(App)
+
+    assert len(client.executed) == 1
+    sql = client.executed[0]
+    assert 'CREATE TABLE "app"' in sql
+    assert '"dc_id"' in sql
+    assert "DEFAULT 2" in sql

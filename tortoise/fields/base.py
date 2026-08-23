@@ -19,7 +19,9 @@ if TYPE_CHECKING:  # pragma: nocoverage
 
 if sys.version_info >= (3, 11):
     from enum import StrEnum
+    from typing import Self
 else:  # pragma: no cover
+    from typing_extensions import Self
 
     class StrEnum(str, Enum):
         __str__ = str.__str__
@@ -202,7 +204,7 @@ class Field(Generic[VALUE], metaclass=_FieldMeta):
     # These methods are just to make IDE/Linters happy:
     if TYPE_CHECKING:
 
-        def __new__(cls, *args: Any, **kwargs: Any) -> Field[VALUE]:
+        def __new__(cls, *args: Any, **kwargs: Any) -> Self:
             return super().__new__(cls)
 
         @overload
