@@ -14,6 +14,7 @@ Changelog
 Added
 ^^^^^
 - ``Q.__bool__()`` so ``Q`` objects with no filters/children (including nested empty ``Q`` children) are falsy.
+- ``db_collation`` argument on fields to set a column collation, emitted as a ``COLLATE`` clause in the generated schema. (#686)
 
 1.1.8
 -----

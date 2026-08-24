@@ -15,7 +15,7 @@ if TYPE_CHECKING:  # pragma: nocoverage
 class OracleSchemaGenerator(BaseSchemaGenerator):
     DIALECT = "oracle"
     TABLE_CREATE_TEMPLATE = "CREATE TABLE {table_name} ({fields}){extra};"
-    FIELD_TEMPLATE = '"{name}" {type}{default}{nullable}{unique}{primary}'
+    FIELD_TEMPLATE = '"{name}" {type}{collate}{default}{nullable}{unique}{primary}'
     TABLE_COMMENT_TEMPLATE = "COMMENT ON TABLE {table} IS '{comment}';"
     COLUMN_COMMENT_TEMPLATE = "COMMENT ON COLUMN {table}.\"{column}\" IS '{comment}';"
     INDEX_CREATE_TEMPLATE = 'CREATE INDEX "{index_name}" ON {table_name} ({fields});'
