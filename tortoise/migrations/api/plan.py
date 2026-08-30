@@ -31,18 +31,21 @@ async def plan(
         if label not in configured_apps:
             raise ValueError(f"Unknown app label {label}")
 
-    apps_config = {label: configured_apps[label] for label in selected_apps}
     apps_by_connection: dict[str, dict[str, dict[str, Any]]] = {}
-    for label, app_config in apps_config.items():
+    for label, app_config in configured_apps.items():
         connection_name = app_config.get("default_connection", "default")
         apps_by_connection.setdefault(connection_name, {})[label] = app_config
 
     targets = _parse_targets(target, selected_apps)
     output: list[str] = []
-    for connection_name, subset in apps_by_connection.items():
+    for connection_name, connection_apps in apps_by_connection.items():
         connection = get_connection(connection_name)
-        executor = MigrationExecutor(connection, subset)
-        executor_targets = [t for t in targets if t.app_label in subset]
+        executor = MigrationExecutor(connection, connection_apps)
+        executor_targets = [
+            t for t in targets if t.app_label in connection_apps and t.app_label in selected_apps
+        ]
+        if not executor_targets:
+            continue
         steps = await executor.plan(executor_targets if executor_targets else None)
         output.extend(_format_steps(steps, connection_name))
 
