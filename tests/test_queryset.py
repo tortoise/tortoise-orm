@@ -169,6 +169,20 @@ def test_slicing_negative_values(db):
         _ = IntFields.all()[:-1]
 
 
+def test_integer_indexing_not_supported(db):
+    with pytest.raises(
+        ParamsError,
+        match=(
+            r"QuerySet indices must be slices, not integers\. "
+            r"QuerySets are lazy and do not support random access\. "
+            r"Use await queryset\.first\(\), await queryset\.offset\(n\)\.first\(\), "
+            r"or await queryset\.all\(\) and index the returned list\."
+        ),
+    ):
+        # Use an index way outside reasonable bounds for the dataset, so we don't accidentally support it.
+        _ = IntFields.all()[1000]
+
+
 def test_slicing_stop_before_start(db):
     with pytest.raises(
         ParamsError,
