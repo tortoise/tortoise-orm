@@ -18,15 +18,14 @@ from pypika_tortoise.terms import Term
 from tortoise import timezone
 from tortoise.exceptions import ConfigurationError, FieldError
 from tortoise.fields.base import Field
-from tortoise.timezone import get_default_timezone, get_timezone, get_use_tz, localtime
+from tortoise.timezone import (
+    get_default_timezone,
+    get_timezone,
+    get_use_tz,
+    localtime,
+    parse_datetime,
+)
 from tortoise.validators import MaxLengthValidator
-
-try:
-    from ciso8601 import parse_datetime
-except ImportError:  # pragma: nocoverage
-    from iso8601 import parse_date
-
-    parse_datetime = functools.partial(parse_date, default_timezone=None)
 
 try:
     from pydantic import BaseModel as _PydanticBaseModel

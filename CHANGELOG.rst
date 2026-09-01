@@ -44,6 +44,10 @@ Fixed
 - Type hint for ``TransactionContext`` now returns a ``TransactionalDBClient`` instead of a raw database connection. This change gives the correct inferred type for the transaction context. (#2232)
 - Fix TSVectorField returned value conversion. (#2237)
 
+Changed
+^^^^^^^
+- Removed the mandatory ``iso8601`` runtime dependency. Datetime parsing now prefers ``ciso8601`` when available and falls back to an internal parser for common ISO 8601 forms; ``ciso8601`` is also available via the ``accel`` extra on Windows CPython. (#2213)
+
 1.1.7
 -----
 

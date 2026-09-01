@@ -7,7 +7,6 @@ from unittest.mock import patch
 from zoneinfo import ZoneInfoNotFoundError
 
 import pytest
-from iso8601 import ParseError
 
 from tests import testmodels
 from tortoise import fields, timezone
@@ -673,7 +672,7 @@ async def test_date_str(db):
     obj0 = await model.create(date="2020-08-17")
     obj1 = await model.get(date="2020-08-17")
     assert obj0.date == obj1.date
-    with pytest.raises((ParseError, ValueError)):
+    with pytest.raises(ValueError):
         await model.create(date="2020-08-xx")
     await model.filter(date="2020-08-17").update(date="2020-08-18")
     obj2 = await model.get(date="2020-08-18")

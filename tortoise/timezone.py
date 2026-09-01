@@ -3,6 +3,7 @@ from __future__ import annotations
 import functools
 import os
 import sys
+from collections.abc import Callable
 from datetime import datetime, time, tzinfo
 from zoneinfo import ZoneInfo as _ZoneInfo
 from zoneinfo import ZoneInfoNotFoundError
@@ -13,6 +14,12 @@ else:
     from datetime import timezone
 
     UTC = timezone.utc
+
+parse_datetime: Callable[[str], datetime]
+try:
+    from ciso8601 import parse_datetime as parse_datetime
+except ImportError:  # pragma: nocoverage
+    from tortoise._iso8601 import parse_datetime as parse_datetime
 
 
 class ZoneInfo(_ZoneInfo):
