@@ -7,12 +7,26 @@ from typing import TYPE_CHECKING, Any, Generic, Literal, TypeVar, overload
 from pypika_tortoise.queries import Table
 
 from tortoise.exceptions import ConfigurationError, NoValuesFetched, OperationalError
-from tortoise.fields.base import CASCADE, SET_NULL, Field, OnDelete
+from tortoise.fields.base import (
+    CASCADE,
+    SET_NULL,
+    Field,
+    ManyToManyFieldKwargs,
+    OnDelete,
+    RelationalFieldKwargs,
+)
 
 if TYPE_CHECKING:  # pragma: nocoverage
+    import sys
+
     from tortoise.backends.base.client import BaseDBAsyncClient
     from tortoise.models import Model
     from tortoise.queryset import Q, QuerySet
+
+    if sys.version_info >= (3, 11):
+        from typing import Unpack
+    else:  # pragma: no cover
+        from typing_extensions import Unpack
 
 MODEL = TypeVar("MODEL", bound="Model")
 
@@ -198,7 +212,10 @@ class ManyToManyRelation(ReverseRelation[MODEL]):
             pks_f.append(pk_f)
         through_table = Table(self.field.through, schema=self.field.through_schema)
         backward_key, forward_key = self.field.backward_key, self.field.forward_key
-        backward_field, forward_field = through_table[backward_key], through_table[forward_key]
+        backward_field, forward_field = (
+            through_table[backward_key],
+            through_table[forward_key],
+        )
         select_query = (
             db.query_class.from_(through_table).where(backward_field == pk_b).select(forward_key)
         )
@@ -441,7 +458,7 @@ def OneToOneField(
     db_constraint: bool = True,
     *,
     null: Literal[True],
-    **kwargs: Any,
+    **kwargs: Unpack[RelationalFieldKwargs],
 ) -> OneToOneNullableRelation[MODEL]: ...
 
 
@@ -452,7 +469,7 @@ def OneToOneField(
     on_delete: OnDelete = CASCADE,
     db_constraint: bool = True,
     null: Literal[False] = False,
-    **kwargs: Any,
+    **kwargs: Unpack[RelationalFieldKwargs],
 ) -> OneToOneRelation[MODEL]: ...
 
 
@@ -516,7 +533,7 @@ def ForeignKeyField(
     db_constraint: bool = True,
     *,
     null: Literal[True],
-    **kwargs: Any,
+    **kwargs: Unpack[RelationalFieldKwargs],
 ) -> ForeignKeyNullableRelation[MODEL]: ...
 
 
@@ -527,7 +544,7 @@ def ForeignKeyField(
     on_delete: OnDelete = CASCADE,
     db_constraint: bool = True,
     null: Literal[False] = False,
-    **kwargs: Any,
+    **kwargs: Unpack[RelationalFieldKwargs],
 ) -> ForeignKeyRelation[MODEL]: ...
 
 
@@ -592,7 +609,7 @@ def ManyToManyField(
     on_delete: OnDelete = CASCADE,
     db_constraint: bool = True,
     unique: bool = True,
-    **kwargs: Any,
+    **kwargs: Unpack[ManyToManyFieldKwargs],
 ) -> ManyToManyRelation[MODEL]:
     """
     ManyToMany relation field.

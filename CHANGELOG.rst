@@ -20,6 +20,11 @@ Added
 
 Added
 ^^^^^
+- ``QuerySet.union()`` — SQL UNION query support for combining results from multiple QuerySets, including support for union across different models, ``union(all=True)`` for duplicates, ``order_by()``, ``limit()``, and ``count()``.
+- ``QuerySet.contains()`` method to check if an object exists in a queryset.
+- Added comprehensive EXPLAIN support for MySQL and PostgreSQL.
+- Built-in ``DomainNameValidator``, ``URLValidator``, and ``EmailValidator`` classes for common validation patterns. (#2162)
+- Typed ``**kwargs`` on field constructors via PEP 692 (``Unpack[TypedDict]``), so IDEs and type checkers can autocomplete and validate common field arguments (``default``, ``null``, ``unique``, ``db_index``, ``description``, etc.). (#2168)
 - ``QuerySet.union()`` — SQL UNION query support for combining results from multiple QuerySets, including support for union across different models, ``union(all=True)`` for duplicates, ``order_by()``, ``limit()``, and ``count()``. (#2146)
 - feat: add ``postgresql://`` scheme as alias for asyncpg (#2154)
 - feat: add pre commit config and fix codespell issues (#2159)

@@ -4,7 +4,7 @@ import inspect
 import operator
 import sys
 import warnings
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 from enum import Enum
 from functools import reduce
 from typing import TYPE_CHECKING, Any, Generic, TypeVar, overload
@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING, Any, Generic, TypeVar, overload
 from pypika_tortoise.terms import Term
 
 from tortoise.exceptions import ConfigurationError, ValidationError
+from tortoise.fields.db_defaults import SqlDefault
 from tortoise.validators import Validator
 
 if TYPE_CHECKING:  # pragma: nocoverage
@@ -19,9 +20,13 @@ if TYPE_CHECKING:  # pragma: nocoverage
 
 if sys.version_info >= (3, 11):
     from enum import StrEnum
-    from typing import Self
+    from typing import Self, TypedDict
 else:  # pragma: no cover
-    from typing_extensions import Self
+    from collections.abc import Awaitable
+
+    from typing_extensions import Self, TypedDict
+    # Under python 3.11, typing.TypedDict does not support multiple inheritance woth non-TypedDict
+    # So for Generic, used typing-extensions for TypedDict
 
     class StrEnum(str, Enum):
         __str__ = str.__str__
@@ -88,6 +93,85 @@ RESTRICT = OnDelete.RESTRICT
 SET_NULL = OnDelete.SET_NULL
 SET_DEFAULT = OnDelete.SET_DEFAULT
 NO_ACTION = OnDelete.NO_ACTION
+
+
+class _FieldKwargsCommon(TypedDict, Generic[VALUE], total=False):
+    """:class:`Field` constructor arguments that are never declared as explicit parameters.
+
+    Used with :data:`typing.Unpack` to give ``**kwargs`` explicit type hints. This is the
+    smallest set; fields that declare ``unique``/``db_index``/``primary_key`` explicitly
+    (e.g. ``TextField``) unpack this directly to avoid PEP 692 parameter-name collisions.
+    """
+
+    source_field: str | None
+    generated: bool
+    default: VALUE | Callable[..., VALUE | Awaitable[VALUE]] | None
+    db_default: VALUE | SqlDefault | _DB_DEFAULT_NOT_SET
+    description: str | None
+    model: Model | None
+    validators: list[Validator | Callable]
+    pk: bool  # deprecated alias for primary_key
+    index: bool  # deprecated alias for db_index
+
+
+class _FieldKwargsNoPk(_FieldKwargsCommon[VALUE], total=False):
+    """Common arguments excluding ``primary_key`` and ``null``.
+
+    For constructors that declare ``primary_key`` and ``null`` as explicit parameters
+    (e.g. ``IntField``).
+    """
+
+    unique: bool
+    db_index: bool | None
+
+
+class FieldKwargs(_FieldKwargsNoPk[VALUE], total=False):
+    """Common arguments excluding ``null``.
+
+    For constructors that declare only ``null`` as an explicit parameter (the majority).
+    """
+
+    primary_key: bool | None
+
+
+class TextFieldKwargs(_FieldKwargsCommon[VALUE], total=False):
+    """Constructor arguments for :class:`TextField`.
+
+    ``TextField`` doesn't declare ``null`` explicitly, so it includes it here.
+    """
+
+    null: bool
+
+
+class JSONFieldKwargs(FieldKwargs[VALUE], total=False):
+    """Constructor arguments for :class:`JSONField`.
+
+    ``JSONField`` declares neither ``null`` nor ``primary_key`` explicitly, and also accepts
+    a custom ``field_type`` (e.g. a Pydantic model class).
+    """
+
+    null: bool
+    field_type: type[Any]
+
+
+class RelationalFieldKwargs(FieldKwargs[VALUE], total=False):
+    """Constructor arguments for :func:`ForeignKeyField` and :func:`OneToOneField`.
+
+    Extends the common :class:`~tortoise.fields.base.FieldKwargs` with ``to_field``.
+    ``null`` is declared as an explicit parameter on those constructors, so it is omitted.
+    """
+
+    to_field: str | None
+
+
+class ManyToManyFieldKwargs(_FieldKwargsCommon[VALUE], total=False):
+    """Constructor arguments for :func:`ManyToManyField`.
+
+    ``unique`` is declared as an explicit parameter, so it is omitted here; the deprecated
+    ``create_unique_index`` alias is still accepted.
+    """
+
+    create_unique_index: bool  # deprecated alias for unique
 
 
 class _FieldMeta(type):
@@ -223,8 +307,8 @@ class Field(Generic[VALUE], metaclass=_FieldMeta):
         generated: bool = False,
         primary_key: bool | None = None,
         null: bool = False,
-        default: Any = None,
-        db_default: Any = DB_DEFAULT_NOT_SET,
+        default: VALUE | Callable[..., VALUE | Awaitable[VALUE]] | None = None,
+        db_default: VALUE | SqlDefault | _DB_DEFAULT_NOT_SET = DB_DEFAULT_NOT_SET,
         unique: bool = False,
         db_index: bool | None = None,
         description: str | None = None,
