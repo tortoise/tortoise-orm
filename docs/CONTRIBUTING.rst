@@ -84,7 +84,7 @@ As this is a value that is different for different people, we have settled on:
 Style
 -----
 
-We try and automate as much as we can, so a simple ``make check`` will do automated style checking and linting, but these don't pick up on the non-obvious style preferences.
+We try and automate as much as we can, so a simple ``make check`` or ``pre-commit run --all-files`` will do automated style checking and linting, but these don't pick up on the non-obvious style preferences.
 
 Tortoise ORM follows a the following agreed upon style:
 
