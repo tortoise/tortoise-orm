@@ -1167,6 +1167,12 @@ class Model(metaclass=ModelMeta):
                 raise IncompleteInstanceError(
                     f"{self.__class__.__name__} is a partial model, can only be saved with the relevant update_field provided"
                 )
+        if update_fields:
+            update_fields = list(update_fields)
+            for field_name, field_obj in self._meta.fields_map.items():
+                if field_name not in update_fields and getattr(field_obj, "auto_now", False):
+                    update_fields.append(field_name)
+
         await self._pre_save(db, update_fields)
 
         if force_create:

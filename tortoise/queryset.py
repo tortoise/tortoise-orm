@@ -1362,6 +1362,12 @@ class UpdateQuery(AwaitableQuery):
         orderings: list[tuple[str, str]],
     ) -> None:
         super().__init__(model)
+        # Inject auto_now fields into update_kwargs if not already specified
+        from tortoise import timezone
+
+        for field_name, field_obj in model._meta.fields_map.items():
+            if field_name not in update_kwargs and getattr(field_obj, "auto_now", False):
+                update_kwargs[field_name] = timezone.now()
         self.update_kwargs = update_kwargs
         self._q_objects = q_objects
         self._annotations = annotations
@@ -2048,7 +2054,11 @@ class BulkUpdateQuery(UpdateQuery, Generic[MODEL]):
             limit=limit,
             orderings=orderings,
         )
-        self.fields = fields
+        fields_list = list(fields)
+        for field_name, field_obj in model._meta.fields_map.items():
+            if field_name not in fields_list and getattr(field_obj, "auto_now", False):
+                fields_list.append(field_name)
+        self.fields = fields_list
         self._objects = objects
         self._batch_size = batch_size
         self._queries: list[QueryBuilder] = []
