@@ -84,21 +84,28 @@ class ImportManager:
     def add_constraint_class(self, name: str) -> None:
         self.uses_constraints.add(name)
 
-    def render(self) -> list[str]:
-        lines: list[str] = []
+    def render(self, *required_imports: str) -> list[str]:
+        lines: list[str] = [*required_imports]
         for module in sorted(self.modules):
             lines.append(f"import {module}")
         for module, names in sorted(self.imports.items()):
             lines.append(f"from {module} import {', '.join(sorted(names))}")
         if self.uses_fields_module:
-            lines.append("from tortoise import fields")
+            from_import = "from tortoise import "
+            for idx, line in enumerate(lines):
+                if line.startswith(from_import):
+                    imported = [i.strip() for i in line[len(from_import) :].split(",")]
+                    lines[idx] = from_import + ", ".join(sorted(["fields", *imported]))
+                    break
+            else:
+                lines.append("from tortoise import fields")
         if self.uses_indexes:
             index_names = ", ".join(sorted(self.uses_indexes))
             lines.append(f"from tortoise.indexes import {index_names}")
         if self.uses_constraints:
             constraint_names = ", ".join(sorted(self.uses_constraints))
             lines.append(f"from tortoise.migrations.constraints import {constraint_names}")
-        return lines
+        return sorted(lines)
 
 
 def _resolve_import(value: Any) -> tuple[str, str, bool]:
@@ -288,13 +295,11 @@ class MigrationWriter:
         for operation in self.operations:
             operations.extend(self._format_operation(operation, imports, indent=" " * 8))
 
-        lines: list[str] = [
+        required_imports = [
             "from tortoise import migrations",
             "from tortoise.migrations import operations as ops",
         ]
-        extra_imports = imports.render()
-        if extra_imports:
-            lines.extend(extra_imports)
+        lines: list[str] = imports.render(*required_imports)
         lines.extend(["", "class Migration(migrations.Migration):"])
         blocks: list[list[str]] = []
         if self.dependencies:
