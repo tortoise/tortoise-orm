@@ -44,6 +44,10 @@ Fixed
 - Type hint for ``TransactionContext`` now returns a ``TransactionalDBClient`` instead of a raw database connection. This change gives the correct inferred type for the transaction context. (#2232)
 - Fix TSVectorField returned value conversion. (#2237)
 
+Changed
+^^^^^^^
+- Accept a `pathlib.Path` instance as the `config_file` argument for TortoiseConfig's configuration-resolving functions. (#2184)
+
 1.1.7
 -----
 
