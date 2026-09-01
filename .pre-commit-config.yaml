@@ -13,7 +13,7 @@ repos:
         files: tortoise/
     -   id: trailing-whitespace
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: 'v0.15.9'
+    rev: 'v0.15.17'
     hooks:
       - id: ruff
         args: [--fix, --exit-non-zero-on-fix, --show-fixes, tortoise/, examples/, tests/, conftest.py]
