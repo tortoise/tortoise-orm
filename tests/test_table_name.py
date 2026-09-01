@@ -3,6 +3,7 @@ import pytest_asyncio
 
 from tortoise import fields
 from tortoise.context import TortoiseContext
+from tortoise.exceptions import ConfigurationError
 from tortoise.models import Model
 
 
@@ -11,17 +12,34 @@ def table_name_generator(model_cls: type[Model]):
 
 
 class Tournament(Model):
-    id = fields.IntField(pk=True)
+    id = fields.IntField(primary_key=True)
     name = fields.TextField()
     created_at = fields.DatetimeField(auto_now_add=True)
 
 
 class CustomTable(Model):
-    id = fields.IntField(pk=True)
+    id = fields.IntField(primary_key=True)
     name = fields.TextField()
 
     class Meta:
         table = "my_custom_table"
+
+
+class CustomDBTable(Model):
+    id = fields.IntField(primary_key=True)
+    name = fields.TextField()
+
+    class Meta:
+        db_table = "my_custom_db_table"
+
+
+class CustomTableAndDBTable(Model):
+    id = fields.IntField(primary_key=True)
+    name = fields.TextField()
+
+    class Meta:
+        table = "my_matching_table"
+        db_table = "my_matching_table"
 
 
 @pytest_asyncio.fixture
@@ -46,3 +64,24 @@ async def test_glabal_name_generator(table_name_db):
 @pytest.mark.asyncio
 async def test_custom_table_name_precedence(table_name_db):
     assert CustomTable._meta.db_table == "my_custom_table"
+
+
+@pytest.mark.asyncio
+async def test_custom_db_table_name_precedence(table_name_db):
+    assert CustomDBTable._meta.db_table == "my_custom_db_table"
+
+
+@pytest.mark.asyncio
+async def test_custom_table_and_db_table_name_match(table_name_db):
+    assert CustomTableAndDBTable._meta.db_table == "my_matching_table"
+
+
+def test_conflicting_table_and_db_table_names():
+    with pytest.raises(ConfigurationError, match="Meta.table and Meta.db_table"):
+
+        class ConflictingTableName(Model):
+            id = fields.IntField(primary_key=True)
+
+            class Meta:
+                table = "first_table"
+                db_table = "second_table"

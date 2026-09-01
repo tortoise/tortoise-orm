@@ -201,7 +201,15 @@ The ``Meta`` class
     .. attribute:: table
         :annotation: = ""
 
-        Set this to configure a manual table name, instead of a generated one
+        Set this to configure a manual table name, instead of a generated one.
+        ``db_table`` is also supported as an alias. If both ``table`` and
+        ``db_table`` are set, they must have the same value.
+
+    .. attribute:: db_table
+        :annotation: = ""
+
+        Alias for ``table``. This is useful for users coming from Django, where
+        ``db_table`` is the standard option name.
 
     .. attribute:: table_description
         :annotation: = ""
