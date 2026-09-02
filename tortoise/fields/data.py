@@ -382,7 +382,7 @@ class DecimalField(Field[T_DECIMAL], Decimal):  # type: ignore
 
     def to_python_value(self, value: Any) -> Decimal | None:
         if value is not None:
-            value = Decimal(value).quantize(self.quant).normalize()
+            value = Decimal(value).quantize(self.quant)
         return value
 
     @property
