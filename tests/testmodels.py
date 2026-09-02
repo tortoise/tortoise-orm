@@ -1156,3 +1156,34 @@ class Drink(Model):
     toppings = fields.ManyToManyField(
         Flavor, related_name="topping_drinks", through="drink_topping"
     )
+
+
+class LongJoinAuthor(Model):
+    id = fields.UUIDField(primary_key=True)
+
+
+class LongJoinBook(Model):
+    id = fields.UUIDField(primary_key=True)
+    author_model_relation_with_long_name: fields.ForeignKeyRelation[LongJoinAuthor] = (
+        fields.ForeignKeyField("models.LongJoinAuthor", related_name="books")
+    )
+
+
+class LongJoinChapter(Model):
+    id = fields.UUIDField(primary_key=True)
+    book_model_relation_with_long_name: fields.ForeignKeyRelation[LongJoinBook] = (
+        fields.ForeignKeyField("models.LongJoinBook", related_name="chapters")
+    )
+
+
+class LongJoinParent(Model):
+    id = fields.IntField(primary_key=True)
+    name = fields.CharField(max_length=50)
+    this_is_some_long_column_name = fields.CharField(max_length=255)
+
+
+class ThisIsAnExcessivelyLongOneToOneChildModelName(Model):
+    id = fields.IntField(primary_key=True)
+    parent: fields.OneToOneRelation[LongJoinParent] = fields.OneToOneField(
+        "models.LongJoinParent", related_name="child"
+    )

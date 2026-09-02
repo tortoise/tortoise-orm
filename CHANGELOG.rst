@@ -43,6 +43,10 @@ Fixed
 - Field declarations on models now resolve to their concrete type (e.g. ``CharField[str]``) in Pyright/Pylance instead of ``Field[Unknown]``; the ``Field.__new__`` type-check stub now returns ``Self``. (#2216)
 - Type hint for ``TransactionContext`` now returns a ``TransactionalDBClient`` instead of a raw database connection. This change gives the correct inferred type for the transaction context. (#2232)
 - Fix TSVectorField returned value conversion. (#2237)
+- ``select_related`` now maps JOIN columns by recorded field order instead of
+  parsing aliases, so long relation/column names work on Postgres (63-byte
+  identifier limit). (#1902)
+
 
 1.1.7
 -----
