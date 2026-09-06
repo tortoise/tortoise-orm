@@ -7,7 +7,6 @@ from typing import Any, cast
 
 import starlette
 from starlette.applications import Starlette  # pylint: disable=E0401
-from starlette.routing import _DefaultLifespan as StarletteDefaultLifespan
 from starlette.types import ASGIApp, Lifespan, Receive, Scope, Send
 
 from tortoise import Tortoise
@@ -43,6 +42,15 @@ class TortoiseContextMiddleware:
             return
 
         await self.app(scope, receive, send)
+
+
+def _is_custom_lifespan(original_lifespan: Any) -> bool:
+    try:
+        from starlette.routing import _DefaultLifespan
+    except ImportError:
+        return True
+    else:
+        return not isinstance(original_lifespan, _DefaultLifespan)
 
 
 def register_tortoise(
@@ -138,7 +146,7 @@ def register_tortoise(
 
     original_lifespan = app.router.lifespan_context
 
-    if generate_schemas or not isinstance(original_lifespan, StarletteDefaultLifespan):
+    if generate_schemas or _is_custom_lifespan(original_lifespan):
 
         @asynccontextmanager
         async def orm_inited_lifespan(app_: Starlette) -> AsyncIterator[Mapping[str, Any] | None]:
