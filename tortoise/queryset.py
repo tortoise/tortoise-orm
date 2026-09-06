@@ -10,7 +10,7 @@ from pypika_tortoise import JoinType, Order, Table
 from pypika_tortoise.analytics import Count
 from pypika_tortoise.functions import Cast
 from pypika_tortoise.queries import QueryBuilder, _SetOperation
-from pypika_tortoise.terms import Case, Field, Star, Term, ValueWrapper
+from pypika_tortoise.terms import Case, Field, Star, Term, Tuple, ValueWrapper
 
 from tortoise.backends.base.client import BaseDBAsyncClient, Capabilities
 from tortoise.exceptions import (
@@ -163,6 +163,29 @@ class AwaitableQuery(_ChooseDBMixin[MODEL], Generic[MODEL]):
             self.query = self.query.groupby(
                 *[self.model._meta.basetable[field] for field in self.model._meta.db_fields]
             )
+
+    def _pk_in_subquery(self, table: Table) -> Term:
+        """Build ``pk IN (SELECT "_t".pk FROM (SELECT pk ...) AS "_t")`` from the current
+        filter-resolved select query.
+
+        Filters on related fields add JOINs to the query, but most backends do not allow
+        JOINs in DELETE/UPDATE statements, so the target rows are selected by primary key
+        in a subquery instead.
+        """
+        pk_cols = [
+            table[self.model._meta.fields_db_projection[name]]
+            for name, field in self.model._meta.fields_map.items()
+            if field.pk
+        ]
+        inner = copy(self.query)
+        inner._selects = list(pk_cols)
+        alias = "_t"
+        wrapped = self.model._meta.db.query_class.from_(inner.as_(alias)).select(
+            *[Table(alias)[col.name] for col in pk_cols]
+        )
+        if len(pk_cols) == 1:
+            return pk_cols[0].isin(wrapped)
+        return Tuple(*pk_cols).isin(wrapped)
 
     def _join_table_by_field(
         self, table: Table, related_field_name: str, related_field: RelationalField
@@ -1349,12 +1372,24 @@ class UpdateQuery(AwaitableQuery):
 
     def _make_query(self) -> None:
         table = self.model._meta.basetable
-        self.query = self._db.query_class.update(table)
+        # Resolve filters on a SELECT-shaped query first: filters on related fields add
+        # JOINs, which are not valid in UPDATE statements on most backends, so the target
+        # rows are selected by primary key through a subquery instead (see _pk_in_subquery).
+        self.query = copy(self.model._meta.basequery)
         if self.capabilities.support_update_limit_order_by and self._limit:
             self.query._limit = self.query._wrapper_cls(self._limit)
             self.resolve_ordering(self.model, table, self._orderings, self._annotations)
 
         self.resolve_filters()
+        if self.query._joins:
+            self.query = self._db.query_class.update(table).where(self._pk_in_subquery(table))
+        else:
+            update_query = self._db.query_class.update(table)
+            update_query._wheres = self.query._wheres
+            update_query._havings = self.query._havings
+            update_query._orderbys = self.query._orderbys
+            update_query._limit = self.query._limit
+            self.query = update_query
         for key, value in self.update_kwargs.items():
             field_object = self.model._meta.fields_map.get(key)
             if not field_object:
@@ -1427,16 +1462,21 @@ class DeleteQuery(AwaitableQuery):
         self._orderings = orderings
 
     def _make_query(self) -> None:
+        table = self.model._meta.basetable
         self.query = copy(self.model._meta.basequery)
         if self.capabilities.support_update_limit_order_by and self._limit:
             self.query._limit = self.query._wrapper_cls(self._limit)
             self.resolve_ordering(
                 model=self.model,
-                table=self.model._meta.basetable,
+                table=table,
                 orderings=self._orderings,
                 annotations=self._annotations,
             )
         self.resolve_filters()
+        if self.query._joins:
+            self.query = self.model._meta.db.query_class.from_(table).where(
+                self._pk_in_subquery(table)
+            )
         self.query._delete_from = True
         return
 

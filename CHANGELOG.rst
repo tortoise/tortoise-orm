@@ -8,23 +8,41 @@ Changelog
 1.1
 ===
 
+1.1.9
+-----
+
+Added
+^^^^^
+- ``Q.__bool__()`` so ``Q`` objects with no filters/children (including nested empty ``Q`` children) are falsy.
+
 1.1.8
 -----
 
 Added
 ^^^^^
-- ``QuerySet.union()`` — SQL UNION query support for combining results from multiple QuerySets, including support for union across different models, ``union(all=True)`` for duplicates, ``order_by()``, ``limit()``, and ``count()``.
-- ``QuerySet.contains()`` method to check if an object exists in a queryset.
-- Added comprehensive EXPLAIN support for MySQL and PostgreSQL.
-- Built-in ``DomainNameValidator``, ``URLValidator``, and ``EmailValidator`` classes for common validation patterns. (#2162)
+- ``QuerySet.union()`` — SQL UNION query support for combining results from multiple QuerySets, including support for union across different models, ``union(all=True)`` for duplicates, ``order_by()``, ``limit()``, and ``count()``. (#2146)
+- feat: add ``postgresql://`` scheme as alias for asyncpg (#2154)
+- feat: add pre commit config and fix codespell issues (#2159)
+- feat: django compatibility field name (#2160)
+- feat: expose classmethod to build tortoise config (#2162)
+- ``QuerySet.contains()`` method to check if an object exists in a queryset. (#2163)
+- Added comprehensive EXPLAIN support for MySQL and PostgreSQL. (#2165)
+- Built-in ``DomainNameValidator``, ``URLValidator``, and ``EmailValidator`` classes for common validation patterns. (#2167)
 
 Fixed
 ^^^^^
 - ``MigrationRecorder`` now uses parameterized queries; fixes MariaDB/MySQL rejecting ISO-8601 ``applied_at`` values. (#2132)
+- fix(migrations): use parameterized queries in MigrationRecorder (#2153)
+- Applies model generics on relational fields functions (#2156)
+- fix: MSSQL connection left in busy state after insert (#2171)
 - ``db_default`` on ``ForeignKeyField``/``OneToOneField`` now propagates to the underlying ``<fk>_id`` column, so ``CREATE TABLE`` emits the ``DEFAULT`` clause for FK columns. (#2199)
+- Fix ``db_default`` on FK/O2O dropped during ``_init_relations`` (#2200)
 - ``MigrationRecorder`` no longer emits tortoise's own ``pk`` field ``DeprecationWarning`` when applying migrations; it now builds its bookkeeping model with ``primary_key=True``. (#2203)
 - ``QuerySet.count()`` now matches the limited query result for the LIMIT/OFFSET edge cases: it returns ``0`` (instead of a negative number) when ``offset()`` exceeds the total row count, and ``0`` (instead of the total) for ``limit(0)``. (#2208)
+- tests: cover Q inequality and unhashable behavior (#2214)
 - Field declarations on models now resolve to their concrete type (e.g. ``CharField[str]``) in Pyright/Pylance instead of ``Field[Unknown]``; the ``Field.__new__`` type-check stub now returns ``Self``. (#2216)
+- Type hint for ``TransactionContext`` now returns a ``TransactionalDBClient`` instead of a raw database connection. This change gives the correct inferred type for the transaction context. (#2232)
+- Fix TSVectorField returned value conversion. (#2237)
 
 1.1.7
 -----

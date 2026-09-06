@@ -306,14 +306,14 @@ class ConnectionWrapper(Generic[T_conn]):
         self._lock.release()
 
 
-class TransactionContext(Generic[T_conn]):
+class TransactionContext:
     """A context manager interface for transactions. It is returned from in_transaction
     and _in_transaction."""
 
     client: TransactionalDBClient
 
     @abc.abstractmethod
-    async def __aenter__(self) -> T_conn: ...
+    async def __aenter__(self) -> TransactionalDBClient: ...
 
     @abc.abstractmethod
     async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None: ...
