@@ -19,6 +19,22 @@ def test_q_basic():
     assert q.join_type == "AND"
 
 
+def test_q_to_bool():
+    q = Q(row="data")
+    q_negative = ~q
+    q_empty = Q()
+    q_children = Q(Q(row="data"), Q(row="data"))
+    q_children_empty = Q(Q(), Q())
+    q_children_empty_join_type_or = Q(Q(), Q(), join_type="OR")
+    assert bool(q) is True
+    assert bool(q_negative) is True
+    assert bool(q_negative) is True
+    assert bool(q_empty) is False
+    assert bool(q_children) is True
+    assert bool(q_children_empty) is False
+    assert bool(q_children_empty_join_type_or) is False
+
+
 def test_q_compound():
     q1 = Q(moo="cow")
     q2 = Q(moo="bull")

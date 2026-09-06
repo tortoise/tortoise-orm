@@ -1156,3 +1156,38 @@ async def test_union_with_annotate_raises(db):
 
     with pytest.raises(ParamsError, match="Union queries do not support annotations"):
         await qs1.union(qs2)
+
+
+@pytest.mark.asyncio
+async def test_delete_filter_by_related_field(db):
+    """Deleting through a filter on a related field must stay valid (#283)."""
+    author1 = await Author.create(name="Conan Doyle")
+    author2 = await Author.create(name="Ursula Le Guin")
+    await Book.create(name="The Hound", author=author1, rating=5)
+    await Book.create(name="The Sign of Four", author=author1, rating=4)
+    await Book.create(name="A Wizard of Earthsea", author=author2, rating=3)
+
+    deleted = await Book.filter(author__name="Conan Doyle").delete()
+
+    assert deleted == 2
+    assert await Book.filter(author__name="Conan Doyle").count() == 0
+    # negative control: rows belonging to the other author are untouched
+    assert await Book.filter(author__name="Ursula Le Guin").count() == 1
+    assert await Author.all().count() == 2
+
+
+@pytest.mark.asyncio
+async def test_update_filter_by_related_field(db):
+    """Updating through a filter on a related field must stay valid (#283)."""
+    author1 = await Author.create(name="Conan Doyle")
+    author2 = await Author.create(name="Ursula Le Guin")
+    book1 = await Book.create(name="The Hound", author=author1, rating=5)
+    await Book.create(name="A Wizard of Earthsea", author=author2, rating=3)
+
+    updated = await Book.filter(author__name="Conan Doyle").update(rating=1)
+
+    assert updated == 1
+    assert (await Book.get(id=book1.id)).rating == 1
+    # negative control: the other author's book keeps its rating
+    other = await Book.get(name="A Wizard of Earthsea")
+    assert other.rating == 3
