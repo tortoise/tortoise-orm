@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import Callable
-from typing import Any, TypeVar
+from typing import Any, TypeVar, cast
 
 import asyncpg
 from asyncpg.transaction import Transaction
@@ -68,7 +68,7 @@ class AsyncpgDBClient(BasePostgresClient):
                 msg += f"database {self.database}"
             else:
                 msg += f"default database. Verify environment PGDATABASE. Exception: {ex}"
-            raise DBConnectionError(msg)
+            raise DBConnectionError(msg) from ex
 
     async def create_pool(self, **kwargs) -> asyncpg.Pool:
         return await asyncpg.create_pool(None, **kwargs)
@@ -90,11 +90,11 @@ class AsyncpgDBClient(BasePostgresClient):
         try:
             return await func(self, *args, **kwargs)
         except (asyncpg.SyntaxOrAccessError, asyncpg.exceptions.DataError) as exc:
-            raise OperationalError(exc)
+            raise OperationalError(exc) from exc
         except asyncpg.IntegrityConstraintViolationError as exc:
-            raise IntegrityError(exc)
+            raise IntegrityError(exc) from exc
         except asyncpg.InvalidTransactionStateError as exc:  # pragma: nocoverage
-            raise TransactionManagementError(exc)
+            raise TransactionManagementError(exc) from exc
 
     async def db_delete(self) -> None:
         try:
@@ -132,20 +132,13 @@ class AsyncpgDBClient(BasePostgresClient):
     async def execute_query(self, query: str, values: list | None = None) -> tuple[int, list[dict]]:
         async with self.acquire_connection() as connection:
             self.log.debug("%s: %s", query, values)
-            if values:
-                params = [query, *values]
-            else:
-                params = [query]
+            params = [query, *values] if values else [query]
             normalized = query.lstrip().upper()
-            if (
-                normalized.startswith("UPDATE")
-                or normalized.startswith("DELETE")
-                or normalized.startswith("INSERT")
-            ):
+            if normalized.startswith(("UPDATE", "DELETE", "INSERT")):
                 res = await connection.execute(*params)
                 try:
                     rows_affected = int(res.split(" ")[1])
-                except Exception:  # pragma: nocoverage
+                except (AttributeError, IndexError, ValueError):  # pragma: nocoverage
                     rows_affected = 0
                 return rows_affected, []
 
@@ -156,19 +149,21 @@ class AsyncpgDBClient(BasePostgresClient):
     async def execute_query_dict(self, query: str, values: list | None = None) -> list[dict]:
         async with self.acquire_connection() as connection:
             self.log.debug("%s: %s", query, values)
-            if values:
-                return list(map(dict, await connection.fetch(query, *values)))
-            return list(map(dict, await connection.fetch(query)))
+            params = [query, *values] if values else [query]
+            results = await connection.fetch(*params)
+            return [dict(i) for i in results]
 
 
 class TransactionWrapper(AsyncpgDBClient, TransactionalDBClient):
-    """A transactional connection wrapper for psycopg.
+    """A transactional connection wrapper for asyncpg.
 
     asyncpg implements nested transactions (savepoints) natively, so we don't need to.
     """
 
+    _connection: asyncpg.Connection  # Put it here to improve type hints
+
     def __init__(self, connection: AsyncpgDBClient) -> None:
-        self._connection: asyncpg.Connection = connection._connection
+        self._connection = cast(asyncpg.Connection, connection._connection)
         self._lock = asyncio.Lock()
         self.log = connection.log
         self.connection_name = connection.connection_name
