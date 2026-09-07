@@ -110,12 +110,28 @@ class StateApps(Apps):
                     Query, basequery.select(*model._meta.db_fields)
                 )
 
-    def unregister_model(self, app_label: str, model_name: str) -> None:
+    def unregister_model(self, app_label: str, model_name: str, *, detach: bool = True) -> None:
         try:
             model = self.apps[app_label].pop(model_name)
-            model._meta.app = None
+            if detach:
+                model._meta.app = None
         except KeyError:
             return
+
+    def snapshot(self) -> StateApps:
+        """Return a cheap snapshot of the rendered migration models.
+
+        Rendered model classes are immutable versions of a migration model. State
+        operations replace changed models (and their related models) instead of
+        mutating them, so an apps registry only needs its mappings copied to keep
+        the previous version available to database operations.
+        """
+        state_apps = self.__class__(
+            default_connections=dict(self._default_connections),
+            connections=self._connections,
+        )
+        state_apps.apps = {app_label: dict(models) for app_label, models in self.apps.items()}
+        return state_apps
 
     def split_reference(self, reference: str | type[Model]) -> tuple[str, str]:
         if not isinstance(reference, str):

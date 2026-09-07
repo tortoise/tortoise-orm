@@ -9,8 +9,14 @@ import pytest
 from tortoise import fields
 from tortoise.fields.relational import ForeignKeyFieldInstance
 from tortoise.migrations.migration import Migration
-from tortoise.migrations.operations import CreateModel, Operation
-from tortoise.migrations.schema_generator.state import State
+from tortoise.migrations.operations import (
+    AlterField,
+    CreateModel,
+    DeleteModel,
+    Operation,
+    RemoveField,
+)
+from tortoise.migrations.schema_generator.state import ModelState, State
 from tortoise.migrations.schema_generator.state_apps import StateApps
 
 
@@ -63,25 +69,25 @@ async def test_state_building_performance_200_models():
 
 
 @pytest.mark.asyncio
-async def test_apply_dry_run_does_not_clone_state():
-    """Verify that apply(dry_run=True) never calls State.clone()."""
+async def test_apply_dry_run_does_not_snapshot_state():
+    """Verify that apply(dry_run=True) never calls State.snapshot()."""
     migrations = _build_migrations(10)
     state = State(models={}, apps=StateApps())
 
-    clone_calls = 0
-    original_clone = State.clone
+    snapshot_calls = 0
+    original_snapshot = State.snapshot
 
-    def counting_clone(self):
-        nonlocal clone_calls
-        clone_calls += 1
-        return original_clone(self)
+    def counting_snapshot(self):
+        nonlocal snapshot_calls
+        snapshot_calls += 1
+        return original_snapshot(self)
 
-    with patch.object(State, "clone", counting_clone):
+    with patch.object(State, "snapshot", counting_snapshot):
         for migration in migrations:
             await migration.apply(state, dry_run=True, schema_editor=None)
 
     assert len(state.models) == 10
-    assert clone_calls == 0, f"State.clone() was called {clone_calls} times during dry_run"
+    assert snapshot_calls == 0, f"State.snapshot() was called {snapshot_calls} times during dry_run"
 
 
 def test_state_clone_produces_independent_copy():
@@ -146,3 +152,92 @@ def test_state_clone_preserves_relations():
     fk = child_model._meta.fields_map["parent"]
     assert isinstance(fk, ForeignKeyFieldInstance)
     assert fk.related_model is parent_model
+
+
+def test_state_snapshot_does_not_render_unchanged_models():
+    state = State(models={}, apps=StateApps())
+    for i in range(50):
+        _make_create_model_op(i).state_forward("app", state)
+
+    with patch.object(ModelState, "render", wraps=ModelState.render) as render:
+        snapshot = state.snapshot()
+
+    assert render.call_count == 0
+    for model_name, model in state.apps.apps["app"].items():
+        assert snapshot.apps.get_model("app", model_name) is model
+
+
+def test_state_snapshot_keeps_old_related_models_intact():
+    state = State(models={}, apps=StateApps())
+    CreateModel(
+        name="Parent",
+        fields=[
+            ("id", fields.IntField(primary_key=True)),
+            ("name", fields.CharField(max_length=50)),
+        ],
+    ).state_forward("app", state)
+    CreateModel(
+        name="Child",
+        fields=[
+            ("id", fields.IntField(primary_key=True)),
+            ("parent", fields.ForeignKeyField("app.Parent", related_name="children")),
+        ],
+    ).state_forward("app", state)
+    old_state = state.snapshot()
+    old_parent = old_state.apps.get_model("app", "Parent")
+    old_child = old_state.apps.get_model("app", "Child")
+
+    AlterField(
+        model_name="Parent",
+        name="name",
+        field=fields.TextField(),
+    ).state_forward("app", state)
+
+    new_parent = state.apps.get_model("app", "Parent")
+    new_child = state.apps.get_model("app", "Child")
+    assert old_parent is not new_parent
+    assert old_child is not new_child
+    assert isinstance(old_parent._meta.fields_map["name"], fields.CharField)
+    assert isinstance(new_parent._meta.fields_map["name"], fields.TextField)
+    assert old_child._meta.fields_map["parent"].related_model is old_parent
+    assert new_child._meta.fields_map["parent"].related_model is new_parent
+    assert old_parent._meta.app == "app"
+    assert old_child._meta.app == "app"
+
+
+def test_state_snapshot_keeps_removed_field_in_old_state():
+    state = State(models={}, apps=StateApps())
+    CreateModel(
+        name="Article",
+        fields=[
+            ("id", fields.IntField(primary_key=True)),
+            ("title", fields.CharField(max_length=100)),
+        ],
+    ).state_forward("app", state)
+    old_state = state.snapshot()
+    old_model = old_state.apps.get_model("app", "Article")
+
+    RemoveField(model_name="Article", name="title").state_forward("app", state)
+
+    new_model = state.apps.get_model("app", "Article")
+    assert "title" in old_state.models[("app", "Article")].fields
+    assert "title" not in state.models[("app", "Article")].fields
+    assert "title" in old_model._meta.fields_map
+    assert "title" not in new_model._meta.fields_map
+    assert old_model is not new_model
+
+
+def test_state_snapshot_survives_model_deletion():
+    state = State(models={}, apps=StateApps())
+    CreateModel(
+        name="Obsolete",
+        fields=[("id", fields.IntField(primary_key=True))],
+    ).state_forward("app", state)
+    old_state = state.snapshot()
+    old_model = old_state.apps.get_model("app", "Obsolete")
+
+    DeleteModel("Obsolete").state_forward("app", state)
+
+    assert old_state.apps.get_model("app", "Obsolete") is old_model
+    assert old_model._meta.app == "app"
+    assert "Obsolete" not in state.apps.apps["app"]

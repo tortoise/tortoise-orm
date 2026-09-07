@@ -15,6 +15,10 @@ Added
 ^^^^^
 - ``Q.__bool__()`` so ``Q`` objects with no filters/children (including nested empty ``Q`` children) are falsy.
 
+Changed
+^^^^^^^
+- Migration execution now snapshots rendered model registries instead of rebuilding every historical model class before each operation, substantially improving large migration plans while preserving old/new operation states.
+
 1.1.8
 -----
 
