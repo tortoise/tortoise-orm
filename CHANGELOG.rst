@@ -17,7 +17,7 @@ Added
 
 Changed
 ^^^^^^^
-- Migration execution now snapshots rendered model registries instead of rebuilding every historical model class before each operation, substantially improving large migration plans while preserving old/new operation states.
+- Migration execution now snapshots rendered model registries and rebuilds querysets only for changed models instead of rebuilding every historical model before each operation, substantially improving large migration plans while preserving old/new operation states.
 
 1.1.8
 -----

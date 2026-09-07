@@ -205,6 +205,31 @@ def test_state_snapshot_keeps_old_related_models_intact():
     assert old_child._meta.app == "app"
 
 
+def test_state_reload_builds_querysets_only_for_reloaded_models():
+    state = State(models={}, apps=StateApps())
+    CreateModel(
+        name="Changed",
+        fields=[
+            ("id", fields.IntField(primary_key=True)),
+            ("name", fields.CharField(max_length=50)),
+        ],
+    ).state_forward("app", state)
+    CreateModel(
+        name="Unchanged",
+        fields=[("id", fields.IntField(primary_key=True))],
+    ).state_forward("app", state)
+
+    with patch.object(state.apps, "_build_initial_querysets") as build_querysets:
+        AlterField(
+            model_name="Changed",
+            name="name",
+            field=fields.TextField(),
+        ).state_forward("app", state)
+
+    reloaded_models = build_querysets.call_args.args[0]
+    assert {model.__name__ for model in reloaded_models} == {"Changed"}
+
+
 def test_state_snapshot_keeps_removed_field_in_old_state():
     state = State(models={}, apps=StateApps())
     CreateModel(

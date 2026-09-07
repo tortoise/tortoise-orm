@@ -166,6 +166,7 @@ class State:
         return related_models
 
     def _reload(self, models_to_reload: set[tuple[str, str]]) -> None:
+        reloaded_models: list[type[Model]] = []
         for app_label, model_name in models_to_reload:
             model_state = self.models.get((app_label, model_name))
             if model_state is None:
@@ -178,9 +179,10 @@ class State:
             self.apps.unregister_model(app_label, model_name, detach=False)
             model = model_state.render(self.apps)
             self.apps.register_model(app_label, model)
+            reloaded_models.append(model)
 
         self.apps._init_relations()
-        self.apps._build_initial_querysets()
+        self.apps._build_initial_querysets(reloaded_models)
 
     def reload_model(self, app_label: str, model_name: str) -> None:
         model_state = self.models.get((app_label, model_name))

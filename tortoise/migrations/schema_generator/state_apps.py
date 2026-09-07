@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Iterable
 from typing import TYPE_CHECKING, cast
 
 if TYPE_CHECKING:
@@ -90,25 +91,25 @@ class StateApps(Apps):
         for model in models_with_missing_refs:
             model._meta._inited = False
 
-    def _build_initial_querysets(self) -> None:
+    def _build_initial_querysets(self, models: Iterable[type[Model]] | None = None) -> None:
         # Skip building querysets when no DB config is available (state-only mode)
         # This allows pure state operations to work without database connections
         if self._connections._db_config is None:
             return
 
-        for app in self.apps.values():
-            for model in app.values():
-                if model._meta.default_connection is None:
-                    continue
-                if not model._meta._inited:
-                    continue
-                model._meta.finalise_model()
-                model._meta.basetable = Table(name=model._meta.db_table, schema=model._meta.schema)
-                basequery = model._meta.db.query_class.from_(model._meta.basetable)
-                model._meta.basequery = cast(Query, basequery)
-                model._meta.basequery_all_fields = cast(
-                    Query, basequery.select(*model._meta.db_fields)
-                )
+        if models is None:
+            models = (model for app in self.apps.values() for model in app.values())
+
+        for model in models:
+            if model._meta.default_connection is None:
+                continue
+            if not model._meta._inited:
+                continue
+            model._meta.finalise_model()
+            model._meta.basetable = Table(name=model._meta.db_table, schema=model._meta.schema)
+            basequery = model._meta.db.query_class.from_(model._meta.basetable)
+            model._meta.basequery = cast(Query, basequery)
+            model._meta.basequery_all_fields = cast(Query, basequery.select(*model._meta.db_fields))
 
     def unregister_model(self, app_label: str, model_name: str, *, detach: bool = True) -> None:
         try:
