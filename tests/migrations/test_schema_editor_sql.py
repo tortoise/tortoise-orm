@@ -6,11 +6,14 @@ import pytest
 
 from tests.utils.fake_client import FakeClient
 from tortoise import fields
+from tortoise.backends.base.schema_generator import BaseSchemaGenerator
 from tortoise.contrib.postgres.fields import TSVectorField
 from tortoise.contrib.postgres.indexes import GinIndex
 from tortoise.indexes import Index
+from tortoise.migrations.constraints import CheckConstraint, UniqueConstraint
 from tortoise.migrations.schema_editor.base import BaseSchemaEditor
 from tortoise.migrations.schema_editor.base_postgres import BasePostgresSchemaEditor
+from tortoise.migrations.schema_editor.mysql import MySQLSchemaEditor
 from tortoise.migrations.schema_generator.state_apps import StateApps
 from tortoise.models import Model
 
@@ -282,3 +285,175 @@ async def test_create_model_includes_db_default_on_fk() -> None:
     assert 'CREATE TABLE "app"' in sql
     assert '"dc_id"' in sql
     assert "DEFAULT 2" in sql
+
+
+@pytest.mark.asyncio
+async def test_create_model_includes_meta_constraints() -> None:
+    """CreateModel must emit named UniqueConstraint and CheckConstraint in CREATE TABLE."""
+
+    class Like(Model):
+        id = fields.IntField(pk=True)
+        types = fields.CharField(max_length=10)
+        user_id = fields.IntField()
+        art_id = fields.IntField()
+        score = fields.IntField()
+
+        class Meta:
+            table = "like"
+            app = "models"
+            constraints = [
+                UniqueConstraint(fields=("types", "user_id", "art_id"), name="unique_like"),
+                CheckConstraint(check="score >= 0", name="chk_score_positive"),
+            ]
+
+    client = FakeClient("sql")
+    editor = TestSchemaEditor(client)
+    await editor.create_model(Like)
+
+    assert len(client.executed) == 1
+    sql = client.executed[0]
+    assert 'CONSTRAINT "unique_like" UNIQUE ("types", "user_id", "art_id")' in sql
+    assert 'CONSTRAINT "chk_score_positive" CHECK (score >= 0)' in sql
+
+
+@pytest.mark.asyncio
+async def test_create_model_skips_unique_constraint_already_in_unique_together() -> None:
+    """Do not emit a second UNIQUE for UniqueConstraint fields already in unique_together."""
+
+    class WidgetConstrained(Model):
+        id = fields.IntField(pk=True)
+        name = fields.CharField(max_length=100)
+        category = fields.CharField(max_length=50)
+
+        class Meta:
+            table = "widget"
+            app = "models"
+            unique_together = (("name", "category"),)
+            constraints = [
+                UniqueConstraint(fields=("name", "category"), name="uid_name_category"),
+            ]
+
+    client = FakeClient("sql")
+    editor = TestSchemaEditor(client)
+    await editor.create_model(WidgetConstrained)
+
+    sql = client.executed[0]
+    assert "uid_name_category" not in sql
+    assert sql.count("UNIQUE") == 1
+
+
+@pytest.mark.asyncio
+async def test_create_model_skips_unique_constraint_matching_unique_together_columns() -> None:
+    """Skip UniqueConstraint when its resolved columns match unique_together."""
+
+    class Organization(Model):
+        id = fields.IntField(pk=True)
+
+        class Meta:
+            table = "organization"
+            app = "models"
+
+    class Membership(Model):
+        id = fields.IntField(pk=True)
+        organization: fields.ForeignKeyRelation[Organization] = fields.ForeignKeyField(
+            "models.Organization", related_name="memberships"
+        )
+        user_email = fields.CharField(max_length=255)
+
+        class Meta:
+            table = "membership"
+            app = "models"
+            unique_together = (("organization", "user_email"),)
+            constraints = [
+                UniqueConstraint(fields=("organization_id", "user_email"), name="uid_org_email"),
+            ]
+
+    init_apps(Organization, Membership)
+
+    client = FakeClient("sql")
+    editor = TestSchemaEditor(client)
+    await editor.create_model(Membership)
+
+    sql = client.executed[0]
+    assert "uid_org_email" not in sql
+    assert sql.count("UNIQUE") == 1
+
+
+@pytest.mark.asyncio
+async def test_mysql_create_model_uses_named_unique_key() -> None:
+    """MySQL CREATE TABLE must use the UniqueConstraint name as UNIQUE KEY."""
+
+    class Like(Model):
+        id = fields.IntField(pk=True)
+        types = fields.CharField(max_length=10)
+        user_id = fields.IntField()
+        art_id = fields.IntField()
+        score = fields.IntField()
+
+        class Meta:
+            table = "like"
+            app = "models"
+            constraints = [
+                UniqueConstraint(fields=("types", "user_id", "art_id"), name="unique_like"),
+                CheckConstraint(check="score >= 0", name="chk_score_positive"),
+            ]
+
+    client = FakeClient("mysql")
+    editor = MySQLSchemaEditor(client)
+    await editor.create_model(Like)
+
+    sql = client.executed[0]
+    assert "UNIQUE KEY `unique_like` (`types`, `user_id`, `art_id`)" in sql
+    assert "CONSTRAINT `chk_score_positive` CHECK (score >= 0)" in sql
+
+
+@pytest.mark.asyncio
+async def test_create_model_postgres_partial_unique_index() -> None:
+    """PostgreSQL CREATE TABLE emits partial UniqueConstraint as CREATE UNIQUE INDEX."""
+
+    class UserAccount(Model):
+        id = fields.IntField(pk=True)
+        email = fields.CharField(max_length=255)
+        is_active = fields.BooleanField(default=True)
+
+        class Meta:
+            table = "user_account"
+            app = "models"
+            constraints = [
+                UniqueConstraint(
+                    fields=("email",), name="uq_active_email", condition="is_active = true"
+                ),
+            ]
+
+    client = FakeClient("postgres", inline_comment=False)
+    editor = BasePostgresSchemaEditor(client)
+    await editor.create_model(UserAccount)
+
+    sql = client.executed[0]
+    assert (
+        'CREATE UNIQUE INDEX "uq_active_email" ON "user_account" ("email") WHERE is_active = true;'
+    ) in sql
+
+
+def test_generate_schema_includes_meta_constraints() -> None:
+    """generate_schemas CREATE TABLE must include Meta.constraints."""
+
+    class Like(Model):
+        id = fields.IntField(pk=True)
+        types = fields.CharField(max_length=10)
+        user_id = fields.IntField()
+        art_id = fields.IntField()
+        score = fields.IntField()
+
+        class Meta:
+            table = "like"
+            app = "models"
+            constraints = [
+                UniqueConstraint(fields=("types", "user_id", "art_id"), name="unique_like"),
+                CheckConstraint(check="score >= 0", name="chk_score_positive"),
+            ]
+
+    generator = BaseSchemaGenerator(FakeClient("sql"))
+    sql = generator._get_table_sql(Like, safe=False)["table_creation_string"]
+    assert 'CONSTRAINT "unique_like" UNIQUE ("types", "user_id", "art_id")' in sql
+    assert 'CONSTRAINT "chk_score_positive" CHECK (score >= 0)' in sql

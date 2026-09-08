@@ -15,6 +15,10 @@ Added
 ^^^^^
 - ``Q.__bool__()`` so ``Q`` objects with no filters/children (including nested empty ``Q`` children) are falsy.
 
+Fixed
+^^^^^
+- ``Meta.constraints`` (``UniqueConstraint`` / ``CheckConstraint``) are now emitted in ``CREATE TABLE`` by ``migrate`` and ``generate_schemas``. MySQL ``add_constraint`` honors the constraint ``name``. (#2272)
+
 1.1.8
 -----
 
