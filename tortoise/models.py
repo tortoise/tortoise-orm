@@ -868,7 +868,7 @@ class Model(metaclass=ModelMeta):
             raise TypeError("Model instances without id are unhashable")
         return hash(self.pk)
 
-    def __iter__(self) -> Iterable[tuple]:
+    def __iter__(self) -> Iterable[tuple[str, Any]]:
         for field in self._meta.db_fields:
             yield field, getattr(self, field)
 
