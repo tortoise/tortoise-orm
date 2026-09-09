@@ -445,6 +445,13 @@ class UniqueName(Model):
     other_optional = fields.CharField(max_length=20, null=True)
 
 
+class UniqueNameRequired(Model):
+    id = fields.IntField(primary_key=True)
+    name = fields.CharField(max_length=20, unique=True)
+    optional = fields.CharField(max_length=20, null=True)
+    other_optional = fields.CharField(max_length=20, null=True)
+
+
 class UniqueTogetherFields(Model):
     id = fields.IntField(primary_key=True)
     first_name = fields.CharField(max_length=64)
