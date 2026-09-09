@@ -15,6 +15,10 @@ Added
 ^^^^^
 - ``Q.__bool__()`` so ``Q`` objects with no filters/children (including nested empty ``Q`` children) are falsy.
 
+Fixed
+^^^^^
+- ``Model.update_or_create()`` now applies the caller's defaults after losing a concurrent insert, re-reading the current row through the existing transactional update path. (#2060)
+
 1.1.8
 -----
 

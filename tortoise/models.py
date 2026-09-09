@@ -1353,12 +1353,16 @@ class Model(metaclass=ModelMeta):
         if not defaults:
             defaults = {}
         db = using_db or cls._choose_db(True)
-        async with in_transaction(connection_name=db.connection_name) as connection:
-            instance = await cls.select_for_update().using_db(connection).get_or_none(**kwargs)
-            if instance:
-                await instance.update_from_dict(defaults).save(using_db=connection)
-                return instance, False
-        return await cls._create_or_get(db, defaults, **kwargs)
+        while True:
+            async with in_transaction(connection_name=db.connection_name) as connection:
+                instance = await cls.select_for_update().using_db(connection).get_or_none(**kwargs)
+                if instance is not None:
+                    await instance.update_from_dict(defaults).save(using_db=connection)
+                    return instance, False
+            instance, created = await cls._create_or_get(db, defaults, **kwargs)
+            if created:
+                return instance, True
+            # Retry the update path with a fresh instance after a concurrent insert.
 
     @classmethod
     async def create(
