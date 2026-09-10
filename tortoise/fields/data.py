@@ -18,7 +18,7 @@ from pypika_tortoise.terms import Term
 from tortoise import timezone
 from tortoise.exceptions import ConfigurationError, FieldError
 from tortoise.fields.base import Field
-from tortoise.timezone import UTC, get_default_timezone, get_timezone, get_use_tz, localtime
+from tortoise.timezone import get_default_timezone, get_use_tz
 from tortoise.validators import MaxLengthValidator
 
 try:
@@ -471,9 +471,9 @@ class DatetimeField(Field[T_DATETIME], datetime.datetime):
             if get_use_tz():
                 # When use_tz=True, ensure all datetimes are timezone-aware
                 if timezone.is_naive(value):
-                    value = timezone.make_aware(value, get_timezone())
+                    value = timezone.make_aware(value)
                 else:
-                    value = localtime(value)
+                    value = value.astimezone(get_default_timezone())
             else:
                 # When use_tz=False, ensure all datetimes are naive
                 # Some backends (PostgreSQL TIMESTAMPTZ) return aware datetimes natively
@@ -506,7 +506,7 @@ class DatetimeField(Field[T_DATETIME], datetime.datetime):
                 RuntimeWarning,
                 stacklevel=2,
             )
-            value = timezone.make_aware(value).astimezone(UTC)  # ty:ignore[invalid-assignment]
+            value = timezone.make_aware(value)  # ty:ignore[invalid-assignment]
         self.validate(value)
         return value
 
