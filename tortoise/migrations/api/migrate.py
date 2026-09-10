@@ -35,24 +35,29 @@ async def migrate(
         if label not in configured_apps:
             raise ValueError(f"Unknown app label {label}")
 
-    apps_config = {label: configured_apps[label] for label in selected_apps}
+    # Fix Issue #2119: Group all configured apps by connection so MigrationLoader
+    # and StateApps have full visibility into cross-app relationships sharing the connection.
     apps_by_connection: dict[str, dict[str, dict[str, Any]]] = {}
-    for label, app_config in apps_config.items():
+    for label, app_config in configured_apps.items():
         connection_name = app_config.get("default_connection", "default")
         apps_by_connection.setdefault(connection_name, {})[label] = app_config
 
     targets = _parse_targets(target, selected_apps)
-    for connection_name, subset in apps_by_connection.items():
+    for connection_name, connection_apps in apps_by_connection.items():
+        executor_targets = [
+            t for t in targets if t.app_label in connection_apps and t.app_label in selected_apps
+        ]
+        if not executor_targets:
+            continue
         connection = get_connection(connection_name)
-        executor = MigrationExecutor(connection, subset)
-        executor_targets = [t for t in targets if t.app_label in subset]
+        executor = MigrationExecutor(connection, connection_apps)
         if reporter is not None:
-            plan = await executor.plan(executor_targets if executor_targets else None)
+            plan = await executor.plan(executor_targets)
             result = reporter(connection_name, plan, fake, dry_run)
             if inspect.isawaitable(result):
                 await result
         await executor.migrate(
-            executor_targets if executor_targets else None,
+            executor_targets,
             fake=fake,
             dry_run=dry_run,
             direction=direction,
