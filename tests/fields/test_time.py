@@ -800,3 +800,47 @@ def test_timezone(tz_env):
         assert (
             localtime_shanghai.utcoffset() == timezone.localtime(timezone=pytz_shanghai).utcoffset()
         )
+
+@pytest.mark.asyncio
+async def test_datetime_naive_input_with_custom_timezone(db, tz_env):
+    """Test naive input honors TIMEZONE instead of hardcoded UTC when use_tz=True."""
+    os.environ["USE_TZ"] = "True"
+    os.environ["TIMEZONE"] = "Asia/Shanghai"
+    timezone._reset_timezone_cache()
+
+    model = testmodels.DatetimeFields
+    naive_dt = datetime(2026, 9, 7, 9, 0)
+    
+    obj = await model.create(datetime=naive_dt)
+
+    # When we create with a naive dt, the timezone module now assumes 
+    # it belongs to the configured timezone (Asia/Shanghai)
+    # So 09:00 naive becomes 09:00+08:00
+    
+    # Reload from DB
+    obj_get = await model.get(id=obj.id)
+    
+    # It should still be 09:00+08:00 because it correctly roundtripped
+    expected_dt = timezone.make_aware(naive_dt, "Asia/Shanghai")
+    assert obj_get.datetime == expected_dt, f"Expected {expected_dt}, got {obj_get.datetime}"
+
+
+@pytest.mark.asyncio
+async def test_datetime_naive_input_with_custom_timezone_update(db, tz_env):
+    """Test naive input honors TIMEZONE during update."""
+    os.environ["USE_TZ"] = "True"
+    os.environ["TIMEZONE"] = "Asia/Shanghai"
+    timezone._reset_timezone_cache()
+
+    model = testmodels.DatetimeFields
+    naive_dt = datetime(2026, 9, 7, 9, 0)
+    
+    obj = await model.create(datetime=naive_dt)
+    
+    with pytest.warns(RuntimeWarning, match="received a naive datetime"):
+        await model.filter(id=obj.id).update(datetime=naive_dt)
+
+    obj_get = await model.get(id=obj.id)
+    expected_dt = timezone.make_aware(naive_dt, "Asia/Shanghai")
+    assert obj_get.datetime == expected_dt, f"Expected {expected_dt}, got {obj_get.datetime}"
+

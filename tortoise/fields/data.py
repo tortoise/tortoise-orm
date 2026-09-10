@@ -502,7 +502,7 @@ class DatetimeField(Field[T_DATETIME], datetime.datetime):
                         " while time zone support is active.",
                         RuntimeWarning,
                     )
-                    value = timezone.make_aware(value, "UTC")
+                    value = timezone.make_aware(value, get_timezone())
         self.validate(value)
         return value
 
