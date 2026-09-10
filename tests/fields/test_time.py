@@ -2,11 +2,11 @@ import contextlib
 import os
 from datetime import date, datetime, time, timedelta
 from datetime import timezone as dt_timezone
-from time import sleep
 from unittest.mock import patch
 from zoneinfo import ZoneInfoNotFoundError
 
 import pytest
+from anyio import sleep
 from iso8601 import ParseError
 
 from tests import testmodels
@@ -83,7 +83,7 @@ async def test_datetime_create(db):
     assert obj.datetime_auto - now < timedelta(seconds=1)
     assert obj.datetime_add - now < timedelta(seconds=1)
     datetime_auto = obj.datetime_auto
-    sleep(0.012)
+    await sleep(0.012)
     await obj.save()
     obj2 = await model.get(id=obj.id)
     assert obj2.datetime == now
@@ -194,9 +194,11 @@ async def test_datetime_default_timezone(db, tz_env):
 
     now = timezone.now()
     obj = await model.create(datetime=now)
+    assert isinstance(obj.datetime.tzinfo, ZoneInfo)
     assert obj.datetime.tzinfo.zone == "UTC"
 
     obj_get = await model.get(pk=obj.pk)
+    assert isinstance(obj_get.datetime.tzinfo, ZoneInfo)
     assert obj_get.datetime.tzinfo.zone == "UTC"
     assert obj_get.datetime == now
 
@@ -212,9 +214,11 @@ async def test_datetime_set_timezone(db, tz_env):
 
     now = datetime.now(parse_timezone(tz))
     obj = await model.create(datetime=now)
+    assert isinstance(obj.datetime.tzinfo, ZoneInfo)
     assert obj.datetime.tzinfo.zone == tz
 
     obj_get = await model.get(pk=obj.pk)
+    assert isinstance(obj_get.datetime.tzinfo, ZoneInfo)
     assert obj_get.datetime.tzinfo.zone == tz
     assert obj_get.datetime == now
 
@@ -230,8 +234,10 @@ async def test_datetime_timezone(db, tz_env):
 
     now = datetime.now(parse_timezone(tz))
     obj = await model.create(datetime=now)
+    assert isinstance(obj.datetime.tzinfo, ZoneInfo)
     assert obj.datetime.tzinfo.zone == tz
     obj_get = await model.get(pk=obj.pk)
+    assert isinstance(obj.datetime.tzinfo, ZoneInfo)
     assert obj.datetime.tzinfo.zone == tz
     assert obj_get.datetime == now
 
@@ -352,7 +358,7 @@ async def test_datetime_auto_now_naive_with_use_tz_false(db, tz_env):
     original_auto_now = obj.datetime_auto
 
     # Update object to trigger auto_now
-    sleep(0.01)  # Ensure time difference
+    await sleep(0.01)  # Ensure time difference
     obj.datetime = datetime(2021, 2, 2)
     await obj.save()
 
@@ -385,6 +391,7 @@ async def test_datetime_auto_now_add_matches_db_on_create(db, tz_env):
     # Instance from create() should match instance from get() — no refresh needed
     assert obj.datetime_add == obj_get.datetime_add
     assert obj.datetime_add.tzinfo is not None
+    assert isinstance(obj.datetime_add.tzinfo, ZoneInfo)
     assert obj.datetime_add.tzinfo.key == "Asia/Shanghai"
 
 
@@ -403,7 +410,7 @@ async def test_datetime_auto_now_matches_db_on_save(db, tz_env):
     timezone._reset_timezone_cache()
 
     obj = await model.create(datetime=datetime(2021, 1, 1, tzinfo=get_default_timezone()))
-    sleep(0.01)
+    await sleep(0.01)
     obj.datetime = datetime(2021, 2, 2, tzinfo=get_default_timezone())
     await obj.save()
     obj_get = await model.get(pk=obj.pk)
@@ -411,6 +418,7 @@ async def test_datetime_auto_now_matches_db_on_save(db, tz_env):
     # Instance from save() should match instance from get() — no refresh needed
     assert obj.datetime_auto == obj_get.datetime_auto
     assert obj.datetime_auto.tzinfo is not None
+    assert isinstance(obj.datetime_auto.tzinfo, ZoneInfo)
     assert obj.datetime_auto.tzinfo.key == "Asia/Shanghai"
 
 
@@ -427,7 +435,7 @@ async def test_datetime_auto_fields_match_db_with_use_tz_false(db, tz_env):
     assert obj.datetime_add == obj_get.datetime_add
     assert timezone.is_naive(obj.datetime_add)
 
-    sleep(0.01)
+    await sleep(0.01)
     obj.datetime = datetime(2021, 2, 2)
     await obj.save()
     obj_get = await model.get(pk=obj.pk)
@@ -745,6 +753,8 @@ def test_zoneinfo():
     tz_utc = parse_timezone("UTC")
     tz_utc2 = parse_timezone("utc")
     tz_utc3 = parse_timezone("Utc")
+    assert isinstance(tz_utc, ZoneInfo)
+    assert isinstance(tz_utc2, ZoneInfo)
     assert tz_utc.key == tz_utc2.zone == "UTC"
     assert (
         now.replace(tzinfo=UTC)
@@ -781,6 +791,7 @@ def test_timezone(tz_env):
     now_shanghai = datetime.now(tz_shanghai)
     offset = now_shanghai.utcoffset()
     naive_now = timezone.make_naive(utcnow, tz_shanghai.key)
+    assert offset is not None
     assert (utcnow + offset).isoformat().split("+")[0] == naive_now.isoformat()
     # test make_aware
     with pytest.raises(ValueError):
@@ -801,6 +812,7 @@ def test_timezone(tz_env):
             localtime_shanghai.utcoffset() == timezone.localtime(timezone=pytz_shanghai).utcoffset()
         )
 
+
 @pytest.mark.asyncio
 async def test_datetime_naive_input_with_custom_timezone(db, tz_env):
     """Test naive input honors TIMEZONE instead of hardcoded UTC when use_tz=True."""
@@ -810,16 +822,16 @@ async def test_datetime_naive_input_with_custom_timezone(db, tz_env):
 
     model = testmodels.DatetimeFields
     naive_dt = datetime(2026, 9, 7, 9, 0)
-    
+
     obj = await model.create(datetime=naive_dt)
 
-    # When we create with a naive dt, the timezone module now assumes 
+    # When we create with a naive dt, the timezone module now assumes
     # it belongs to the configured timezone (Asia/Shanghai)
     # So 09:00 naive becomes 09:00+08:00
-    
+
     # Reload from DB
     obj_get = await model.get(id=obj.id)
-    
+
     # It should still be 09:00+08:00 because it correctly roundtripped
     expected_dt = timezone.make_aware(naive_dt, "Asia/Shanghai")
     assert obj_get.datetime == expected_dt, f"Expected {expected_dt}, got {obj_get.datetime}"
@@ -834,13 +846,12 @@ async def test_datetime_naive_input_with_custom_timezone_update(db, tz_env):
 
     model = testmodels.DatetimeFields
     naive_dt = datetime(2026, 9, 7, 9, 0)
-    
+
     obj = await model.create(datetime=naive_dt)
-    
+
     with pytest.warns(RuntimeWarning, match="received a naive datetime"):
         await model.filter(id=obj.id).update(datetime=naive_dt)
 
     obj_get = await model.get(id=obj.id)
     expected_dt = timezone.make_aware(naive_dt, "Asia/Shanghai")
     assert obj_get.datetime == expected_dt, f"Expected {expected_dt}, got {obj_get.datetime}"
-
