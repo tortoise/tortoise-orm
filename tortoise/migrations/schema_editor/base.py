@@ -201,9 +201,16 @@ class BaseSchemaEditor(SchemaQuotingMixin):
         index_name: str | None = None,
         index_type: str | None = None,
         extra: str | None = None,
+        unique: bool = False,
+        nulls_not_distinct: bool = False,
     ) -> str:
-        return self.INDEX_CREATE_TEMPLATE.format(
-            index_name=index_name or self._generate_index_name("idx", model, field_names),
+        # nulls_not_distinct is PostgreSQL-only (see BasePostgresSchemaEditor);
+        # accepted here so callers can pass it unconditionally, but it's a no-op.
+        _ = nulls_not_distinct
+        template = self.UNIQUE_INDEX_CREATE_TEMPLATE if unique else self.INDEX_CREATE_TEMPLATE
+        prefix = "uidx" if unique else "idx"
+        return template.format(
+            index_name=index_name or self._generate_index_name(prefix, model, field_names),
             table_name=self._qualify_table_name(model._meta.db_table, model._meta.schema),
             fields=self._format_index_fields(field_names),
             index_type=f"{index_type} " if index_type else "",
@@ -738,7 +745,8 @@ class BaseSchemaEditor(SchemaQuotingMixin):
         if index.name:
             return index.name
         index.resolve_expressions(model)
-        return self._generate_index_name("idx", model, list(index.field_names))
+        prefix = "uidx" if getattr(index, "unique", False) else "idx"
+        return self._generate_index_name(prefix, model, list(index.field_names))
 
     def _constraint_name_for_model(self, model: type[Model], constraint: UniqueConstraint) -> str:
         if constraint.name:
@@ -809,6 +817,8 @@ class BaseSchemaEditor(SchemaQuotingMixin):
             index_name=self._index_name_for_model(model, index),
             index_type=index.INDEX_TYPE,
             extra=index.extra,
+            unique=getattr(index, "unique", False),
+            nulls_not_distinct=getattr(index, "nulls_not_distinct", False),
         )
         if index_sql:
             await self._run_sql(index_sql)

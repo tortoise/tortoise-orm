@@ -13,9 +13,7 @@ if TYPE_CHECKING:  # pragma: nocoverage
 
 class BasePostgresSchemaGenerator(BaseSchemaGenerator):
     DIALECT = "postgres"
-    INDEX_CREATE_TEMPLATE = (
-        'CREATE INDEX {exists}"{index_name}" ON {table_name} {index_type}({fields}){extra};'
-    )
+    INDEX_CREATE_TEMPLATE = 'CREATE INDEX {exists}"{index_name}" ON {table_name} {index_type}({fields}){nulls_not_distinct}{extra};'
     UNIQUE_INDEX_CREATE_TEMPLATE = INDEX_CREATE_TEMPLATE.replace("INDEX", "UNIQUE INDEX")
     TABLE_COMMENT_TEMPLATE = "COMMENT ON TABLE {table} IS '{comment}';"
     COLUMN_COMMENT_TEMPLATE = "COMMENT ON COLUMN {table}.\"{column}\" IS '{comment}';"
@@ -79,10 +77,40 @@ class BasePostgresSchemaGenerator(BaseSchemaGenerator):
         index_name: str | None = None,
         index_type: str | None = None,
         extra: str | None = None,
+        unique: bool = False,
+        nulls_not_distinct: bool = False,
     ) -> str:
         if index_type:
             index_type = f"USING {index_type}"
 
-        return super()._get_index_sql(
-            model, field_names, safe, index_name=index_name, index_type=index_type, extra=extra
+        nulls_not_distinct_sql = " NULLS NOT DISTINCT" if unique and nulls_not_distinct else ""
+        template = self.UNIQUE_INDEX_CREATE_TEMPLATE if unique else self.INDEX_CREATE_TEMPLATE
+        prefix = "uidx" if unique else "idx"
+
+        return template.format(
+            exists="IF NOT EXISTS " if safe else "",
+            index_name=index_name or self._get_index_name(prefix, model, field_names),
+            index_type=f"{index_type} " if index_type else "",
+            table_name=self._qualify_table_name(model._meta.db_table, model._meta.schema),
+            fields=self._format_index_fields(field_names),
+            nulls_not_distinct=nulls_not_distinct_sql,
+            extra=f"{extra}" if extra else "",
+        )
+
+    def _get_unique_index_sql(
+        self,
+        exists: str,
+        table_name: str,
+        field_names: Sequence[str],
+        schema: str | None = None,
+    ) -> str:
+        index_name = self._get_index_name("uidx", table_name, field_names)
+        return self.UNIQUE_INDEX_CREATE_TEMPLATE.format(
+            exists=exists,
+            index_name=index_name,
+            index_type="",
+            table_name=self._qualify_table_name(table_name, schema),
+            fields=", ".join([self.quote(f) for f in field_names]),
+            nulls_not_distinct="",
+            extra="",
         )

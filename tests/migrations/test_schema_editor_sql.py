@@ -7,7 +7,7 @@ import pytest
 from tests.utils.fake_client import FakeClient
 from tortoise import fields
 from tortoise.contrib.postgres.fields import TSVectorField
-from tortoise.contrib.postgres.indexes import GinIndex
+from tortoise.contrib.postgres.indexes import GinIndex, PostgreSQLIndex
 from tortoise.indexes import Index
 from tortoise.migrations.schema_editor.base import BaseSchemaEditor
 from tortoise.migrations.schema_editor.base_postgres import BasePostgresSchemaEditor
@@ -189,6 +189,77 @@ async def test_add_index_generates_gin_tsvector_sql() -> None:
     expected_name = editor._generate_index_name("idx", SearchDocument, ["search_vector"])
     assert (
         f'CREATE INDEX "{expected_name}" ON "search_document" USING GIN ("search_vector");'
+    ) == client.executed[0]
+
+
+@pytest.mark.asyncio
+async def test_add_unique_index_generates_nulls_not_distinct_sql() -> None:
+    class Customer(Model):
+        id = fields.IntField(pk=True)
+        shop_id = fields.IntField()
+        phone_number = fields.CharField(max_length=20)
+        deleted_at = fields.DatetimeField(null=True)
+
+        class Meta:
+            table = "customer"
+            app = "models"
+            indexes = [
+                PostgreSQLIndex(
+                    fields=("shop_id", "phone_number", "deleted_at"),
+                    unique=True,
+                    nulls_not_distinct=True,
+                )
+            ]
+
+    client = FakeClient("postgres", inline_comment=False)
+    editor = BasePostgresSchemaEditor(client)
+
+    index = cast(Index, Customer._meta.indexes[0])
+    await editor.add_index(Customer, index)
+
+    assert client.executed
+    expected_name = editor._generate_index_name(
+        "uidx", Customer, ["shop_id", "phone_number", "deleted_at"]
+    )
+    assert (
+        f'CREATE UNIQUE INDEX "{expected_name}" ON "customer"'
+        f' ("shop_id", "phone_number", "deleted_at") NULLS NOT DISTINCT;'
+    ) == client.executed[0]
+
+
+@pytest.mark.asyncio
+async def test_add_partial_unique_index_generates_nulls_not_distinct_before_where() -> None:
+    class Customer(Model):
+        id = fields.IntField(pk=True)
+        shop_id = fields.IntField()
+        phone_number = fields.CharField(max_length=20)
+        deleted_at = fields.DatetimeField(null=True)
+
+        class Meta:
+            table = "customer"
+            app = "models"
+            indexes = [
+                PostgreSQLIndex(
+                    fields=("shop_id", "phone_number", "deleted_at"),
+                    unique=True,
+                    nulls_not_distinct=True,
+                    condition={"shop_id": 1},
+                )
+            ]
+
+    client = FakeClient("postgres", inline_comment=False)
+    editor = BasePostgresSchemaEditor(client)
+
+    index = cast(Index, Customer._meta.indexes[0])
+    await editor.add_index(Customer, index)
+
+    assert client.executed
+    expected_name = editor._generate_index_name(
+        "uidx", Customer, ["shop_id", "phone_number", "deleted_at"]
+    )
+    assert (
+        f'CREATE UNIQUE INDEX "{expected_name}" ON "customer"'
+        f' ("shop_id", "phone_number", "deleted_at") NULLS NOT DISTINCT WHERE shop_id = 1;'
     ) == client.executed[0]
 
 
