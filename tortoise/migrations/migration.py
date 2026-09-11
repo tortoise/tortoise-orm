@@ -48,7 +48,7 @@ class Migration:
             not dry_run and schema_editor is not None
         )
         for operation in self.operations:
-            old_state = state.clone() if need_old_state else None
+            old_state = state.snapshot() if need_old_state else None
             operation.state_forward(self.app_label, state)
             if collect_sql and schema_editor:
                 schema_editor.collected_sql.append("--")
@@ -100,13 +100,13 @@ class Migration:
         new_state = state
         if not need_old_state and self.operations:
             # Single working copy so state_forward doesn't mutate the original
-            new_state = state.clone()
+            new_state = state.snapshot()
         for operation in self.operations:
             if not getattr(operation, "reversible", True):
                 raise ValueError(f"Operation {operation} in {self} is not reversible")
             if need_old_state:
-                new_state = new_state.clone()
-                old_state = new_state.clone()
+                new_state = new_state.snapshot()
+                old_state = new_state.snapshot()
                 operation.state_forward(self.app_label, new_state)
                 to_run.insert(0, (operation, old_state, new_state))
             else:

@@ -19,6 +19,7 @@ Fixed
 ^^^^^
 - ``QuerySet.distinct().count()`` no longer counts rows duplicated by a join (e.g. filtering on a m2m relation); it now counts distinct primary keys and matches the number of rows the query returns. (#2255)
 - BlackSheep: ``register_tortoise`` now enables the global connection fallback, so database access works when BlackSheep runs handlers in tasks other than the one that initialized the ORM. (#2248)
+- Migration execution now snapshots rendered model registries and rebuilds querysets only for changed models instead of rebuilding every historical model before each operation, substantially improving large migration plans while preserving old/new operation states.
 
 1.1.8
 -----
