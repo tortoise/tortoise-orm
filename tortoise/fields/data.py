@@ -489,7 +489,7 @@ class DatetimeField(Field[T_DATETIME], datetime.datetime):
             self.auto_now
             or (self.auto_now_add and getattr(instance, self.model_field_name) is None)
         ):
-            now = timezone.now()
+            now = timezone.localtime()
             # Convert to match what would be read from DB (apply timezone conversion)
             now_python = self.to_python_value(now)
             setattr(instance, self.model_field_name, now_python)
