@@ -9,6 +9,7 @@ from tests.testmodels import (
     MinRelation,
     Node,
     Reporter,
+    Team,
     Tournament,
     Tree,
 )
@@ -225,6 +226,22 @@ async def test_distinct(db, intfields_data):
         {"intnum_null": -1},
         {"intnum_null": 80},
     ]
+
+
+@pytest.mark.asyncio
+async def test_distinct_count_with_m2m_join(db):
+    tournament = await Tournament.create(name="Tournament")
+    event = await Event.create(name="Event", tournament=tournament)
+    event2 = await Event.create(name="Event2", tournament=tournament)
+    names = ("Team A", "Team B", "Team C")
+    for name in names:
+        await event.participants.add(await Team.create(name=name))
+
+    queryset = Event.filter(participants__name__in=names).distinct()
+    assert len(await queryset) == 1
+    assert await queryset.count() == 1
+    await event2.participants.add(await Team.get(name=name))
+    assert await queryset.count() == 2
 
 
 @pytest.mark.asyncio
@@ -1027,10 +1044,7 @@ async def test_union_order_by_multiple_fields(db):
     if r1.id == t1.id:
         return
 
-    if r1.id > t1.id:
-        expected = [t2, t1, r1]
-    else:
-        expected = [t2, r1, t1]
+    expected = [t2, t1, r1] if r1.id > t1.id else [t2, r1, t1]
 
     assert result == expected
 
@@ -1187,7 +1201,7 @@ async def test_update_filter_by_related_field(db):
     updated = await Book.filter(author__name="Conan Doyle").update(rating=1)
 
     assert updated == 1
-    assert (await Book.get(id=book1.id)).rating == 1
+    assert (await Book.get(pk=book1.pk)).rating == 1
     # negative control: the other author's book keeps its rating
     other = await Book.get(name="A Wizard of Earthsea")
     assert other.rating == 3
