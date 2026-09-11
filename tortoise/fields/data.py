@@ -768,8 +768,8 @@ class JSONField(Field[T], dict, list):  # type: ignore
         if isinstance(value, (str, bytes)):
             try:
                 self.decoder(value)
-            except Exception:
-                raise FieldError(f"Value {value!r} is invalid json value.")
+            except Exception as e:
+                raise FieldError(f"Value {value!r} is invalid json value.") from e
             if isinstance(value, bytes):
                 return value.decode()
             return value
@@ -788,10 +788,10 @@ class JSONField(Field[T], dict, list):  # type: ignore
         if isinstance(value, (str, bytes)):
             try:
                 data = self.decoder(value)
-            except Exception:
+            except Exception as e:
                 raise FieldError(
                     f"Value {value if isinstance(value, str) else value.decode()} is invalid json value."
-                )
+                ) from e
 
             if (
                 _PydanticModelMetaclass is not None
@@ -886,8 +886,8 @@ class IntEnumFieldInstance(SmallIntField):
         for item in enum_type:
             try:
                 value = int(item.value)
-            except ValueError:
-                raise ConfigurationError("IntEnumField only supports integer enums!")
+            except ValueError as e:
+                raise ConfigurationError("IntEnumField only supports integer enums!") from e
             if not minimum <= value < 32768:
                 raise ConfigurationError(
                     f"The valid range of IntEnumField's values is {minimum}..32767!"
@@ -920,7 +920,7 @@ def IntEnumField(
     enum_type: type[IntEnumType],
     description: str | None = None,
     **kwargs: Any,
-) -> IntEnumType:
+) -> Field[IntEnumType]:
     """
     Enum Field
 
@@ -938,7 +938,7 @@ def IntEnumField(
         of "name: value" pairs.
 
     """
-    return IntEnumFieldInstance(enum_type, description, **kwargs)  # type: ignore
+    return IntEnumFieldInstance(enum_type, description, **kwargs)
 
 
 class CharEnumFieldInstance(CharField):
@@ -983,7 +983,7 @@ def CharEnumField(
     description: str | None = None,
     max_length: int = 0,
     **kwargs: Any,
-) -> CharEnumType:
+) -> Field[CharEnumType]:
     """
     Char Enum Field
 
@@ -1006,4 +1006,4 @@ def CharEnumField(
 
     """
 
-    return CharEnumFieldInstance(enum_type, description, max_length, **kwargs)  # type: ignore
+    return CharEnumFieldInstance(enum_type, description, max_length, **kwargs)

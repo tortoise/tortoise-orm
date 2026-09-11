@@ -7,7 +7,7 @@ from collections.abc import Iterator, MutableMapping
 from copy import copy
 from enum import Enum, IntEnum
 from hashlib import sha3_224
-from typing import TYPE_CHECKING, Any, TypeAlias, cast
+from typing import TYPE_CHECKING, Any, TypeAlias, cast, get_args, get_origin
 
 from pydantic import ConfigDict, computed_field, create_model
 from pydantic import Field as PydanticField
@@ -123,6 +123,13 @@ class FieldMap(MutableMapping[str, Field | ComputedFieldDescription]):
                 for k in computed
             }
         )
+
+
+def is_field_annotation(type_obj: Any) -> bool:
+    t = get_origin(type_obj)
+    if t is None:
+        return False
+    return issubclass(t, Field)
 
 
 def pydantic_queryset_creator(
@@ -364,6 +371,8 @@ class PydanticModelCreator:
             if isinstance(getattr(v, "decorator_info", None), ComputedFieldInfo):
                 computed_fields[k] = v
             else:
+                if v and is_field_annotation(v[0]):
+                    v = (get_args(v[0])[0], *v[1:])
                 common_fields[k] = v
         base_model = type(
             "BasePydanticModel",
@@ -470,7 +479,7 @@ class PydanticModelCreator:
         model = self._get_submodel(python_type, field_name)
         if model:
             self._relational_fields_index.append((field_name, model.__name__))
-            return list[model]  # type: ignore
+            return list[model]  # type: ignore[valid-type]
         return None
 
     def _process_data_field(
@@ -515,13 +524,13 @@ class PydanticModelCreator:
                 if orm_obj is not None:
                     try:
                         return original_func(orm_obj)
-                    except NoValuesFetched:
+                    except NoValuesFetched as e:
                         raise NoValuesFetched(
                             f"Computed field '{original_func.__name__}' tried to access a "
                             f"relation that has not been fetched. Either include the relation "
                             f"in the Pydantic model so it is auto-prefetched, or call "
                             f"fetch_related() before serialization."
-                        )
+                        ) from e
                 return original_func(self_pydantic)
 
             comment = _cleandoc(func)
