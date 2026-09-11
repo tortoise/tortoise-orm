@@ -15,6 +15,11 @@ Added
 ^^^^^
 - ``Q.__bool__()`` so ``Q`` objects with no filters/children (including nested empty ``Q`` children) are falsy.
 
+Fixed
+^^^^^
+- ``QuerySet.distinct().count()`` no longer counts rows duplicated by a join (e.g. filtering on a m2m relation); it now counts distinct primary keys and matches the number of rows the query returns. (#2255)
+- BlackSheep: ``register_tortoise`` now enables the global connection fallback, so database access works when BlackSheep runs handlers in tasks other than the one that initialized the ORM. (#2248)
+
 1.1.8
 -----
 
