@@ -838,11 +838,26 @@ async def test_datetime_naive_input_with_custom_timezone_update(db, enable_tz):
 
     model = testmodels.DatetimeFields
     naive_dt = datetime(2026, 9, 7, 9, 0)
+    expected_dt = timezone.make_aware(naive_dt, tz)
 
     obj = await model.create(datetime=naive_dt)
+    assert obj.datetime == expected_dt, f"Expected {expected_dt}, got {obj.datetime}"
 
     with pytest.warns(RuntimeWarning, match="received a naive datetime"):
-        await model.filter(id=obj.id).update(datetime=naive_dt)
+        await model.filter(id=obj.id).update(datetime_null=naive_dt)
     obj_get = await model.get(id=obj.id)
-    expected_dt = timezone.make_aware(naive_dt, tz)
-    assert obj_get.datetime == expected_dt, f"Expected {expected_dt}, got {obj_get.datetime}"
+    assert obj_get.datetime_null == expected_dt, (
+        f"Expected {expected_dt}, got {obj_get.datetime_null}"
+    )
+
+    started_at = timezone.localtime()
+    obj.datetime = started_at.replace(tzinfo=None)
+    with pytest.warns(RuntimeWarning, match="received a naive datetime"):
+        await obj.save()
+    now = timezone.localtime()
+    obj = await model.get(id=obj.id)
+    assert obj.datetime == started_at, f"Expected {started_at}, got {obj.datetime}"
+    assert obj.datetime_add < started_at, f"Expected: {obj.datetime_add} < {started_at}"
+    assert now > obj.datetime_auto > started_at, (
+        f"Expected: {now} > {obj.datetime_auto} > {started_at}"
+    )
