@@ -71,20 +71,20 @@ class FieldMap(MutableMapping[str, Field | ComputedFieldDescription]):
             self.field_map_update([pk_field], meta)
         self.computed_fields: dict[str, ComputedFieldDescription] = {}
 
-    def __delitem__(self, __key: str) -> None:
-        self._field_map.__delitem__(__key)
+    def __delitem__(self, key: str, /) -> None:
+        del self._field_map[key]
 
-    def __getitem__(self, __key: str) -> Field | ComputedFieldDescription:
-        return self._field_map.__getitem__(__key)
+    def __getitem__(self, key: str, /) -> Field | ComputedFieldDescription:
+        return self._field_map[key]
+
+    def __setitem__(self, key: str, value: Field | ComputedFieldDescription, /) -> None:
+        self._field_map[key] = value
 
     def __len__(self) -> int:  # pragma: no-coverage
         return self._field_map.__len__()
 
     def __iter__(self) -> Iterator[str]:
         return self._field_map.__iter__()
-
-    def __setitem__(self, __key: str, __value: Field | ComputedFieldDescription) -> None:
-        self._field_map.__setitem__(__key, __value)
 
     def sort_alphabetically(self) -> None:
         self._field_map = {k: self._field_map[k] for k in sorted(self._field_map)}
@@ -184,7 +184,7 @@ def pydantic_queryset_creator(
     )
     model.__doc__ = _cleandoc(cls)
     model.model_config["title"] = name or f"{submodel.model_config['title']}_list"
-    model.model_config["submodel"] = submodel  # type: ignore[typeddict-unknown-key]
+    model.model_config["submodel"] = submodel  # type: ignore
     return model
 
 
@@ -257,8 +257,8 @@ class PydanticModelCreator:
 
         self._pconfig: ConfigDict
 
-        self._properties: dict[str, PropertyValue] = dict()
-        self._relational_fields_index: list[tuple[str, str]] = list()
+        self._properties: dict[str, PropertyValue] = {}
+        self._relational_fields_index: list[tuple[str, str]] = []
 
         self._model_description: ModelDescription = ModelDescription.from_model(cls)
 
@@ -387,7 +387,7 @@ class PydanticModelCreator:
             **common_fields,
         )
         model.__doc__ = _cleandoc(self._cls)
-        model.model_config["orig_model"] = self._cls  # type: ignore[typeddict-unknown-key]
+        model.model_config["orig_model"] = self._cls  # type: ignore
         _MODEL_INDEX[self._hash] = model
         return model
 
@@ -495,7 +495,7 @@ class PydanticModelCreator:
             json_schema_extra["readOnly"] = constraints["readOnly"]
             del constraints["readOnly"]
         fconfig.update(constraints)
-        python_type: type[Enum] | type[IntEnum] | type
+        python_type: type[Enum | IntEnum] | type
         if isinstance(field, (IntEnumFieldInstance, CharEnumFieldInstance)):
             python_type = field.enum_type
         else:
@@ -526,9 +526,9 @@ class PydanticModelCreator:
                         return original_func(orm_obj)
                     except NoValuesFetched as e:
                         raise NoValuesFetched(
-                            f"Computed field '{original_func.__name__}' tried to access a "
-                            f"relation that has not been fetched. Either include the relation "
-                            f"in the Pydantic model so it is auto-prefetched, or call "
+                            f"Computed field '{getattr(original_func, '__name__', repr(original_func))}' "
+                            f"tried to access a relation that has not been fetched. Either include the "
+                            f"relation in the Pydantic model so it is auto-prefetched, or call "
                             f"fetch_related() before serialization."
                         ) from e
                 return original_func(self_pydantic)
@@ -540,7 +540,7 @@ class PydanticModelCreator:
 
     @staticmethod
     def _create_submodel(
-        cls: type[Model],
+        model_cls: type[Model],
         *,
         stack: tuple[StackEntry, ...],
         exclude: tuple[str, ...] = (),
@@ -551,7 +551,7 @@ class PydanticModelCreator:
         sort_alphabetically: bool | None = None,
     ) -> type[PydanticModel] | None:
         """Create a Pydantic submodel with recursion protection against cyclic references."""
-        if not allow_cycles and cls in (c[0] for c in stack[:-1]):
+        if not allow_cycles and model_cls in (c[0] for c in stack[:-1]):
             return None
 
         level = 1
@@ -561,7 +561,7 @@ class PydanticModelCreator:
 
             level += 1
         pmc = PydanticModelCreator(
-            cls,
+            model_cls,
             exclude=exclude,
             include=include,
             computed=computed,
