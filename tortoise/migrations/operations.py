@@ -363,6 +363,9 @@ class DeleteModel(TortoiseOperation):
 
 
 class AlterModelOptions(TortoiseOperation):
+    # Options carried by other operations; the rest belong to this one.
+    UNMANAGED_OPTION_KEYS = frozenset({"table", "app", "indexes", "unique_together", "constraints"})
+
     def __init__(self, name: str, options: dict[str, Any]):
         self.name = name
         self.options = options
@@ -374,6 +377,11 @@ class AlterModelOptions(TortoiseOperation):
         model_state = self.get_model_state(state, app_label, self.name)
 
         model_state.options.update(self.options)
+        # update() only adds or changes keys, so an option removed from the model would
+        # otherwise survive here and be re-detected on every later makemigrations run.
+        for key in list(model_state.options):
+            if key not in self.UNMANAGED_OPTION_KEYS and key not in self.options:
+                del model_state.options[key]
         state.reload_model(app_label, self.name)
 
     async def database_forward(
