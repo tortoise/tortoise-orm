@@ -41,6 +41,7 @@ Added
 
 Fixed
 ^^^^^
+- Filtering by a related model instance on a ``ForeignKeyField``/``OneToOneField`` declared with a non-primary-key ``to_field`` now uses the ``to_field`` value instead of the instance's primary key, so the generated query targets the correct column. (#2225)
 - ``MigrationRecorder`` now uses parameterized queries; fixes MariaDB/MySQL rejecting ISO-8601 ``applied_at`` values. (#2132)
 - fix(migrations): use parameterized queries in MigrationRecorder (#2153)
 - Applies model generics on relational fields functions (#2156)
