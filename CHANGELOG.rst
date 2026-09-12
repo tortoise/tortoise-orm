@@ -18,13 +18,11 @@ Added
 
 Fixed
 ^^^^^
-- fix(queryset): support DELETE/UPDATE with filters on related fields. (#2269)
-
-Fixed
-^^^^^
 - ``QuerySet.distinct().count()`` no longer counts rows duplicated by a join (e.g. filtering on a m2m relation); it now counts distinct primary keys and matches the number of rows the query returns. (#2255)
 - BlackSheep: ``register_tortoise`` now enables the global connection fallback, so database access works when BlackSheep runs handlers in tasks other than the one that initialized the ORM. (#2248)
+- fix(queryset): support DELETE/UPDATE with filters on related fields. (#2269)
 - Fix naive DatetimeField timezone drift. (#2277)
+- A model with its own ``Meta`` now inherits ``Meta.ordering`` from its abstract base model when it does not define its own. (#2236)
 
 1.1.8
 -----
