@@ -98,8 +98,7 @@ class _FieldMeta(type):
             cls = type.__new__(mcs, name, (bases[0],), attrs)
             # All other base classes are our meta types, we store them in class attributes
             field_type = bases[1] if len(bases) == 2 else reduce(operator.or_, bases[1:])
-            field_type_attr = "field_type"
-            setattr(cls, field_type_attr, field_type)
+            setattr(cls, "field_type", field_type)
             return cls
         return type.__new__(mcs, name, bases, attrs)
 

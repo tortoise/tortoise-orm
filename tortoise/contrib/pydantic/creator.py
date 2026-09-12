@@ -372,6 +372,7 @@ class PydanticModelCreator:
                 computed_fields[k] = v
             else:
                 if v and is_field_annotation(v[0]):
+                    # `tortoise.fields.base.Field[EnumType]` -> `EnumType`
                     v = (get_args(v[0])[0], *v[1:])
                 common_fields[k] = v
         base_model = type(

@@ -23,6 +23,7 @@ Fixed
 - fix(queryset): support DELETE/UPDATE with filters on related fields. (#2269)
 - Fix naive DatetimeField timezone drift. (#2277)
 - A model with its own ``Meta`` now inherits ``Meta.ordering`` from its abstract base model when it does not define its own. (#2236)
+- The return type hint for ``IntEnumField``/``CharEnumField`` is now ``tortoise.fields.Field[EnumType]`` instead of ``EnumType``. (#2243)
 
 1.1.8
 -----
@@ -40,7 +41,6 @@ Added
 
 Fixed
 ^^^^^
-- ``makemigrations`` now renders ``IntEnumField``/``CharEnumField`` as their concrete ``IntEnumFieldInstance``/``CharEnumFieldInstance`` classes, so generated migrations type-check under ``mypy`` instead of failing with ``incompatible type "tuple[str, ...]"``. (#2155)
 - ``MigrationRecorder`` now uses parameterized queries; fixes MariaDB/MySQL rejecting ISO-8601 ``applied_at`` values. (#2132)
 - fix(migrations): use parameterized queries in MigrationRecorder (#2153)
 - Applies model generics on relational fields functions (#2156)
