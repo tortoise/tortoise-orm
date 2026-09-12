@@ -393,8 +393,15 @@ class QuerySet(AwaitableQuery[MODEL]):
         self._select_for_update_no_key: bool = False
         self._select_related: set[str] = set()
         self._select_related_idx: list[
-            tuple[type[Model], int, Table | str, type[Model], Iterable[str | None]]
-        ] = []  # format with: model,idx,model_name,parent_model
+            tuple[
+                type[Model],
+                int,
+                Table | str,
+                type[Model],
+                Iterable[str | None],
+                tuple[str, ...],
+            ]
+        ] = []  # format: model, idx, table/name, parent_model, path, field_names
         self._force_indexes: set[str] = set()
         self._use_indexes: set[str] = set()
 
@@ -1152,23 +1159,28 @@ class QuerySet(AwaitableQuery[MODEL]):
             if self._fields_for_select:
                 continue
 
-            related_fields = field.related_model._meta.db_fields
+            related_fields = tuple(field.related_model._meta.db_fields)
             append_item = (
                 field.related_model,
                 len(related_fields),
                 field.model_field_name,
                 model,
                 path,
+                related_fields,
             )
             model = field.related_model
+            # Only select columns the first time this path is recorded. Nested
+            # lookups (e.g. left then left__extra) would otherwise append the
+            # parent columns again while _select_related_idx stays unique, and
+            # positional hydration then reads the wrong slice.
             if append_item not in self._select_related_idx:
                 self._select_related_idx.append(append_item)
-            self.query = self.query.select(
-                *[
-                    table[related_field].as_(f"{table.get_table_name()}.{related_field}")
-                    for related_field in related_fields
-                ]
-            )
+                self.query = self.query.select(
+                    *[
+                        table[related_field].as_(f"{table.get_table_name()}.{related_field}")
+                        for related_field in related_fields
+                    ]
+                )
         return model, table
 
     def _resolve_only(self, only_lookup_expressions: tuple[str, ...]) -> None:
@@ -1194,6 +1206,7 @@ class QuerySet(AwaitableQuery[MODEL]):
                     table,
                     self.model,
                     (None,),
+                    tuple(data_fields),
                 )
             )
             try:
@@ -1219,6 +1232,7 @@ class QuerySet(AwaitableQuery[MODEL]):
                     self.model._meta.basetable,
                     self.model,
                     (None,),
+                    (),
                 )
             )
 
@@ -1249,6 +1263,7 @@ class QuerySet(AwaitableQuery[MODEL]):
                         table,
                         referring_model,
                         path,
+                        tuple(data_fields) if i == len(fetch_fields) - 1 else (),
                     )
                 )
                 added_paths.add(path)
@@ -1274,6 +1289,7 @@ class QuerySet(AwaitableQuery[MODEL]):
                 table,
                 self.model,
                 (None,),
+                tuple(self.model._meta.db_fields),
             )
             self._select_related_idx.append(append_item)
         self.resolve_ordering(
