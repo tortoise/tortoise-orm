@@ -9,13 +9,13 @@ from tortoise.context import TortoiseContext
 
 
 @pytest.mark.asyncio
-async def test_resolve_password_passes_through_plain_values():
+async def test_resolve_password_passes_through_plain_values() -> None:
     assert await resolve_password("foomip") == "foomip"
     assert await resolve_password(None) is None
 
 
 @pytest.mark.asyncio
-async def test_resolve_password_calls_sync_and_async_callables():
+async def test_resolve_password_calls_sync_and_async_callables() -> None:
     calls = []
 
     def sync_factory() -> str:
@@ -32,12 +32,9 @@ async def test_resolve_password_calls_sync_and_async_callables():
 
 
 @pytest.mark.asyncio
-async def test_asyncpg_forwards_password_callable_to_the_driver():
+async def test_asyncpg_forwards_password_callable_to_the_driver() -> None:
     """asyncpg resolves the callable itself, once per new connection."""
-    try:
-        import asyncpg  # noqa: F401
-    except ImportError:
-        pytest.skip("asyncpg not installed")
+    pytest.importorskip("asyncpg")
 
     async def token() -> str:
         return "token"
@@ -45,8 +42,7 @@ async def test_asyncpg_forwards_password_callable_to_the_driver():
     with patch(
         "tortoise.backends.asyncpg.client.asyncpg.create_pool", new=AsyncMock()
     ) as asyncpg_connect:
-        ctx = TortoiseContext()
-        async with ctx:
+        async with TortoiseContext() as ctx:
             await ctx.connections._init(
                 {
                     "models": {
@@ -63,14 +59,14 @@ async def test_asyncpg_forwards_password_callable_to_the_driver():
                 False,
             )
             await ctx.connections.get("models").create_connection(with_db=True)
-
+            assert asyncpg_connect.await_args is not None
             assert asyncpg_connect.await_args.kwargs["password"] is token
 
 
 @pytest.mark.asyncio
-async def test_psycopg_keeps_the_password_out_of_the_conninfo():
+async def test_psycopg_keeps_the_password_out_of_the_conninfo() -> None:
     try:
-        import psycopg  # noqa: F401
+        from tortoise.backends.psycopg.client import PsycopgClient
     except ImportError:
         pytest.skip("psycopg not installed")
 
@@ -81,8 +77,7 @@ async def test_psycopg_keeps_the_password_out_of_the_conninfo():
         "tortoise.backends.psycopg.client.PsycopgClient.create_pool", new=AsyncMock()
     ) as patched_create_pool:
         patched_create_pool.return_value = AsyncMock()
-        ctx = TortoiseContext()
-        async with ctx:
+        async with TortoiseContext() as ctx:
             await ctx.connections._init(
                 {
                     "models": {
@@ -101,13 +96,13 @@ async def test_psycopg_keeps_the_password_out_of_the_conninfo():
             )
             client = ctx.connections.get("models")
             await client.create_connection(with_db=True)
-
+            assert isinstance(client, PsycopgClient)
             assert "password" not in client._template["conninfo"]
             assert client._template["connection_class"].__name__ == "PasswordFactoryConnection"
 
 
 @pytest.mark.asyncio
-async def test_psycopg_connection_class_mints_a_password_per_connection():
+async def test_psycopg_connection_class_mints_a_password_per_connection() -> None:
     try:
         from tortoise.backends.psycopg.client import password_factory_connection_class
     except ImportError:
@@ -125,14 +120,15 @@ async def test_psycopg_connection_class_mints_a_password_per_connection():
     async def token() -> str:
         return next(tokens)
 
-    connection_class = password_factory_connection_class(RecordingConnection, token)  # type: ignore[arg-type]
-
-    assert await connection_class.connect("host=127.0.0.1") == "connection"
+    connection_class = password_factory_connection_class(RecordingConnection, token)  # type:ignore
+    assert issubclass(connection_class, RecordingConnection)
+    connection = await connection_class.connect("host=127.0.0.1")
+    assert connection == "connection"
     assert await connection_class.connect("host=127.0.0.1") == "connection"
     assert [kwargs["password"] for kwargs in seen] == ["token-1", "token-2"]
 
 
-def test_star_password_ignores_password_callables():
+def test_star_password_ignores_password_callables() -> None:
     def factory() -> str:
         return "s3cret"  # pragma: nocoverage
 
