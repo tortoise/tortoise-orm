@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Any, Generic, Literal, Protocol, TypeVar, cast
 
 from pypika_tortoise import JoinType, Order, Table
 from pypika_tortoise.analytics import Count
+from pypika_tortoise.dialects import PostgreSQLQueryBuilder
 from pypika_tortoise.functions import Cast
 from pypika_tortoise.functions import Count as DistinctCount
 from pypika_tortoise.queries import QueryBuilder, _SetOperation
@@ -43,6 +44,7 @@ from tortoise.utils import chunk
 # Empty placeholder - Should never be edited.
 
 QUERY: QueryBuilder = QueryBuilder()
+POSTGRES_QUERY: PostgreSQLQueryBuilder = PostgreSQLQueryBuilder()
 
 if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.models import Model
@@ -85,6 +87,7 @@ class QuerySetSingle(Protocol[T_co]):
 class _ChooseDBMixin(Generic[MODEL]):
     _db: BaseDBAsyncClient | None
     model: type[MODEL]
+    query: QueryBuilder | PostgreSQLQueryBuilder
 
     def _choose_db(self, for_write: bool = False) -> BaseDBAsyncClient:
         """
@@ -97,9 +100,23 @@ class _ChooseDBMixin(Generic[MODEL]):
         db = router.db_for_write(self.model) if for_write else router.db_for_read(self.model)
         return db or self.model._meta.db
 
+    def _apply_db(self, db: BaseDBAsyncClient | None) -> None:
+        """
+        Set the database connection for this query and update the query builder dialect.
+
+        Assigns ``db`` to ``_db`` and, when the connection targets PostgreSQL,
+        replaces the default ``query`` placeholder with ``POSTGRES_QUERY`` so
+        that subsequent query-building calls produce PostgreSQL-specific SQL.
+
+        :param db: The database connection to use for this query.
+        """
+        self._db = db
+        if db is not None and hasattr(self, "query") and db.capabilities.dialect == "postgres":
+            self.query = POSTGRES_QUERY
+
     def _choose_db_if_not_chosen(self, for_write: bool = False) -> None:
         if self._db is None:
-            self._db = self._choose_db(for_write)
+            self._apply_db(self._choose_db(for_write))
 
 
 class AwaitableQuery(_ChooseDBMixin[MODEL], Generic[MODEL]):
@@ -117,7 +134,7 @@ class AwaitableQuery(_ChooseDBMixin[MODEL], Generic[MODEL]):
     def __init__(self, model: type[MODEL]) -> None:
         self._joined_tables: list[Table] = []
         self.model: type[MODEL] = model
-        self.query: QueryBuilder = QUERY
+        self.query: QueryBuilder | PostgreSQLQueryBuilder = QUERY
         self._db: BaseDBAsyncClient = None  # type: ignore
         self._capabilities: Capabilities | None = None
         self._annotations: dict[str, Expression | Term] = {}
@@ -295,6 +312,64 @@ class AwaitableQuery(_ChooseDBMixin[MODEL], Generic[MODEL]):
 
                 self.query = self.query.orderby(field, order=ordering[1])
 
+    def resolve_distinct(
+        self,
+        distinct: bool,
+        distinct_on: list[str],
+        orderings: Iterable[tuple[str, str | Order]],
+        annotations: dict[str, Term | Expression],
+    ) -> None:
+        self.query._distinct = distinct
+        if isinstance(self.query, PostgreSQLQueryBuilder):
+            self.query._distinct_on = []
+        if not distinct:
+            return
+        if not orderings and self.model._meta.ordering and not annotations:
+            orderings = self.model._meta.ordering
+        if distinct_on:
+            if not isinstance(self.query, PostgreSQLQueryBuilder):
+                raise OperationalError("DISTINCT ON is only supported by PostgreSQL")
+            ordering_fields = [ordering[0] for ordering in orderings]
+            len_ordering_fields = len(ordering_fields)
+            for i, field in enumerate(distinct_on):
+                if ordering_fields and (i >= len_ordering_fields or ordering_fields[i] != field):
+                    raise OperationalError(
+                        f"DISTINCT ON fields must match the leading ORDER BY fields. "
+                        f"Expected ORDER BY to start with {distinct_on!r}."
+                    )
+            distinct_on_by_source_field = []
+            for field_name in distinct_on:
+                field_object = self.model._meta.fields_map.get(field_name)
+                part_after = field_name
+                related_table = self.model._meta.basetable
+                related_model: type[Model] = self.model
+                while part_after:
+                    related_field_name, __, part_after = part_after.partition("__")
+                    if related_field_name in related_model._meta.fetch_fields:
+                        related_field = cast(
+                            RelationalField, self.model._meta.fields_map[related_field_name]
+                        )
+                        related_table = self._join_table_by_field(
+                            related_table, related_field_name, related_field
+                        )
+                        related_model = related_field.model
+                    else:
+                        field_object = related_model._meta.fields_map.get(related_field_name)
+
+                        if not field_object:
+                            raise FieldError(
+                                f"Unknown field {related_field_name} for model {related_model.__name__}"
+                            )
+                        related_table_field = related_table[
+                            field_object.source_field or related_field_name
+                        ]
+                        if func := field_object.get_for_dialect(
+                            related_model._meta.db.capabilities.dialect, "function_cast"
+                        ):
+                            related_table_field = func(field_object, related_table_field)
+                        distinct_on_by_source_field.append(related_table_field)
+            self.query.distinct_on(*distinct_on_by_source_field)
+
     def _resolve_annotate(self, fields_for_select: Collection[str] | None = None) -> bool:
         if not self._annotations:
             return False
@@ -383,6 +458,7 @@ class QuerySet(AwaitableQuery[MODEL]):
         self._filter_kwargs: dict[str, Any] = {}
         self._orderings: list[tuple[str, Any]] = []
         self._distinct: bool = False
+        self._distinct_on: list[str] = []
         self._having: dict[str, Any] = {}
         self._fields_for_select: tuple[str, ...] = ()
         self._group_bys: tuple[str, ...] = ()
@@ -408,7 +484,7 @@ class QuerySet(AwaitableQuery[MODEL]):
         queryset._prefetch_queries = copy(self._prefetch_queries)
         queryset._single = self._single
         queryset._raise_does_not_exist = self._raise_does_not_exist
-        queryset._db = self._db
+        queryset._apply_db(self._db)
         queryset._limit = self._limit
         queryset._offset = self._offset
         queryset._fields_for_select = self._fields_for_select
@@ -417,6 +493,7 @@ class QuerySet(AwaitableQuery[MODEL]):
         queryset._joined_tables = copy(self._joined_tables)
         queryset._q_objects = copy(self._q_objects)
         queryset._distinct = self._distinct
+        queryset._distinct_on = copy(self._distinct_on)
         queryset._annotations = copy(self._annotations)
         queryset._having = copy(self._having)
         queryset._custom_filters = copy(self._custom_filters)
@@ -601,15 +678,38 @@ class QuerySet(AwaitableQuery[MODEL]):
             queryset = queryset.limit(key.stop - start)
         return queryset
 
-    def distinct(self) -> QuerySet[MODEL]:
+    def distinct(self, *args: str) -> QuerySet[MODEL]:
         """
-        Make QuerySet distinct.
+        Make QuerySet return distinct results.
 
-        Only makes sense in combination with a ``.values()`` or ``.values_list()`` as it
-        precedes all the fetched fields with a distinct.
+        Without arguments, adds a plain ``DISTINCT`` to the query, which works on all databases
+        and is most useful with ``.values()`` or ``.values_list()``.
+
+        With arguments (PostgreSQL only), generates ``DISTINCT ON (fields)`` which keeps one row
+        per unique combination of the given fields. ``ORDER BY`` is optional, but if specified
+        it must begin with the same fields in the same order as ``DISTINCT ON`` — otherwise an
+        :exc:`~tortoise.exceptions.OperationalError` is raised.
+
+        Can be combined with ``.only()``, ``.values()``, and ``.values_list()`` — fields not
+        present in ``DISTINCT ON`` are taken from the row selected by the ordering.
+
+        .. code-block:: python3
+
+            # Plain DISTINCT — all databases
+            await Tournament.all().distinct().values("name")
+
+            # DISTINCT ON without ORDER BY — PostgreSQL only
+            await Tournament.all().distinct("name")
+
+            # DISTINCT ON with ORDER BY — ORDER BY must start with DISTINCT ON fields
+            await Tournament.all().distinct("name").order_by("name", "-desc")
+
+        :param args: Field names for ``DISTINCT ON`` (PostgreSQL only). Omit for plain
+            ``DISTINCT``.
         """
         queryset = self._clone()
         queryset._distinct = True
+        queryset._distinct_on = list(args)
         return queryset
 
     def union(self, *other_qs: QuerySet[MODEL], all: bool = False) -> UnionQuery[MODEL]:
@@ -719,6 +819,7 @@ class QuerySet(AwaitableQuery[MODEL]):
             group_bys=self._group_bys,
             force_indexes=self._force_indexes,
             use_indexes=self._use_indexes,
+            distinct_on=self._distinct_on,
         )
 
     def values(self, *args: str, **kwargs: str) -> ValuesQuery[Literal[False]]:
@@ -774,6 +875,7 @@ class QuerySet(AwaitableQuery[MODEL]):
             group_bys=self._group_bys,
             force_indexes=self._force_indexes,
             use_indexes=self._use_indexes,
+            distinct_on=self._distinct_on,
         )
 
     def delete(self) -> DeleteQuery:
@@ -1135,7 +1237,7 @@ class QuerySet(AwaitableQuery[MODEL]):
         Useful for transactions workaround.
         """
         queryset = self._clone()
-        queryset._db = _db if _db else queryset._db
+        queryset._apply_db(_db if _db else queryset._db)
         return queryset
 
     def _join_select_related(self, lookup_expression: str) -> tuple[type[Model], Table]:
@@ -1284,12 +1386,16 @@ class QuerySet(AwaitableQuery[MODEL]):
             self._fields_for_select,
         )
         self.resolve_filters()
+        self.resolve_distinct(
+            self._distinct,
+            self._distinct_on,
+            self._orderings,
+            self._annotations,
+        )
         if self._limit is not None:
             self.query._limit = self.query._wrapper_cls(self._limit)
         if self._offset is not None:
             self.query._offset = self.query._wrapper_cls(self._offset)
-        if self._distinct:
-            self.query._distinct = True
         if self._select_for_update:
             self.query = self.query.for_update(
                 self._select_for_update_nowait,
@@ -1308,8 +1414,7 @@ class QuerySet(AwaitableQuery[MODEL]):
             self.query = self.query.use_index(*self._use_indexes)
 
     def __await__(self) -> Generator[Any, None, list[MODEL]]:
-        if self._db is None:
-            self._db = self._choose_db(self._select_for_update)  # type: ignore
+        self._choose_db_if_not_chosen(self._select_for_update)
         self._make_query()
         return self._execute().__await__()
 
@@ -1363,7 +1468,7 @@ class UpdateQuery(AwaitableQuery):
         self._q_objects = q_objects
         self._annotations = annotations
         self._custom_filters = custom_filters
-        self._db = db
+        self._apply_db(db)
         self._limit = limit
         self._orderings = orderings
 
@@ -1454,7 +1559,7 @@ class DeleteQuery(AwaitableQuery):
         self._q_objects = q_objects
         self._annotations = annotations
         self._custom_filters = custom_filters
-        self._db = db
+        self._apply_db(db)
         self._limit = limit
         self._orderings = orderings
 
@@ -1504,7 +1609,7 @@ class ExistsQuery(AwaitableQuery):
     ) -> None:
         super().__init__(model)
         self._q_objects = q_objects
-        self._db = db
+        self._apply_db(db)
         self._annotations = annotations
         self._custom_filters = custom_filters
         self._force_indexes = force_indexes
@@ -1579,7 +1684,7 @@ class CountQuery(AwaitableQuery):
         self._custom_filters = custom_filters
         self._limit = limit
         self._offset = offset or 0
-        self._db = db
+        self._apply_db(db)
         self._force_indexes = force_indexes
         self._use_indexes = use_indexes
         self._distinct = distinct
@@ -1648,8 +1753,7 @@ class FieldSelectQuery(AwaitableQuery):
 
         if field in self.model._meta.fetch_fields and not forwarded_fields:
             raise ValueError(
-                f'Selecting relation "{field}" is not possible, select concrete '
-                "field on related model"
+                f'Selecting relation "{field}" is not possible, select concrete field on related model'
             )
 
         field_object = cast(RelationalField, model._meta.fields_map.get(field))
@@ -1680,8 +1784,7 @@ class FieldSelectQuery(AwaitableQuery):
 
         if field in self.model._meta.fetch_fields:
             raise ValueError(
-                f'Selecting relation "{field}" is not possible, select '
-                "concrete field on related model"
+                f'Selecting relation "{field}" is not possible, select concrete field on related model'
             )
 
         field_, __, forwarded_fields = field.partition("__")
@@ -1757,6 +1860,7 @@ class ValuesListQuery(FieldSelectQuery, Generic[SINGLE]):
         "_force_indexes",
         "_use_indexes",
         "_fields_to_select_sql",
+        "_distinct_on",
     )
 
     def __init__(
@@ -1777,6 +1881,7 @@ class ValuesListQuery(FieldSelectQuery, Generic[SINGLE]):
         group_bys: tuple[str, ...],
         force_indexes: set[str],
         use_indexes: set[str],
+        distinct_on: list[str],
     ) -> None:
         super().__init__(model, annotations)
         if flat and (len(fields_for_select_list) != 1):
@@ -1794,10 +1899,11 @@ class ValuesListQuery(FieldSelectQuery, Generic[SINGLE]):
         self._raise_does_not_exist = raise_does_not_exist
         self._fields_for_select_list = fields_for_select_list
         self._flat = flat
-        self._db = db
+        self._apply_db(db)
         self._group_bys = group_bys
         self._force_indexes = force_indexes
         self._use_indexes = use_indexes
+        self._distinct_on = distinct_on
         self._fields_to_select_sql = {
             *self._fields_for_select_list,
             *(key for key, value in self.fields.items() if value in self._fields_for_select_list),
@@ -1818,12 +1924,16 @@ class ValuesListQuery(FieldSelectQuery, Generic[SINGLE]):
             fields_for_select=self._fields_for_select_list,
         )
         self.resolve_filters(self._fields_to_select_sql)
+        self.resolve_distinct(
+            self._distinct,
+            self._distinct_on,
+            self._orderings,
+            self._annotations,
+        )
         if self._limit:
             self.query._limit = self.query._wrapper_cls(self._limit)
         if self._offset:
             self.query._offset = self.query._wrapper_cls(self._offset)
-        if self._distinct:
-            self.query._distinct = True
         if self._group_bys:
             self.query._groupbys = self._resolve_group_bys(*self._group_bys)
 
@@ -1890,6 +2000,7 @@ class ValuesQuery(FieldSelectQuery, Generic[SINGLE]):
         "_group_bys",
         "_force_indexes",
         "_use_indexes",
+        "_distinct_on",
     )
 
     def __init__(
@@ -1909,6 +2020,7 @@ class ValuesQuery(FieldSelectQuery, Generic[SINGLE]):
         group_bys: tuple[str, ...],
         force_indexes: set[str],
         use_indexes: set[str],
+        distinct_on: list[str],
     ) -> None:
         super().__init__(model, annotations)
         self._fields_for_select = fields_for_select
@@ -1920,10 +2032,11 @@ class ValuesQuery(FieldSelectQuery, Generic[SINGLE]):
         self._q_objects = q_objects
         self._single = single
         self._raise_does_not_exist = raise_does_not_exist
-        self._db = db
+        self._apply_db(db)
         self._group_bys = group_bys
         self._force_indexes = force_indexes
         self._use_indexes = use_indexes
+        self._distinct_on = distinct_on
 
     def _make_query(self) -> None:
         self._joined_tables = []
@@ -1940,6 +2053,12 @@ class ValuesQuery(FieldSelectQuery, Generic[SINGLE]):
             fields_for_select=self._fields_for_select.keys(),
         )
         self.resolve_filters()
+        self.resolve_distinct(
+            self._distinct,
+            self._distinct_on,
+            self._orderings,
+            self._annotations,
+        )
 
         # remove annotations that are not in fields_for_select
         self.query._selects = [
@@ -1950,8 +2069,6 @@ class ValuesQuery(FieldSelectQuery, Generic[SINGLE]):
             self.query._limit = self.query._wrapper_cls(self._limit)
         if self._offset:
             self.query._offset = self.query._wrapper_cls(self._offset)
-        if self._distinct:
-            self.query._distinct = True
         if self._group_bys:
             self.query._groupbys = self._resolve_group_bys(*self._group_bys)
 
@@ -2016,7 +2133,7 @@ class RawSQLQuery(AwaitableQuery):
     def __init__(self, model: type[MODEL], db: BaseDBAsyncClient, sql: str) -> None:
         super().__init__(model)
         self._sql = sql
-        self._db = db
+        self._apply_db(db)
 
     async def _execute(self) -> Any:
         instance_list = await self._db.executor_class(
@@ -2147,7 +2264,7 @@ class BulkCreateQuery(AwaitableQuery, Generic[MODEL]):
         self._objects = objects
         self._ignore_conflicts = ignore_conflicts
         self._batch_size = batch_size
-        self._db = db
+        self._apply_db(db)
         self._update_fields = update_fields
         self._on_conflict = on_conflict
 
@@ -2351,7 +2468,7 @@ class UnionCountQuery(AwaitableQuery):
     ) -> None:
         super().__init__(model)
         self._union_query = union_query
-        self._db = db
+        self._apply_db(db)
 
     def _make_query(self) -> None:
         self._union_query._make_query()
@@ -2397,11 +2514,11 @@ class UnionQuery(_ChooseDBMixin[MODEL], Generic[MODEL]):
         all: bool = False,
     ):
         self.model = model
-        self.query = QUERY
+        self.query: QueryBuilder | PostgreSQLQueryBuilder = QUERY
         self._models: set[type[Model]] = {model, *(qs.model for qs in querysets)}
         self._union_query: QueryBuilder | _SetOperation | None = None
         self._selects: list[str] = []
-        self._db = db
+        self._apply_db(db)
         self._qs = querysets
         self._all = all
         self._orderings: list[tuple[str, Order]] | None = None
@@ -2482,7 +2599,7 @@ class UnionQuery(_ChooseDBMixin[MODEL], Generic[MODEL]):
         union._models = self._models
         union._union_query = None
         union._selects = self._selects
-        union._db = self._db
+        union._apply_db(self._db)
         union._qs = self._qs
         union._all = self._all
         union._orderings = self._orderings
