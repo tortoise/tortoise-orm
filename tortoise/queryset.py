@@ -61,6 +61,8 @@ class QuerySetSingle(Protocol[T_co]):
     # pylint: disable=W0104
     def __await__(self) -> Generator[Any, None, T_co]: ...  # pragma: nocoverage
 
+    def sql(self, params_inline=False) -> str: ...  # pragma: nocoverage
+
     def prefetch_related(
         self, *args: str | Prefetch
     ) -> QuerySetSingle[T_co]: ...  # pragma: nocoverage

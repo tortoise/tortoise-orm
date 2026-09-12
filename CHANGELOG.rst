@@ -8,17 +8,23 @@ Changelog
 1.1
 ===
 
-1.1.9
+1.1.9 *Unreleased*
 -----
 
 Added
 ^^^^^
-- ``Q.__bool__()`` so ``Q`` objects with no filters/children (including nested empty ``Q`` children) are falsy.
+- ``Q.__bool__()`` so ``Q`` objects with no filters/children (including nested empty ``Q`` children) are falsy. (#2227)
+- PostgreSQL ``password`` credential now accepts a sync or async callable, resolved once per new connection, to support short-lived credentials such as AWS RDS/Aurora IAM tokens and Azure Entra ID tokens. (#2261)
 
 Fixed
 ^^^^^
 - ``QuerySet.distinct().count()`` no longer counts rows duplicated by a join (e.g. filtering on a m2m relation); it now counts distinct primary keys and matches the number of rows the query returns. (#2255)
 - ``DecimalField`` no longer strips the scale it just applied: ``to_python_value()`` called ``.normalize()`` immediately after ``.quantize()``, so a ``DecimalField(max_digits=12, decimal_places=2)`` holding ``100.00`` came back as ``Decimal('1E+2')`` and rendered as ``1E+2`` in strings, f-strings and JSON. (#2271)
+- BlackSheep: ``register_tortoise`` now enables the global connection fallback, so database access works when BlackSheep runs handlers in tasks other than the one that initialized the ORM. (#2248)
+- fix(queryset): support DELETE/UPDATE with filters on related fields. (#2269)
+- Fix naive DatetimeField timezone drift. (#2277)
+- A model with its own ``Meta`` now inherits ``Meta.ordering`` from its abstract base model when it does not define its own. (#2236)
+- The return type hint for ``IntEnumField``/``CharEnumField`` is now ``tortoise.fields.Field[EnumType]`` instead of ``EnumType``. (#2243)
 
 1.1.8
 -----
