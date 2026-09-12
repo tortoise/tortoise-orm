@@ -82,7 +82,7 @@ def _model_options_for_compare(options: dict[str, object]) -> dict[str, object]:
     return {
         key: value
         for key, value in options.items()
-        if key not in ("table", "app", "indexes", "unique_together", "constraints")
+        if key not in AlterModelOptions.UNMANAGED_OPTION_KEYS
     }
 
 
