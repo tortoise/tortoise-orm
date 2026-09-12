@@ -9,8 +9,9 @@ from typing import TYPE_CHECKING, Any, Generic, Literal, Protocol, TypeVar, cast
 from pypika_tortoise import JoinType, Order, Table
 from pypika_tortoise.analytics import Count
 from pypika_tortoise.functions import Cast
+from pypika_tortoise.functions import Count as DistinctCount
 from pypika_tortoise.queries import QueryBuilder, _SetOperation
-from pypika_tortoise.terms import Case, Field, Star, Term, Tuple, ValueWrapper
+from pypika_tortoise.terms import Case, Field, Function, Star, Term, Tuple, ValueWrapper
 
 from tortoise.backends.base.client import BaseDBAsyncClient, Capabilities
 from tortoise.exceptions import (
@@ -93,10 +94,7 @@ class _ChooseDBMixin(Generic[MODEL]):
         """
         if self._db:
             return self._db
-        if for_write:
-            db = router.db_for_write(self.model)
-        else:
-            db = router.db_for_read(self.model)
+        db = router.db_for_write(self.model) if for_write else router.db_for_read(self.model)
         return db or self.model._meta.db
 
     def _choose_db_if_not_chosen(self, for_write: bool = False) -> None:
@@ -462,13 +460,13 @@ class QuerySet(AwaitableQuery[MODEL]):
 
         You can also pass Q objects to filters as args.
         """
-        return self._filter_or_exclude(negate=False, *args, **kwargs)
+        return self._filter_or_exclude(*args, negate=False, **kwargs)
 
     def exclude(self, *args: Q, **kwargs: Any) -> QuerySet[MODEL]:
         """
         Same as .filter(), but with appends all args with NOT
         """
-        return self._filter_or_exclude(negate=True, *args, **kwargs)
+        return self._filter_or_exclude(*args, negate=True, **kwargs)
 
     def _parse_orderings(
         self, orderings: tuple[str, ...], reverse=False
@@ -614,7 +612,7 @@ class QuerySet(AwaitableQuery[MODEL]):
         queryset._distinct = True
         return queryset
 
-    def union(self, *other_qs: QuerySet[Model], all: bool = False) -> UnionQuery[MODEL]:
+    def union(self, *other_qs: QuerySet[MODEL], all: bool = False) -> UnionQuery[MODEL]:
         """
         Return the union of QuerySets.
 
@@ -754,8 +752,8 @@ class QuerySet(AwaitableQuery[MODEL]):
         else:
             _fields = [
                 field
-                for field in self.model._meta.fields_map.keys()
-                if field in self.model._meta.fields_db_projection.keys()
+                for field in self.model._meta.fields_map
+                if field in self.model._meta.fields_db_projection
             ] + list(self._annotations.keys())
 
             fields_for_select = {field: field for field in _fields}
@@ -829,6 +827,7 @@ class QuerySet(AwaitableQuery[MODEL]):
             offset=self._offset,
             force_indexes=self._force_indexes,
             use_indexes=self._use_indexes,
+            distinct=self._distinct,
         )
 
     def exists(self) -> ExistsQuery:
@@ -959,13 +958,11 @@ class QuerySet(AwaitableQuery[MODEL]):
         :raises OperationalError: If a ``db_default`` field has mixed usage across
             instances (some provide a value, others rely on the database default).
         """
-        if ignore_conflicts and update_fields:
-            raise ValueError(
-                "ignore_conflicts and update_fields are mutually exclusive.",
-            )
-        if not ignore_conflicts:
-            if (update_fields and not on_conflict) or (on_conflict and not update_fields):
-                raise ValueError("update_fields and on_conflict need set in same time.")
+        if ignore_conflicts:
+            if update_fields:
+                raise ValueError("ignore_conflicts and update_fields are mutually exclusive.")
+        elif (update_fields and not on_conflict) or (on_conflict and not update_fields):
+            raise ValueError("update_fields and on_conflict need set in same time.")
         return BulkCreateQuery(
             db=self._db,
             model=self.model,
@@ -1098,7 +1095,7 @@ class QuerySet(AwaitableQuery[MODEL]):
                 raise FieldError(
                     f"Relation {first_level_field} for {self.model._meta.full_name} not found"
                 )
-            if first_level_field not in queryset._prefetch_map.keys():
+            if first_level_field not in queryset._prefetch_map:
                 queryset._prefetch_map[first_level_field] = set()
             if forwarded_prefetch:
                 queryset._prefetch_map[first_level_field].add(forwarded_prefetch)
@@ -1409,8 +1406,8 @@ class UpdateQuery(AwaitableQuery):
             else:
                 try:
                     db_field = self.model._meta.fields_db_projection[key]
-                except KeyError:
-                    raise FieldError(f"Field {key} is virtual and can not be updated")
+                except KeyError as e:
+                    raise FieldError(f"Field {key} is virtual and can not be updated") from e
 
                 if isinstance(value, Expression):
                     value = value.resolve(
@@ -1560,6 +1557,7 @@ class CountQuery(AwaitableQuery):
         "_offset",
         "_force_indexes",
         "_use_indexes",
+        "_distinct",
     )
 
     def __init__(
@@ -1573,6 +1571,7 @@ class CountQuery(AwaitableQuery):
         offset: int | None,
         force_indexes: set[str],
         use_indexes: set[str],
+        distinct: bool = False,
     ) -> None:
         super().__init__(model)
         self._q_objects = q_objects
@@ -1583,13 +1582,22 @@ class CountQuery(AwaitableQuery):
         self._db = db
         self._force_indexes = force_indexes
         self._use_indexes = use_indexes
+        self._distinct = distinct
 
     def _make_query(self) -> None:
         self.query = copy(self.model._meta.basequery)
         self.resolve_filters()
-        count_term = Count(Star())
-        if self.query._groupbys:
-            count_term = count_term.over()
+        count_term: Function
+        if self._distinct and not self.query._groupbys:
+            # ``DISTINCT`` on the outer SELECT does not apply to ``COUNT(*)``,
+            # so rows duplicated by a join would still be counted. Count the
+            # distinct primary keys instead.
+            pk_field: Field = self.model._meta.basetable[self.model._meta.db_pk_column]
+            count_term = DistinctCount(pk_field).distinct()
+        else:
+            count_term = Count(Star())
+            if self.query._groupbys:
+                count_term = count_term.over()
 
         # remove annotations
         self.query._selects = []
@@ -2194,7 +2202,7 @@ class BulkCreateQuery(AwaitableQuery, Generic[MODEL]):
             if include_generated
             else self._executor.regular_columns
         )
-        return [c for fn, c in zip(field_names, columns) if fn not in omit_fields]
+        return [c for fn, c in zip(field_names, columns, strict=False) if fn not in omit_fields]
 
     def _apply_on_conflict(
         self,
@@ -2405,7 +2413,7 @@ class UnionQuery(_ChooseDBMixin[MODEL], Generic[MODEL]):
         return [
             select.name
             for select in qs.query._selects
-            if getattr(select, "alias") not in [cls.TORTOISE_APP_FIELD, cls.TORTOISE_MODEL_FIELD]
+            if select.alias not in [cls.TORTOISE_APP_FIELD, cls.TORTOISE_MODEL_FIELD]
         ]
 
     def _make_query(self) -> None:
