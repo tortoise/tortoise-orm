@@ -924,7 +924,7 @@ def IntEnumField(
     enum_type: type[IntEnumType],
     description: str | None = None,
     **kwargs: Any,
-) -> IntEnumType:
+) -> Field[IntEnumType]:
     """
     Enum Field
 
@@ -942,7 +942,7 @@ def IntEnumField(
         of "name: value" pairs.
 
     """
-    return IntEnumFieldInstance(enum_type, description, **kwargs)  # type: ignore
+    return IntEnumFieldInstance(enum_type, description, **kwargs)
 
 
 class CharEnumFieldInstance(CharField):
@@ -987,7 +987,7 @@ def CharEnumField(
     description: str | None = None,
     max_length: int = 0,
     **kwargs: Any,
-) -> CharEnumType:
+) -> Field[CharEnumType]:
     """
     Char Enum Field
 
@@ -1010,4 +1010,4 @@ def CharEnumField(
 
     """
 
-    return CharEnumFieldInstance(enum_type, description, max_length, **kwargs)  # type: ignore
+    return CharEnumFieldInstance(enum_type, description, max_length, **kwargs)

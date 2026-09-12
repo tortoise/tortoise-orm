@@ -23,6 +23,7 @@ Fixed
 - fix(queryset): support DELETE/UPDATE with filters on related fields. (#2269)
 - Fix naive DatetimeField timezone drift. (#2277)
 - A model with its own ``Meta`` now inherits ``Meta.ordering`` from its abstract base model when it does not define its own. (#2236)
+- The return type hint for ``IntEnumField``/``CharEnumField`` is now ``tortoise.fields.Field[EnumType]`` instead of ``EnumType``. (#2243)
 
 1.1.8
 -----
