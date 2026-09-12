@@ -410,6 +410,25 @@ CREATE UNIQUE INDEX "uidx_teamevents_event_i_664dbc" ON "teamevents" ("event_id"
 
 
 @pytest.mark.asyncio
+async def test_schema_db_collation():
+    await _reset_tortoise()
+    try:
+        await _init_for_sqlite("tests.schema.models_collation")
+        sql = get_schema_sql(connections.get("default"), safe=False)
+        assert (
+            sql.strip()
+            == """CREATE TABLE "account" (
+    "id" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+    "name" VARCHAR(50) COLLATE NOCASE NOT NULL,
+    "bio" TEXT COLLATE NOCASE NOT NULL,
+    "plain" VARCHAR(20) NOT NULL
+);"""
+        )
+    finally:
+        await _teardown_tortoise()
+
+
+@pytest.mark.asyncio
 async def test_schema():
     await _reset_tortoise()
     try:
