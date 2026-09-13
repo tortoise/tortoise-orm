@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import cast
 
+from tortoise.fields.base import DB_DEFAULT_NOT_SET
 from tortoise.fields.relational import (
     BackwardFKRelation,
     BackwardOneToOneRelation,
@@ -125,6 +126,14 @@ class SqliteSchemaEditor(SqliteQuotingMixin, BaseSchemaEditor):
             )
             unique_field = field.unique and not field.pk
 
+        if field.has_db_default():
+            if hasattr(field.db_default, "get_sql"):
+                field_definition += f" DEFAULT {field.db_default.get_sql(dialect=self.DIALECT)}"
+            else:
+                db_val = field.to_db_value(field.db_default, model)
+                escaped = self._escape_default_value(db_val)
+                field_definition += f" DEFAULT {escaped}"
+
         await self._run_sql(
             self.ADD_FIELD_TEMPLATE.format(table=qualified_table, definition=field_definition)
         )
@@ -133,29 +142,68 @@ class SqliteSchemaEditor(SqliteQuotingMixin, BaseSchemaEditor):
             await self.add_constraint(model, UniqueConstraint(fields=(db_field,)))
 
     async def add_constraint(self, model, constraint) -> None:
-        constraint_name = self._constraint_name_for_model(model, constraint)
+        from tortoise.migrations.constraints import CheckConstraint
+
+        if isinstance(constraint, CheckConstraint):
+            await self._remake_table(model)
+            return
+        if hasattr(constraint, "condition") and constraint.condition:
+            raise NotImplementedError(
+                f"Partial unique indexes (condition) are not supported on {self.DIALECT}. "
+                "Use PostgreSQL for conditional unique constraints."
+            )
+        resolved_fields = self._resolve_fields_to_columns(model, constraint.fields)
+        resolved_constraint = UniqueConstraint(fields=tuple(resolved_fields), name=constraint.name)
+        constraint_name = self._constraint_name_for_model(model, resolved_constraint)
         index_sql = self.UNIQUE_INDEX_CREATE_TEMPLATE.format(
             index_name=constraint_name,
             table_name=self._qualify_table_name(model._meta.db_table, model._meta.schema),
-            fields=", ".join([self.quote(f) for f in constraint.fields]),
+            fields=", ".join([self.quote(f) for f in resolved_fields]),
             extra="",
         )
         await self._run_sql(index_sql)
 
+    async def _get_unique_constraint_names_from_db(
+        self, table_name: str, column_names: list[str], schema: str | None = None
+    ) -> list[str]:
+        """Use PRAGMA index_list + PRAGMA index_info to find unique index names."""
+        _, indexes = await self.client.execute_query(f'PRAGMA index_list("{table_name}")')
+        result: list[str] = []
+        for idx in indexes:
+            if not idx.get("unique"):
+                continue
+            idx_name = idx.get("name", "")
+            _, columns = await self.client.execute_query(f'PRAGMA index_info("{idx_name}")')
+            col_names = [col.get("name") for col in columns]
+            if col_names == column_names:
+                result.append(idx_name)
+        return result
+
     async def remove_constraint(self, model, constraint) -> None:
-        constraint_name = self._constraint_name_for_model(model, constraint)
+        from tortoise.migrations.constraints import CheckConstraint
+
+        if isinstance(constraint, CheckConstraint):
+            await self._remake_table(model)
+            return
+        resolved_fields = self._resolve_fields_to_columns(model, constraint.fields)
+        resolved_constraint = UniqueConstraint(fields=tuple(resolved_fields), name=constraint.name)
+        constraint_name = await self._resolve_constraint_name(model, resolved_constraint)
         await self.remove_index(
             model,
-            Index(fields=constraint.fields, name=constraint_name),
+            Index(fields=tuple(resolved_fields), name=constraint_name),
         )
 
     async def rename_constraint(self, model, old_constraint, new_constraint) -> None:
-        old_name = self._constraint_name_for_model(model, old_constraint)
-        new_name = self._constraint_name_for_model(model, new_constraint)
+        old_resolved = self._resolve_fields_to_columns(model, old_constraint.fields)
+        new_resolved = self._resolve_fields_to_columns(model, new_constraint.fields)
+        old_c = UniqueConstraint(fields=tuple(old_resolved), name=old_constraint.name)
+        new_c = UniqueConstraint(fields=tuple(new_resolved), name=new_constraint.name)
+        old_name = self._constraint_name_for_model(model, old_c)
+        new_name = self._constraint_name_for_model(model, new_c)
         await self.rename_index(
             model,
-            Index(fields=old_constraint.fields, name=old_name),
-            Index(fields=new_constraint.fields, name=new_name),
+            Index(fields=tuple(old_resolved), name=old_name),
+            Index(fields=tuple(new_resolved), name=new_name),
         )
 
     async def remove_field(self, model, field) -> None:
@@ -178,6 +226,8 @@ class SqliteSchemaEditor(SqliteQuotingMixin, BaseSchemaEditor):
             and old_field.null == new_field.null
             and old_field.unique == new_field.unique
             and old_field.index == new_field.index
+            and getattr(old_field, "db_default", DB_DEFAULT_NOT_SET)
+            == getattr(new_field, "db_default", DB_DEFAULT_NOT_SET)
             and not old_field.pk
             and not new_field.pk
         ):
@@ -300,6 +350,23 @@ class SqliteSchemaEditor(SqliteQuotingMixin, BaseSchemaEditor):
                     on_delete=fk_field.on_delete,
                     comment="",
                 )
+            elif actual_field.pk and actual_field.generated:
+                generated_sql = actual_field.get_for_dialect(self.DIALECT, "GENERATED_SQL")
+                if generated_sql:
+                    field_def = self.GENERATED_PK_TEMPLATE.format(
+                        field_name=db_field,
+                        generated_sql=generated_sql,
+                        comment="",
+                    )
+                else:
+                    field_def = self._get_field_sql(
+                        db_field=db_field,
+                        field_type=actual_field.get_for_dialect(self.DIALECT, "SQL_TYPE"),
+                        nullable=actual_field.null,
+                        unique=False,
+                        is_pk=True,
+                        comment="",
+                    )
             else:
                 field_def = self._get_field_sql(
                     db_field=db_field,
@@ -310,7 +377,26 @@ class SqliteSchemaEditor(SqliteQuotingMixin, BaseSchemaEditor):
                     comment="",
                 )
 
+            if actual_field.has_db_default():
+                if hasattr(actual_field.db_default, "get_sql"):
+                    field_def += f" DEFAULT {actual_field.db_default.get_sql(dialect=self.DIALECT)}"
+                else:
+                    db_val = actual_field.to_db_value(actual_field.db_default, model)
+                    escaped = self._escape_default_value(db_val)
+                    field_def += f" DEFAULT {escaped}"
+
             field_definitions.append(field_def)
+
+        # Include CHECK constraints from model._meta.constraints in the CREATE TABLE
+        from tortoise.migrations.constraints import CheckConstraint as _CheckConstraint
+
+        for constraint in getattr(model._meta, "constraints", None) or ():
+            if isinstance(constraint, _CheckConstraint):
+                field_definitions.append(
+                    self.CHECK_CONSTRAINT_CREATE_TEMPLATE.format(
+                        name=constraint.name, check=constraint.check
+                    )
+                )
 
         qualified_new = self._qualify_table_name(new_table_name, model._meta.schema)
         qualified_old = self._qualify_table_name(db_table, model._meta.schema)

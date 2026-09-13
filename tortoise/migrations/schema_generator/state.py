@@ -83,6 +83,8 @@ class ModelState(BaseEntityState):
             options["app"] = model._meta.app
         if model._meta.unique_together:
             options["unique_together"] = model._meta.unique_together
+        if model._meta.constraints:
+            options["constraints"] = model._meta.constraints
         if model._meta.indexes:
             options["indexes"] = model._meta.indexes
         if model._meta.pk_attr:
@@ -135,6 +137,8 @@ def get_related_models_recursive(model: type[Model]) -> set[tuple[str, str]]:
     rel_models = get_related_models(model)
 
     for rel_model in rel_models:
+        if rel_model._meta.app is None:
+            continue
         model_tuple = (_require_app_label(rel_model), rel_model.__name__)
         if model_tuple in seen:
             continue

@@ -29,12 +29,8 @@ class SqliteSchemaGenerator(SqliteQuotingMixin, BaseSchemaGenerator):
         table: str,
         column: str,
         default: Any,
-        auto_now_add: bool = False,
-        auto_now: bool = False,
     ) -> str:
-        default_str = " DEFAULT"
-        default_str += " CURRENT_TIMESTAMP" if (auto_now_add or auto_now) else f" {default}"
-        return default_str
+        return f" DEFAULT {default}"
 
     def _escape_default_value(self, default: Any):
         return encoders.get(type(default))(default)  # type: ignore

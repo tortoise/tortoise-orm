@@ -24,11 +24,17 @@ class FakeConnection:
         self.connection_name = "default"
         self._applied = applied or []
         self.executed_scripts: list[str] = []
+        self.inserts: list[tuple[str, list]] = []
+        self.queries: list[tuple[str, list | None]] = []
 
     async def execute_query(self, query: str, values: list | None = None):
-        _ = (query, values)
+        self.queries.append((query, values))
         rows = [{"app": key.app_label, "name": key.name} for key in self._applied]
         return 0, rows
+
+    async def execute_insert(self, query: str, values: list) -> int:
+        self.inserts.append((query, values))
+        return 1
 
     async def execute_script(self, query: str) -> None:
         self.executed_scripts.append(query)
@@ -395,8 +401,8 @@ async def test_recorder_reads_and_writes() -> None:
 
     await recorder.record_applied("app", "0002_second")
     await recorder.record_unapplied("app", "0001_initial")
-    assert any("INSERT INTO" in query for query in connection.executed_scripts)
-    assert any("DELETE FROM" in query for query in connection.executed_scripts)
+    assert any("INSERT INTO" in q for q, _ in connection.inserts)
+    assert any("DELETE FROM" in q for q, _ in connection.queries)
 
 
 @pytest.mark.asyncio

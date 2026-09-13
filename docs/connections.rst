@@ -162,6 +162,54 @@ providing isolation between different contexts (useful for testing).
     conn3 = Tortoise.get_connection("default")
     assert conn is not conn3
 
+Event Loop Handling
+===================
+
+Some database drivers (asyncpg, aiomysql) bind their connection pools to the event loop
+that created them. If the loop changes -- for example, when using function-scoped pytest
+fixtures or Starlette's ``TestClient`` -- the old pool becomes unusable.
+
+Tortoise handles this automatically: when ``ConnectionHandler.get()`` detects that the
+current event loop differs from the one the connection was created on, it transparently
+creates a fresh connection.
+
+**In production**, a loop change usually indicates a bug (e.g., mixing sync/async code).
+A ``TortoiseLoopSwitchWarning`` is emitted so you can investigate:
+
+.. code-block:: python
+
+    import warnings
+    from tortoise.warnings import TortoiseLoopSwitchWarning
+
+    # Suppress if you know what you're doing
+    warnings.filterwarnings("ignore", category=TortoiseLoopSwitchWarning)
+
+**In tests**, ``tortoise_test_context()`` suppresses this warning automatically.
+No special configuration needed.
+
+.. list-table:: Backend Loop Binding
+   :header-rows: 1
+   :widths: 30 20 50
+
+   * - Backend
+     - Bound?
+     - Notes
+   * - asyncpg
+     - Yes
+     - Pool stores loop at creation time
+   * - aiomysql/asyncmy
+     - Yes
+     - Pool stores loop at creation time
+   * - psycopg
+     - No
+     - Uses running loop per-operation
+   * - aiosqlite
+     - Partial
+     - Grabs loop per-operation, not at creation
+   * - asyncodbc (MSSQL/Oracle)
+     - No
+     - Per-operation loop resolution
+
 API Reference
 =============
 

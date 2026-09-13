@@ -1,7 +1,6 @@
 # mypy: no-disallow-untyped-decorators
 # pylint: disable=E0611,E0401
 import multiprocessing
-import os
 from collections.abc import AsyncGenerator
 from concurrent.futures import ProcessPoolExecutor
 from contextlib import asynccontextmanager
@@ -13,11 +12,10 @@ import pytest
 from asgi_lifespan import LifespanManager
 from httpx import ASGITransport, AsyncClient
 
-from tortoise.contrib.test import MEMORY_SQLITE
+from tortoise.contrib.test import truncate_all_models
 from tortoise.fields.data import JSON_LOADS
 from tortoise.timezone import UTC, localtime
 
-os.environ["DB_URL"] = MEMORY_SQLITE
 try:
     from config import register_orm
     from main import app
@@ -42,7 +40,6 @@ def anyio_backend() -> str:
 
 @asynccontextmanager
 async def client_manager(app, base_url="http://test", **kw) -> ClientManagerType:
-    app.state.testing = True
     async with LifespanManager(app):
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url=base_url, **kw) as c:
@@ -52,6 +49,7 @@ async def client_manager(app, base_url="http://test", **kw) -> ClientManagerType
 @pytest.fixture(scope="module")
 async def client() -> ClientManagerType:
     async with client_manager(app) as c:
+        await truncate_all_models()
         yield c
 
 
@@ -62,6 +60,7 @@ async def client_east() -> ClientManagerType:
     async with client_manager(app_east) as c:
         ctx = app_east.state._tortoise_context
         with ctx:  # Enter context to make it current via contextvar
+            await truncate_all_models()
             yield c
 
 

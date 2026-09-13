@@ -192,7 +192,7 @@ class Apps:
             key_field = f"{field}_id"
             key_fk_object.reference = fk_object
             key_fk_object.source_field = fk_object.source_field or key_field
-            for attr in ("index", "default", "null", "generated", "description"):
+            for attr in ("index", "default", "null", "generated", "description", "db_default"):
                 setattr(key_fk_object, attr, getattr(fk_object, attr))
             if is_o2o:
                 key_fk_object.pk = fk_object.pk

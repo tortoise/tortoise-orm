@@ -326,6 +326,11 @@ class Q:
             and self.filters == other.filters
         )
 
+    def __bool__(self) -> bool:
+        if self.filters:
+            return True
+        return any(self.children)
+
     def negate(self) -> None:
         """
         Negates the current Q object. (mutation)
@@ -605,7 +610,7 @@ class Aggregate(Function):
 
     :param field: Field name
     :param default_values: Extra parameters to the function.
-    :param is_distinct: Flag for aggregate with distinction
+    :param distinct: Flag for aggregate with distinction
     """
 
     database_func: type[AggregateFunction] = DistinctOptionFunction

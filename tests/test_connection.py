@@ -1,9 +1,12 @@
+import asyncio
+import warnings
 from unittest.mock import AsyncMock, Mock, PropertyMock, call, patch
 
 import pytest
 
 from tortoise import BaseDBAsyncClient, ConfigurationError
 from tortoise.connection import ConnectionHandler
+from tortoise.warnings import TortoiseLoopSwitchWarning
 
 
 @pytest.fixture
@@ -206,9 +209,10 @@ def test_create_connection_db_info_not_str(
 
 
 def test_get_alias_present(conn_handler):
-    conn_handler._storage = {"default": "some_connection"}
+    mock_conn = Mock(_check_loop=Mock(return_value=True))
+    conn_handler._storage = {"default": mock_conn}
     ret_val = conn_handler.get("default")
-    assert ret_val == "some_connection"
+    assert ret_val is mock_conn
 
 
 @patch("tortoise.connection.ConnectionHandler._create_connection")
@@ -246,10 +250,12 @@ def test_reset(conn_handler):
 
 @patch("tortoise.connection.ConnectionHandler.db_config", new_callable=PropertyMock)
 def test_all(mocked_db_config, conn_handler):
-    conn_handler._storage = {"default": "some_conn", "other": "some_other_conn"}
+    mock_conn_1 = Mock(_check_loop=Mock(return_value=True))
+    mock_conn_2 = Mock(_check_loop=Mock(return_value=True))
+    conn_handler._storage = {"default": mock_conn_1, "other": mock_conn_2}
     mocked_db_config.return_value = {"default": {}, "other": {}}
     ret_val = conn_handler.all()
-    assert set(ret_val) == {"some_conn", "some_other_conn"}
+    assert set(ret_val) == {mock_conn_1, mock_conn_2}
 
 
 @pytest.mark.asyncio
@@ -282,3 +288,50 @@ async def test_close_all_without_discard(mocked_db_config, conn_handler):
     conn_1.close.assert_awaited_once()
     conn_2.close.assert_awaited_once()
     assert conn_handler._storage == {"default": conn_1, "other": conn_2}
+
+
+# --- Event loop validation tests ---
+
+
+@pytest.mark.asyncio
+async def test_check_loop_returns_true_when_not_bound():
+    client = Mock(spec=BaseDBAsyncClient)
+    client._bound_loop = None
+    client._check_loop = BaseDBAsyncClient._check_loop.__get__(client)
+    assert client._check_loop() is True
+
+
+@pytest.mark.asyncio
+async def test_check_loop_returns_true_on_same_loop():
+    client = Mock(spec=BaseDBAsyncClient)
+    client._bound_loop = asyncio.get_running_loop()
+    client._check_loop = BaseDBAsyncClient._check_loop.__get__(client)
+    assert client._check_loop() is True
+
+
+@pytest.mark.asyncio
+async def test_check_loop_returns_false_on_different_loop():
+    client = Mock(spec=BaseDBAsyncClient)
+    client._bound_loop = asyncio.new_event_loop()
+    client._check_loop = BaseDBAsyncClient._check_loop.__get__(client)
+    assert client._check_loop() is False
+
+
+@patch("tortoise.connection.ConnectionHandler._create_connection")
+def test_get_reconnects_on_loop_change(mocked_create_connection, conn_handler):
+    """When _check_loop() returns False, get() should warn and create a new connection."""
+    stale_conn = Mock(_check_loop=Mock(return_value=False))
+    fresh_conn = Mock(_check_loop=Mock(return_value=True))
+    mocked_create_connection.return_value = fresh_conn
+    conn_handler._storage = {"default": stale_conn}
+
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        ret_val = conn_handler.get("default")
+
+    assert ret_val is fresh_conn
+    assert conn_handler._storage["default"] is fresh_conn
+    mocked_create_connection.assert_called_once_with("default")
+    loop_warnings = [x for x in w if issubclass(x.category, TortoiseLoopSwitchWarning)]
+    assert len(loop_warnings) == 1
+    assert "different event loop" in str(loop_warnings[0].message)

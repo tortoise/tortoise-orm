@@ -7,5 +7,7 @@ from tortoise.exceptions import UnSupportedError
 
 
 class MSSQLExecutor(ODBCExecutor):
-    async def execute_explain(self, sql: str) -> Any:
+    async def execute_explain(
+        self, sql: str, output_fmt: str | None = None, **options: bool
+    ) -> Any:
         raise UnSupportedError("MSSQL does not support explain")

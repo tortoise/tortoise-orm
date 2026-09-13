@@ -92,7 +92,7 @@ class TypeTestModel(Model):
     char_enum_field_non_null = CharEnumField(enum_type=Color, max_length=10, null=False)
     char_enum_field_nullable = CharEnumField(enum_type=Color, max_length=10, null=True)
 
-    # inhereted fields
+    # inherited fields
     inhereted_int_field_non_null = InheretedFromIntField(null=False)
     inhereted_int_field_nullable = InheretedFromIntField(null=True)
 

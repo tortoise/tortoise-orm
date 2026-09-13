@@ -278,6 +278,61 @@ def test_delete_model_fail_on_refs(state_with_model: State):
         operation.state_forward("models", state_with_model)
 
 
+def test_delete_model_with_fk(state_with_model: State):
+    state = state_with_model
+    CreateModel(
+        name="TestModel2",
+        fields=[
+            ("id", fields.IntField(pk=True)),
+            ("reference", ForeignKeyFieldInstance("models.TestModel", related_name="children")),
+        ],
+    ).state_forward("models", state)
+
+    DeleteModel("TestModel2").state_forward("models", state)
+
+    assert ("models", "TestModel2") not in state.models
+    with pytest.raises(KeyError):
+        state.apps.get_model("models.TestModel2")
+    # Target model still intact
+    state.apps.get_model("models.TestModel")
+
+
+def test_delete_model_with_o2o(state_with_model: State):
+    state = state_with_model
+    CreateModel(
+        name="TestModel2",
+        fields=[
+            ("id", fields.IntField(pk=True)),
+            ("reference", OneToOneFieldInstance("models.TestModel", related_name="o2o_rel")),
+        ],
+    ).state_forward("models", state)
+
+    DeleteModel("TestModel2").state_forward("models", state)
+
+    assert ("models", "TestModel2") not in state.models
+    with pytest.raises(KeyError):
+        state.apps.get_model("models.TestModel2")
+    state.apps.get_model("models.TestModel")
+
+
+def test_delete_model_with_m2m(state_with_model: State):
+    state = state_with_model
+    CreateModel(
+        name="TestModel2",
+        fields=[
+            ("id", fields.IntField(pk=True)),
+            ("reference", ManyToManyFieldInstance("models.TestModel", related_name="m2m_rel")),
+        ],
+    ).state_forward("models", state)
+
+    DeleteModel("TestModel2").state_forward("models", state)
+
+    assert ("models", "TestModel2") not in state.models
+    with pytest.raises(KeyError):
+        state.apps.get_model("models.TestModel2")
+    state.apps.get_model("models.TestModel")
+
+
 def test_alter_options(state_with_model: State):
     operation = AlterModelOptions(name="TestModel", options={"ordering": ["-id"]})
     operation.state_forward("models", state_with_model)

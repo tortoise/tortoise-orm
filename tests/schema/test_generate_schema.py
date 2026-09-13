@@ -62,13 +62,13 @@ CREATE TABLE IF NOT EXISTS "teamaddress" (
 CREATE TABLE IF NOT EXISTS "tournament" (
     "tid" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
     "name" VARCHAR(100) NOT NULL /* Tournament name */,
-    "created" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP /* Created *\\/'`\\/* datetime */
+    "created" TIMESTAMP NOT NULL /* Created *\\/'`\\/* datetime */
 ) /* What Tournaments *\\/'`\\/* we have */;
 CREATE INDEX IF NOT EXISTS "idx_tournament_name_6fe200" ON "tournament" ("name");
 CREATE TABLE IF NOT EXISTS "event" (
     "id" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL /* Event ID */,
     "name" TEXT NOT NULL,
-    "modified" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "modified" TIMESTAMP NOT NULL,
     "prize" VARCHAR(40),
     "token" VARCHAR(100) NOT NULL UNIQUE /* Unique token */,
     "key" VARCHAR(100) NOT NULL,
@@ -380,13 +380,13 @@ CREATE INDEX "idx_team_manager_ef8f69" ON "team" ("manager_id", "name");
 CREATE TABLE "tournament" (
     "tid" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
     "name" VARCHAR(100) NOT NULL /* Tournament name */,
-    "created" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP /* Created *\/'`\/* datetime */
+    "created" TIMESTAMP NOT NULL /* Created *\/'`\/* datetime */
 ) /* What Tournaments *\/'`\/* we have */;
 CREATE INDEX "idx_tournament_name_6fe200" ON "tournament" ("name");
 CREATE TABLE "event" (
     "id" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL /* Event ID */,
     "name" TEXT NOT NULL,
-    "modified" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "modified" TIMESTAMP NOT NULL,
     "prize" VARCHAR(40),
     "token" VARCHAR(100) NOT NULL UNIQUE /* Unique token */,
     "key" VARCHAR(100) NOT NULL,
@@ -462,13 +462,13 @@ CREATE TABLE "teamaddress" (
 CREATE TABLE "tournament" (
     "tid" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
     "name" VARCHAR(100) NOT NULL /* Tournament name */,
-    "created" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP /* Created *\\/'`\\/* datetime */
+    "created" TIMESTAMP NOT NULL /* Created *\\/'`\\/* datetime */
 ) /* What Tournaments *\\/'`\\/* we have */;
 CREATE INDEX "idx_tournament_name_6fe200" ON "tournament" ("name");
 CREATE TABLE "event" (
     "id" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL /* Event ID */,
     "name" TEXT NOT NULL,
-    "modified" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "modified" TIMESTAMP NOT NULL,
     "prize" VARCHAR(40),
     "token" VARCHAR(100) NOT NULL UNIQUE /* Unique token */,
     "key" VARCHAR(100) NOT NULL,
@@ -533,13 +533,13 @@ CREATE INDEX "idx_team_manager_ef8f69" ON "team" ("manager_id", "name");
 CREATE TABLE "tournament" (
     "tid" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
     "name" VARCHAR(100) NOT NULL /* Tournament name */,
-    "created" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP /* Created *\/'`\/* datetime */
+    "created" TIMESTAMP NOT NULL /* Created *\/'`\/* datetime */
 ) /* What Tournaments *\/'`\/* we have */;
 CREATE INDEX "idx_tournament_name_6fe200" ON "tournament" ("name");
 CREATE TABLE "event" (
     "id" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL /* Event ID */,
     "name" TEXT NOT NULL,
-    "modified" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "modified" TIMESTAMP NOT NULL,
     "prize" VARCHAR(40),
     "token" VARCHAR(100) NOT NULL UNIQUE /* Unique token */,
     "key" VARCHAR(100) NOT NULL,
@@ -677,13 +677,13 @@ async def test_mysql_schema_no_db_constraint():
 CREATE TABLE `tournament` (
     `tid` SMALLINT NOT NULL PRIMARY KEY AUTO_INCREMENT,
     `name` VARCHAR(100) NOT NULL COMMENT 'Tournament name',
-    `created` DATETIME(6) NOT NULL COMMENT 'Created */\'`/* datetime' DEFAULT CURRENT_TIMESTAMP(6),
+    `created` DATETIME(6) NOT NULL COMMENT 'Created */\'`/* datetime',
     KEY `idx_tournament_name_6fe200` (`name`)
 ) CHARACTER SET utf8mb4 COMMENT='What Tournaments */\'`/* we have';
 CREATE TABLE `event` (
     `id` BIGINT NOT NULL PRIMARY KEY AUTO_INCREMENT COMMENT 'Event ID',
     `name` LONGTEXT NOT NULL,
-    `modified` DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
+    `modified` DATETIME(6) NOT NULL,
     `prize` DECIMAL(10,2),
     `token` VARCHAR(100) NOT NULL UNIQUE COMMENT 'Unique token',
     `key` VARCHAR(100) NOT NULL,
@@ -763,13 +763,13 @@ CREATE TABLE `teamaddress` (
 CREATE TABLE `tournament` (
     `tid` SMALLINT NOT NULL PRIMARY KEY AUTO_INCREMENT,
     `name` VARCHAR(100) NOT NULL COMMENT 'Tournament name',
-    `created` DATETIME(6) NOT NULL COMMENT 'Created */\\'`/* datetime' DEFAULT CURRENT_TIMESTAMP(6),
+    `created` DATETIME(6) NOT NULL COMMENT 'Created */\\'`/* datetime',
     KEY `idx_tournament_name_6fe200` (`name`)
 ) CHARACTER SET utf8mb4 COMMENT='What Tournaments */\\'`/* we have';
 CREATE TABLE `event` (
     `id` BIGINT NOT NULL PRIMARY KEY AUTO_INCREMENT COMMENT 'Event ID',
     `name` LONGTEXT NOT NULL,
-    `modified` DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
+    `modified` DATETIME(6) NOT NULL,
     `prize` DECIMAL(10,2),
     `token` VARCHAR(100) NOT NULL UNIQUE COMMENT 'Unique token',
     `key` VARCHAR(100) NOT NULL,
@@ -874,13 +874,13 @@ CREATE TABLE IF NOT EXISTS `teamaddress` (
 CREATE TABLE IF NOT EXISTS `tournament` (
     `tid` SMALLINT NOT NULL PRIMARY KEY AUTO_INCREMENT,
     `name` VARCHAR(100) NOT NULL COMMENT 'Tournament name',
-    `created` DATETIME(6) NOT NULL COMMENT 'Created */\\'`/* datetime' DEFAULT CURRENT_TIMESTAMP(6),
+    `created` DATETIME(6) NOT NULL COMMENT 'Created */\\'`/* datetime',
     KEY `idx_tournament_name_6fe200` (`name`)
 ) CHARACTER SET utf8mb4 COMMENT='What Tournaments */\\'`/* we have';
 CREATE TABLE IF NOT EXISTS `event` (
     `id` BIGINT NOT NULL PRIMARY KEY AUTO_INCREMENT COMMENT 'Event ID',
     `name` LONGTEXT NOT NULL,
-    `modified` DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
+    `modified` DATETIME(6) NOT NULL,
     `prize` DECIMAL(10,2),
     `token` VARCHAR(100) NOT NULL UNIQUE COMMENT 'Unique token',
     `key` VARCHAR(100) NOT NULL,
@@ -983,13 +983,13 @@ async def test_mysql_m2m_no_auto_create():
 CREATE TABLE `tournament` (
     `tid` SMALLINT NOT NULL PRIMARY KEY AUTO_INCREMENT,
     `name` VARCHAR(100) NOT NULL COMMENT 'Tournament name',
-    `created` DATETIME(6) NOT NULL COMMENT 'Created */\'`/* datetime' DEFAULT CURRENT_TIMESTAMP(6),
+    `created` DATETIME(6) NOT NULL COMMENT 'Created */\'`/* datetime',
     KEY `idx_tournament_name_6fe200` (`name`)
 ) CHARACTER SET utf8mb4 COMMENT='What Tournaments */\'`/* we have';
 CREATE TABLE `event` (
     `id` BIGINT NOT NULL PRIMARY KEY AUTO_INCREMENT COMMENT 'Event ID',
     `name` LONGTEXT NOT NULL,
-    `modified` DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
+    `modified` DATETIME(6) NOT NULL,
     `prize` DECIMAL(10,2),
     `token` VARCHAR(100) NOT NULL UNIQUE COMMENT 'Unique token',
     `key` VARCHAR(100) NOT NULL,
@@ -1099,7 +1099,7 @@ COMMENT ON TABLE "team" IS 'The TEAMS!';
 CREATE TABLE "tournament" (
     "tid" SMALLSERIAL NOT NULL PRIMARY KEY,
     "name" VARCHAR(100) NOT NULL,
-    "created" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+    "created" TIMESTAMPTZ NOT NULL
 );
 CREATE INDEX "idx_tournament_name_6fe200" ON "tournament" ("name");
 COMMENT ON COLUMN "tournament"."name" IS 'Tournament name';
@@ -1108,7 +1108,7 @@ COMMENT ON TABLE "tournament" IS 'What Tournaments */''`/* we have';
 CREATE TABLE "event" (
     "id" BIGSERIAL NOT NULL PRIMARY KEY,
     "name" TEXT NOT NULL,
-    "modified" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "modified" TIMESTAMPTZ NOT NULL,
     "prize" DECIMAL(10,2),
     "token" VARCHAR(100) NOT NULL UNIQUE,
     "key" VARCHAR(100) NOT NULL,
@@ -1195,7 +1195,7 @@ COMMENT ON TABLE "teamaddress" IS 'The Team''s address';
 CREATE TABLE "tournament" (
     "tid" SMALLSERIAL NOT NULL PRIMARY KEY,
     "name" VARCHAR(100) NOT NULL,
-    "created" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+    "created" TIMESTAMPTZ NOT NULL
 );
 CREATE INDEX "idx_tournament_name_6fe200" ON "tournament" ("name");
 COMMENT ON COLUMN "tournament"."name" IS 'Tournament name';
@@ -1204,7 +1204,7 @@ COMMENT ON TABLE "tournament" IS 'What Tournaments */''`/* we have';
 CREATE TABLE "event" (
     "id" BIGSERIAL NOT NULL PRIMARY KEY,
     "name" TEXT NOT NULL,
-    "modified" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "modified" TIMESTAMPTZ NOT NULL,
     "prize" DECIMAL(10,2),
     "token" VARCHAR(100) NOT NULL UNIQUE,
     "key" VARCHAR(100) NOT NULL,
@@ -1305,7 +1305,7 @@ COMMENT ON TABLE "teamaddress" IS 'The Team''s address';
 CREATE TABLE IF NOT EXISTS "tournament" (
     "tid" SMALLSERIAL NOT NULL PRIMARY KEY,
     "name" VARCHAR(100) NOT NULL,
-    "created" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+    "created" TIMESTAMPTZ NOT NULL
 );
 CREATE INDEX IF NOT EXISTS "idx_tournament_name_6fe200" ON "tournament" ("name");
 COMMENT ON COLUMN "tournament"."name" IS 'Tournament name';
@@ -1314,7 +1314,7 @@ COMMENT ON TABLE "tournament" IS 'What Tournaments */''`/* we have';
 CREATE TABLE IF NOT EXISTS "event" (
     "id" BIGSERIAL NOT NULL PRIMARY KEY,
     "name" TEXT NOT NULL,
-    "modified" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "modified" TIMESTAMPTZ NOT NULL,
     "prize" DECIMAL(10,2),
     "token" VARCHAR(100) NOT NULL UNIQUE,
     "key" VARCHAR(100) NOT NULL,
@@ -1442,7 +1442,7 @@ COMMENT ON TABLE "team" IS 'The TEAMS!';
 CREATE TABLE "tournament" (
     "tid" SMALLSERIAL NOT NULL PRIMARY KEY,
     "name" VARCHAR(100) NOT NULL,
-    "created" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+    "created" TIMESTAMPTZ NOT NULL
 );
 CREATE INDEX "idx_tournament_name_6fe200" ON "tournament" ("name");
 COMMENT ON COLUMN "tournament"."name" IS 'Tournament name';
@@ -1451,7 +1451,7 @@ COMMENT ON TABLE "tournament" IS 'What Tournaments */''`/* we have';
 CREATE TABLE "event" (
     "id" BIGSERIAL NOT NULL PRIMARY KEY,
     "name" TEXT NOT NULL,
-    "modified" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "modified" TIMESTAMPTZ NOT NULL,
     "prize" DECIMAL(10,2),
     "token" VARCHAR(100) NOT NULL UNIQUE,
     "key" VARCHAR(100) NOT NULL,
@@ -1493,10 +1493,10 @@ async def test_asyncpg_pgfields_unsafe():
             == """CREATE TABLE "postgres_fields" (
     "id" SERIAL NOT NULL PRIMARY KEY,
     "tsvector" TSVECTOR NOT NULL,
-    "text_array" TEXT[] NOT NULL DEFAULT '{"a","b","c"}',
-    "varchar_array" VARCHAR(32)[] NOT NULL DEFAULT '{"aa","bbb","cccc"}',
-    "int_array" INT[] DEFAULT '{1,2,3}',
-    "real_array" REAL[] NOT NULL DEFAULT '{1.1,2.2,3.3}'
+    "text_array" TEXT[] NOT NULL,
+    "varchar_array" VARCHAR(32)[] NOT NULL,
+    "int_array" INT[],
+    "real_array" REAL[] NOT NULL
 );
 COMMENT ON COLUMN "postgres_fields"."real_array" IS 'this is array of real numbers';"""
         )
@@ -1515,10 +1515,10 @@ async def test_asyncpg_pgfields_safe():
             == """CREATE TABLE IF NOT EXISTS "postgres_fields" (
     "id" SERIAL NOT NULL PRIMARY KEY,
     "tsvector" TSVECTOR NOT NULL,
-    "text_array" TEXT[] NOT NULL DEFAULT '{"a","b","c"}',
-    "varchar_array" VARCHAR(32)[] NOT NULL DEFAULT '{"aa","bbb","cccc"}',
-    "int_array" INT[] DEFAULT '{1,2,3}',
-    "real_array" REAL[] NOT NULL DEFAULT '{1.1,2.2,3.3}'
+    "text_array" TEXT[] NOT NULL,
+    "varchar_array" VARCHAR(32)[] NOT NULL,
+    "int_array" INT[],
+    "real_array" REAL[] NOT NULL
 );
 COMMENT ON COLUMN "postgres_fields"."real_array" IS 'this is array of real numbers';"""
         )
@@ -1605,7 +1605,7 @@ COMMENT ON TABLE "team" IS 'The TEAMS!';
 CREATE TABLE "tournament" (
     "tid" SMALLSERIAL NOT NULL PRIMARY KEY,
     "name" VARCHAR(100) NOT NULL,
-    "created" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+    "created" TIMESTAMPTZ NOT NULL
 );
 CREATE INDEX "idx_tournament_name_6fe200" ON "tournament" ("name");
 COMMENT ON COLUMN "tournament"."name" IS 'Tournament name';
@@ -1614,7 +1614,7 @@ COMMENT ON TABLE "tournament" IS 'What Tournaments */''`/* we have';
 CREATE TABLE "event" (
     "id" BIGSERIAL NOT NULL PRIMARY KEY,
     "name" TEXT NOT NULL,
-    "modified" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "modified" TIMESTAMPTZ NOT NULL,
     "prize" DECIMAL(10,2),
     "token" VARCHAR(100) NOT NULL UNIQUE,
     "key" VARCHAR(100) NOT NULL,
@@ -1701,7 +1701,7 @@ COMMENT ON TABLE "teamaddress" IS 'The Team''s address';
 CREATE TABLE "tournament" (
     "tid" SMALLSERIAL NOT NULL PRIMARY KEY,
     "name" VARCHAR(100) NOT NULL,
-    "created" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+    "created" TIMESTAMPTZ NOT NULL
 );
 CREATE INDEX "idx_tournament_name_6fe200" ON "tournament" ("name");
 COMMENT ON COLUMN "tournament"."name" IS 'Tournament name';
@@ -1710,7 +1710,7 @@ COMMENT ON TABLE "tournament" IS 'What Tournaments */''`/* we have';
 CREATE TABLE "event" (
     "id" BIGSERIAL NOT NULL PRIMARY KEY,
     "name" TEXT NOT NULL,
-    "modified" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "modified" TIMESTAMPTZ NOT NULL,
     "prize" DECIMAL(10,2),
     "token" VARCHAR(100) NOT NULL UNIQUE,
     "key" VARCHAR(100) NOT NULL,
@@ -1811,7 +1811,7 @@ COMMENT ON TABLE "teamaddress" IS 'The Team''s address';
 CREATE TABLE IF NOT EXISTS "tournament" (
     "tid" SMALLSERIAL NOT NULL PRIMARY KEY,
     "name" VARCHAR(100) NOT NULL,
-    "created" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+    "created" TIMESTAMPTZ NOT NULL
 );
 CREATE INDEX IF NOT EXISTS "idx_tournament_name_6fe200" ON "tournament" ("name");
 COMMENT ON COLUMN "tournament"."name" IS 'Tournament name';
@@ -1820,7 +1820,7 @@ COMMENT ON TABLE "tournament" IS 'What Tournaments */''`/* we have';
 CREATE TABLE IF NOT EXISTS "event" (
     "id" BIGSERIAL NOT NULL PRIMARY KEY,
     "name" TEXT NOT NULL,
-    "modified" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "modified" TIMESTAMPTZ NOT NULL,
     "prize" DECIMAL(10,2),
     "token" VARCHAR(100) NOT NULL UNIQUE,
     "key" VARCHAR(100) NOT NULL,
@@ -1948,7 +1948,7 @@ COMMENT ON TABLE "team" IS 'The TEAMS!';
 CREATE TABLE "tournament" (
     "tid" SMALLSERIAL NOT NULL PRIMARY KEY,
     "name" VARCHAR(100) NOT NULL,
-    "created" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+    "created" TIMESTAMPTZ NOT NULL
 );
 CREATE INDEX "idx_tournament_name_6fe200" ON "tournament" ("name");
 COMMENT ON COLUMN "tournament"."name" IS 'Tournament name';
@@ -1957,7 +1957,7 @@ COMMENT ON TABLE "tournament" IS 'What Tournaments */''`/* we have';
 CREATE TABLE "event" (
     "id" BIGSERIAL NOT NULL PRIMARY KEY,
     "name" TEXT NOT NULL,
-    "modified" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "modified" TIMESTAMPTZ NOT NULL,
     "prize" DECIMAL(10,2),
     "token" VARCHAR(100) NOT NULL UNIQUE,
     "key" VARCHAR(100) NOT NULL,
@@ -1999,10 +1999,10 @@ async def test_psycopg_pgfields_unsafe():
             == """CREATE TABLE "postgres_fields" (
     "id" SERIAL NOT NULL PRIMARY KEY,
     "tsvector" TSVECTOR NOT NULL,
-    "text_array" TEXT[] NOT NULL DEFAULT '{"a","b","c"}',
-    "varchar_array" VARCHAR(32)[] NOT NULL DEFAULT '{"aa","bbb","cccc"}',
-    "int_array" INT[] DEFAULT '{1,2,3}',
-    "real_array" REAL[] NOT NULL DEFAULT '{1.1,2.2,3.3}'
+    "text_array" TEXT[] NOT NULL,
+    "varchar_array" VARCHAR(32)[] NOT NULL,
+    "int_array" INT[],
+    "real_array" REAL[] NOT NULL
 );
 COMMENT ON COLUMN "postgres_fields"."real_array" IS 'this is array of real numbers';"""
         )
@@ -2021,10 +2021,10 @@ async def test_psycopg_pgfields_safe():
             == """CREATE TABLE IF NOT EXISTS "postgres_fields" (
     "id" SERIAL NOT NULL PRIMARY KEY,
     "tsvector" TSVECTOR NOT NULL,
-    "text_array" TEXT[] NOT NULL DEFAULT '{"a","b","c"}',
-    "varchar_array" VARCHAR(32)[] NOT NULL DEFAULT '{"aa","bbb","cccc"}',
-    "int_array" INT[] DEFAULT '{1,2,3}',
-    "real_array" REAL[] NOT NULL DEFAULT '{1.1,2.2,3.3}'
+    "text_array" TEXT[] NOT NULL,
+    "varchar_array" VARCHAR(32)[] NOT NULL,
+    "int_array" INT[],
+    "real_array" REAL[] NOT NULL
 );
 COMMENT ON COLUMN "postgres_fields"."real_array" IS 'this is array of real numbers';"""
         )

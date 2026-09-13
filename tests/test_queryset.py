@@ -9,6 +9,7 @@ from tests.testmodels import (
     MinRelation,
     Node,
     Reporter,
+    Team,
     Tournament,
     Tree,
 )
@@ -24,7 +25,7 @@ from tortoise.exceptions import (
     NotExistOrMultiple,
     ParamsError,
 )
-from tortoise.expressions import F, RawSQL, Subquery
+from tortoise.expressions import F, RawSQL, Subquery, Value
 from tortoise.functions import Avg
 
 # TODO: Test the many exceptions in QuerySet
@@ -60,8 +61,40 @@ async def test_exists(db, intfields_data):
 
 
 @pytest.mark.asyncio
+async def test_contains(db, intfields_data):
+    obj = await IntFields.filter(intnum=10).first()
+    assert await IntFields.all().contains(obj)
+
+    assert await IntFields.filter(intnum__lt=50).contains(obj)
+
+    assert not await IntFields.filter(intnum__gt=50).contains(obj)
+
+
+@pytest.mark.asyncio
+async def test_contains_when_no_pk(db, intfields_data):
+    with pytest.raises(ParamsError, match="The given object does not have a primary key."):
+        await IntFields.all().contains(IntFields(intnum=99))
+
+
+@pytest.mark.asyncio
+async def test_contains_with_wrong_model(db, intfields_data):
+    with pytest.raises(
+        ParamsError, match="The given object is not an instance of the queryset's model."
+    ):
+        await IntFields.all().contains(Tournament(name="test"))
+
+
+@pytest.mark.asyncio
 async def test_limit_count(db, intfields_data):
     assert await IntFields.all().limit(10).count() == 10
+
+
+@pytest.mark.asyncio
+async def test_limit_zero_count(db, intfields_data):
+    # limit(0) means zero rows, so count() must be 0 (not the total), matching
+    # the actual limited query.
+    assert await IntFields.all().limit(0).count() == 0
+    assert await IntFields.all().limit(0).count() == len(await IntFields.all().limit(0))
 
 
 @pytest.mark.asyncio
@@ -80,6 +113,14 @@ async def test_limit_zero(db, intfields_data):
 @pytest.mark.asyncio
 async def test_offset_count(db, intfields_data):
     assert await IntFields.all().offset(10).count() == 20
+
+
+@pytest.mark.asyncio
+async def test_offset_count_beyond_total(db, intfields_data):
+    # An offset past the total must report 0, not a negative count (the SQL
+    # LIMIT/OFFSET would return zero rows).
+    assert await IntFields.all().offset(100).count() == 0
+    assert await IntFields.all().offset(100).count() == len(await IntFields.all().offset(100))
 
 
 @pytest.mark.asyncio
@@ -199,6 +240,22 @@ async def test_distinct(db, intfields_data):
         {"intnum_null": -1},
         {"intnum_null": 80},
     ]
+
+
+@pytest.mark.asyncio
+async def test_distinct_count_with_m2m_join(db):
+    tournament = await Tournament.create(name="Tournament")
+    event = await Event.create(name="Event", tournament=tournament)
+    event2 = await Event.create(name="Event2", tournament=tournament)
+    names = ("Team A", "Team B", "Team C")
+    for name in names:
+        await event.participants.add(await Team.create(name=name))
+
+    queryset = Event.filter(participants__name__in=names).distinct()
+    assert len(await queryset) == 1
+    assert await queryset.count() == 1
+    await event2.participants.add(await Team.get(name=name))
+    assert await queryset.count() == 2
 
 
 @pytest.mark.asyncio
@@ -915,3 +972,250 @@ def test_multiple_objects_returned():
     exp_cls: type[NotExistOrMultiple] = MultipleObjectsReturned
     assert str(exp_cls("old format")) == "old format"
     assert str(exp_cls(Tournament)) == exp_cls.TEMPLATE.format(Tournament.__name__)
+
+
+@pytest.mark.asyncio
+async def test_union_basic(db):
+    t1 = await Tournament.create(name="T1")
+    t2 = await Tournament.create(name="T2")
+    t3 = await Tournament.create(name="T3")
+    await Tournament.create(name="T4")
+
+    qs1 = Tournament.filter(name__in=["T1", "T2"])
+    qs2 = Tournament.filter(name="T3")
+
+    result = await qs1.union(qs2)
+    assert set(result) == {t1, t2, t3}
+
+
+@pytest.mark.asyncio
+async def test_union_all(db):
+    t1 = await Tournament.create(name="T1")
+    await Tournament.create(name="T2")
+
+    qs1 = Tournament.filter(name="T1")
+    qs2 = Tournament.filter(name="T1")
+
+    result = await qs1.union(qs2, all=True)
+    assert list(result) == [t1, t1]
+
+
+@pytest.mark.asyncio
+async def test_union_mixed_models(db):
+    r1 = await Reporter.create(name="R1")
+    r2 = await Reporter.create(name="R2")
+    await Reporter.create(name="R3")
+    t1 = await Tournament.create(name="T1")
+    await Tournament.create(name="T2")
+
+    qs1 = Tournament.filter(name="T1").only("id", "name")
+    qs2 = Reporter.filter(name__in=["R1", "R2"]).only("id", "name")
+
+    result = await qs1.union(qs2)
+    assert set(result) == {t1, r1, r2}
+
+
+@pytest.mark.parametrize(
+    "orderings,expected_instances",
+    [
+        ("name", ["t2", "t1", "r1"]),
+        ("-name", ["r1", "t1", "t2"]),
+    ],
+)
+@pytest.mark.asyncio
+async def test_union_order_by(db, orderings, expected_instances):
+    t1 = await Tournament.create(name="C")
+    await Reporter.create(name="A")
+    t2 = await Tournament.create(name="B")
+    await Reporter.create(name="D")
+    await Tournament.create(name="E")
+    r1 = await Reporter.create(name="F")
+
+    qs1 = Tournament.filter(id__in=[t1.id, t2.id]).only("id", "name")
+    qs2 = Reporter.filter(id=r1.id).only("id", "name")
+
+    result = await qs1.union(qs2).order_by(*orderings.split(","))
+
+    instance_map = {"t1": t1, "t2": t2, "r1": r1}
+    expected = [instance_map[k] for k in expected_instances]
+
+    assert result == expected
+
+
+@pytest.mark.asyncio
+async def test_union_order_by_multiple_fields(db):
+    t1 = await Tournament.create(name="C")
+    t2 = await Tournament.create(name="B")
+    r1 = await Reporter.create(name="C")
+    await Tournament.create(name="Z")
+    await Reporter.create(name="Z")
+
+    qs1 = Tournament.filter(id__in=[t1.id, t2.id]).only("id", "name")
+    qs2 = Reporter.filter(id=r1.id).only("id", "name")
+
+    result = await qs1.union(qs2).order_by("name", "id")
+
+    if r1.id == t1.id:
+        return
+
+    expected = [t2, t1, r1] if r1.id > t1.id else [t2, r1, t1]
+
+    assert result == expected
+
+
+@requireCapability(dialect=NotEQ("mssql"))
+@pytest.mark.asyncio
+async def test_union_limit(db):
+    r1 = await Reporter.create(name="B")
+    t1 = await Tournament.create(name="A")
+    await Reporter.create(name="D")
+    await Tournament.create(name="C")
+
+    qs1 = Tournament.all().only("id", "name")
+    qs2 = Reporter.all().only("id", "name")
+
+    result = await qs1.union(qs2).order_by("name").limit(2)
+    assert list(result) == [t1, r1]
+
+
+@requireCapability(dialect=NotEQ("mssql"))
+@pytest.mark.asyncio
+async def test_union_offset(db):
+    await Tournament.create(name="T1")
+    await Tournament.create(name="T2")
+    t3 = await Tournament.create(name="T3")
+    t4 = await Tournament.create(name="T4")
+
+    qs1 = Tournament.filter(name__in=["T1", "T2"]).only("id", "name")
+    qs2 = Tournament.filter(name__in=["T3", "T4"]).only("id", "name")
+
+    result = await qs1.union(qs2).order_by("name").limit(4).offset(2)
+    assert list(result) == [t3, t4]
+
+
+@pytest.mark.asyncio
+async def test_union_offset_negative_raises(db):
+    qs1 = Tournament.all().only("id", "name")
+    qs2 = Tournament.all().only("id", "name")
+
+    with pytest.raises(ParamsError, match="Offset should be non-negative number"):
+        await qs1.union(qs2).offset(-1)
+
+
+@pytest.mark.asyncio
+async def test_union_chained(db):
+    t1 = await Tournament.create(name="T1")
+    t2 = await Tournament.create(name="T2")
+    await Tournament.create(name="T3")
+    r1 = await Reporter.create(name="R1")
+    await Reporter.create(name="R2")
+
+    qs1 = Tournament.filter(name="T1").only("id", "name")
+    qs2 = Tournament.filter(name="T2").only("id", "name")
+    qs3 = Reporter.filter(name="R1").only("id", "name")
+
+    result = await qs1.union(qs2).union(qs3)
+    assert set(result) == {t1, t2, r1}
+
+
+@pytest.mark.asyncio
+async def test_union_count(db):
+    await Tournament.create(name="T1")
+    await Reporter.create(name="R1")
+    await Tournament.create(name="T2")
+    await Reporter.create(name="R2")
+
+    qs1 = Tournament.filter(name="T1").only("id")
+    qs2 = Reporter.filter(name="R1").only("id")
+
+    assert await qs1.union(qs2).count() == 2
+
+
+@pytest.mark.asyncio
+async def test_union_different_select_fields_raises(db):
+    await Tournament.create(name="T1")
+
+    qs1 = Tournament.filter(name="T1").only("name")
+    qs2 = Tournament.filter(name="T1").only("desc")
+
+    with pytest.raises(ParamsError, match="Union queries must have the same select fields"):
+        await qs1.union(qs2)
+
+
+@pytest.mark.asyncio
+async def test_union_different_fields__in_different_models_raises(db):
+    await Tournament.create(name="T1")
+    await Reporter.create(name="R1")
+
+    qs1 = Tournament.all()
+    qs2 = Reporter.all()
+
+    with pytest.raises(ParamsError, match="Union queries must have the same select fields"):
+        await qs1.union(qs2)
+
+
+@pytest.mark.asyncio
+async def test_union_order_by_field_not_in_select_raises(db):
+    await Tournament.create(name="T1")
+
+    qs1 = Tournament.filter(name="T1").only("id", "name")
+    qs2 = Tournament.filter(name="T1").only("id", "name")
+
+    qs = qs1.union(qs2)
+    with pytest.raises(ParamsError, match="Order by field must be in the select list"):
+        await qs.order_by("desc")
+
+
+@pytest.mark.asyncio
+async def test_union_with_annotate_raises(db):
+    await Tournament.create(name="T1")
+    await Reporter.create(name="R1")
+
+    qs1 = (
+        Tournament.filter(name="T1")
+        .annotate(annotated_value=Value(1))
+        .only("id", "name", "annotated_value")
+    )
+    qs2 = (
+        Reporter.filter(name="R1")
+        .annotate(annotated_value=Value(1))
+        .only("id", "name", "annotated_value")
+    )
+
+    with pytest.raises(ParamsError, match="Union queries do not support annotations"):
+        await qs1.union(qs2)
+
+
+@pytest.mark.asyncio
+async def test_delete_filter_by_related_field(db):
+    """Deleting through a filter on a related field must stay valid (#283)."""
+    author1 = await Author.create(name="Conan Doyle")
+    author2 = await Author.create(name="Ursula Le Guin")
+    await Book.create(name="The Hound", author=author1, rating=5)
+    await Book.create(name="The Sign of Four", author=author1, rating=4)
+    await Book.create(name="A Wizard of Earthsea", author=author2, rating=3)
+
+    deleted = await Book.filter(author__name="Conan Doyle").delete()
+
+    assert deleted == 2
+    assert await Book.filter(author__name="Conan Doyle").count() == 0
+    # negative control: rows belonging to the other author are untouched
+    assert await Book.filter(author__name="Ursula Le Guin").count() == 1
+    assert await Author.all().count() == 2
+
+
+@pytest.mark.asyncio
+async def test_update_filter_by_related_field(db):
+    """Updating through a filter on a related field must stay valid (#283)."""
+    author1 = await Author.create(name="Conan Doyle")
+    author2 = await Author.create(name="Ursula Le Guin")
+    book1 = await Book.create(name="The Hound", author=author1, rating=5)
+    await Book.create(name="A Wizard of Earthsea", author=author2, rating=3)
+
+    updated = await Book.filter(author__name="Conan Doyle").update(rating=1)
+
+    assert updated == 1
+    assert (await Book.get(pk=book1.pk)).rating == 1
+    # negative control: the other author's book keeps its rating
+    other = await Book.get(name="A Wizard of Earthsea")
+    assert other.rating == 3

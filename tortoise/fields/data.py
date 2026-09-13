@@ -18,7 +18,7 @@ from pypika_tortoise.terms import Term
 from tortoise import timezone
 from tortoise.exceptions import ConfigurationError, FieldError
 from tortoise.fields.base import Field
-from tortoise.timezone import get_default_timezone, get_timezone, get_use_tz, localtime
+from tortoise.timezone import get_default_timezone, get_use_tz
 from tortoise.validators import MaxLengthValidator
 
 try:
@@ -27,6 +27,13 @@ except ImportError:  # pragma: nocoverage
     from iso8601 import parse_date
 
     parse_datetime = functools.partial(parse_date, default_timezone=None)
+
+try:
+    from pydantic import BaseModel as _PydanticBaseModel
+    from pydantic._internal._model_construction import ModelMetaclass as _PydanticModelMetaclass
+except ImportError:
+    _PydanticBaseModel = None  # type: ignore
+    _PydanticModelMetaclass = None  # type: ignore[assignment,misc]
 
 if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.models import Model
@@ -237,7 +244,7 @@ class CharField(Field[T_STR]):
         }
 
     @property
-    def SQL_TYPE(self) -> str:  # type: ignore
+    def SQL_TYPE(self) -> str:  # type: ignore[override]
         return f"VARCHAR({self.max_length})"
 
     class _db_oracle:
@@ -249,7 +256,7 @@ class CharField(Field[T_STR]):
             return f"NVARCHAR2({self.field.max_length})"
 
 
-class TextField(Field[str], str):  # type: ignore
+class TextField(Field[str], str):  # type: ignore[misc]
     """
     Large Text field.
     """
@@ -375,11 +382,11 @@ class DecimalField(Field[T_DECIMAL], Decimal):  # type: ignore
 
     def to_python_value(self, value: Any) -> Decimal | None:
         if value is not None:
-            value = Decimal(value).quantize(self.quant).normalize()
+            value = Decimal(value).quantize(self.quant)
         return value
 
     @property
-    def SQL_TYPE(self) -> str:  # type: ignore
+    def SQL_TYPE(self) -> str:  # type: ignore[override]
         return f"DECIMAL({self.max_digits},{self.decimal_places})"
 
     class _db_sqlite:
@@ -455,18 +462,18 @@ class DatetimeField(Field[T_DATETIME], datetime.datetime):
 
     def to_python_value(self, value: Any) -> datetime.datetime | None:
         if value is not None:
-            if isinstance(value, datetime.datetime):
-                value = value
-            elif isinstance(value, int):
-                value = datetime.datetime.fromtimestamp(value)
-            else:
-                value = parse_datetime(value)
+            if not isinstance(value, datetime.datetime):
+                value = (
+                    datetime.datetime.fromtimestamp(value)
+                    if isinstance(value, int)
+                    else parse_datetime(value)
+                )
             if get_use_tz():
                 # When use_tz=True, ensure all datetimes are timezone-aware
                 if timezone.is_naive(value):
-                    value = timezone.make_aware(value, get_timezone())
+                    value = timezone.make_aware(value)
                 else:
-                    value = localtime(value)
+                    value = value.astimezone(get_default_timezone())
             else:
                 # When use_tz=False, ensure all datetimes are naive
                 # Some backends (PostgreSQL TIMESTAMPTZ) return aware datetimes natively
@@ -482,20 +489,24 @@ class DatetimeField(Field[T_DATETIME], datetime.datetime):
             self.auto_now
             or (self.auto_now_add and getattr(instance, self.model_field_name) is None)
         ):
-            now = timezone.now()
+            now = timezone.localtime()
             # Convert to match what would be read from DB (apply timezone conversion)
             now_python = self.to_python_value(now)
             setattr(instance, self.model_field_name, now_python)
-            return now  # type:ignore[return-value]
-        if value is not None:
-            if isinstance(value, datetime.datetime) and get_use_tz():
-                if timezone.is_naive(value):
-                    warnings.warn(
-                        f"DateTimeField {self.model_field_name} received a naive datetime ({value})"
-                        " while time zone support is active.",
-                        RuntimeWarning,
-                    )
-                    value = timezone.make_aware(value, "UTC")
+            return now  # type: ignore
+        if (
+            value is not None
+            and isinstance(value, datetime.datetime)
+            and get_use_tz()
+            and timezone.is_naive(value)
+        ):
+            warnings.warn(
+                f"DateTimeField {self.model_field_name} received a naive datetime ({value})"
+                " while time zone support is active.",
+                RuntimeWarning,
+                stacklevel=2,
+            )
+            value = timezone.make_aware(value)  # ty:ignore[invalid-assignment]
         self.validate(value)
         return value
 
@@ -544,7 +555,7 @@ class DateField(Field[T_DATE], datetime.date):
     ) -> DateFieldQueryValueType | None:
         if value is not None and isinstance(value, str) and len(value) > 4:
             with contextlib.suppress(ValueError):
-                value = parse_datetime(value).date()  # type: ignore[assignment]
+                value = parse_datetime(value).date()  # type: ignore
         self.validate(value)
         return value
 
@@ -619,14 +630,14 @@ class TimeField(Field[T_TIME], datetime.time):
         if value is not None:
             if isinstance(value, datetime.timedelta):
                 return value
-            if get_use_tz():
-                if timezone.is_naive(value):
-                    warnings.warn(
-                        f"TimeField {self.model_field_name} received a naive time ({value})"
-                        " while time zone support is active.",
-                        RuntimeWarning,
-                    )
-                    value = value.replace(tzinfo=get_default_timezone())
+            if get_use_tz() and timezone.is_naive(value):
+                warnings.warn(
+                    f"TimeField {self.model_field_name} received a naive time ({value})"
+                    " while time zone support is active.",
+                    RuntimeWarning,
+                    stacklevel=2,
+                )
+                value = value.replace(tzinfo=get_default_timezone())
         self.validate(value)
         return value
 
@@ -701,7 +712,7 @@ class FloatField(Field[T_FLOAT], float):
         SQL_TYPE = "DOUBLE"
 
 
-class JSONField(Field[T], dict, list):  # type: ignore
+class JSONField(Field[T], dict, list):  # type: ignore[misc]
     """
     JSON field.
 
@@ -761,19 +772,17 @@ class JSONField(Field[T], dict, list):  # type: ignore
         if isinstance(value, (str, bytes)):
             try:
                 self.decoder(value)
-            except Exception:
-                raise FieldError(f"Value {value!r} is invalid json value.")
+            except Exception as e:
+                raise FieldError(f"Value {value!r} is invalid json value.") from e
             if isinstance(value, bytes):
                 return value.decode()
             return value
 
-        try:
-            from pydantic import BaseModel
-
-            if isinstance(value, BaseModel):
-                value = value.model_dump()
-        except ImportError:
-            pass
+        if _PydanticBaseModel is not None and isinstance(value, _PydanticBaseModel):
+            if self.encoder is JSON_DUMPS:
+                return value.model_dump_json()
+            # self.encoder may be a custom json encoder
+            value = value.model_dump()
 
         return self.encoder(value)
 
@@ -783,20 +792,19 @@ class JSONField(Field[T], dict, list):  # type: ignore
         if isinstance(value, (str, bytes)):
             try:
                 data = self.decoder(value)
-
-                try:
-                    from pydantic._internal._model_construction import ModelMetaclass
-
-                    if isinstance(self.field_type, ModelMetaclass) and not isinstance(data, list):
-                        return self.field_type(**data)
-                except ImportError:
-                    pass
-
-                return data
-            except Exception:
+            except Exception as e:
                 raise FieldError(
                     f"Value {value if isinstance(value, str) else value.decode()} is invalid json value."
-                )
+                ) from e
+
+            if (
+                _PydanticModelMetaclass is not None
+                and isinstance(self.field_type, _PydanticModelMetaclass)
+                and not isinstance(data, list)
+            ):
+                return self.field_type(**data)
+
+            return data
 
         return value
 
@@ -835,7 +843,7 @@ class UUIDField(Field[T_UUID], UUID):
         return UUID(value)
 
 
-class BinaryField(Field[T_BINARY], bytes):  # type: ignore
+class BinaryField(Field[T_BINARY], bytes):  # type: ignore[misc]
     """
     Binary field.
 
@@ -882,8 +890,8 @@ class IntEnumFieldInstance(SmallIntField):
         for item in enum_type:
             try:
                 value = int(item.value)
-            except ValueError:
-                raise ConfigurationError("IntEnumField only supports integer enums!")
+            except ValueError as e:
+                raise ConfigurationError("IntEnumField only supports integer enums!") from e
             if not minimum <= value < 32768:
                 raise ConfigurationError(
                     f"The valid range of IntEnumField's values is {minimum}..32767!"
@@ -916,7 +924,7 @@ def IntEnumField(
     enum_type: type[IntEnumType],
     description: str | None = None,
     **kwargs: Any,
-) -> IntEnumType:
+) -> Field[IntEnumType]:
     """
     Enum Field
 
@@ -934,7 +942,7 @@ def IntEnumField(
         of "name: value" pairs.
 
     """
-    return IntEnumFieldInstance(enum_type, description, **kwargs)  # type: ignore
+    return IntEnumFieldInstance(enum_type, description, **kwargs)
 
 
 class CharEnumFieldInstance(CharField):
@@ -979,7 +987,7 @@ def CharEnumField(
     description: str | None = None,
     max_length: int = 0,
     **kwargs: Any,
-) -> CharEnumType:
+) -> Field[CharEnumType]:
     """
     Char Enum Field
 
@@ -1002,4 +1010,4 @@ def CharEnumField(
 
     """
 
-    return CharEnumFieldInstance(enum_type, description, max_length, **kwargs)  # type: ignore
+    return CharEnumFieldInstance(enum_type, description, max_length, **kwargs)

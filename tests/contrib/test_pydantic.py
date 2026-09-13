@@ -115,6 +115,19 @@ async def test_backward_relations_with_pydantic_meta(db, pydantic_setup):
 
 
 @pytest.mark.asyncio
+async def test_backward_relations_annotated_kept(db):
+    """backward_relations=False should keep explicitly annotated ReverseRelation fields."""
+    from tests.testmodels import ModelTestPydanticAnnotatedBackwardRel
+
+    Pydantic = pydantic_model_creator(ModelTestPydanticAnnotatedBackwardRel)
+    schema = Pydantic.model_json_schema()
+    # Annotated backward relation should be included
+    assert "annotated_children" in schema["properties"]
+    # Unannotated backward relation should be excluded
+    assert "unannotated_children" not in schema["properties"]
+
+
+@pytest.mark.asyncio
 async def test_event_schema(db, pydantic_setup):
     Event_Pydantic = pydantic_setup["Event_Pydantic"]
     assert Event_Pydantic.model_json_schema() == {
@@ -1366,6 +1379,8 @@ async def test_json_field(db):
         "data_default": {"a": 1},
         "data_validate": None,
         "data_pydantic": json_pydantic_default.model_dump(),
+        "data_decimal": None,
+        "data_index": None,
     }
     ret1 = creator.model_validate(json_field_1_get).model_dump()
     assert ret1 == {
@@ -1375,6 +1390,8 @@ async def test_json_field(db):
         "data_default": {"a": 1},
         "data_validate": None,
         "data_pydantic": json_pydantic_default.model_dump(),
+        "data_decimal": None,
+        "data_index": None,
     }
 
 

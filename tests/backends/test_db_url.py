@@ -7,6 +7,7 @@ from tortoise.exceptions import ConfigurationError
 
 _postgres_scheme_engines = {
     "postgres": "tortoise.backends.asyncpg",
+    "postgresql": "tortoise.backends.asyncpg",
     "asyncpg": "tortoise.backends.asyncpg",
     "psycopg": "tortoise.backends.psycopg",
 }
@@ -243,6 +244,12 @@ def test_mysql_pre_encoded_percent_in_password():
     db_url = "mysql://user:foo%25bar@127.0.0.1:3306/mydb"
     res = expand_db_url(db_url)
     assert res["credentials"]["password"] == "foo%bar"
+
+
+def test_postgres_plus_sign_in_password():
+    for scheme, engine in _postgres_scheme_engines.items():
+        res = expand_db_url(f"{scheme}://postgres:p%2Bss+word@127.0.0.1:54321/test")
+        assert res["credentials"]["password"] == "p+ss+word"
 
 
 def test_mysql_basic():

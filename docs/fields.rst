@@ -49,6 +49,12 @@ Relational Fields
     :members: ForeignKeyField, OneToOneField, ManyToManyField
     :exclude-members: to_db_value, to_python_value
 
+DB Default Expressions
+----------------------
+
+.. automodule:: tortoise.fields.db_defaults
+    :members:
+
 DB Specific Fields
 ------------------
 

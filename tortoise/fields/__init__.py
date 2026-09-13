@@ -26,6 +26,7 @@ from tortoise.fields.data import (
     TimeField,
     UUIDField,
 )
+from tortoise.fields.db_defaults import Now, RandomHex, SqlDefault
 from tortoise.fields.relational import (
     BackwardFKRelation,
     BackwardOneToOneRelation,
@@ -48,6 +49,9 @@ __all__ = [
     "NO_ACTION",
     "OnDelete",
     "Field",
+    "Now",
+    "RandomHex",
+    "SqlDefault",
     "BigIntField",
     "BinaryField",
     "BooleanField",
@@ -76,4 +80,18 @@ __all__ = [
     "OneToOneNullableRelation",
     "OneToOneRelation",
     "ReverseRelation",
+    "IntegerField",
+    "SmallIntegerField",
+    "DurationField",
+    "BigIntegerField",
+    "DateTimeField",
+    "ForeignKey",
 ]
+
+# Django field name compatibility
+from tortoise.fields.data import BigIntField as BigIntegerField
+from tortoise.fields.data import DatetimeField as DateTimeField
+from tortoise.fields.data import IntField as IntegerField
+from tortoise.fields.data import SmallIntField as SmallIntegerField
+from tortoise.fields.data import TimeDeltaField as DurationField
+from tortoise.fields.relational import ForeignKeyField as ForeignKey

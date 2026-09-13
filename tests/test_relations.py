@@ -599,7 +599,7 @@ async def test_reverse_relation_create_fk_errors_for_unsaved_instance(db):
 async def test_recursive(db) -> None:
     file = "examples/relations_recursive.py"
     r = subprocess.run([sys.executable, file], capture_output=True, text=True)  # nosec
-    assert not r.stderr, f"Script had errors: {r.stderr}"
+    assert r.returncode == 0, f"Script failed (rc={r.returncode}): {r.stderr}"
     output = r.stdout
     s = "2.1. Second H2 (to: ) (from: 2.2. Third H2, Loose, 1.1. First H2)"
     assert s in output

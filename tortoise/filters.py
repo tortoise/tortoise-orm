@@ -35,10 +35,16 @@ if TYPE_CHECKING:  # pragma: nocoverage
 
 
 class Like(BasicCriterion):
+    """
+    A Like that supports an ESCAPE clause
+
+    :param left: The left side of the LIKE expression (field/term).
+    :param right: The right side of the LIKE expression (pattern/value).
+    :param alias: Optional alias for the column.
+    :param escape: The escape clause to use. Defaults to " ESCAPE '\\'".
+    """
+
     def __init__(self, left, right, alias=None, escape=" ESCAPE '\\'") -> None:
-        """
-        A Like that supports an ESCAPE clause
-        """
         super().__init__(Matching.like, left, right, alias=alias)
         self.escape = escape
 

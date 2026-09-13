@@ -10,6 +10,28 @@ class Migration(migrations.Migration):
 
     operations = [
         ops.CreateModel(
+            name="Warehouse",
+            fields=[
+                (
+                    "id",
+                    fields.IntField(generated=True, primary_key=True, unique=True, db_index=True),
+                ),
+                ("name", fields.CharField(max_length=200)),
+                ("location", fields.CharField(max_length=300)),
+                (
+                    "is_active",
+                    fields.BooleanField(default=True, generated=False, null=False, unique=False),
+                ),
+            ],
+            options={
+                "table": "warehouse",
+                "app": "erp",
+                "pk_attr": "id",
+                "table_description": "Warehouse entity - storage location for inventory.",
+            },
+            bases=["Model"],
+        ),
+        ops.CreateModel(
             name="Alert",
             fields=[
                 (
@@ -39,28 +61,6 @@ class Migration(migrations.Migration):
                 "app": "erp",
                 "pk_attr": "id",
                 "table_description": "Inventory alert - references Warehouse via FK.",
-            },
-            bases=["Model"],
-        ),
-        ops.CreateModel(
-            name="Warehouse",
-            fields=[
-                (
-                    "id",
-                    fields.IntField(generated=True, primary_key=True, unique=True, db_index=True),
-                ),
-                ("name", fields.CharField(max_length=200)),
-                ("location", fields.CharField(max_length=300)),
-                (
-                    "is_active",
-                    fields.BooleanField(default=True, generated=False, null=False, unique=False),
-                ),
-            ],
-            options={
-                "table": "warehouse",
-                "app": "erp",
-                "pk_attr": "id",
-                "table_description": "Warehouse entity - storage location for inventory.",
             },
             bases=["Model"],
         ),

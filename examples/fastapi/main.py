@@ -1,50 +1,21 @@
 # pylint: disable=E0611,E0401
-import os
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
+from config import register_orm
 from fastapi import FastAPI
 from routers import router as users_router
 
-from examples.fastapi.config import register_orm
-from tortoise import Tortoise
-from tortoise.backends.base.config_generator import generate_config
-from tortoise.contrib.fastapi import RegisterTortoise, tortoise_exception_handlers
-
-
-@asynccontextmanager
-async def lifespan_test(app: FastAPI) -> AsyncGenerator[None, None]:
-    config = generate_config(
-        os.getenv("TORTOISE_TEST_DB", "sqlite://:memory:"),
-        app_modules={"models": ["models"]},
-        testing=True,
-        connection_label="models",
-    )
-    async with RegisterTortoise(
-        app=app,
-        config=config,
-        generate_schemas=True,
-        _create_db=True,
-    ):
-        # db connected
-        yield
-        # app teardown
-    # db connections closed
-    await Tortoise._drop_databases()
+from tortoise.contrib.fastapi import tortoise_exception_handlers
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
-    if getattr(app.state, "testing", None):
-        async with lifespan_test(app) as _:
-            yield
-    else:
-        # app startup
-        async with register_orm(app):
-            # db connected
-            yield
-            # app teardown
-        # db connections closed
+    async with register_orm(app):
+        # db connected
+        yield
+        # app teardown
+    # db connections closed
 
 
 app = FastAPI(

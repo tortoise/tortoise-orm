@@ -2,15 +2,16 @@ from __future__ import annotations
 
 import types
 from collections import defaultdict
-from collections.abc import AsyncIterator, Callable, Collection, Generator, Iterable
+from collections.abc import AsyncIterator, Callable, Collection, Generator, Iterable, Sequence
 from copy import copy
 from typing import TYPE_CHECKING, Any, Generic, Literal, Protocol, TypeVar, cast, overload
 
 from pypika_tortoise import JoinType, Order, Table
 from pypika_tortoise.analytics import Count
 from pypika_tortoise.functions import Cast
-from pypika_tortoise.queries import QueryBuilder
-from pypika_tortoise.terms import Case, Field, Star, Term, ValueWrapper
+from pypika_tortoise.functions import Count as DistinctCount
+from pypika_tortoise.queries import QueryBuilder, _SetOperation
+from pypika_tortoise.terms import Case, Field, Function, Star, Term, Tuple, ValueWrapper
 
 from tortoise.backends.base.client import BaseDBAsyncClient, Capabilities
 from tortoise.exceptions import (
@@ -18,9 +19,11 @@ from tortoise.exceptions import (
     FieldError,
     IntegrityError,
     MultipleObjectsReturned,
+    OperationalError,
     ParamsError,
 )
-from tortoise.expressions import Expression, Q, RawSQL, ResolveContext, ResolveResult
+from tortoise.expressions import Expression, Q, RawSQL, ResolveContext, ResolveResult, Value
+from tortoise.fields.base import DatabaseDefault
 from tortoise.fields.relational import (
     ForeignKeyFieldInstance,
     OneToOneFieldInstance,
@@ -58,6 +61,8 @@ class QuerySetSingle(Protocol[T_co]):
     # pylint: disable=W0104
     def __await__(self) -> Generator[Any, None, T_co]: ...  # pragma: nocoverage
 
+    def sql(self, params_inline=False) -> str: ...  # pragma: nocoverage
+
     def prefetch_related(
         self, *args: str | Prefetch
     ) -> QuerySetSingle[T_co]: ...  # pragma: nocoverage
@@ -79,7 +84,27 @@ class QuerySetSingle(Protocol[T_co]):
     ) -> ValuesQuery[Literal[True]]: ...  # pragma: nocoverage
 
 
-class AwaitableQuery(Generic[MODEL]):
+class _ChooseDBMixin(Generic[MODEL]):
+    _db: BaseDBAsyncClient | None
+    model: type[MODEL]
+
+    def _choose_db(self, for_write: bool = False) -> BaseDBAsyncClient:
+        """
+        Return the connection that will be used if this query is executed now.
+
+        :return: BaseDBAsyncClient:
+        """
+        if self._db:
+            return self._db
+        db = router.db_for_write(self.model) if for_write else router.db_for_read(self.model)
+        return db or self.model._meta.db
+
+    def _choose_db_if_not_chosen(self, for_write: bool = False) -> None:
+        if self._db is None:
+            self._db = self._choose_db(for_write)
+
+
+class AwaitableQuery(_ChooseDBMixin[MODEL], Generic[MODEL]):
     __slots__ = (
         "query",
         "model",
@@ -111,24 +136,6 @@ class AwaitableQuery(Generic[MODEL]):
     def capabilities(self, value: Capabilities) -> None:
         self._capabilities = value
 
-    def _choose_db(self, for_write: bool = False) -> BaseDBAsyncClient:
-        """
-        Return the connection that will be used if this query is executed now.
-
-        :return: BaseDBAsyncClient:
-        """
-        if self._db:
-            return self._db
-        if for_write:
-            db = router.db_for_write(self.model)
-        else:
-            db = router.db_for_read(self.model)
-        return db or self.model._meta.db
-
-    def _choose_db_if_not_chosen(self, for_write: bool = False) -> None:
-        if self._db is None:
-            self._db = self._choose_db(for_write)  # type: ignore
-
     def resolve_filters(self, fields_for_select: Collection[str] | None = None) -> None:
         """Builds the common filters for a QuerySet."""
         has_aggregate = self._resolve_annotate(fields_for_select)
@@ -156,6 +163,29 @@ class AwaitableQuery(Generic[MODEL]):
             self.query = self.query.groupby(
                 *[self.model._meta.basetable[field] for field in self.model._meta.db_fields]
             )
+
+    def _pk_in_subquery(self, table: Table) -> Term:
+        """Build ``pk IN (SELECT "_t".pk FROM (SELECT pk ...) AS "_t")`` from the current
+        filter-resolved select query.
+
+        Filters on related fields add JOINs to the query, but most backends do not allow
+        JOINs in DELETE/UPDATE statements, so the target rows are selected by primary key
+        in a subquery instead.
+        """
+        pk_cols = [
+            table[self.model._meta.fields_db_projection[name]]
+            for name, field in self.model._meta.fields_map.items()
+            if field.pk
+        ]
+        inner = copy(self.query)
+        inner._selects = list(pk_cols)
+        alias = "_t"
+        wrapped = self.model._meta.db.query_class.from_(inner.as_(alias)).select(
+            *[Table(alias)[col.name] for col in pk_cols]
+        )
+        if len(pk_cols) == 1:
+            return pk_cols[0].isin(wrapped)
+        return Tuple(*pk_cols).isin(wrapped)
 
     def _join_table_by_field(
         self, table: Table, related_field_name: str, related_field: RelationalField
@@ -432,13 +462,13 @@ class QuerySet(AwaitableQuery[MODEL]):
 
         You can also pass Q objects to filters as args.
         """
-        return self._filter_or_exclude(negate=False, *args, **kwargs)
+        return self._filter_or_exclude(*args, negate=False, **kwargs)
 
     def exclude(self, *args: Q, **kwargs: Any) -> QuerySet[MODEL]:
         """
         Same as .filter(), but with appends all args with NOT
         """
-        return self._filter_or_exclude(negate=True, *args, **kwargs)
+        return self._filter_or_exclude(*args, negate=True, **kwargs)
 
     def _parse_orderings(
         self, orderings: tuple[str, ...], reverse=False
@@ -591,6 +621,15 @@ class QuerySet(AwaitableQuery[MODEL]):
         queryset._distinct = True
         return queryset
 
+    def union(self, *other_qs: QuerySet[MODEL], all: bool = False) -> UnionQuery[MODEL]:
+        """
+        Return the union of QuerySets.
+
+        :param other_qs: Another QuerySet(s) to union with.
+        :return: A new UnionQuery representing the union of both QuerySets.
+        """
+        return UnionQuery(self.model, self._db, self, *other_qs, all=all)  # type: ignore[arg-type]
+
     def select_for_update(
         self,
         nowait: bool = False,
@@ -722,8 +761,8 @@ class QuerySet(AwaitableQuery[MODEL]):
         else:
             _fields = [
                 field
-                for field in self.model._meta.fields_map.keys()
-                if field in self.model._meta.fields_db_projection.keys()
+                for field in self.model._meta.fields_map
+                if field in self.model._meta.fields_db_projection
             ] + list(self._annotations.keys())
 
             fields_for_select = {field: field for field in _fields}
@@ -797,6 +836,7 @@ class QuerySet(AwaitableQuery[MODEL]):
             offset=self._offset,
             force_indexes=self._force_indexes,
             use_indexes=self._use_indexes,
+            distinct=self._distinct,
         )
 
     def exists(self) -> ExistsQuery:
@@ -811,6 +851,31 @@ class QuerySet(AwaitableQuery[MODEL]):
             custom_filters=self._custom_filters,
             force_indexes=self._force_indexes,
             use_indexes=self._use_indexes,
+        )
+
+    def contains(self, obj: MODEL) -> ContainsQuery:
+        """
+        Check if the QuerySet contains the given instance.
+
+        :param obj: The model instance to check for.
+        :return: True if the QuerySet contains the instance, False otherwise.
+        """
+
+        if not isinstance(obj, self.model):
+            raise ParamsError("The given object is not an instance of the queryset's model.")
+
+        if not obj.pk:
+            raise ParamsError("The given object does not have a primary key.")
+
+        return ContainsQuery(
+            db=self._db,
+            model=self.model,
+            q_objects=self._q_objects,
+            annotations=self._annotations,
+            custom_filters=self._custom_filters,
+            force_indexes=self._force_indexes,
+            use_indexes=self._use_indexes,
+            obj=obj,
         )
 
     def all(self) -> QuerySet[MODEL]:
@@ -888,6 +953,10 @@ class QuerySet(AwaitableQuery[MODEL]):
         This method inserts the provided list of objects into the database in an efficient manner
         (generally only 1 query, no matter how many objects there are).
 
+        Fields with ``db_default`` that are not explicitly set will use the database
+        DEFAULT.  Within a single call, each ``db_default`` field must be treated
+        consistently: either **all** instances supply a value or **none** do.
+
         :param on_conflict: On conflict index name
         :param update_fields: Update fields when conflicts
         :param ignore_conflicts: Ignore conflicts when inserting
@@ -895,14 +964,14 @@ class QuerySet(AwaitableQuery[MODEL]):
         :param batch_size: How many objects are created in a single query
 
         :raises ValueError: If params do not meet specifications
+        :raises OperationalError: If a ``db_default`` field has mixed usage across
+            instances (some provide a value, others rely on the database default).
         """
-        if ignore_conflicts and update_fields:
-            raise ValueError(
-                "ignore_conflicts and update_fields are mutually exclusive.",
-            )
-        if not ignore_conflicts:
-            if (update_fields and not on_conflict) or (on_conflict and not update_fields):
-                raise ValueError("update_fields and on_conflict need set in same time.")
+        if ignore_conflicts:
+            if update_fields:
+                raise ValueError("ignore_conflicts and update_fields are mutually exclusive.")
+        elif (update_fields and not on_conflict) or (on_conflict and not update_fields):
+            raise ValueError("update_fields and on_conflict need set in same time.")
         return BulkCreateQuery(
             db=self._db,
             model=self.model,
@@ -1035,31 +1104,38 @@ class QuerySet(AwaitableQuery[MODEL]):
                 raise FieldError(
                     f"Relation {first_level_field} for {self.model._meta.full_name} not found"
                 )
-            if first_level_field not in queryset._prefetch_map.keys():
+            if first_level_field not in queryset._prefetch_map:
                 queryset._prefetch_map[first_level_field] = set()
             if forwarded_prefetch:
                 queryset._prefetch_map[first_level_field].add(forwarded_prefetch)
         return queryset
 
-    async def explain(self) -> Any:
+    async def explain(self, output_fmt: str | None = None, **options: bool) -> Any:
         """Fetch and return information about the query execution plan.
 
         This is done by executing an ``EXPLAIN`` query whose exact prefix depends
         on the database backend, as documented below.
 
-        - PostgreSQL: ``EXPLAIN (FORMAT JSON, VERBOSE) ...``
-        - SQLite: ``EXPLAIN QUERY PLAN ...``
-        - MySQL: ``EXPLAIN FORMAT=JSON ...``
+        :param output_fmt: The output format for the EXPLAIN result.
+            - PostgreSQL: ``text``, ``json``, ``xml``, ``yaml`` (default: ``json``)
+            - MySQL: ``json``, ``traditional``, ``tree`` (default: ``json``)
+            - SQLite, MSSQL, Oracle: Not supported (raises UnSupportedError)
+        :param options: Additional options for EXPLAIN (database-specific).
+            - PostgreSQL: ``analyze``, ``buffers``, ``costs``, ``memory``, ``settings``, ``summary``, ``timing``, ``verbose``, ``wal``, ``generic_plan``, ``serialize`` (if not provided default is ``verbose``)
+            - MySQL: ``analyze``
+            - SQLite, MSSQL, Oracle: Not supported (raises UnSupportedError)
 
         .. note::
             This is only meant to be used in an interactive environment for debugging
             and query optimization.
             **The output format may (and will) vary greatly depending on the database backend.**
+
+        :raises UnSupportedError: If the database does not support the requested format or options.
         """
         self._choose_db_if_not_chosen()
         self._make_query()
         return await self._db.executor_class(model=self.model, db=self._db).execute_explain(
-            self.query.get_sql()
+            self.query.get_sql(), output_fmt, **options
         )
 
     def using_db(self, _db: BaseDBAsyncClient | None) -> QuerySet[MODEL]:
@@ -1110,7 +1186,7 @@ class QuerySet(AwaitableQuery[MODEL]):
         fetch_to_fields = defaultdict(list)
         # the order is important here, we need to process the shallowest fields first
         # because we want to populate _select_related_idx with actual items that need to be
-        # selected, not "filler" items tha just tell the executor that an empty instance has
+        # selected, not "filler" items than just tell the executor that an empty instance has
         # to be created
         for expression in sorted(only_lookup_expressions, key=lambda x: x.count("__")):
             fetch_fields_lookup, __, field_name = expression.rpartition("__")
@@ -1302,12 +1378,24 @@ class UpdateQuery(AwaitableQuery):
 
     def _make_query(self) -> None:
         table = self.model._meta.basetable
-        self.query = self._db.query_class.update(table)
+        # Resolve filters on a SELECT-shaped query first: filters on related fields add
+        # JOINs, which are not valid in UPDATE statements on most backends, so the target
+        # rows are selected by primary key through a subquery instead (see _pk_in_subquery).
+        self.query = copy(self.model._meta.basequery)
         if self.capabilities.support_update_limit_order_by and self._limit:
             self.query._limit = self.query._wrapper_cls(self._limit)
             self.resolve_ordering(self.model, table, self._orderings, self._annotations)
 
         self.resolve_filters()
+        if self.query._joins:
+            self.query = self._db.query_class.update(table).where(self._pk_in_subquery(table))
+        else:
+            update_query = self._db.query_class.update(table)
+            update_query._wheres = self.query._wheres
+            update_query._havings = self.query._havings
+            update_query._orderbys = self.query._orderbys
+            update_query._limit = self.query._limit
+            self.query = update_query
         for key, value in self.update_kwargs.items():
             field_object = self.model._meta.fields_map.get(key)
             if not field_object:
@@ -1327,8 +1415,8 @@ class UpdateQuery(AwaitableQuery):
             else:
                 try:
                     db_field = self.model._meta.fields_db_projection[key]
-                except KeyError:
-                    raise FieldError(f"Field {key} is virtual and can not be updated")
+                except KeyError as e:
+                    raise FieldError(f"Field {key} is virtual and can not be updated") from e
 
                 if isinstance(value, Expression):
                     value = value.resolve(
@@ -1380,16 +1468,21 @@ class DeleteQuery(AwaitableQuery):
         self._orderings = orderings
 
     def _make_query(self) -> None:
+        table = self.model._meta.basetable
         self.query = copy(self.model._meta.basequery)
         if self.capabilities.support_update_limit_order_by and self._limit:
             self.query._limit = self.query._wrapper_cls(self._limit)
             self.resolve_ordering(
                 model=self.model,
-                table=self.model._meta.basetable,
+                table=table,
                 orderings=self._orderings,
                 annotations=self._annotations,
             )
         self.resolve_filters()
+        if self.query._joins:
+            self.query = self.model._meta.db.query_class.from_(table).where(
+                self._pk_in_subquery(table)
+            )
         self.query._delete_from = True
         return
 
@@ -1451,12 +1544,29 @@ class ExistsQuery(AwaitableQuery):
         return bool(result)
 
 
+class ContainsQuery(ExistsQuery):
+    def __init__(
+        self,
+        obj: MODEL,
+        **kwargs,
+    ) -> None:
+        super().__init__(**kwargs)
+        self._obj = obj
+
+    def _make_query(self) -> None:
+        super()._make_query()
+        pk_field = Field(self.model._meta.db_pk_column)
+        pk_value = self.model._meta.pk.to_db_value(self._obj.pk, self._obj)
+        self.query = self.query.where(pk_field.eq(pk_value))
+
+
 class CountQuery(AwaitableQuery):
     __slots__ = (
         "_limit",
         "_offset",
         "_force_indexes",
         "_use_indexes",
+        "_distinct",
     )
 
     def __init__(
@@ -1470,6 +1580,7 @@ class CountQuery(AwaitableQuery):
         offset: int | None,
         force_indexes: set[str],
         use_indexes: set[str],
+        distinct: bool = False,
     ) -> None:
         super().__init__(model)
         self._q_objects = q_objects
@@ -1480,13 +1591,22 @@ class CountQuery(AwaitableQuery):
         self._db = db
         self._force_indexes = force_indexes
         self._use_indexes = use_indexes
+        self._distinct = distinct
 
     def _make_query(self) -> None:
         self.query = copy(self.model._meta.basequery)
         self.resolve_filters()
-        count_term = Count(Star())
-        if self.query._groupbys:
-            count_term = count_term.over()
+        count_term: Function
+        if self._distinct and not self.query._groupbys:
+            # ``DISTINCT`` on the outer SELECT does not apply to ``COUNT(*)``,
+            # so rows duplicated by a join would still be counted. Count the
+            # distinct primary keys instead.
+            pk_field: Field = self.model._meta.basetable[self.model._meta.db_pk_column]
+            count_term = DistinctCount(pk_field).distinct()
+        else:
+            count_term = Count(Star())
+            if self.query._groupbys:
+                count_term = count_term.over()
 
         # remove annotations
         self.query._selects = []
@@ -1508,8 +1628,13 @@ class CountQuery(AwaitableQuery):
         _, result = await self._db.execute_query(*self.query.get_parameterized_sql())
         if not result:
             return 0
-        count = list(dict(result[0]).values())[0] - self._offset
-        if self._limit and count > self._limit:
+        # COUNT(*) ignores LIMIT/OFFSET, so the offset is applied here. Clamp at
+        # 0: when the offset is past the total, SQL would return 0 rows, not a
+        # negative count.
+        count = max(0, list(dict(result[0]).values())[0] - self._offset)
+        # Use ``is not None`` so an explicit ``limit(0)`` clamps to 0 instead of
+        # being treated as "no limit" by a truthiness check.
+        if self._limit is not None and count > self._limit:
             return self._limit
         return count
 
@@ -2035,71 +2160,185 @@ class BulkCreateQuery(AwaitableQuery, Generic[MODEL]):
         self._update_fields = update_fields
         self._on_conflict = on_conflict
 
-    def _make_queries(self) -> tuple[str, str]:
-        self._executor = self._db.executor_class(model=self.model, db=self._db)
-        if self._ignore_conflicts or self._update_fields:
-            _, columns = self._executor._prepare_insert_columns()
-            insert_query = self._executor._prepare_insert_statement(
-                columns, ignore_conflicts=self._ignore_conflicts
-            )
-            insert_query_all = insert_query
-            if self.model._meta.generated_db_fields:
-                _, columns_all = self._executor._prepare_insert_columns(include_generated=True)
-                insert_query_all = self._executor._prepare_insert_statement(
-                    columns_all,
-                    has_generated=False,
-                    ignore_conflicts=self._ignore_conflicts,
-                )
-            if self._update_fields:
-                alias = f"new_{self.model._meta.db_table}"
-                insert_query_all = insert_query_all.as_(alias).on_conflict(
-                    *(self._on_conflict or [])
-                )
-                insert_query = insert_query.as_(alias).on_conflict(*(self._on_conflict or []))
-                for update_field in self._update_fields:
-                    insert_query_all = insert_query_all.do_update(update_field)
-                    insert_query = insert_query.do_update(update_field)
-            return insert_query.get_sql(), insert_query_all.get_sql()
-        else:
+    def _analyze_db_default_fields(self, columns: list[str]) -> set[str]:
+        """Classify each db_default field across all instances.
+
+        Returns a set of field names to omit from the INSERT (all instances
+        use DatabaseDefault for that field). Raises OperationalError if a
+        field has mixed usage (some instances provide a value, others don't).
+        """
+
+        fields_map = self.model._meta.fields_map
+        db_default_field_names = [fn for fn in columns if fields_map[fn].has_db_default()]
+        if not db_default_field_names:
+            return set()
+
+        omit_fields: set[str] = set()
+        for field_name in db_default_field_names:
+            has_default = False
+            has_value = False
+            for instance in self._objects:
+                if isinstance(getattr(instance, field_name), DatabaseDefault):
+                    has_default = True
+                else:
+                    has_value = True
+                if has_default and has_value:
+                    raise OperationalError(
+                        f"Cannot use bulk_create() when field '{field_name}' has "
+                        f"db_default and some instances provide explicit values while "
+                        f"others rely on the database default. Either: "
+                        f"(a) set the value explicitly on ALL instances, "
+                        f"(b) omit it from ALL instances to use the database default, or "
+                        f"(c) split into separate bulk_create() calls."
+                    )
+            if has_default and not has_value:
+                omit_fields.add(field_name)
+
+        return omit_fields
+
+    def _build_default_values_sql(self) -> str:
+        """Build INSERT SQL for when all columns are omitted."""
+        table = self.model._meta.basetable
+        return str(self._db.query_class.into(table).default_values())
+
+    def _filter_columns(self, omit_fields: set[str], include_generated: bool = False) -> list[str]:
+        """Prepare INSERT columns, filtering out omitted db_default fields."""
+        _, columns = self._executor._prepare_insert_columns(include_generated=include_generated)
+        if not omit_fields:
+            return columns
+        field_names = (
+            self._executor.regular_columns_all
+            if include_generated
+            else self._executor.regular_columns
+        )
+        return [c for fn, c in zip(field_names, columns, strict=False) if fn not in omit_fields]
+
+    def _apply_on_conflict(
+        self,
+        insert_query: QueryBuilder,
+        insert_query_all: QueryBuilder,
+        update_fields: Iterable[str],
+        omit_fields: set[str],
+    ) -> tuple[QueryBuilder, QueryBuilder]:
+        """Apply ON CONFLICT ... DO UPDATE to both query variants."""
+        effective_update_fields = (
+            [f for f in update_fields if f not in omit_fields]
+            if omit_fields
+            else list(update_fields)
+        )
+        alias = f"new_{self.model._meta.db_table}"
+        insert_query = insert_query.as_(alias).on_conflict(*(self._on_conflict or []))
+        insert_query_all = insert_query_all.as_(alias).on_conflict(*(self._on_conflict or []))
+        for update_field in effective_update_fields:
+            insert_query = insert_query.do_update(update_field)
+            insert_query_all = insert_query_all.do_update(update_field)
+        return insert_query, insert_query_all
+
+    def _make_queries(self, omit_fields: set[str] | None = None) -> tuple[str, str]:
+        if omit_fields is None:
+            omit_fields = set()
+
+        if not (self._ignore_conflicts or self._update_fields) and not omit_fields:
             return self._executor.insert_query, self._executor.insert_query_all
 
-    async def _execute_many(self, insert_sql: str, insert_sql_all: str) -> None:
+        default_sql = self._build_default_values_sql()
+
+        columns = self._filter_columns(omit_fields)
+        if not columns:
+            return default_sql, default_sql
+        insert_query = self._executor._prepare_insert_statement(
+            columns, ignore_conflicts=self._ignore_conflicts
+        )
+
+        insert_query_all = insert_query
+        if self.model._meta.generated_db_fields:
+            columns_all = self._filter_columns(omit_fields, include_generated=True)
+            if not columns_all:
+                return default_sql, default_sql
+            insert_query_all = self._executor._prepare_insert_statement(
+                columns_all,
+                has_generated=False,
+                ignore_conflicts=self._ignore_conflicts,
+            )
+
+        if self._update_fields:
+            insert_query, insert_query_all = self._apply_on_conflict(
+                insert_query, insert_query_all, self._update_fields, omit_fields
+            )
+
+        return insert_query.get_sql(), insert_query_all.get_sql()
+
+    async def _execute_many(
+        self,
+        insert_sql: str,
+        insert_sql_all: str,
+        effective_columns: list[str],
+        effective_columns_all: list[str],
+    ) -> None:
         fields_map = self.model._meta.fields_map
         for instance_chunk in chunk(self._objects, self._batch_size):
             values_lists_all = []
             values_lists = []
+            count_default_all = 0
+            count_default = 0
             for instance in instance_chunk:
                 if instance._custom_generated_pk:
-                    values_lists_all.append(
-                        [
-                            fields_map[field_name].to_db_value(
-                                getattr(instance, field_name), instance
-                            )
-                            for field_name in self._executor.regular_columns_all
-                        ]
-                    )
+                    if effective_columns_all:
+                        values_lists_all.append(
+                            [
+                                fields_map[field_name].to_db_value(
+                                    getattr(instance, field_name), instance
+                                )
+                                for field_name in effective_columns_all
+                            ]
+                        )
+                    else:
+                        count_default_all += 1
                 else:
-                    values_lists.append(
-                        [
-                            fields_map[field_name].to_db_value(
-                                getattr(instance, field_name), instance
-                            )
-                            for field_name in self._executor.regular_columns
-                        ]
-                    )
+                    if effective_columns:
+                        values_lists.append(
+                            [
+                                fields_map[field_name].to_db_value(
+                                    getattr(instance, field_name), instance
+                                )
+                                for field_name in effective_columns
+                            ]
+                        )
+                    else:
+                        count_default += 1
             if values_lists_all:
                 await self._db.execute_many(insert_sql_all, values_lists_all)
             if values_lists:
                 await self._db.execute_many(insert_sql, values_lists)
+            # When all columns are omitted, execute DEFAULT VALUES individually
+            for _ in range(count_default_all):
+                await self._db.execute_insert(insert_sql_all, [])
+            for _ in range(count_default):
+                await self._db.execute_insert(insert_sql, [])
 
     def __await__(self) -> Generator[Any, None, None]:
         self._choose_db_if_not_chosen(True)
-        insert_sql, insert_sql_all = self._make_queries()
-        return self._execute_many(insert_sql, insert_sql_all).__await__()
+        self._executor = self._db.executor_class(model=self.model, db=self._db)
+        self._objects = list(self._objects)  # materialize for multi-pass
+
+        omit_fields = self._analyze_db_default_fields(self._executor.regular_columns)
+
+        insert_sql, insert_sql_all = self._make_queries(omit_fields)
+        effective_columns = [c for c in self._executor.regular_columns if c not in omit_fields]
+        effective_columns_all = [
+            c for c in self._executor.regular_columns_all if c not in omit_fields
+        ]
+        return self._execute_many(
+            insert_sql, insert_sql_all, effective_columns, effective_columns_all
+        ).__await__()
 
     def sql(self, params_inline=False) -> str:
         self._choose_db_if_not_chosen()
-        insert_sql, insert_sql_all = self._make_queries()
+        self._executor = self._db.executor_class(model=self.model, db=self._db)
+        self._objects = list(self._objects)
+
+        omit_fields = self._analyze_db_default_fields(self._executor.regular_columns)
+        insert_sql, insert_sql_all = self._make_queries(omit_fields)
 
         if all(o._custom_generated_pk for o in self._objects):
             return insert_sql_all
@@ -2108,3 +2347,229 @@ class BulkCreateQuery(AwaitableQuery, Generic[MODEL]):
             return insert_sql
 
         return ";".join([insert_sql, insert_sql_all])
+
+
+class UnionCountQuery(AwaitableQuery):
+    __slots__ = ("_union_query", "_db")
+
+    def __init__(
+        self,
+        model: type[MODEL],
+        db: BaseDBAsyncClient,
+        union_query: UnionQuery[MODEL],
+    ) -> None:
+        super().__init__(model)
+        self._union_query = union_query
+        self._db = db
+
+    def _make_query(self) -> None:
+        self._union_query._make_query()
+        self.query = self.query.QUERY_CLS.from_(self._union_query._union_query).select(  # type:ignore[arg-type]
+            Count(Star())
+        )
+
+    def __await__(self) -> Generator[Any, None, int]:
+        self._choose_db_if_not_chosen()
+        self._make_query()
+        return self._execute().__await__()
+
+    async def _execute(self) -> int:
+        _, result = await self._db.execute_query(self.query.get_sql())
+        if not result:
+            return 0
+        return list(dict(result[0]).values())[0]
+
+
+class UnionQuery(_ChooseDBMixin[MODEL], Generic[MODEL]):
+    __slots__ = (
+        "model",
+        "query",
+        "_models",
+        "_union_query",
+        "_selects",
+        "_db",
+        "_qs",
+        "_all",
+        "_orderings",
+        "_limit",
+        "_offset",
+    )
+
+    TORTOISE_APP_FIELD = "tortoise_app"
+    TORTOISE_MODEL_FIELD = "tortoise_model"
+
+    def __init__(
+        self,
+        model: type[MODEL],
+        db: BaseDBAsyncClient,
+        *querysets: QuerySet[Model],
+        all: bool = False,
+    ):
+        self.model = model
+        self.query = QUERY
+        self._models: set[type[Model]] = {model, *(qs.model for qs in querysets)}
+        self._union_query: QueryBuilder | _SetOperation | None = None
+        self._selects: list[str] = []
+        self._db = db
+        self._qs = querysets
+        self._all = all
+        self._orderings: list[tuple[str, Order]] | None = None
+        self._limit: int | None = None
+        self._offset: int | None = None
+
+    @classmethod
+    def _get_selects(cls, qs: QuerySet[Model] | UnionQuery[Model]) -> list[str]:
+        return [
+            select.name
+            for select in qs.query._selects
+            if select.alias not in [cls.TORTOISE_APP_FIELD, cls.TORTOISE_MODEL_FIELD]
+        ]
+
+    def _make_query(self) -> None:
+        self._union_query = None
+        for qs in self._qs:
+            if qs._annotations:
+                raise ParamsError("Union queries do not support annotations")
+            model_annotations = {
+                self.TORTOISE_APP_FIELD: Value(qs.model._meta.app),
+                self.TORTOISE_MODEL_FIELD: Value(qs.model._meta._model.__name__),
+            }
+            qs = qs.annotate(**model_annotations)
+            qs._make_query()
+            qs.query.wrap_set_operation_queries = False
+            if not self._union_query:
+                self._union_query = qs.query
+                self._selects = self._get_selects(qs)
+            else:
+                if self._get_selects(qs) != self._selects:
+                    raise ParamsError("Union queries must have the same select fields")
+                self._union_query = (
+                    self._union_query.union_all(qs.query)
+                    if self._all
+                    else self._union_query.union(qs.query)
+                )
+
+        if self._union_query is None:
+            return
+
+        if self._orderings:
+            for field_name, order in self._orderings:
+                if field_name not in self._selects:
+                    raise ParamsError("Order by field must be in the select list for union queries")
+
+                self._union_query = self._union_query.orderby(field_name, order=order)
+
+        if self._limit is not None:
+            self._union_query = self._union_query.limit(self._limit)
+
+        if self._offset is not None:
+            self._union_query = self._union_query.offset(self._offset)
+
+    def __await__(self) -> Generator[Any, None, Sequence[MODEL]]:
+        self._choose_db_if_not_chosen()
+        self._make_query()
+        return self._execute().__await__()
+
+    async def __aiter__(self: UnionQuery[Any]) -> AsyncIterator[Any]:
+        for val in await self:
+            yield val
+
+    async def _execute(self) -> Sequence[MODEL]:
+        if self._union_query is None:
+            return []
+
+        sql = self._union_query.get_sql(self._qs[0].query.QUERY_CLS.SQL_CONTEXT)
+        instance_list = await self._db.executor_class(  # type: ignore[union-attr]
+            model=self.model,
+            db=self._db,  # type: ignore[arg-type]
+        ).execute_union(sql, self.TORTOISE_APP_FIELD, self.TORTOISE_MODEL_FIELD, self._models)
+        return instance_list
+
+    def _clone(self) -> UnionQuery[MODEL]:
+        union = self.__class__.__new__(self.__class__)
+        union.model = self.model
+        union._models = self._models
+        union._union_query = None
+        union._selects = self._selects
+        union._db = self._db
+        union._qs = self._qs
+        union._all = self._all
+        union._orderings = self._orderings
+        union._limit = self._limit
+        union._offset = self._offset
+        return union
+
+    @classmethod
+    def _parse_orderings(cls, orderings: tuple[str, ...]) -> list[tuple[str, Order]]:
+        new_ordering = []
+        for ordering in orderings:
+            new_ordering.append(QuerySet._resolve_ordering_string(ordering))
+        return new_ordering
+
+    def union(self, *other_qs: QuerySet[Model], all: bool = False) -> UnionQuery[MODEL]:
+        """
+        Return the union of QuerySets.
+
+        :param other_qs: Another QuerySet(s) to union with.
+        :return: A new UnionQuery representing the union of all QuerySets.
+        """
+        union = self._clone()
+        union._models = {*union._models, *(qs.model for qs in other_qs)}
+        union._qs = union._qs + other_qs
+        union._all = union._all or all
+        return union
+
+    def order_by(self, *orderings: str) -> UnionQuery[MODEL]:
+        """
+        Accept args to filter by in format like this:
+
+        .. code-block:: python3
+
+            .order_by('name', '-id')
+
+        A '-' before the name will result in descending sort order, default is ascending.
+
+        :raises FieldError: If unknown field has been provided.
+        """
+        union = self._clone()
+        union._orderings = self._parse_orderings(orderings)
+        return union
+
+    def limit(self, limit: int) -> UnionQuery[MODEL]:
+        """
+        Limits UnionQuery to given length.
+
+        :raises ParamsError: Limit should be non-negative number.
+        """
+        if limit < 0:
+            raise ParamsError("Limit should be non-negative number")
+
+        union = self._clone()
+        union._limit = limit
+        return union
+
+    def offset(self, offset: int) -> UnionQuery[MODEL]:
+        """
+        Query offset for UnionQuery.
+
+        :raises ParamsError: Offset should be non-negative number.
+        """
+        if offset < 0:
+            raise ParamsError("Offset should be non-negative number")
+
+        union = self._clone()
+        union._offset = offset
+        return union
+
+    def count(self) -> UnionCountQuery:
+        """
+        Return count of objects in union query.
+        """
+        self._choose_db_if_not_chosen()
+        union_query_clone = self._clone()
+
+        return UnionCountQuery(
+            model=self.model,
+            db=self._db,  # type: ignore[arg-type]
+            union_query=union_query_clone,
+        )

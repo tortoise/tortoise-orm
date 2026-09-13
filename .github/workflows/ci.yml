@@ -17,7 +17,7 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
-      - uses: astral-sh/setup-uv@v7
+      - uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
       - uses: actions/cache@v5
         with:
           path: ~/.cache/pip
@@ -39,7 +39,7 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
-      - uses: astral-sh/setup-uv@v7
+      - uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
       - uses: actions/cache@v5
         with:
           path: ~/.cache/pip
@@ -58,7 +58,9 @@ jobs:
           PYTHONDEVMODE: 1
       - name: Test FastAPI/Blacksheep/Sanic Examples
         run: |
-          PYTHONPATH=$DEST_FASTAPI uv run --frozen pytest $PYTEST_ARGS $DEST_FASTAPI/_tests.py
+          PYTHONPATH=$DEST_FASTAPI uv run --frozen tortoise -c config.TORTOISE_ORM migrate
+          PYTHONPATH=$DEST_FASTAPI uv run --frozen pytest $PYTEST_ARGS_SEQ $DEST_FASTAPI/_tests.py
+          rm -f $DEST_FASTAPI/db.sqlite3
           PYTHONPATH=$DEST_BLACKSHEEP uv run --frozen pytest $PYTEST_ARGS $DEST_BLACKSHEEP/_tests.py
           PYTHONPATH=$DEST_SANIC uv run --frozen pytest $PYTEST_ARGS $DEST_SANIC/_tests.py
         env:
@@ -67,6 +69,7 @@ jobs:
           DEST_SANIC: examples/sanic
           PYTHONDEVMODE: 1
           PYTEST_ARGS: "-n auto --cov=tortoise --cov-append --cov-branch --tb=native -q"
+          PYTEST_ARGS_SEQ: "--cov=tortoise --cov-append --cov-branch --tb=native -q"
       - name: Test Comprehensive Migrations Example
         run: |
           cd examples/comprehensive_migrations_project
@@ -116,7 +119,7 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
-      - uses: astral-sh/setup-uv@v7
+      - uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
       - uses: actions/cache@v5
         with:
           path: ~/.cache/pip
@@ -162,7 +165,7 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
-      - uses: astral-sh/setup-uv@v7
+      - uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
       - uses: actions/cache@v5
         with:
           path: ~/.cache/pip
@@ -224,7 +227,7 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
-      - uses: astral-sh/setup-uv@v7
+      - uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
       - uses: actions/cache@v5
         with:
           path: ~/.cache/pip
@@ -253,7 +256,7 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: "3.14"
-      - uses: astral-sh/setup-uv@v7
+      - uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
       - name: Install dependencies
         run: make deps
       - name: Download all coverage artifacts
