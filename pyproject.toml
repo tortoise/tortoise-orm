@@ -52,7 +52,7 @@ accel = [
 ]
 asyncpg = ["asyncpg"]
 aiomysql = ["aiomysql"]
-asyncmy = ["asyncmy (>=0.2.11,<1.0.0)"]
+asyncmy = ["asyncmy (>=0.2.12,<1.0.0)"]
 psycopg = ["psycopg[pool,binary] (>=3.0.12,<4.0.0)"]
 asyncodbc = ["asyncodbc (>=0.1.1,<1.0.0); python_version < '4.0'"]
 

@@ -539,6 +539,15 @@ class ModelMeta(type):
             pk_attr,
         )
 
+        # Inherit the default ordering from an abstract base model when the
+        # subclass's own Meta does not define one (#2046).
+        if not hasattr(meta_class, "ordering"):
+            for base in bases:
+                base_meta = getattr(base, "_meta", None)
+                if base_meta is not None and base_meta._default_ordering:
+                    meta._default_ordering = base_meta._default_ordering
+                    break
+
         new_class = super().__new__(cls, name, bases, attrs)
         for field in meta.fields_map.values():
             field.model = new_class  # type: ignore

@@ -309,3 +309,34 @@ async def test_aggregate_max_with_f_expression(db):
         .values("max_decimal")
     )
     assert values[0] == {"max_decimal": None}
+
+
+@pytest.mark.asyncio
+async def test_scale_is_preserved(db):
+    # Decimal.__eq__ compares numerically, so `== Decimal("27.27")` cannot see
+    # the scale. Assert on the string form, which is what reaches a template,
+    # an f-string or a JSON serializer.
+    obj0 = await testmodels.DecimalFields.create(decimal=Decimal("100.00"), decimal_nodec=10)
+    obj = await testmodels.DecimalFields.get(id=obj0.id)
+    assert str(obj.decimal) == "100.0000"
+    assert str(obj.decimal_nodec) == "10"
+    assert obj.decimal.as_tuple().exponent == -4
+    assert obj.decimal_nodec.as_tuple().exponent == 0
+
+
+def test_to_python_value_scale():
+    field = fields.DecimalField(max_digits=12, decimal_places=2)
+    for value, expected in (
+        ("100.00", "100.00"),
+        ("100", "100.00"),
+        ("10", "10.00"),
+        ("1000000", "1000000.00"),
+        ("0", "0.00"),
+        ("1234.5", "1234.50"),
+        ("12.3456", "12.35"),
+    ):
+        assert str(field.to_python_value(value)) == expected
+
+    field0 = fields.DecimalField(max_digits=12, decimal_places=0)
+    assert str(field0.to_python_value("10")) == "10"
+    assert str(field0.to_python_value("100")) == "100"
