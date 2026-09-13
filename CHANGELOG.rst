@@ -26,6 +26,10 @@ Fixed
 - A model with its own ``Meta`` now inherits ``Meta.ordering`` from its abstract base model when it does not define its own. (#2236)
 - The return type hint for ``IntEnumField``/``CharEnumField`` is now ``tortoise.fields.Field[EnumType]`` instead of ``EnumType``. (#2243)
 
+Fixed
+^^^^^
+- ``GeometryField`` (MySQL) now declares a concrete ``field_type``; previously it was ``None`` (the ``_FieldMeta`` metaclass only auto-assigns it for multi-base fields), so ``to_python_value``/``to_db_value`` raised ``TypeError`` on any non-``None`` value. (#2238)
+
 1.1.8
 -----
 
