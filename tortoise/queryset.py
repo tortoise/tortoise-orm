@@ -61,6 +61,8 @@ class QuerySetSingle(Protocol[T_co]):
     # pylint: disable=W0104
     def __await__(self) -> Generator[Any, None, T_co]: ...  # pragma: nocoverage
 
+    def sql(self, params_inline=False) -> str: ...  # pragma: nocoverage
+
     def prefetch_related(
         self, *args: str | Prefetch
     ) -> QuerySetSingle[T_co]: ...  # pragma: nocoverage
@@ -582,6 +584,13 @@ class QuerySet(AwaitableQuery[MODEL]):
         or None.
         """
         if not isinstance(key, slice):
+            if isinstance(key, int):  # type: ignore[unreachable]
+                raise ParamsError(
+                    "QuerySet indices must be slices, not integers. "
+                    "QuerySets are lazy and do not support random access. "
+                    "Use await queryset.first(), await queryset.offset(n).first(), "
+                    "or await queryset.all() and index the returned list."
+                )
             raise ParamsError("QuerySet indices must be slices.")
 
         if not (key.step is None or (isinstance(key.step, int) and key.step == 1)):
@@ -1309,7 +1318,7 @@ class QuerySet(AwaitableQuery[MODEL]):
 
     def __await__(self) -> Generator[Any, None, list[MODEL]]:
         if self._db is None:
-            self._db = self._choose_db(self._select_for_update)  # type: ignore
+            self._db = self._choose_db(self._select_for_update)  # type: ignore[unreachable]
         self._make_query()
         return self._execute().__await__()
 
@@ -1397,7 +1406,7 @@ class UpdateQuery(AwaitableQuery):
                 raise IntegrityError(f"Field {key} is generated and can not be updated")
             if isinstance(field_object, (ForeignKeyFieldInstance, OneToOneFieldInstance)):
                 self.model._validate_relation_type(key, value)
-                fk_field: str = field_object.source_field  # type: ignore
+                fk_field: str = field_object.source_field  # type: ignore[assignment]
                 db_field = self.model._meta.fields_map[fk_field].source_field
                 value = self.model._meta.fields_map[fk_field].to_db_value(
                     getattr(value, field_object.to_field_instance.model_field_name),

@@ -156,7 +156,7 @@ async def test_slicing_count(db, intfields_data):
     assert await queryset.count() == 4
 
 
-def test_slicing_negative_values(db):
+def test_slicing_negative_values(db) -> None:
     with pytest.raises(
         ParamsError,
         match="Slice start should be non-negative number or None.",
@@ -170,7 +170,21 @@ def test_slicing_negative_values(db):
         _ = IntFields.all()[:-1]
 
 
-def test_slicing_stop_before_start(db):
+def test_integer_indexing_not_supported(db) -> None:
+    with pytest.raises(
+        ParamsError,
+        match=(
+            r"QuerySet indices must be slices, not integers\. "
+            r"QuerySets are lazy and do not support random access\. "
+            r"Use await queryset\.first\(\), await queryset\.offset\(n\)\.first\(\), "
+            r"or await queryset\.all\(\) and index the returned list\."
+        ),
+    ):
+        # Use an index way outside reasonable bounds for the dataset, so we don't accidentally support it.
+        _ = IntFields.all()[1000]  # type:ignore
+
+
+def test_slicing_stop_before_start(db) -> None:
     with pytest.raises(
         ParamsError,
         match="Slice stop should be non-negative number greater that slice start, or None.",
@@ -948,13 +962,13 @@ async def test_annotations_in_flat_values_list(db):
 
 
 # Tests for exception classes (no database needed, pure Python tests)
-def test_does_not_exist():
+def test_does_not_exist() -> None:
     exp_cls: type[NotExistOrMultiple] = DoesNotExist
     assert str(exp_cls("old format")) == "old format"
     assert str(exp_cls(Tournament)) == exp_cls.TEMPLATE.format(Tournament.__name__)
 
 
-def test_multiple_objects_returned():
+def test_multiple_objects_returned() -> None:
     exp_cls: type[NotExistOrMultiple] = MultipleObjectsReturned
     assert str(exp_cls("old format")) == "old format"
     assert str(exp_cls(Tournament)) == exp_cls.TEMPLATE.format(Tournament.__name__)
