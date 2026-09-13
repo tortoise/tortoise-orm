@@ -18,7 +18,6 @@ Added
 
 Fixed
 ^^^^^
-- ``Model.update_or_create()`` now applies the caller's defaults after losing a concurrent insert, re-reading the current row through the existing transactional update path. (#2060)
 - ``QuerySet.distinct().count()`` no longer counts rows duplicated by a join (e.g. filtering on a m2m relation); it now counts distinct primary keys and matches the number of rows the query returns. (#2255)
 - ``DecimalField`` no longer strips the scale it just applied: ``to_python_value()`` called ``.normalize()`` immediately after ``.quantize()``, so a ``DecimalField(max_digits=12, decimal_places=2)`` holding ``100.00`` came back as ``Decimal('1E+2')`` and rendered as ``1E+2`` in strings, f-strings and JSON. (#2271)
 - BlackSheep: ``register_tortoise`` now enables the global connection fallback, so database access works when BlackSheep runs handlers in tasks other than the one that initialized the ORM. (#2248)
@@ -27,6 +26,7 @@ Fixed
 - A model with its own ``Meta`` now inherits ``Meta.ordering`` from its abstract base model when it does not define its own. (#2236)
 - The return type hint for ``IntEnumField``/``CharEnumField`` is now ``tortoise.fields.Field[EnumType]`` instead of ``EnumType``. (#2243)
 - Make EmailValidator allowed_domains actually restrict domains. (#2252)
+- ``Model.update_or_create()`` now applies the caller's defaults after losing a concurrent insert, re-reading the current row through the existing transactional update path. (#2060)
 
 1.1.8
 -----

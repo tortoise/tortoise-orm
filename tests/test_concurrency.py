@@ -15,7 +15,7 @@ from tortoise.transactions import in_transaction
 
 
 @pytest.mark.asyncio
-async def test_concurrency_read_isolated(db_isolated):
+async def test_concurrency_read_isolated(db_isolated) -> None:
     """Test concurrent reads."""
     await Tournament.create(name="Test")
     tour1 = await Tournament.first()
@@ -24,7 +24,7 @@ async def test_concurrency_read_isolated(db_isolated):
 
 
 @pytest.mark.asyncio
-async def test_concurrency_create_isolated(db_isolated):
+async def test_concurrency_create_isolated(db_isolated) -> None:
     """Test concurrent creates."""
     all_write = await asyncio.gather(*[Tournament.create(name="Test") for _ in range(100)])
     all_read = await Tournament.all()
@@ -32,7 +32,7 @@ async def test_concurrency_create_isolated(db_isolated):
 
 
 @pytest.mark.asyncio
-async def test_nonconcurrent_get_or_create_isolated(db_isolated):
+async def test_nonconcurrent_get_or_create_isolated(db_isolated) -> None:
     """Test non-concurrent get_or_create."""
     unas = [await UniqueName.get_or_create(name="c") for _ in range(10)]
     una_created = [una[1] for una in unas if una[1] is True]
@@ -86,10 +86,10 @@ async def test_concurrent_create_applies_defaults(
     assert await UniqueNameRequired.filter(name="race").count() == 1
     stored = await UniqueNameRequired.get(name="race")
     if method_name == "update_or_create":
-        for defaults, (instance, _) in zip(defaults_pair, results):
+        for defaults, (instance, _) in zip(defaults_pair, results, strict=False):
             for field, value in defaults.items():
                 assert getattr(instance, field) == value
-        for defaults, (_, created) in zip(defaults_pair, results):
+        for defaults, (_, created) in zip(defaults_pair, results, strict=False):
             if not created:
                 for field, value in defaults.items():
                     assert getattr(stored, field) == value
@@ -104,7 +104,7 @@ async def test_concurrent_create_applies_defaults(
 
 
 @pytest.mark.asyncio
-async def test_update_or_create_refreshes_after_create_race(db_isolated, monkeypatch):
+async def test_update_or_create_refreshes_after_create_race(db_isolated, monkeypatch) -> None:
     """The unlocked conflict lookup must not overwrite another writer's later changes."""
     original_create_or_get = UniqueNameRequired._create_or_get
 
@@ -128,7 +128,7 @@ async def test_update_or_create_refreshes_after_create_race(db_isolated, monkeyp
 
 
 @pytest.mark.asyncio
-async def test_update_or_create_retries_deleted_race_winner(db_isolated, monkeypatch):
+async def test_update_or_create_retries_deleted_race_winner(db_isolated, monkeypatch) -> None:
     """A row deleted after the conflict lookup can be created by the retry."""
     original_create_or_get = UniqueNameRequired._create_or_get
     create_attempts = 0
@@ -157,7 +157,7 @@ async def test_update_or_create_retries_deleted_race_winner(db_isolated, monkeyp
 
 @requireCapability(supports_transactions=True)
 @pytest.mark.asyncio
-async def test_update_or_create_race_in_existing_transaction(db_isolated, monkeypatch):
+async def test_update_or_create_race_in_existing_transaction(db_isolated, monkeypatch) -> None:
     """Conflict recovery and its UPDATE must remain inside the caller's transaction."""
     original_create_or_get = UniqueNameRequired._create_or_get
 
@@ -183,7 +183,7 @@ async def test_update_or_create_race_in_existing_transaction(db_isolated, monkey
 )
 @requireCapability(dialect=NotEQ("mssql"))
 @pytest.mark.asyncio
-async def test_concurrent_get_or_create_isolated(db_isolated):
+async def test_concurrent_get_or_create_isolated(db_isolated) -> None:
     """Test concurrent get_or_create."""
     unas = await asyncio.gather(*[UniqueName.get_or_create(name="d") for _ in range(10)])
     una_created = [una[1] for una in unas if una[1] is True]
@@ -197,10 +197,10 @@ async def test_concurrent_get_or_create_isolated(db_isolated):
 )
 @requireCapability(supports_transactions=True)
 @pytest.mark.asyncio
-async def test_concurrent_transactions_with_multiple_ops(db_isolated):
+async def test_concurrent_transactions_with_multiple_ops(db_isolated) -> None:
     """Test concurrent transactions with multiple operations."""
 
-    async def create_in_transaction():
+    async def create_in_transaction() -> None:
         async with in_transaction():
             await asyncio.gather(*[Tournament.create(name="Test") for _ in range(100)])
 
@@ -214,10 +214,10 @@ async def test_concurrent_transactions_with_multiple_ops(db_isolated):
 )
 @requireCapability(supports_transactions=True)
 @pytest.mark.asyncio
-async def test_concurrent_transactions_with_single_op(db_isolated):
+async def test_concurrent_transactions_with_single_op(db_isolated) -> None:
     """Test concurrent transactions with single operation."""
 
-    async def create():
+    async def create() -> None:
         async with in_transaction():
             await Tournament.create(name="Test")
 
@@ -231,13 +231,12 @@ async def test_concurrent_transactions_with_single_op(db_isolated):
 )
 @requireCapability(supports_transactions=True)
 @pytest.mark.asyncio
-async def test_nested_concurrent_transactions_with_multiple_ops(db_isolated):
+async def test_nested_concurrent_transactions_with_multiple_ops(db_isolated) -> None:
     """Test nested concurrent transactions with multiple operations."""
 
-    async def create_in_transaction():
-        async with in_transaction():
-            async with in_transaction():
-                await asyncio.gather(*[Tournament.create(name="Test") for _ in range(100)])
+    async def create_in_transaction() -> None:
+        async with in_transaction(), in_transaction():
+            await asyncio.gather(*[Tournament.create(name="Test") for _ in range(100)])
 
     await asyncio.gather(*[create_in_transaction() for _ in range(10)])
     count = await Tournament.all().count()
@@ -251,7 +250,7 @@ async def test_nested_concurrent_transactions_with_multiple_ops(db_isolated):
 
 @requireCapability(supports_transactions=True)
 @pytest.mark.asyncio
-async def test_concurrency_read_transactioned(db):
+async def test_concurrency_read_transactioned(db) -> None:
     """Test concurrent reads within transaction."""
     await Tournament.create(name="Test")
     tour1 = await Tournament.first()
@@ -261,7 +260,7 @@ async def test_concurrency_read_transactioned(db):
 
 @requireCapability(supports_transactions=True)
 @pytest.mark.asyncio
-async def test_concurrency_create_transactioned(db):
+async def test_concurrency_create_transactioned(db) -> None:
     """Test concurrent creates within transaction."""
     all_write = await asyncio.gather(*[Tournament.create(name="Test") for _ in range(100)])
     all_read = await Tournament.all()
@@ -270,7 +269,7 @@ async def test_concurrency_create_transactioned(db):
 
 @requireCapability(supports_transactions=True)
 @pytest.mark.asyncio
-async def test_nonconcurrent_get_or_create_transactioned(db):
+async def test_nonconcurrent_get_or_create_transactioned(db) -> None:
     """Test non-concurrent get_or_create within transaction."""
     unas = [await UniqueName.get_or_create(name="a") for _ in range(10)]
     una_created = [una[1] for una in unas if una[1] is True]
@@ -286,7 +285,7 @@ async def test_nonconcurrent_get_or_create_transactioned(db):
 
 
 @pytest.mark.asyncio
-async def test_concurrent_queries_lazy_init(db_isolated):
+async def test_concurrent_queries_lazy_init(db_isolated) -> None:
     """Test concurrent queries with lazy connection initialization.
 
     Tortoise.init is lazy and does not initialize the database connection
@@ -299,7 +298,7 @@ async def test_concurrent_queries_lazy_init(db_isolated):
 
 
 @pytest.mark.asyncio
-async def test_concurrent_transactions_lazy_init(db_isolated):
+async def test_concurrent_transactions_lazy_init(db_isolated) -> None:
     """Test concurrent transactions with lazy connection initialization."""
 
     async def transaction() -> None:
