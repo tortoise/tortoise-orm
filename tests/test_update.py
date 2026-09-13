@@ -166,6 +166,78 @@ async def test_update_auto_now(db):
 
 
 @pytest.mark.asyncio
+async def test_update_auto_now_with_update_fields(db):
+    tournament = await Tournament.create(name="1")
+    event = await Event.create(name="original", tournament=tournament)
+    original_modified = event.modified
+
+    # Set modified to the past so we can detect if it gets updated
+    past = timezone.now() - timedelta(days=1)
+    await Event.filter(pk=event.pk).update(modified=past)
+
+    event = await Event.get(pk=event.pk)
+    assert event.modified.date() == past.date()
+
+    # Update only name with update_fields; auto_now field should also be updated
+    event.name = "updated"
+    await event.save(update_fields=["name"])
+
+    event = await Event.get(pk=event.pk)
+    assert event.name == "updated"
+    assert event.modified.date() == timezone.now().date()
+
+
+@pytest.mark.asyncio
+async def test_bulk_update_auto_now(db):
+    tournament = await Tournament.create(name="1")
+    event1 = await Event.create(name="original1", tournament=tournament)
+    event2 = await Event.create(name="original2", tournament=tournament)
+
+    # Set modified to the past so we can detect if it gets updated
+    past = timezone.now() - timedelta(days=1)
+    await Event.filter(pk__in=[event1.pk, event2.pk]).update(modified=past)
+
+    event1 = await Event.get(pk=event1.pk)
+    event2 = await Event.get(pk=event2.pk)
+    assert event1.modified.date() == past.date()
+    assert event2.modified.date() == past.date()
+
+    # bulk_update only name; auto_now field should also be updated
+    event1.name = "updated1"
+    event2.name = "updated2"
+    await Event.filter(pk__in=[event1.pk, event2.pk]).bulk_update(
+        [event1, event2], fields=["name"]
+    )
+
+    event1 = await Event.get(pk=event1.pk)
+    event2 = await Event.get(pk=event2.pk)
+    assert event1.name == "updated1"
+    assert event2.name == "updated2"
+    assert event1.modified.date() == timezone.now().date()
+    assert event2.modified.date() == timezone.now().date()
+
+
+@pytest.mark.asyncio
+async def test_queryset_update_auto_now(db):
+    tournament = await Tournament.create(name="1")
+    event = await Event.create(name="original", tournament=tournament)
+
+    # Set modified to the past (explicit modified= won't be overridden by auto_now)
+    past = timezone.now() - timedelta(days=1)
+    await Event.filter(pk=event.pk).update(modified=past)
+
+    event = await Event.get(pk=event.pk)
+    assert event.modified.date() == past.date()
+
+    # queryset.update() should auto-include auto_now fields
+    await Event.filter(pk=event.pk).update(name="updated")
+
+    event = await Event.get(pk=event.pk)
+    assert event.name == "updated"
+    assert event.modified.date() == timezone.now().date()
+
+
+@pytest.mark.asyncio
 async def test_update_relation(db):
     tournament_first = await Tournament.create(name="1")
     tournament_second = await Tournament.create(name="2")
