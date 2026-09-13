@@ -8,4 +8,4 @@ Usage
 
 .. code-block:: sh
 
-    python3 main.py
+    python main.py
