@@ -86,7 +86,7 @@ contrib = [
     "sanic",
     "sanic-testing",
     # Sample integration - Starlette
-    "starlette",
+    "starlette >=0.52,<2.0",
     # Pydantic support
     "pydantic >=2.0,!=2.7.0",
     # FastAPI support
