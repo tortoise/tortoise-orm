@@ -84,7 +84,8 @@ As this is a value that is different for different people, we have settled on:
 Style
 -----
 
-We try and automate as much as we can, so a simple ``make check`` will do automated style checking and linting, but these don't pick up on the non-obvious style preferences.
+We try and automate as much as we can, so a simple ``make style`` (or ``uvx prek run --all-files``) will do automated formatting, style checking and linting, but these don't pick up on the non-obvious style preferences.
+Before creating a PR, please run ``make check`` (or ``uvx prek run --all-files --group check``) to ensure code quality.
 
 Tortoise ORM follows a the following agreed upon style:
 
