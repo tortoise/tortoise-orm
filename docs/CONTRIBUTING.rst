@@ -8,7 +8,7 @@ Contribution Guide
    CODE_OF_CONDUCT
 
 
-If you want to contribute check out issues, or just straightforwardly create PR.
+If you want to contribute, check out the issues, or just create a PR.
 
 Tortoise ORM is a volunteer effort. We encourage you to pitch in and join the team!
 
@@ -66,7 +66,7 @@ The code is structured in the following directories:
 Coding Guideline
 ================
 
-We believe to keep the code simple, so it is easier to test and there is less place for bugs to hide.
+We believe in keeping the code simple, so it is easier to test and there are fewer places for bugs to hide.
 
 Priorities
 ----------
