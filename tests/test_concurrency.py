@@ -1,5 +1,4 @@
 import asyncio
-import sys
 
 import pytest
 
@@ -53,13 +52,15 @@ async def test_nonconcurrent_get_or_create_isolated(db_isolated) -> None:
 @pytest.mark.asyncio
 async def test_concurrent_create_applies_defaults(
     db_isolated, monkeypatch, method_name, defaults_pair
-):
+) -> None:
     """Both callers read a missing row before either attempts the real INSERT."""
     original_create_or_get = UniqueNameRequired._create_or_get
     both_missing = asyncio.Event()
     create_attempts = 0
 
-    async def synchronized_create_or_get(cls, db, defaults, **kwargs):
+    async def synchronized_create_or_get(
+        cls, db, defaults, **kwargs
+    ) -> tuple[UniqueNameRequired, bool]:
         nonlocal create_attempts
         create_attempts += 1
         if create_attempts == 2:
@@ -108,7 +109,7 @@ async def test_update_or_create_refreshes_after_create_race(db_isolated, monkeyp
     """The unlocked conflict lookup must not overwrite another writer's later changes."""
     original_create_or_get = UniqueNameRequired._create_or_get
 
-    async def racing_create_or_get(cls, db, defaults, **kwargs):
+    async def racing_create_or_get(cls, db, defaults, **kwargs) -> tuple[UniqueNameRequired, bool]:
         await cls.create(name=kwargs["name"], optional="winner", other_optional="old")
         instance, created = await original_create_or_get(db, defaults, **kwargs)
         assert created is False
@@ -133,7 +134,7 @@ async def test_update_or_create_retries_deleted_race_winner(db_isolated, monkeyp
     original_create_or_get = UniqueNameRequired._create_or_get
     create_attempts = 0
 
-    async def racing_create_or_get(cls, db, defaults, **kwargs):
+    async def racing_create_or_get(cls, db, defaults, **kwargs) -> tuple[UniqueNameRequired, bool]:
         nonlocal create_attempts
         create_attempts += 1
         if create_attempts == 1:
@@ -160,7 +161,7 @@ async def test_update_or_create_updates_recreated_race_winner(db_isolated, monke
     original_create_or_get = UniqueNameRequired._create_or_get
     deleted_winner = False
 
-    async def racing_create_or_get(cls, db, defaults, **kwargs):
+    async def racing_create_or_get(cls, db, defaults, **kwargs) -> tuple[UniqueNameRequired, bool]:
         nonlocal deleted_winner
         await cls.create(using_db=db, name=kwargs["name"], optional="winner", other_optional="old")
         instance, created = await original_create_or_get(db, defaults, **kwargs)
@@ -190,13 +191,13 @@ async def test_update_or_create_repeated_deletions_terminate(db_isolated, monkey
     """Sustained churn fails promptly and rolls back the caller's transaction."""
     original_create_or_get = UniqueNameRequired._create_or_get
 
-    async def racing_create_or_get(cls, db, defaults, **kwargs):
+    async def racing_create_or_get(cls, db, defaults, **kwargs) -> tuple[UniqueNameRequired, bool]:
         await cls.create(using_db=db, name=kwargs["name"], optional="winner")
         instance, created = await original_create_or_get(db, defaults, **kwargs)
         await instance.delete(using_db=db)
         return instance, created
 
-    async def update_during_churn():
+    async def update_during_churn() -> None:
         async with in_transaction("models") as connection:
             await UniqueNameRequired.create(using_db=connection, name="caller")
             await UniqueNameRequired.update_or_create(
@@ -218,7 +219,7 @@ async def test_update_or_create_race_in_existing_transaction(db_isolated, monkey
     """Conflict recovery and its UPDATE must remain inside the caller's transaction."""
     original_create_or_get = UniqueNameRequired._create_or_get
 
-    async def racing_create_or_get(cls, db, defaults, **kwargs):
+    async def racing_create_or_get(cls, db, defaults, **kwargs) -> tuple[UniqueNameRequired, bool]:
         await cls.create(using_db=db, name=kwargs["name"], optional="winner")
         return await original_create_or_get(db, defaults, **kwargs)
 
@@ -235,9 +236,6 @@ async def test_update_or_create_race_in_existing_transaction(db_isolated, monkey
     assert await UniqueNameRequired.filter(name="race").count() == 0
 
 
-@pytest.mark.skipif(
-    sys.version_info < (3, 7), reason="aiocontextvars backport not handling this well"
-)
 @requireCapability(dialect=NotEQ("mssql"))
 @pytest.mark.asyncio
 async def test_concurrent_get_or_create_isolated(db_isolated) -> None:
@@ -249,9 +247,6 @@ async def test_concurrent_get_or_create_isolated(db_isolated) -> None:
         assert una[0] == unas[0][0]
 
 
-@pytest.mark.skipif(
-    sys.version_info < (3, 7), reason="aiocontextvars backport not handling this well"
-)
 @requireCapability(supports_transactions=True)
 @pytest.mark.asyncio
 async def test_concurrent_transactions_with_multiple_ops(db_isolated) -> None:
@@ -266,9 +261,6 @@ async def test_concurrent_transactions_with_multiple_ops(db_isolated) -> None:
     assert count == 1000
 
 
-@pytest.mark.skipif(
-    sys.version_info < (3, 7), reason="aiocontextvars backport not handling this well"
-)
 @requireCapability(supports_transactions=True)
 @pytest.mark.asyncio
 async def test_concurrent_transactions_with_single_op(db_isolated) -> None:
@@ -283,9 +275,6 @@ async def test_concurrent_transactions_with_single_op(db_isolated) -> None:
     assert count == 100
 
 
-@pytest.mark.skipif(
-    sys.version_info < (3, 7), reason="aiocontextvars backport not handling this well"
-)
 @requireCapability(supports_transactions=True)
 @pytest.mark.asyncio
 async def test_nested_concurrent_transactions_with_multiple_ops(db_isolated) -> None:
