@@ -16,6 +16,10 @@ Added
 - ``Q.__bool__()`` so ``Q`` objects with no filters/children (including nested empty ``Q`` children) are falsy. (#2227)
 - PostgreSQL ``password`` credential now accepts a sync or async callable, resolved once per new connection, to support short-lived credentials such as AWS RDS/Aurora IAM tokens and Azure Entra ID tokens. (#2261)
 
+Changed
+^^^^^^^
+- `tortoise.contrib.starlette` now only supports Starlette 1.0+ (This does not affect FastAPI users; you can continue using FastAPI with any version of Starlette). (#2130)
+
 Fixed
 ^^^^^
 - ``QuerySet.distinct().count()`` no longer counts rows duplicated by a join (e.g. filtering on a m2m relation); it now counts distinct primary keys and matches the number of rows the query returns. (#2255)
