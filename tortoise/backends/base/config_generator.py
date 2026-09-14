@@ -200,7 +200,22 @@ def expand_db_url(db_url: str, testing: bool = False) -> dict:
     vmap.update(db["vmap"])
     params[vmap["path"]] = path
     if vmap.get("hostname"):
-        params[vmap["hostname"]] = url.hostname or None
+        plain_hostname = url.hostname or None
+        parsed_hostname: str | list[str] | None = plain_hostname
+        if (
+            plain_hostname
+            and "," in plain_hostname
+            and db_backend in ("postgres", "postgresql", "asyncpg")
+        ):
+            # A comma-joined host list (host1,host2:5432) is libpq's own
+            # multi-host syntax for primary/replica failover. psycopg
+            # forwards this string straight through to libpq, which already
+            # parses it correctly on its own, but asyncpg.connect() wants
+            # the hosts as an actual sequence rather than one string with
+            # asyncpg's own DNS resolution otherwise trying (and failing)
+            # to look up the whole comma-joined string as a single name.
+            parsed_hostname = plain_hostname.split(",")
+        params[vmap["hostname"]] = parsed_hostname
     try:
         if vmap.get("port") and url.port:
             params[vmap["port"]] = int(url.port)
