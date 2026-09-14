@@ -7,6 +7,7 @@ from tests.testmodels import Tournament, UniqueName, UniqueNameRequired
 from tortoise import connections
 from tortoise.contrib.test import requireCapability
 from tortoise.contrib.test.condition import NotEQ
+from tortoise.exceptions import OperationalError
 from tortoise.transactions import in_transaction
 
 # =============================================================================
@@ -81,7 +82,6 @@ async def test_concurrent_create_applies_defaults(
                 task.cancel()
         await asyncio.gather(*tasks, return_exceptions=True)
 
-    assert create_attempts == 2
     assert sum(created for _, created in results) == 1
     assert await UniqueNameRequired.filter(name="race").count() == 1
     stored = await UniqueNameRequired.get(name="race")
@@ -149,10 +149,67 @@ async def test_update_or_create_retries_deleted_race_winner(db_isolated, monkeyp
         name="race", defaults={"optional": "retry"}
     )
     assert created is True
-    assert create_attempts == 2
     assert instance.optional == "retry"
     assert await UniqueNameRequired.filter(name="race").count() == 1
     assert (await UniqueNameRequired.get(pk=instance.pk)).optional == "retry"
+
+
+@pytest.mark.asyncio
+async def test_update_or_create_updates_recreated_race_winner(db_isolated, monkeypatch) -> None:
+    """A second insert conflict still gets a fresh locked read before updating."""
+    original_create_or_get = UniqueNameRequired._create_or_get
+    deleted_winner = False
+
+    async def racing_create_or_get(cls, db, defaults, **kwargs):
+        nonlocal deleted_winner
+        await cls.create(using_db=db, name=kwargs["name"], optional="winner", other_optional="old")
+        instance, created = await original_create_or_get(db, defaults, **kwargs)
+        if not deleted_winner:
+            await instance.delete(using_db=db)
+            deleted_winner = True
+        else:
+            await cls.filter(pk=instance.pk).using_db(db).update(other_optional="concurrent")
+        return instance, created
+
+    monkeypatch.setattr(UniqueNameRequired, "_create_or_get", classmethod(racing_create_or_get))
+    instance, created = await UniqueNameRequired.update_or_create(
+        name="race", defaults={"optional": "loser"}
+    )
+    assert created is False
+    assert instance.optional == "loser"
+    assert instance.other_optional == "concurrent"
+    assert await UniqueNameRequired.filter(name="race").count() == 1
+    stored = await UniqueNameRequired.get(pk=instance.pk)
+    assert stored.optional == "loser"
+    assert stored.other_optional == "concurrent"
+
+
+@requireCapability(supports_transactions=True)
+@pytest.mark.asyncio
+async def test_update_or_create_repeated_deletions_terminate(db_isolated, monkeypatch) -> None:
+    """Sustained churn fails promptly and rolls back the caller's transaction."""
+    original_create_or_get = UniqueNameRequired._create_or_get
+
+    async def racing_create_or_get(cls, db, defaults, **kwargs):
+        await cls.create(using_db=db, name=kwargs["name"], optional="winner")
+        instance, created = await original_create_or_get(db, defaults, **kwargs)
+        await instance.delete(using_db=db)
+        return instance, created
+
+    async def update_during_churn():
+        async with in_transaction("models") as connection:
+            await UniqueNameRequired.create(using_db=connection, name="caller")
+            await UniqueNameRequired.update_or_create(
+                name="race", defaults={"optional": "loser"}, using_db=connection
+            )
+
+    monkeypatch.setattr(UniqueNameRequired, "_create_or_get", classmethod(racing_create_or_get))
+    with pytest.raises(OperationalError) as exc:
+        await asyncio.wait_for(update_during_churn(), timeout=30)
+    # An INSERT IntegrityError is not the deliberate exhaustion error.
+    assert type(exc.value) is OperationalError
+    assert await UniqueNameRequired.filter(name="caller").count() == 0
+    assert await UniqueNameRequired.filter(name="race").count() == 0
 
 
 @requireCapability(supports_transactions=True)

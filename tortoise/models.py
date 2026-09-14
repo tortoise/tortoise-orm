@@ -1344,23 +1344,32 @@ class Model(metaclass=ModelMeta):
         """
         A convenience method for updating an object with the given kwargs, creating a new one if necessary.
 
+        Creation is attempted at most twice. Each concurrent insert conflict is followed by a
+        fresh locked read, including after the last creation attempt.
+
         :param defaults: Default values used to update the object.
         :param using_db: Specific DB connection to use instead of default bound
         :param kwargs: Query parameters.
+        :raises OperationalError: If repeated concurrent deletions exhaust conflict recovery.
         """
         if not defaults:
             defaults = {}
         db = using_db or cls._choose_db(True)
-        while True:
+        for attempt in range(3):
             async with in_transaction(connection_name=db.connection_name) as connection:
                 instance = await cls.select_for_update().using_db(connection).get_or_none(**kwargs)
                 if instance is not None:
                     await instance.update_from_dict(defaults).save(using_db=connection)
                     return instance, False
+            if attempt == 2:
+                break
             instance, created = await cls._create_or_get(db, defaults, **kwargs)
             if created:
                 return instance, True
             # Retry the update path with a fresh instance after a concurrent insert.
+        raise OperationalError(
+            f"{cls.__name__}.update_or_create() could not recover from concurrent deletions"
+        )
 
     @classmethod
     async def create(
