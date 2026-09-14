@@ -27,6 +27,7 @@ Fixed
 - The return type hint for ``IntEnumField``/``CharEnumField`` is now ``tortoise.fields.Field[EnumType]`` instead of ``EnumType``. (#2243)
 - Make EmailValidator allowed_domains actually restrict domains. (#2252)
 - ``AlterModelOptions`` now clears options that were removed from the model, instead of only merging in the ones that remain; removing a model docstring no longer makes ``makemigrations`` regenerate the same migration on every run. (#2279)
+- ``Model.update_or_create()`` now applies the caller's defaults after losing a concurrent insert, re-reading the current row through the existing transactional update path. Creation is attempted at most twice, with a final locked read after the last conflict; repeated concurrent deletions that exhaust recovery raise ``OperationalError`` rather than retrying indefinitely. (#2276)
 
 1.1.8
 -----
