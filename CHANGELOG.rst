@@ -26,6 +26,7 @@ Fixed
 - A model with its own ``Meta`` now inherits ``Meta.ordering`` from its abstract base model when it does not define its own. (#2236)
 - The return type hint for ``IntEnumField``/``CharEnumField`` is now ``tortoise.fields.Field[EnumType]`` instead of ``EnumType``. (#2243)
 - Make EmailValidator allowed_domains actually restrict domains. (#2252)
+- ``AlterModelOptions`` now clears options that were removed from the model, instead of only merging in the ones that remain; removing a model docstring no longer makes ``makemigrations`` regenerate the same migration on every run. (#2279)
 
 1.1.8
 -----
