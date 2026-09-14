@@ -193,6 +193,64 @@ class BaseSchemaEditor(SchemaQuotingMixin):
     def _get_unique_constraint_name(self, model: type[Model], field_names: list[str]) -> str:
         return self._generate_index_name("uid", model, field_names)
 
+    def _table_constraint_sqls(self, model: type[Model]) -> list[str]:
+        """In-table UNIQUE/CHECK clauses from ``Meta.constraints``.
+
+        ``UniqueConstraint`` entries whose fields already appear in
+        ``unique_together`` are skipped to avoid duplicate keys.
+        Partial unique constraints (``condition``) are not table constraints.
+        """
+        sqls: list[str] = []
+        unique_together_columns = {
+            tuple(self._resolve_fields_to_columns(model, fields))
+            for fields in (model._meta.unique_together or ())
+        }
+        for constraint in getattr(model._meta, "constraints", None) or ():
+            if isinstance(constraint, UniqueConstraint):
+                if constraint.condition:
+                    continue
+                resolved_fields = self._resolve_fields_to_columns(model, constraint.fields)
+                if tuple(resolved_fields) in unique_together_columns:
+                    continue
+                resolved = UniqueConstraint(fields=tuple(resolved_fields), name=constraint.name)
+                sqls.append(
+                    self.UNIQUE_CONSTRAINT_CREATE_TEMPLATE.format(
+                        index_name=self._constraint_name_for_model(model, resolved),
+                        fields=", ".join(self.quote(field) for field in resolved_fields),
+                    )
+                )
+            elif isinstance(constraint, CheckConstraint):
+                sqls.append(
+                    self.CHECK_CONSTRAINT_CREATE_TEMPLATE.format(
+                        name=constraint.name,
+                        check=constraint.check,
+                    )
+                )
+        return sqls
+
+    def _partial_unique_index_sqls(self, model: type[Model]) -> list[str]:
+        """``CREATE UNIQUE INDEX ... WHERE`` for partial ``UniqueConstraint``s (PostgreSQL)."""
+        if self.DIALECT != "postgres":
+            return []
+        sqls: list[str] = []
+        for constraint in getattr(model._meta, "constraints", None) or ():
+            if not isinstance(constraint, UniqueConstraint) or not constraint.condition:
+                continue
+            resolved_fields = self._resolve_fields_to_columns(model, constraint.fields)
+            resolved = UniqueConstraint(
+                fields=tuple(resolved_fields),
+                name=constraint.name,
+                condition=constraint.condition,
+            )
+            index_name = self._constraint_name_for_model(model, resolved)
+            sqls.append(
+                f'CREATE UNIQUE INDEX "{index_name}" '
+                f"ON {self._qualify_table_name(model._meta.db_table, model._meta.schema)} "
+                f"({', '.join(self.quote(field) for field in resolved_fields)}) "
+                f"WHERE {constraint.condition};"
+            )
+        return sqls
+
     def _get_index_sql(
         self,
         model: type[Model],
@@ -393,7 +451,10 @@ class BaseSchemaEditor(SchemaQuotingMixin):
                     self._get_unique_constraint_sql(model, unique_together_to_create)
                 )
 
+        in_table_definitions.extend(self._table_constraint_sqls(model))
+
         _indexes = [self._get_index_sql(model, [field_name]) for field_name in fields_with_index]
+        _indexes.extend(self._partial_unique_index_sqls(model))
 
         if model._meta.indexes:
             for index in model._meta.indexes:

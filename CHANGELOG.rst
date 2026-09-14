@@ -29,6 +29,10 @@ Fixed
 - ``AlterModelOptions`` now clears options that were removed from the model, instead of only merging in the ones that remain; removing a model docstring no longer makes ``makemigrations`` regenerate the same migration on every run. (#2279)
 - ``Model.update_or_create()`` now applies the caller's defaults after losing a concurrent insert, re-reading the current row through the existing transactional update path. Creation is attempted at most twice, with a final locked read after the last conflict; repeated concurrent deletions that exhaust recovery raise ``OperationalError`` rather than retrying indefinitely. (#2276)
 
+Fixed
+^^^^^
+- ``Meta.constraints`` (``UniqueConstraint`` / ``CheckConstraint``) are now emitted in ``CREATE TABLE`` by ``migrate`` and ``generate_schemas``. MySQL ``add_constraint`` honors the constraint ``name``. (#2272)
+
 1.1.8
 -----
 

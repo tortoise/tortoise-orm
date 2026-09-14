@@ -17,6 +17,7 @@ if TYPE_CHECKING:  # pragma: nocoverage
         ForeignKeyFieldInstance,
         ManyToManyFieldInstance,
     )
+    from tortoise.migrations.constraints import UniqueConstraint
     from tortoise.models import Model
 
 # pylint: disable=R0201
@@ -31,6 +32,7 @@ class BaseSchemaGenerator(SchemaQuotingMixin):
     )
     UNIQUE_INDEX_CREATE_TEMPLATE = INDEX_CREATE_TEMPLATE.replace("INDEX", "UNIQUE INDEX")
     UNIQUE_CONSTRAINT_CREATE_TEMPLATE = 'CONSTRAINT "{index_name}" UNIQUE ({fields})'
+    CHECK_CONSTRAINT_CREATE_TEMPLATE = 'CONSTRAINT "{name}" CHECK ({check})'
     GENERATED_PK_TEMPLATE = '"{field_name}" {generated_sql}{comment}'
     FK_TEMPLATE = ' REFERENCES {table} ("{field}") ON DELETE {on_delete}{comment}'
     M2M_TABLE_TEMPLATE = (
@@ -205,11 +207,96 @@ class BaseSchemaGenerator(SchemaQuotingMixin):
             extra="",
         )
 
-    def _get_unique_constraint_sql(self, model: type[Model], field_names: Sequence[str]) -> str:
+    def _get_unique_constraint_sql(
+        self,
+        model: type[Model],
+        field_names: Sequence[str],
+        index_name: str | None = None,
+    ) -> str:
         return self.UNIQUE_CONSTRAINT_CREATE_TEMPLATE.format(
-            index_name=self._get_index_name("uid", model, field_names),
+            index_name=index_name or self._get_index_name("uid", model, field_names),
             fields=", ".join([self.quote(f) for f in field_names]),
         )
+
+    def _resolve_fields_to_columns(
+        self, model: type[Model], field_names: tuple[str, ...] | Sequence[str]
+    ) -> list[str]:
+        resolved = []
+        for field_name in field_names:
+            field_object = model._meta.fields_map.get(field_name)
+            if field_object is not None:
+                resolved.append(field_object.source_field or field_name)
+            else:
+                resolved.append(field_name)
+        return resolved
+
+    def _constraint_name_for_model(self, model: type[Model], constraint: UniqueConstraint) -> str:
+        if constraint.name:
+            return constraint.name
+        return self._get_index_name("uid", model, list(constraint.fields))
+
+    def _table_constraint_sqls(self, model: type[Model]) -> list[str]:
+        """In-table UNIQUE/CHECK clauses from ``Meta.constraints``."""
+        from tortoise.migrations.constraints import CheckConstraint, UniqueConstraint
+
+        sqls: list[str] = []
+        unique_together_columns = {
+            tuple(self._resolve_fields_to_columns(model, fields))
+            for fields in (model._meta.unique_together or ())
+        }
+        for constraint in getattr(model._meta, "constraints", None) or ():
+            if isinstance(constraint, UniqueConstraint):
+                if constraint.condition:
+                    continue
+                resolved_fields = self._resolve_fields_to_columns(model, constraint.fields)
+                if tuple(resolved_fields) in unique_together_columns:
+                    continue
+                resolved = UniqueConstraint(fields=tuple(resolved_fields), name=constraint.name)
+                sqls.append(
+                    self._get_unique_constraint_sql(
+                        model,
+                        resolved_fields,
+                        index_name=self._constraint_name_for_model(model, resolved),
+                    )
+                )
+            elif isinstance(constraint, CheckConstraint):
+                sqls.append(
+                    self.CHECK_CONSTRAINT_CREATE_TEMPLATE.format(
+                        name=constraint.name,
+                        check=constraint.check,
+                    )
+                )
+        return sqls
+
+    def _partial_unique_index_sqls(self, model: type[Model], safe: bool) -> list[str]:
+        """``CREATE UNIQUE INDEX ... WHERE`` for partial ``UniqueConstraint``s (PostgreSQL)."""
+        if self.DIALECT != "postgres":
+            return []
+        from tortoise.migrations.constraints import UniqueConstraint
+
+        exists = "IF NOT EXISTS " if safe else ""
+        sqls: list[str] = []
+        for constraint in getattr(model._meta, "constraints", None) or ():
+            if not isinstance(constraint, UniqueConstraint) or not constraint.condition:
+                continue
+            resolved_fields = self._resolve_fields_to_columns(model, constraint.fields)
+            resolved = UniqueConstraint(
+                fields=tuple(resolved_fields),
+                name=constraint.name,
+                condition=constraint.condition,
+            )
+            index_name = self._constraint_name_for_model(model, resolved)
+            sqls.append(
+                self.UNIQUE_INDEX_CREATE_TEMPLATE.format(
+                    exists=exists,
+                    index_name=index_name,
+                    index_type="",
+                    table_name=self._qualify_table_name(model._meta.db_table, model._meta.schema),
+                    fields=", ".join(self.quote(field) for field in resolved_fields),
+                    extra=f" WHERE {constraint.condition}",
+                )
+            )
+        return sqls
 
     def _get_pk_field_sql_type(self, pk_field: Field) -> str:
         if isinstance(pk_field, OneToOneFieldInstance):
@@ -477,7 +564,10 @@ class BaseSchemaGenerator(SchemaQuotingMixin):
                     self._get_unique_constraint_sql(model, unique_together_to_create)
                 )
 
+        fields_to_create.extend(self._table_constraint_sqls(model))
+
         field_indexes_sqls = self._get_field_indexes_sqls(model, fields_with_index, safe)
+        field_indexes_sqls.extend(self._partial_unique_index_sqls(model, safe))
 
         fields_to_create.extend(self._get_inner_statements())
 
