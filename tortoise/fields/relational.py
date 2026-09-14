@@ -338,6 +338,20 @@ class ForeignKeyFieldInstance(RelationalField[MODEL]):
         desc["on_delete"] = str(self.on_delete)
         return desc
 
+    def deconstruct(self) -> tuple[str, list[Any], dict[str, Any]]:
+        path, args, kwargs = super().deconstruct()
+        # After Apps._init_relations(), source_field no longer holds the column name: it
+        # holds the name of the generated `<field>_id` backing field. The column name the
+        # user asked for was moved onto that backing field, so read it back from there.
+        # Without this, makemigrations writes the backing field name as the column name
+        # and a migrated schema disagrees with generate_schemas().
+        model = getattr(self, "model", None)
+        if model is not None and self.source_field:
+            backing = model._meta.fields_map.get(self.source_field)
+            if backing is not None and backing.source_field:
+                kwargs["source_field"] = backing.source_field
+        return path, args, kwargs
+
 
 class BackwardFKRelation(RelationalField[MODEL]):
     def __init__(

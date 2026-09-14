@@ -373,3 +373,51 @@ async def test_fk_bulk_update_wrong_type(db):
             [testmodels.MinRelation(id=rel.id, tournament=author) for rel in relations],
             fields=["tournament"],
         )
+
+
+# ============================================================================
+# deconstruct() keeps the declared source_field (#2283)
+# ============================================================================
+
+
+@pytest.mark.asyncio
+async def test_deconstruct_fk_keeps_declared_source_field(db):
+    # After the relations are initialised, fk.source_field holds the name of the
+    # generated `<field>_id` backing field, not the column name. deconstruct() must
+    # still report the column the user declared, or makemigrations writes the wrong
+    # column name and a migrated schema disagrees with generate_schemas().
+    fk = testmodels.SourceFields._meta.fields_map["fk"]
+    assert fk.source_field == "fk_id"
+    _, _, kwargs = fk.deconstruct()
+    assert kwargs["source_field"] == "fk_sometable"
+
+
+@pytest.mark.asyncio
+async def test_deconstruct_o2o_keeps_declared_source_field(db):
+    o2o = testmodels.SourceFields._meta.fields_map["o2o"]
+    assert o2o.source_field == "o2o_id"
+    _, _, kwargs = o2o.deconstruct()
+    assert kwargs["source_field"] == "o2o_sometable"
+
+
+@pytest.mark.asyncio
+async def test_deconstruct_fk_without_source_field_uses_default_column(db):
+    # A field that declared no source_field keeps the `<field>_id` default.
+    fk = testmodels.Event._meta.fields_map["tournament"]
+    _, _, kwargs = fk.deconstruct()
+    assert kwargs["source_field"] == "tournament_id"
+
+
+@pytest.mark.asyncio
+async def test_deconstruct_source_field_matches_db_column(db):
+    # The deconstructed value must be the column the schema generator actually creates.
+    for model, field_name in (
+        (testmodels.SourceFields, "fk"),
+        (testmodels.SourceFields, "o2o"),
+        (testmodels.Event, "tournament"),
+    ):
+        field = model._meta.fields_map[field_name]
+        _, _, kwargs = field.deconstruct()
+        backing = model._meta.fields_map[field.source_field]
+        assert kwargs["source_field"] == backing.source_field
+        assert kwargs["source_field"] in model._meta.db_fields
