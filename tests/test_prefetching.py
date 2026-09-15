@@ -155,6 +155,61 @@ async def test_prefetch_m2m_to_attr(db):
 
 
 @pytest.mark.asyncio
+async def test_prefetch_m2m_annotate(db):
+    tournament = await Tournament.create(name="tournament")
+    team = await Team.create(name="1")
+    event = await Event.create(name="First", tournament=tournament)
+    await event.participants.add(team)
+    event = await Event.first().prefetch_related(
+        Prefetch("participants", Team.annotate(count_events=Count("events")))
+    )
+    for team in event.participants:
+        assert team.count_events == 1
+
+
+@pytest.mark.asyncio
+async def test_prefetch_m2m_select_related(db):
+    tournament = await Tournament.create(name="tournament")
+    team = await Team.create(name="1")
+    event = await Event.create(name="First", tournament=tournament)
+    await team.events.add(event)
+    team = await Team.first().prefetch_related(
+        Prefetch("events", Event.all().select_related("tournament"))
+    )
+    for event in team.events:
+        assert event.tournament == tournament
+
+
+@pytest.mark.asyncio
+async def test_prefetch_m2m_order_by(db):
+    tournament = await Tournament.create(name="tournament")
+    team_1 = await Team.create(name="1")
+    team_2 = await Team.create(name="2")
+    event = await Event.create(name="First", tournament=tournament)
+    await event.participants.add(team_1, team_2)
+    event_1 = await Event.first().prefetch_related(
+        Prefetch("participants", Team.all().order_by("name"))
+    )
+    event_2 = await Event.first().prefetch_related(
+        Prefetch("participants", Team.all().order_by("-name"))
+    )
+    assert [team.name for team in event_1.participants] == ["1", "2"]
+    assert [team.name for team in event_2.participants] == ["2", "1"]
+
+
+@pytest.mark.asyncio
+async def test_prefetch_m2m_only(db):
+    tournament = await Tournament.create(name="tournament")
+    team = await Team.create(name="1")
+    event = await Event.create(name="First", tournament=tournament)
+    await team.events.add(event)
+    team = await Team.first().prefetch_related(Prefetch("events", Event.all().only("name")))
+    assert len(team.events) == 1
+    for event in team.events:
+        assert bool(event.pk)
+
+
+@pytest.mark.asyncio
 async def test_prefetch_o2o_to_attr(db):
     tournament = await Tournament.create(name="tournament")
     event = await Event.create(name="First", tournament=tournament)
