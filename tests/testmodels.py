@@ -790,6 +790,59 @@ class SourceFields(Model):
         table_description = "Source mapped fields"
 
 
+class FKSourceFields(Model):
+    """Owned by the FK ``source_field`` deconstruct tests in tests/fields/test_fk.py.
+
+    Kept separate from :class:`SourceFields` so those tests do not break if the
+    shape of any other test model changes. Self-referencing so every case fits
+    in one table.
+    """
+
+    id = fields.IntField(primary_key=True)
+
+    #: Renames its column.
+    renamed: fields.ForeignKeyNullableRelation["FKSourceFields"] = fields.ForeignKeyField(
+        "models.FKSourceFields",
+        related_name="renamed_rev",
+        null=True,
+        source_field="renamed_column",
+        on_delete=NO_ACTION,
+    )
+    renamed_rev: fields.ReverseRelation["FKSourceFields"]
+
+    #: Declares a source_field equal to the field name itself.
+    same: fields.ForeignKeyNullableRelation["FKSourceFields"] = fields.ForeignKeyField(
+        "models.FKSourceFields",
+        related_name="same_rev",
+        null=True,
+        source_field="same",
+        on_delete=NO_ACTION,
+    )
+    same_rev: fields.ReverseRelation["FKSourceFields"]
+
+    #: Declares no source_field, so the column stays ``plain_id``.
+    plain: fields.ForeignKeyNullableRelation["FKSourceFields"] = fields.ForeignKeyField(
+        "models.FKSourceFields",
+        related_name="plain_rev",
+        null=True,
+        on_delete=NO_ACTION,
+    )
+    plain_rev: fields.ReverseRelation["FKSourceFields"]
+
+    #: OneToOne that renames its column.
+    o2o: fields.OneToOneNullableRelation["FKSourceFields"] = fields.OneToOneField(
+        "models.FKSourceFields",
+        related_name="o2o_rev",
+        null=True,
+        source_field="o2o_column",
+        on_delete=NO_ACTION,
+    )
+    o2o_rev: fields.Field
+
+    class Meta:
+        table = "fk_source_fields"
+
+
 class Service(IntEnum):
     python_programming = 1
     database_design = 2

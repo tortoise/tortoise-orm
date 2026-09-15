@@ -1,6 +1,7 @@
 import pytest
 
 from tests import testmodels
+from tortoise import fields
 from tortoise.exceptions import (
     IntegrityError,
     NoValuesFetched,
@@ -382,42 +383,57 @@ async def test_fk_bulk_update_wrong_type(db):
 
 @pytest.mark.asyncio
 async def test_deconstruct_fk_keeps_declared_source_field(db):
-    # After the relations are initialised, fk.source_field holds the name of the
-    # generated `<field>_id` backing field, not the column name. deconstruct() must
-    # still report the column the user declared, or makemigrations writes the wrong
-    # column name and a migrated schema disagrees with generate_schemas().
-    fk = testmodels.SourceFields._meta.fields_map["fk"]
-    assert fk.source_field == "fk_id"
-    _, _, kwargs = fk.deconstruct()
-    assert kwargs["source_field"] == "fk_sometable"
+    # After the relations are initialised, source_field holds the name of the generated
+    # `<field>_id` backing field, not the column name. deconstruct() must still report
+    # the column the model declared, or makemigrations writes the wrong column name and
+    # a migrated schema disagrees with generate_schemas().
+    field = testmodels.FKSourceFields._meta.fields_map["renamed"]
+    assert field.source_field == "renamed_id"
+    _, _, kwargs = field.deconstruct()
+    assert kwargs["source_field"] == "renamed_column"
 
 
 @pytest.mark.asyncio
 async def test_deconstruct_o2o_keeps_declared_source_field(db):
-    o2o = testmodels.SourceFields._meta.fields_map["o2o"]
-    assert o2o.source_field == "o2o_id"
-    _, _, kwargs = o2o.deconstruct()
-    assert kwargs["source_field"] == "o2o_sometable"
+    field = testmodels.FKSourceFields._meta.fields_map["o2o"]
+    assert field.source_field == "o2o_id"
+    _, _, kwargs = field.deconstruct()
+    assert kwargs["source_field"] == "o2o_column"
 
 
 @pytest.mark.asyncio
 async def test_deconstruct_fk_without_source_field_uses_default_column(db):
     # A field that declared no source_field keeps the `<field>_id` default.
-    fk = testmodels.Event._meta.fields_map["tournament"]
-    _, _, kwargs = fk.deconstruct()
-    assert kwargs["source_field"] == "tournament_id"
+    field = testmodels.FKSourceFields._meta.fields_map["plain"]
+    _, _, kwargs = field.deconstruct()
+    assert kwargs["source_field"] == "plain_id"
 
 
 @pytest.mark.asyncio
-async def test_deconstruct_source_field_matches_db_column(db):
-    # The deconstructed value must be the column the schema generator actually creates.
-    for model, field_name in (
-        (testmodels.SourceFields, "fk"),
-        (testmodels.SourceFields, "o2o"),
-        (testmodels.Event, "tournament"),
-    ):
+async def test_deconstruct_fk_source_field_equal_to_field_name(db):
+    # A declared source_field that matches the field name is not overridden by the
+    # `<field>_id` backing field name.
+    field = testmodels.FKSourceFields._meta.fields_map["same"]
+    assert field.source_field == "same_id"
+    _, _, kwargs = field.deconstruct()
+    assert kwargs["source_field"] == "same"
+
+
+def test_deconstruct_before_init_models_keeps_declared_source_field():
+    # A field that was never attached to a model has no relations to read back from,
+    # so deconstruct() reports what was declared.
+    field = fields.ForeignKeyField("models.FKSourceFields", source_field="loose_column")
+    assert getattr(field, "model", None) is None
+    _, _, kwargs = field.deconstruct()
+    assert kwargs["source_field"] == "loose_column"
+
+
+@pytest.mark.asyncio
+async def test_deconstruct_source_field_is_always_a_real_column(db):
+    # Whatever deconstruct() reports has to be a column the schema generator creates,
+    # otherwise a migration built from it would not match the running database.
+    model = testmodels.FKSourceFields
+    for field_name in ("renamed", "same", "plain", "o2o"):
         field = model._meta.fields_map[field_name]
         _, _, kwargs = field.deconstruct()
-        backing = model._meta.fields_map[field.source_field]
-        assert kwargs["source_field"] == backing.source_field
         assert kwargs["source_field"] in model._meta.db_fields
