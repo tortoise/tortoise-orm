@@ -53,7 +53,7 @@ class Migration(migrations.Migration):
                 ("order_number", fields.CharField(unique=True, max_length=50)),
                 ("customer_email", fields.CharField(max_length=255)),
                 ("total_cents", fields.BigIntField()),
-                (  # type: ignore[list-item]
+                (
                     "status",
                     fields.IntEnumField(
                         default=OrderStatus.PENDING,
@@ -62,7 +62,7 @@ class Migration(migrations.Migration):
                         generated=False,
                     ),
                 ),
-                (  # type: ignore[list-item]
+                (
                     "payment_method",
                     fields.CharEnumField(
                         description="CREDIT_CARD: credit_card\nPAYPAL: paypal\nBANK_TRANSFER: bank_transfer\nCASH: cash",

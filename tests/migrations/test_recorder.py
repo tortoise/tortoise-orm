@@ -1,3 +1,5 @@
+import warnings
+
 import pytest
 
 from tortoise.backends.base.client import Capabilities
@@ -124,6 +126,22 @@ async def test_recorder_sqlite_placeholders() -> None:
     delete_query = connection.queries[0][0]
     assert '"app" = ?' in delete_query
     assert '"name" = ?' in delete_query
+
+
+def test_recorder_model_emits_no_field_deprecation_warnings() -> None:
+    """Regression: the migration recorder must not trip tortoise's own
+    ``pk``/``index`` field deprecation warnings. It builds its bookkeeping
+    model internally, so downstream projects can't silence them.
+    """
+    with warnings.catch_warnings(record=True) as caught:
+        # Reset filters so the repo-wide ``ignore:`pk` deprecation`` filter in
+        # pyproject.toml doesn't mask a regression here.
+        warnings.simplefilter("always")
+        MigrationRecorder(FakeConnection("sqlite"))
+
+    messages = [str(w.message) for w in caught if issubclass(w.category, DeprecationWarning)]
+    assert not any("`pk` is deprecated" in m for m in messages), messages
+    assert not any("`index` is deprecated" in m for m in messages), messages
 
 
 @pytest.mark.asyncio

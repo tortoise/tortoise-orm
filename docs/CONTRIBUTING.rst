@@ -8,7 +8,7 @@ Contribution Guide
    CODE_OF_CONDUCT
 
 
-If you want to contribute check out issues, or just straightforwardly create PR.
+If you want to contribute, check out the issues, or just create a PR.
 
 Tortoise ORM is a volunteer effort. We encourage you to pitch in and join the team!
 
@@ -66,7 +66,7 @@ The code is structured in the following directories:
 Coding Guideline
 ================
 
-We believe to keep the code simple, so it is easier to test and there is less place for bugs to hide.
+We believe in keeping the code simple, so it is easier to test and there are fewer places for bugs to hide.
 
 Priorities
 ----------
@@ -84,7 +84,8 @@ As this is a value that is different for different people, we have settled on:
 Style
 -----
 
-We try and automate as much as we can, so a simple ``make check`` will do automated style checking and linting, but these don't pick up on the non-obvious style preferences.
+We try and automate as much as we can, so a simple ``make style`` (or ``uvx prek run --all-files``) will do automated formatting, style checking and linting, but these don't pick up on the non-obvious style preferences.
+Before creating a PR, please run ``make check`` (or ``uvx prek run --all-files --group check``) to ensure code quality.
 
 Tortoise ORM follows a the following agreed upon style:
 

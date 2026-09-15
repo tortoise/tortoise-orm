@@ -16,7 +16,6 @@ from tortoise.backends.base.client import (
     Capabilities,
     ConnectionWrapper,
     NestedTransactionContext,
-    T_conn,
     TransactionalDBClient,
     TransactionContext,
 )
@@ -191,7 +190,7 @@ class SqliteTransactionContext(TransactionContext):
             await self.connection._parent.create_connection(with_db=True)
             self.connection._connection = self.connection._parent._connection
 
-    async def __aenter__(self) -> T_conn:
+    async def __aenter__(self) -> TransactionalDBClient:
         await self._trxlock.acquire()
         await self.ensure_connection()
         self.token = get_connections().set(self.connection_name, self.connection)

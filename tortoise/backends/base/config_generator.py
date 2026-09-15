@@ -9,6 +9,7 @@ from typing import Any
 from tortoise.exceptions import ConfigurationError
 
 urlparse.uses_netloc.append("postgres")
+urlparse.uses_netloc.append("postgresql")
 urlparse.uses_netloc.append("asyncpg")
 urlparse.uses_netloc.append("psycopg")
 urlparse.uses_netloc.append("sqlite")
@@ -127,6 +128,8 @@ DB_LOOKUP: dict[str, dict[str, Any]] = {
 }
 # Create an alias for backwards compatibility
 DB_LOOKUP["postgres"] = DB_LOOKUP["asyncpg"]
+# "postgresql" is the scheme accepted by libpq and pydantic's PostgresDsn
+DB_LOOKUP["postgresql"] = DB_LOOKUP["asyncpg"]
 
 
 def _quote_url_userinfo(db_url: str) -> str:
@@ -211,7 +214,7 @@ def expand_db_url(db_url: str, testing: bool = False) -> dict:
         # asyncpg accepts None for password, but aiomysql not
         params[vmap["password"]] = (
             None
-            if (not url.password and db_backend in {"postgres", "asyncpg", "psycopg"})
+            if (not url.password and db_backend in {"postgres", "postgresql", "asyncpg", "psycopg"})
             else urlparse.unquote(url.password or "")
         )
 
