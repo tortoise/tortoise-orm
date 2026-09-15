@@ -48,7 +48,8 @@ class BaseExecutor:
         prefetch_map: dict[str, set[str | Prefetch]] | None = None,
         prefetch_queries: dict[str, list[tuple[str | None, QuerySet]]] | None = None,
         select_related_idx: (
-            list[tuple[type[Model], int, str, type[Model], Iterable[str | None]]] | None
+            list[tuple[type[Model], int, str, type[Model], Iterable[str | None], Sequence[str]]]
+            | None
         ) = None,
     ) -> None:
         self.model = model
@@ -116,8 +117,6 @@ class BaseExecutor:
     ) -> list:
         _, raw_results = await self.db.execute_query(sql, values)
         instance_list = []
-        if self.select_related_idx:
-            _split_cache: dict[str, str] = {}
         for row_idx, row in enumerate(raw_results):
             if row_idx != 0 and row_idx % CHUNK_SIZE == 0:
                 # Forcibly yield to the event loop to avoid blocking the event loop
@@ -125,21 +124,20 @@ class BaseExecutor:
                 await asyncio.sleep(0)
 
             if self.select_related_idx:
-                _, current_idx, _, _, path = self.select_related_idx[0]
-                row_items = list(dict(row).items())
-                instance: Model = self.model._init_from_db(**dict(row_items[:current_idx]))
+                _, current_idx, _, _, path, _ = self.select_related_idx[0]
+                row_keys, row_values = self._row_keys_and_values(row)
+                instance: Model = self.model._init_from_db(
+                    **dict(zip(row_keys[:current_idx], row_values[:current_idx]))
+                )
                 instances: dict[Any, Any] = {path: instance}
-                for model, index, *__, full_path in self.select_related_idx[1:]:
+                for model, index, _, _, full_path, field_names in self.select_related_idx[1:]:
                     (*path, attr) = full_path
-                    related_items = row_items[current_idx : current_idx + index]
-                    if any(v for _, v in related_items):
-                        related_kwargs = {}
-                        for k, v in related_items:
-                            fname = _split_cache.get(k)
-                            if fname is None:
-                                fname = _split_cache[k] = k.split(".", 1)[1]
-                            related_kwargs[fname] = v
-                        obj = model._init_from_db(**related_kwargs)
+                    related_values = row_values[current_idx : current_idx + index]
+                    if any(related_values):
+                        # Use field names recorded when the query was built. Postgres
+                        # truncates identifiers to 63 bytes, so related aliases cannot
+                        # be parsed back into field names after a long JOIN.
+                        obj = model._init_from_db(**dict(zip(field_names, related_values)))
                     elif index == 0:
                         # 0 signals that an empty "filler" object should be created in the case
                         # where a field of related model is selected but model itself isn't,
@@ -161,6 +159,26 @@ class BaseExecutor:
             instance_list.append(instance)
         await self._execute_prefetch_queries(instance_list)
         return instance_list
+
+    @staticmethod
+    def _row_keys_and_values(row: Any) -> tuple[list[Any], list[Any]]:
+        """Return column keys and values in SELECT order.
+
+        Prefer positional access so backends that keep duplicate truncated keys
+        (e.g. asyncpg Records) still yield one value per selected column.
+        """
+        if isinstance(row, dict):
+            return list(row.keys()), list(row.values())
+        try:
+            values = [row[i] for i in range(len(row))]
+        except (KeyError, TypeError, IndexError):
+            items = list(dict(row).items())
+            return [k for k, _ in items], [v for _, v in items]
+        try:
+            keys = list(row.keys())
+        except (AttributeError, TypeError):
+            keys = list(dict(row).keys())
+        return keys, values
 
     async def execute_union(
         self, sql: str, app_field: str, model_field: str, models: set[type[Model]]
