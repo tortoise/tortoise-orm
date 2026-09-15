@@ -23,7 +23,7 @@ from tortoise.fields.relational import (
 if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.backends.base.client import BaseDBAsyncClient
     from tortoise.filters import FilterInfoDict
-    from tortoise.models import Model
+    from tortoise.models import MODEL, Model
     from tortoise.query_utils import Prefetch
     from tortoise.queryset import QuerySet
 
@@ -597,10 +597,10 @@ class BaseExecutor:
 
     async def _prefetch_m2m_relation(
         self,
-        instance_list: Iterable[Model],
+        instance_list: Iterable[MODEL],
         field: str,
         related_query: tuple[str | None, QuerySet],
-    ) -> Iterable[Model]:
+    ) -> Iterable[MODEL]:
         to_attr, related_queryset = related_query
         pk_field = self.model._meta.pk
         instance_id_set: set = {
