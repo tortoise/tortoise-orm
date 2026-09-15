@@ -57,8 +57,14 @@ async def sqlmigrate(
     connection_name = app_config.get("default_connection", "default")
     connection = get_connection(connection_name)
 
-    apps_config = {app_label: app_config}
-    executor = MigrationExecutor(connection, apps_config)
+    # Fix Issue #2119: Supply all apps sharing the target application's default_connection
+    # to MigrationExecutor so foreign key relations across sibling apps can resolve.
+    connection_apps = {
+        label: cfg
+        for label, cfg in configured_apps.items()
+        if cfg.get("default_connection", "default") == connection_name
+    }
+    executor = MigrationExecutor(connection, connection_apps)
     # Replace the recorder with a noop so build_graph() does not query the DB.
     executor.loader.recorder = _NoopRecorder()
 
