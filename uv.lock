@@ -3489,7 +3489,7 @@ contrib = [
     { name = "quart" },
     { name = "sanic" },
     { name = "sanic-testing" },
-    { name = "starlette" },
+    { name = "starlette", specifier = ">=1.0,<2.0" },
 ]
 dev = [
     { name = "bandit" },
