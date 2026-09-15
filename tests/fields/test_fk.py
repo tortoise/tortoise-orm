@@ -1,6 +1,7 @@
 import pytest
 
 from tests import testmodels
+from tortoise import fields
 from tortoise.exceptions import (
     IntegrityError,
     NoValuesFetched,
@@ -373,3 +374,66 @@ async def test_fk_bulk_update_wrong_type(db):
             [testmodels.MinRelation(id=rel.id, tournament=author) for rel in relations],
             fields=["tournament"],
         )
+
+
+# ============================================================================
+# deconstruct() keeps the declared source_field (#2283)
+# ============================================================================
+
+
+@pytest.mark.asyncio
+async def test_deconstruct_fk_keeps_declared_source_field(db):
+    # After the relations are initialised, source_field holds the name of the generated
+    # `<field>_id` backing field, not the column name. deconstruct() must still report
+    # the column the model declared, or makemigrations writes the wrong column name and
+    # a migrated schema disagrees with generate_schemas().
+    field = testmodels.FKSourceFields._meta.fields_map["renamed"]
+    assert field.source_field == "renamed_id"
+    _, _, kwargs = field.deconstruct()
+    assert kwargs["source_field"] == "renamed_column"
+
+
+@pytest.mark.asyncio
+async def test_deconstruct_o2o_keeps_declared_source_field(db):
+    field = testmodels.FKSourceFields._meta.fields_map["o2o"]
+    assert field.source_field == "o2o_id"
+    _, _, kwargs = field.deconstruct()
+    assert kwargs["source_field"] == "o2o_column"
+
+
+@pytest.mark.asyncio
+async def test_deconstruct_fk_without_source_field_uses_default_column(db):
+    # A field that declared no source_field keeps the `<field>_id` default.
+    field = testmodels.FKSourceFields._meta.fields_map["plain"]
+    _, _, kwargs = field.deconstruct()
+    assert kwargs["source_field"] == "plain_id"
+
+
+@pytest.mark.asyncio
+async def test_deconstruct_fk_source_field_equal_to_field_name(db):
+    # A declared source_field that matches the field name is not overridden by the
+    # `<field>_id` backing field name.
+    field = testmodels.FKSourceFields._meta.fields_map["same"]
+    assert field.source_field == "same_id"
+    _, _, kwargs = field.deconstruct()
+    assert kwargs["source_field"] == "same"
+
+
+def test_deconstruct_before_init_models_keeps_declared_source_field():
+    # A field that was never attached to a model has no relations to read back from,
+    # so deconstruct() reports what was declared.
+    field = fields.ForeignKeyField("models.FKSourceFields", source_field="loose_column")
+    assert getattr(field, "model", None) is None
+    _, _, kwargs = field.deconstruct()
+    assert kwargs["source_field"] == "loose_column"
+
+
+@pytest.mark.asyncio
+async def test_deconstruct_source_field_is_always_a_real_column(db):
+    # Whatever deconstruct() reports has to be a column the schema generator creates,
+    # otherwise a migration built from it would not match the running database.
+    model = testmodels.FKSourceFields
+    for field_name in ("renamed", "same", "plain", "o2o"):
+        field = model._meta.fields_map[field_name]
+        _, _, kwargs = field.deconstruct()
+        assert kwargs["source_field"] in model._meta.db_fields

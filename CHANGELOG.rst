@@ -18,6 +18,7 @@ Added
 
 Fixed
 ^^^^^
+- ``ForeignKeyField``/``OneToOneField`` no longer lose a declared ``source_field`` when deconstructed. ``makemigrations`` wrote the generated ``<field>_id`` backing field name as the column name, so a migrated schema disagreed with ``generate_schemas()`` and neither path reported an error. (#2283)
 - ``QuerySet.distinct().count()`` no longer counts rows duplicated by a join (e.g. filtering on a m2m relation); it now counts distinct primary keys and matches the number of rows the query returns. (#2255)
 - ``DecimalField`` no longer strips the scale it just applied: ``to_python_value()`` called ``.normalize()`` immediately after ``.quantize()``, so a ``DecimalField(max_digits=12, decimal_places=2)`` holding ``100.00`` came back as ``Decimal('1E+2')`` and rendered as ``1E+2`` in strings, f-strings and JSON. (#2271)
 - BlackSheep: ``register_tortoise`` now enables the global connection fallback, so database access works when BlackSheep runs handlers in tasks other than the one that initialized the ORM. (#2248)
