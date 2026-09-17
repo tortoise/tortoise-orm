@@ -4,16 +4,15 @@ repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v6.0.0
     hooks:
-    -   id: check-added-large-files
-    -   id: check-toml
-    -   id: check-yaml
-        args:
-        -   --unsafe
-    -   id: end-of-file-fixer
+      - id: check-added-large-files
+      - id: check-toml
+      - id: check-yaml
+        args: [--unsafe]
+      - id: end-of-file-fixer
         files: tortoise/
-    -   id: trailing-whitespace
+      - id: trailing-whitespace
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: 'v0.15.9'
+    rev: v0.15.9
     hooks:
       - id: ruff
         args: [--fix, --exit-non-zero-on-fix, --show-fixes, tortoise/, examples/, tests/, conftest.py]
@@ -28,3 +27,41 @@ repos:
       - id: codespell  # See pyproject.toml for args
         additional_dependencies:
           - tomli
+
+  - repo: local
+    hooks:
+      - id: mypy
+        name: Check type hints by mypy
+        entry: uv run --frozen mypy
+        language: system
+        args: [tortoise/, examples/, tests/, conftest.py]
+        pass_filenames: false
+        groups: [check]
+        stages: [manual]
+
+      - id: bandit
+        name: Check security by bandit
+        entry: uv run --frozen bandit
+        language: system
+        args: [-c, pyproject.toml, -r, tortoise/, examples/, tests/, conftest.py]
+        pass_filenames: false
+        groups: [check]
+        stages: [manual]
+
+      - id: build
+        name: Build sdist by uv
+        entry: uv build
+        language: system
+        pass_filenames: false
+        groups: [check]
+        stages: [manual]
+
+      - id: twine
+        name: Check sdist by twine
+        entry: uv run --frozen twine check dist/*
+        language: system
+        pass_filenames: false
+        require_serial: true
+        priority: 2
+        groups: [check]
+        stages: [manual]

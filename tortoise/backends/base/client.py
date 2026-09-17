@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import abc
 import asyncio
-from collections.abc import Sequence
-from typing import Any, Generic, TypeVar, cast
+import inspect
+from collections.abc import Awaitable, Callable, Sequence
+from typing import Any, Generic, TypeAlias, TypeVar, cast
 
 from pypika_tortoise import Query
 
@@ -14,6 +15,28 @@ from tortoise.exceptions import TransactionManagementError
 from tortoise.log import db_client_logger
 
 T_conn = TypeVar("T_conn")  # Instance of client connection, such as: asyncpg.Connection()
+
+#: A callable returning a password, awaited first if it returns an awaitable.
+PasswordFactory: TypeAlias = Callable[[], "str | Awaitable[str]"]
+PasswordType: TypeAlias = "str | PasswordFactory | None"
+
+
+async def resolve_password(password: PasswordType) -> str | None:
+    """
+    Resolve a password that may be supplied as a plain string or as a callable.
+
+    Callables are invoked once per connection attempt, which allows short-lived
+    credentials (AWS RDS IAM tokens, Azure Entra ID tokens, Vault leases, ...) to be
+    refreshed transparently without recreating the client.
+
+    :param password: A string, ``None``, or a sync/async callable returning a string.
+    """
+    if callable(password):
+        resolved = password()
+        if inspect.isawaitable(resolved):
+            resolved = await resolved
+        return resolved
+    return password
 
 
 class Capabilities:

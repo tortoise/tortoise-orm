@@ -16,7 +16,7 @@ from pydantic import BaseModel, ConfigDict
 
 from tortoise import fields
 from tortoise.exceptions import NoValuesFetched, ValidationError
-from tortoise.fields import NO_ACTION
+from tortoise.fields import NO_ACTION, Field
 from tortoise.fields.db_defaults import Now, RandomHex, SqlDefault
 from tortoise.indexes import Index
 from tortoise.manager import Manager
@@ -445,6 +445,13 @@ class UniqueName(Model):
     other_optional = fields.CharField(max_length=20, null=True)
 
 
+class UniqueNameRequired(Model):
+    id = fields.IntField(primary_key=True)
+    name = fields.CharField(max_length=20, unique=True)
+    optional = fields.CharField(max_length=20, null=True)
+    other_optional = fields.CharField(max_length=20, null=True)
+
+
 class UniqueTogetherFields(Model):
     id = fields.IntField(primary_key=True)
     first_name = fields.CharField(max_length=64)
@@ -796,8 +803,8 @@ class Currency(str, Enum):
 
 
 class EnumFields(Model):
-    service: Service = fields.IntEnumField(Service)
-    currency: Currency = fields.CharEnumField(Currency, default=Currency.HUF)
+    service: Field[Service] = fields.IntEnumField(Service)
+    currency: Field[Currency] = fields.CharEnumField(Currency, default=Currency.HUF)
 
 
 class DoubleFK(Model):

@@ -34,6 +34,25 @@ class AsyncConnectionPool(psycopg_pool.AsyncConnectionPool):
         await self.putconn(connection)
 
 
+def password_factory_connection_class(
+    base: type[psycopg.AsyncConnection], factory: base_client.PasswordFactory
+) -> type[psycopg.AsyncConnection]:
+    """
+    Build a connection class that mints a fresh password for every new connection.
+
+    ``psycopg`` bakes credentials into an immutable conninfo string, so a rotating
+    password has to be injected at connect time instead.
+    """
+
+    class PasswordFactoryConnection(base):  # type: ignore[valid-type,misc]
+        @classmethod
+        async def connect(cls, conninfo: str = "", **kwargs: Any) -> Any:
+            kwargs["password"] = await base_client.resolve_password(factory)
+            return await super().connect(conninfo, **kwargs)
+
+    return PasswordFactoryConnection
+
+
 class PsycopgSQLQuery(PostgreSQLQuery):
     @classmethod
     def _builder(cls, **kwargs) -> PostgreSQLQueryBuilder:
@@ -82,10 +101,14 @@ class PsycopgClient(postgres_client.BasePostgresClient):
             host=self.host,
             port=self.port,
             user=self.user,
-            password=self.password,
+            password=None if callable(self.password) else self.password,
             dbname=self.database if with_db else None,
             **self.server_settings,
         )
+
+        connection_class: type[psycopg.AsyncConnection] = psycopg.AsyncConnection
+        if callable(self.password):
+            connection_class = password_factory_connection_class(connection_class, self.password)
 
         self._template = {
             "conninfo": conninfo,
@@ -95,7 +118,7 @@ class PsycopgClient(postgres_client.BasePostgresClient):
                 "autocommit": True,
                 "row_factory": psycopg.rows.dict_row,
             },
-            "connection_class": psycopg.AsyncConnection,
+            "connection_class": connection_class,
             **extra,
         }
 

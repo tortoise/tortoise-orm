@@ -53,10 +53,10 @@ def format_annotation(annotation, fully_qualified=False):
                 if 'ForwardRef(' in str(bound):
                     try:
                         bound = bound._evaluate(sys.modules[annotation.__module__].__dict__, None)
-                    except:
+                    except Exception:
                         try:
                             bound = bound._evaluate(type_globals.__dict__, None)
-                        except:
+                        except Exception:
                             bound = bound.__forward_arg__
                 return format_annotation(bound, fully_qualified)
             return f'\\{annotation!r}'
@@ -237,7 +237,7 @@ def get_all_type_hints(obj, name):
     except NameError as exc:
         try:
             rv = get_type_hints(obj, localns=type_globals.__dict__)
-        except:
+        except Exception:
             logger.warning('Cannot resolve forward reference in type annotations of "%s": %s',
                            name, exc)
             rv = obj.__annotations__
