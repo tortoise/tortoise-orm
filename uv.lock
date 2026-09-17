@@ -2997,7 +2997,7 @@ wheels = [
 
 [[package]]
 name = "sanic"
-version = "25.12.0"
+version = "25.12.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiofiles" },
@@ -3012,9 +3012,9 @@ dependencies = [
     { name = "uvloop", marker = "implementation_name == 'cpython' and sys_platform != 'win32'" },
     { name = "websockets" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/69/f6/5e9ba853d2872119a252bff0cad712c015c1ed5318cceab5da68c7d2f1c4/sanic-25.12.0.tar.gz", hash = "sha256:ec124338f83a781da8095ed2676e60eb40c7fe21e7aa649a879f8860b4c7bd7a", size = 373452, upload-time = "2025-12-31T19:36:49.087Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/27/e2/a902611ef48d0cf942093ad297d079f76ec46133a7dc8d1181aa1ab94bd2/sanic-25.12.1.tar.gz", hash = "sha256:7b51bf608e4030f06a6c002cd08fed2872e4936527e63c9a8a97d5cd06a2b47f", size = 375519, upload-time = "2026-05-31T19:45:46.988Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/9e/8a/16adaf66d358abfd0d24f2b76857196cf7effbf75c01306306bf39904e30/sanic-25.12.0-py3-none-any.whl", hash = "sha256:42ccf717f564aadab529a1522c489a709c4971c8123793ae07852aa110f8a913", size = 257787, upload-time = "2025-12-31T19:36:47.406Z" },
+    { url = "https://files.pythonhosted.org/packages/9e/91/5ecd9a91374a7b2831cf183357ceeb609fdfc8b390adb5cac90a261fe1f8/sanic-25.12.1-py3-none-any.whl", hash = "sha256:3874f1fe0442e3b12ce4a3f6524f676d5d3c43839c6a4967d1b82fd8db53c0f3", size = 258466, upload-time = "2026-05-31T19:45:45.27Z" },
 ]
 
 [[package]]
