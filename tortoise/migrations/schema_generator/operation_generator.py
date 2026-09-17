@@ -62,6 +62,21 @@ class OperationGenerator:
         )
 
     @staticmethod
+    def _dependency_key_for_field(field: object) -> ModelKey | None:
+        if not isinstance(field, (ForeignKeyFieldInstance, ManyToManyFieldInstance)):
+            return None
+        ref = getattr(field, "model_name", None)
+        if not ref:
+            return None
+        if isinstance(ref, str):
+            parts = ref.split(".")
+            if len(parts) != 2:
+                return None
+            return parts[0], parts[1]
+        # model_name is a model class
+        return getattr(ref._meta, "app", ""), ref.__name__
+
+    @staticmethod
     def _sort_by_dependencies(keys: list[ModelKey], state: State) -> list[ModelKey]:
         """Sort model keys so that FK/M2M dependencies come before dependents."""
         key_set = set(keys)
@@ -70,21 +85,8 @@ class OperationGenerator:
         for key in keys:
             model_state = state.models[key]
             for field in model_state.fields.values():
-                if not isinstance(field, (ForeignKeyFieldInstance, ManyToManyFieldInstance)):
-                    continue
-                ref = getattr(field, "model_name", None)
-                if not ref:
-                    continue
-                if isinstance(ref, str):
-                    parts = ref.split(".")
-                    if len(parts) == 2:
-                        dep_key: ModelKey = (parts[0], parts[1])
-                    else:
-                        continue
-                else:
-                    # model_name is a model class
-                    dep_key = (getattr(ref._meta, "app", ""), ref.__name__)
-                if dep_key in key_set and dep_key != key:
+                dep_key = OperationGenerator._dependency_key_for_field(field)
+                if dep_key and dep_key in key_set and dep_key != key:
                     deps[key].add(dep_key)
 
         # Kahn's algorithm
