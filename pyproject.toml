@@ -129,6 +129,9 @@ version = { source = "file", path = "tortoise/__init__.py" }
 excludes = ["./**/.git", "./**/.*_cache", "examples"]
 include = ["CHANGELOG.rst", "LICENSE", "README.rst"]
 
+[tool.uv.sources]
+pypika-tortoise = { git = "https://github.com/seladb/pypika-tortoise", branch = "add-functions" }
+
 [tool.mypy]
 pretty = true
 exclude = ["docs"]

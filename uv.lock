@@ -2695,11 +2695,7 @@ wheels = [
 [[package]]
 name = "pypika-tortoise"
 version = "0.6.5"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/c2/06/89fe5fff93c5a01dbdeb9f3d843a7e997dc6e3a87222a260a164ff91fb81/pypika_tortoise-0.6.5.tar.gz", hash = "sha256:64d96c9b88450f6360ad22a7063933b6a90961a7317f04b2b63c98fd5d705506", size = 81468, upload-time = "2026-03-13T20:44:54.439Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/6c/b8/502910eb8b315f719d8f6a6509f13a38b6c4c05378f14ac151ff347bff0a/pypika_tortoise-0.6.5-py3-none-any.whl", hash = "sha256:9194ac6ce6ac9bdfc6e959c831c5788ef05ee1371e82ba281b0eb75f4a2bd4f1", size = 47936, upload-time = "2026-03-13T20:44:53.541Z" },
-]
+source = { git = "https://github.com/seladb/pypika-tortoise?branch=add-functions#c4c65e2e0c5067834ac7a18e86593eac3a24ec5f" }
 
 [[package]]
 name = "pytest"
@@ -3470,7 +3466,7 @@ requires-dist = [
     { name = "orjson", marker = "extra == 'accel'" },
     { name = "psycopg", extras = ["binary", "pool"], marker = "extra == 'psycopg'", specifier = ">=3.0.12,<4.0.0" },
     { name = "ptpython", marker = "extra == 'ptpython'", specifier = ">=3.0.0" },
-    { name = "pypika-tortoise", specifier = ">=0.6.5,<1.0.0" },
+    { name = "pypika-tortoise", git = "https://github.com/seladb/pypika-tortoise?branch=add-functions" },
     { name = "tomlkit", marker = "python_full_version < '3.11'", specifier = ">=0.11.4,<1.0.0" },
     { name = "typing-extensions", marker = "python_full_version < '3.11'", specifier = ">=4.1.0" },
     { name = "uvloop", marker = "implementation_name == 'cpython' and sys_platform != 'win32' and extra == 'accel'" },
