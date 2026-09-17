@@ -154,6 +154,32 @@ def test_postgres_no_port():
         }
 
 
+def test_postgres_multi_host():
+    # asyncpg accepts a list of hosts for primary/replica failover, so a
+    # comma-joined host list has to be split into one for it; psycopg
+    # forwards its kwargs straight to libpq, which already understands the
+    # joined string on its own and would double-split it if we touched it.
+    for scheme, engine in _postgres_scheme_engines.items():
+        res = expand_db_url(
+            f"{scheme}://postgres:moo@host1.example.com,host2.example.com:54321/test"
+        )
+        expected_host = (
+            ["host1.example.com", "host2.example.com"]
+            if engine == "tortoise.backends.asyncpg"
+            else "host1.example.com,host2.example.com"
+        )
+        assert res == {
+            "engine": engine,
+            "credentials": {
+                "database": "test",
+                "host": expected_host,
+                "password": "moo",
+                "port": 54321,
+                "user": "postgres",
+            },
+        }
+
+
 def test_postgres_nonint_port():
     for scheme in _postgres_scheme_engines:
         with pytest.raises(ConfigurationError):
