@@ -9,7 +9,6 @@ dynamic = ["version"]
 requires-python = ">=3.10"
 dependencies = [
     "pypika-tortoise (>=0.6.5,<1.0.0)",
-    "iso8601 (>=2.1.0,<3.0.0); python_version < '4.0'",
     "aiosqlite (>=0.16.0,<1.0.0)",
     "anyio",
     "tomlkit (>=0.11.4,<1.0.0); python_version < '3.11'",
@@ -46,7 +45,7 @@ ptpython = [
     "ptpython>=3.0.0",
 ]
 accel = [
-    "ciso8601; sys_platform != 'win32' and implementation_name == 'cpython'",
+    "ciso8601; implementation_name == 'cpython'",
     "uvloop; sys_platform != 'win32' and implementation_name == 'cpython'",
     "orjson",
 ]
