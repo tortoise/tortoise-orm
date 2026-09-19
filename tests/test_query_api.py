@@ -17,6 +17,7 @@ from tortoise.connection import connections
 from tortoise.context import TortoiseContext, tortoise_test_context
 from tortoise.contrib import test
 from tortoise.exceptions import ParamsError
+from tortoise.expressions import Subquery
 from tortoise.models import Model
 from tortoise.query_api import QueryResult, execute_pypika
 
@@ -343,3 +344,20 @@ async def test_execute_pypika_requires_connection_with_multiple_configured(multi
         await execute_pypika(query)
 
     assert "multiple databases" in str(exc_info.value)
+
+
+@pytest.mark.asyncio
+async def test_subquery_params_inline(query_api_db) -> None:
+    """Subquery filter values should be inlined when using sql(params_inline=True).
+
+    Regression test for https://github.com/tortoise/tortoise-orm/issues/1800
+    """
+    query = QueryModel.filter(
+        id__in=Subquery(QueryModel.filter(name="alpha").values_list("id"))
+    )
+    sql = query.sql(params_inline=True)
+    assert "'alpha'" in sql, f"Expected 'alpha' in inline SQL, got: {sql}"
+
+    # Also verify parameterized mode still works
+    sql_param = query.sql(params_inline=False)
+    assert "alpha" not in sql_param, f"Expected no 'alpha' in parameterized SQL, got: {sql_param}"
