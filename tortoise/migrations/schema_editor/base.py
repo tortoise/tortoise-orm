@@ -813,14 +813,15 @@ class BaseSchemaEditor(SchemaQuotingMixin):
         if index_sql:
             await self._run_sql(index_sql)
 
+    def _drop_index_sql(self, model: type[Model], index_name: str) -> str:
+        table = self._qualify_table_name(model._meta.db_table, model._meta.schema)
+        if "{table}" in self.DROP_INDEX_TEMPLATE:
+            return self.DROP_INDEX_TEMPLATE.format(name=index_name, table=table)
+        return f"DROP INDEX {self._qualify_table_name(index_name, model._meta.schema)}"
+
     async def remove_index(self, model: type[Model], index: Index) -> None:
         index_name = self._index_name_for_model(model, index)
-        await self._run_sql(
-            self.DROP_INDEX_TEMPLATE.format(
-                name=index_name,
-                table=self._qualify_table_name(model._meta.db_table, model._meta.schema),
-            )
-        )
+        await self._run_sql(self._drop_index_sql(model, index_name))
 
     async def rename_index(self, model: type[Model], old_index: Index, new_index: Index) -> None:
         old_name = self._index_name_for_model(model, old_index)
