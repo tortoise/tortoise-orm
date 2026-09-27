@@ -62,6 +62,6 @@ repos:
         language: system
         pass_filenames: false
         require_serial: true
-        priority: 2
+        priority: 20
         groups: [check]
         stages: [manual]
