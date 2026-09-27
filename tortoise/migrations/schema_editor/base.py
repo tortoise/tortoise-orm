@@ -814,8 +814,8 @@ class BaseSchemaEditor(SchemaQuotingMixin):
             await self._run_sql(index_sql)
 
     def _drop_index_sql(self, model: type[Model], index_name: str) -> str:
-        table = self._qualify_table_name(model._meta.db_table, model._meta.schema)
         if "{table}" in self.DROP_INDEX_TEMPLATE:
+            table = self._qualify_table_name(model._meta.db_table, model._meta.schema)
             return self.DROP_INDEX_TEMPLATE.format(name=index_name, table=table)
         return f"DROP INDEX {self._qualify_table_name(index_name, model._meta.schema)}"
 
