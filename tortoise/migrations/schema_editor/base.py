@@ -229,27 +229,7 @@ class BaseSchemaEditor(SchemaQuotingMixin):
         return sqls
 
     def _partial_unique_index_sqls(self, model: type[Model]) -> list[str]:
-        """``CREATE UNIQUE INDEX ... WHERE`` for partial ``UniqueConstraint``s (PostgreSQL)."""
-        if self.DIALECT != "postgres":
-            return []
-        sqls: list[str] = []
-        for constraint in getattr(model._meta, "constraints", None) or ():
-            if not isinstance(constraint, UniqueConstraint) or not constraint.condition:
-                continue
-            resolved_fields = self._resolve_fields_to_columns(model, constraint.fields)
-            resolved = UniqueConstraint(
-                fields=tuple(resolved_fields),
-                name=constraint.name,
-                condition=constraint.condition,
-            )
-            index_name = self._constraint_name_for_model(model, resolved)
-            sqls.append(
-                f'CREATE UNIQUE INDEX "{index_name}" '
-                f"ON {self._qualify_table_name(model._meta.db_table, model._meta.schema)} "
-                f"({', '.join(self.quote(field) for field in resolved_fields)}) "
-                f"WHERE {constraint.condition};"
-            )
-        return sqls
+        return []
 
     def _get_index_sql(
         self,

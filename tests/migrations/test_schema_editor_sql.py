@@ -7,6 +7,7 @@ import pytest
 from tests.utils.fake_client import FakeClient
 from tortoise import fields
 from tortoise.backends.base.schema_generator import BaseSchemaGenerator
+from tortoise.backends.base_postgres.schema_generator import BasePostgresSchemaGenerator
 from tortoise.contrib.postgres.fields import TSVectorField
 from tortoise.contrib.postgres.indexes import GinIndex
 from tortoise.indexes import Index
@@ -430,6 +431,31 @@ async def test_create_model_postgres_partial_unique_index() -> None:
     await editor.create_model(UserAccount)
 
     sql = client.executed[0]
+    assert (
+        'CREATE UNIQUE INDEX "uq_active_email" ON "user_account" ("email") WHERE is_active = true;'
+    ) in sql
+
+
+def test_generate_schema_postgres_partial_unique_index() -> None:
+    """PostgreSQL schema generation emits partial UniqueConstraint indexes."""
+
+    class UserAccount(Model):
+        id = fields.IntField(pk=True)
+        email = fields.CharField(max_length=255)
+        is_active = fields.BooleanField(default=True)
+
+        class Meta:
+            table = "user_account"
+            app = "models"
+            constraints = [
+                UniqueConstraint(
+                    fields=("email",), name="uq_active_email", condition="is_active = true"
+                ),
+            ]
+
+    generator = BasePostgresSchemaGenerator(FakeClient("postgres", inline_comment=False))
+    sql = generator._get_table_sql(UserAccount, safe=False)["table_creation_string"]
+
     assert (
         'CREATE UNIQUE INDEX "uq_active_email" ON "user_account" ("email") WHERE is_active = true;'
     ) in sql
