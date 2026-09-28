@@ -427,13 +427,15 @@ class Tortoise(metaclass=_TortoiseMeta):
         return ctx
 
     @staticmethod
-    def star_password(connections_config) -> str:
+    def star_password(connections_config: dict) -> str:
         # Mask passwords to hide sensitive information in logs output
         passwords = []
-        for name, info in connections_config.items():
+        for _name, info in connections_config.items():
             if isinstance(info, str):
                 info = expand_db_url(info)
-            if password := info.get("credentials", {}).get("password"):
+            if (password := info.get("credentials", {}).get("password")) and isinstance(
+                password, str
+            ):
                 passwords.append(password)
 
         str_connection_config = str(connections_config)
@@ -456,8 +458,8 @@ class Tortoise(metaclass=_TortoiseMeta):
                 try:
                     module_name, class_name = r.rsplit(".", 1)
                     router_cls.append(getattr(importlib.import_module(module_name), class_name))
-                except Exception:
-                    raise ConfigurationError(f"Can't import router from `{r}`")
+                except Exception as e:
+                    raise ConfigurationError(f"Can't import router from `{r}`") from e
             elif isinstance(r, type):
                 router_cls.append(r)
             else:

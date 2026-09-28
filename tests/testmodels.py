@@ -16,7 +16,7 @@ from pydantic import BaseModel, ConfigDict
 
 from tortoise import fields
 from tortoise.exceptions import NoValuesFetched, ValidationError
-from tortoise.fields import NO_ACTION
+from tortoise.fields import NO_ACTION, Field
 from tortoise.fields.db_defaults import Now, RandomHex, SqlDefault
 from tortoise.indexes import Index
 from tortoise.manager import Manager
@@ -109,6 +109,7 @@ class Event(Model):
     tournament: fields.ForeignKeyRelation[Tournament] = fields.ForeignKeyField(
         to="models.Tournament", related_name="events"
     )
+    tournament_id: int  # Put it here to improve type hints
     reporter: fields.ForeignKeyNullableRelation[Reporter] = fields.ForeignKeyField(
         to=Reporter, null=True
     )
@@ -415,6 +416,7 @@ class UUIDFields(Model):
 class MinRelation(Model):
     id = fields.IntField(primary_key=True)
     tournament: fields.ForeignKeyRelation[Tournament] = fields.ForeignKeyField("models.Tournament")
+    tournament_id: int  # Put it here to improve type hints
     participants: fields.ManyToManyRelation[Team] = fields.ManyToManyField("models.Team")
 
 
@@ -441,6 +443,13 @@ class NoID(Model):
 class UniqueName(Model):
     id = fields.IntField(primary_key=True)
     name = fields.CharField(max_length=20, null=True, unique=True)
+    optional = fields.CharField(max_length=20, null=True)
+    other_optional = fields.CharField(max_length=20, null=True)
+
+
+class UniqueNameRequired(Model):
+    id = fields.IntField(primary_key=True)
+    name = fields.CharField(max_length=20, unique=True)
     optional = fields.CharField(max_length=20, null=True)
     other_optional = fields.CharField(max_length=20, null=True)
 
@@ -783,6 +792,59 @@ class SourceFields(Model):
         table_description = "Source mapped fields"
 
 
+class FKSourceFields(Model):
+    """Owned by ``TestDeconstructSourceField`` in tests/fields/test_fk.py.
+
+    Kept separate from :class:`SourceFields` so those tests do not break if the
+    shape of any other test model changes. Self-referencing so every case fits
+    in one table.
+    """
+
+    id = fields.IntField(primary_key=True)
+
+    #: Renames its column.
+    renamed: fields.ForeignKeyNullableRelation["FKSourceFields"] = fields.ForeignKeyField(
+        "models.FKSourceFields",
+        related_name="renamed_rev",
+        null=True,
+        source_field="renamed_column",
+        on_delete=NO_ACTION,
+    )
+    renamed_rev: fields.ReverseRelation["FKSourceFields"]
+
+    #: Declares a source_field equal to the field name itself.
+    same: fields.ForeignKeyNullableRelation["FKSourceFields"] = fields.ForeignKeyField(
+        "models.FKSourceFields",
+        related_name="same_rev",
+        null=True,
+        source_field="same",
+        on_delete=NO_ACTION,
+    )
+    same_rev: fields.ReverseRelation["FKSourceFields"]
+
+    #: Declares no source_field, so the column stays ``plain_id``.
+    plain: fields.ForeignKeyNullableRelation["FKSourceFields"] = fields.ForeignKeyField(
+        "models.FKSourceFields",
+        related_name="plain_rev",
+        null=True,
+        on_delete=NO_ACTION,
+    )
+    plain_rev: fields.ReverseRelation["FKSourceFields"]
+
+    #: OneToOne that renames its column.
+    o2o: fields.OneToOneNullableRelation["FKSourceFields"] = fields.OneToOneField(
+        "models.FKSourceFields",
+        related_name="o2o_rev",
+        null=True,
+        source_field="o2o_column",
+        on_delete=NO_ACTION,
+    )
+    o2o_rev: fields.Field
+
+    class Meta:
+        table = "fk_source_fields"
+
+
 class Service(IntEnum):
     python_programming = 1
     database_design = 2
@@ -796,8 +858,8 @@ class Currency(str, Enum):
 
 
 class EnumFields(Model):
-    service: Service = fields.IntEnumField(Service)
-    currency: Currency = fields.CharEnumField(Currency, default=Currency.HUF)
+    service: Field[Service] = fields.IntEnumField(Service)
+    currency: Field[Currency] = fields.CharEnumField(Currency, default=Currency.HUF)
 
 
 class DoubleFK(Model):
@@ -924,7 +986,9 @@ class RequiredPKModel(Model):
 
 
 class ValidatorModel(Model):
-    regex = fields.CharField(max_length=100, null=True, validators=[RegexValidator("abc.+", re.I)])
+    regex = fields.CharField(
+        max_length=100, null=True, validators=[RegexValidator("abc.+", re.IGNORECASE)]
+    )
     max_length = fields.CharField(max_length=5, null=True)
     min_length = fields.CharField(max_length=5, null=True, validators=[MinLengthValidator(3)])
     ipv4 = fields.CharField(max_length=100, null=True, validators=[validate_ipv4_address])

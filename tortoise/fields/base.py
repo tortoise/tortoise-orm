@@ -342,7 +342,7 @@ class Field(Generic[VALUE], metaclass=_FieldMeta):
                 else:
                     v(value)
             except ValidationError as exc:
-                raise ValidationError(f"{self.model_field_name}: {exc}")
+                raise ValidationError(f"{self.model_field_name}: {exc}") from exc
 
     def has_db_default(self) -> bool:
         return not isinstance(self.db_default, _DB_DEFAULT_NOT_SET)
@@ -568,9 +568,9 @@ class Field(Generic[VALUE], metaclass=_FieldMeta):
         if self.description is not None:
             kwargs["description"] = self.description
         if hasattr(self, "db_constraint"):
-            kwargs["db_constraint"] = getattr(self, "db_constraint")
-        if hasattr(self, "to_field") and getattr(self, "to_field") is not None:
-            kwargs["to_field"] = getattr(self, "to_field")
+            kwargs["db_constraint"] = self.db_constraint
+        if hasattr(self, "to_field") and self.to_field is not None:
+            kwargs["to_field"] = self.to_field
         if self.has_db_default():
             kwargs["db_default"] = self.db_default
 
@@ -585,9 +585,13 @@ class Field(Generic[VALUE], metaclass=_FieldMeta):
             if not hasattr(self, name):
                 continue
             value = getattr(self, name)
-            if name == "model_name" and value is not None:
-                if not isinstance(value, str) and hasattr(value, "_meta"):
-                    value = f"{value._meta.app}.{value.__name__}"
+            if (
+                name == "model_name"
+                and value is not None
+                and not isinstance(value, str)
+                and hasattr(value, "_meta")
+            ):
+                value = f"{value._meta.app}.{value.__name__}"
             if value is None and param.default is None:
                 continue
             kwargs[name] = value
