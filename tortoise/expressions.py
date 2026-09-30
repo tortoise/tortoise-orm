@@ -634,9 +634,15 @@ class Aggregate(Function):
             function = function.distinct()
         return function
 
-    def _resolve_nested_field(self, resolve_context: ResolveContext, field: str) -> ResolveResult:
-        ret = super()._resolve_nested_field(resolve_context, field)
-        if self.filter:
+    def _resolve_argument(
+        self, resolve_context: ResolveContext, value: Any, *, treat_str_as_field: bool
+    ) -> ResolveResult:
+        ret = super()._resolve_argument(
+            resolve_context, value, treat_str_as_field=treat_str_as_field
+        )
+        # Only the aggregated argument is filtered, whether it is a field name,
+        # an F() or a combined expression; extra function arguments are left as is.
+        if treat_str_as_field and self.filter:
             modifier = QueryModifier()
             modifier &= self.filter.resolve(resolve_context)
             ret.term = PypikaCase().when(modifier.where_criterion, ret.term).else_(None)
