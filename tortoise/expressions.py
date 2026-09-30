@@ -314,7 +314,7 @@ class Q:
         Returns a negated instance of the Q object, use ``~`` operator.
         """
         q = Q(*self.children, join_type=self.join_type, **self.filters)
-        q.negate()
+        q._is_negated = not self._is_negated
         return q
 
     def __eq__(self, other: object) -> bool:

@@ -22,6 +22,7 @@ Changed
 
 Fixed
 ^^^^^
+- Negating an already negated Q now cancels out: ~~Q(...) and .exclude(~Q(...)) used to keep a single NOT, so they returned the rows the caller meant to drop.
 - PostgreSQL and Oracle ``RemoveIndex`` / partial ``RemoveConstraint`` now schema-qualify ``DROP INDEX``, so indexes on models with ``Meta.schema`` can be dropped when they are not on the connection ``search_path``. (#2288)
 - ``ForeignKeyField``/``OneToOneField`` no longer lose a declared ``source_field`` when deconstructed. ``makemigrations`` wrote the generated ``<field>_id`` backing field name as the column name, so a migrated schema disagreed with ``generate_schemas()`` and neither path reported an error. (#2284)
 - ``QuerySet.distinct().count()`` no longer counts rows duplicated by a join (e.g. filtering on a m2m relation); it now counts distinct primary keys and matches the number of rows the query returns. (#2255)
