@@ -10,8 +10,9 @@ if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.models import Model
 
 
-class GeometryField(Field):
+class GeometryField(Field[str]):
     SQL_TYPE = "GEOMETRY"
+    field_type = str
 
 
 class UUIDField(UUIDFieldBase):
