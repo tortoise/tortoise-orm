@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 
 from tortoise.fields.base import Field
+from tortoise.indexes import Index
 from tortoise.migrations.schema_editor.base import BaseSchemaEditor
 from tortoise.models import Model
 
@@ -106,6 +107,11 @@ class BasePostgresSchemaEditor(BaseSchemaEditor):
             extra="",
         )
 
+    async def remove_index(self, model: type[Model], index: Index) -> None:
+        index_name = self._index_name_for_model(model, index)
+        qualified_index = self._qualify_table_name(index_name, model._meta.schema)
+        await self._run_sql(f"DROP INDEX {qualified_index}")
+
     async def add_constraint(self, model, constraint) -> None:
         from tortoise.migrations.constraints import UniqueConstraint
 
@@ -138,24 +144,66 @@ class BasePostgresSchemaEditor(BaseSchemaEditor):
                 condition=constraint.condition,
             )
             constraint_name = self._constraint_name_for_model(model, resolved_constraint)
-            await self._run_sql(self.DROP_INDEX_TEMPLATE.format(name=constraint_name))
+            qualified_index = self._qualify_table_name(constraint_name, model._meta.schema)
+            await self._run_sql(f"DROP INDEX {qualified_index}")
             return
+        if isinstance(constraint, UniqueConstraint) and not self.collect_sql:
+            index = await self._find_unconstrained_unique_index(model, constraint)
+            if index:
+                await self._run_sql(f"DROP INDEX {index}")
+                return
         await super().remove_constraint(model, constraint)
+
+    async def _find_unconstrained_unique_index(self, model, constraint) -> str | None:
+        # Legacy unique indexes have no pg_constraint row, so the name lookup behind
+        # ALTER TABLE ... DROP CONSTRAINT never sees them.
+        columns = self._resolve_fields_to_columns(model, constraint.fields)
+        table, schema = model._meta.db_table, model._meta.schema
+        try:
+            if await self._get_unique_constraint_names_from_db(table, columns, schema):
+                return None
+            rows = await self._get_unique_index_names_from_db(table, columns, schema)
+        except Exception:  # nosec B110
+            return None
+        if not rows:
+            return None
+        return self._qualify_table_name(rows[0]["index_name"], rows[0]["schema_name"])
+
+    async def _get_unique_index_names_from_db(
+        self, table_name: str, column_names: list[str], schema: str | None = None
+    ) -> list[dict]:
+        """Query pg_index for plain unique indexes matching exact column set."""
+        relation = self._qualify_table_name(table_name, schema).replace("'", "''")
+        col_array = "ARRAY[" + ",".join(f"'{c}'" for c in column_names) + "]"
+        query = (
+            "SELECT nsp.nspname AS schema_name, idx.relname AS index_name "
+            "FROM pg_index ind "
+            "JOIN pg_class idx ON idx.oid = ind.indexrelid "
+            "JOIN pg_namespace nsp ON nsp.oid = idx.relnamespace "
+            f"WHERE ind.indrelid = to_regclass('{relation}') "  # nosec B608
+            "AND ind.indisunique AND NOT ind.indisprimary "
+            "AND ind.indpred IS NULL AND ind.indexprs IS NULL "
+            "AND ARRAY("
+            "  SELECT att.attname::text"
+            "  FROM unnest(ind.indkey::int2[]) WITH ORDINALITY AS k(attnum, ord)"
+            "  JOIN pg_attribute att ON att.attrelid = ind.indrelid AND att.attnum = k.attnum"
+            "  ORDER BY k.ord"
+            f") = {col_array}::text[]"
+        )
+        _, rows = await self.client.execute_query(query)
+        return rows
 
     async def _get_unique_constraint_names_from_db(
         self, table_name: str, column_names: list[str], schema: str | None = None
     ) -> list[str]:
         """Query pg_constraint for unique constraint names matching exact column set."""
-        nsp = schema or "public"
+        relation = self._qualify_table_name(table_name, schema).replace("'", "''")
         col_array = "ARRAY[" + ",".join(f"'{c}'" for c in column_names) + "]"
         query = (
             "SELECT con.conname "
             "FROM pg_constraint con "
-            "JOIN pg_class rel ON rel.oid = con.conrelid "
-            "JOIN pg_namespace nsp ON nsp.oid = rel.relnamespace "
-            f"WHERE rel.relname = '{table_name}' "  # nosec B608
+            f"WHERE con.conrelid = to_regclass('{relation}') "  # nosec B608
             "AND con.contype = 'u' "
-            f"AND nsp.nspname = '{nsp}' "
             "AND ARRAY("
             "  SELECT att.attname::text"
             "  FROM unnest(con.conkey) WITH ORDINALITY AS k(attnum, ord)"
