@@ -119,6 +119,7 @@ class PsycopgClient(postgres_client.BasePostgresClient):
                 "row_factory": psycopg.rows.dict_row,
             },
             "connection_class": connection_class,
+            "check": AsyncConnectionPool.check_connection,
             **extra,
         }
 
