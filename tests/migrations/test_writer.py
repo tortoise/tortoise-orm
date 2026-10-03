@@ -77,9 +77,8 @@ def test_writer_format_create_model_basic(tmp_path: Path, monkeypatch) -> None:
     ]
     expected = textwrap.dedent(
         """\
-        from tortoise import migrations
+        from tortoise import fields, migrations
         from tortoise.migrations import operations as ops
-        from tortoise import fields
 
         class Migration(migrations.Migration):
             operations = [
@@ -107,9 +106,8 @@ def test_writer_format_rename_and_alter(tmp_path: Path, monkeypatch) -> None:
     ]
     expected = textwrap.dedent(
         """\
-        from tortoise import migrations
+        from tortoise import fields, migrations
         from tortoise.migrations import operations as ops
-        from tortoise import fields
 
         class Migration(migrations.Migration):
             operations = [
@@ -156,10 +154,9 @@ def test_writer_format_options_indexes_constraints(tmp_path: Path, monkeypatch) 
     ]
     expected = textwrap.dedent(
         """\
-        from tortoise import migrations
-        from tortoise.migrations import operations as ops
-        from tortoise import fields
+        from tortoise import fields, migrations
         from tortoise.indexes import Index, PartialIndex
+        from tortoise.migrations import operations as ops
         from tortoise.migrations.constraints import UniqueConstraint
 
         class Migration(migrations.Migration):
@@ -233,10 +230,9 @@ def test_writer_renders_fk_field(tmp_path: Path, monkeypatch) -> None:
     ]
     expected = textwrap.dedent(
         """\
-        from tortoise import migrations
-        from tortoise.migrations import operations as ops
+        from tortoise import fields, migrations
         from tortoise.fields.base import OnDelete
-        from tortoise import fields
+        from tortoise.migrations import operations as ops
 
         class Migration(migrations.Migration):
             operations = [
@@ -272,10 +268,9 @@ def test_writer_excludes_fk_source_field(tmp_path: Path, monkeypatch) -> None:
     ]
     expected = textwrap.dedent(
         """\
-        from tortoise import migrations
-        from tortoise.migrations import operations as ops
+        from tortoise import fields, migrations
         from tortoise.fields.base import OnDelete
-        from tortoise import fields
+        from tortoise.migrations import operations as ops
 
         class Migration(migrations.Migration):
             operations = [
@@ -312,10 +307,9 @@ def test_writer_serializes_on_delete_enum(tmp_path: Path, monkeypatch) -> None:
     ]
     expected = textwrap.dedent(
         """\
-        from tortoise import migrations
-        from tortoise.migrations import operations as ops
+        from tortoise import fields, migrations
         from tortoise.fields.base import OnDelete
-        from tortoise import fields
+        from tortoise.migrations import operations as ops
 
         class Migration(migrations.Migration):
             operations = [
@@ -341,9 +335,8 @@ def test_writer_skips_missing_db_index(tmp_path: Path, monkeypatch) -> None:
     ]
     expected = textwrap.dedent(
         """\
-        from tortoise import migrations
+        from tortoise import fields, migrations
         from tortoise.migrations import operations as ops
-        from tortoise import fields
 
         class Migration(migrations.Migration):
             operations = [
@@ -464,10 +457,9 @@ def test_writer_handles_one_to_one_field(tmp_path: Path, monkeypatch) -> None:
     ]
     expected = textwrap.dedent(
         """\
-        from tortoise import migrations
-        from tortoise.migrations import operations as ops
+        from tortoise import fields, migrations
         from tortoise.fields.base import OnDelete
-        from tortoise import fields
+        from tortoise.migrations import operations as ops
 
         class Migration(migrations.Migration):
             operations = [
@@ -500,10 +492,9 @@ def test_writer_handles_enum_fields(tmp_path: Path, monkeypatch) -> None:
     # NOT fields.IntEnumFieldInstance or fields.CharEnumFieldInstance
     expected = textwrap.dedent(
         """\
-        from tortoise import migrations
-        from tortoise.migrations import operations as ops
         from tests.migrations.test_writer import Role, Status
-        from tortoise import fields
+        from tortoise import fields, migrations
+        from tortoise.migrations import operations as ops
 
         class Migration(migrations.Migration):
             operations = [
@@ -533,9 +524,9 @@ def test_writer_format_runpython(tmp_path: Path, monkeypatch) -> None:
     operations = [RunPython(_runpython_forward, reverse_code=_runpython_reverse, atomic=False)]
     expected = textwrap.dedent(
         """\
+        from tests.migrations.test_writer import _runpython_forward, _runpython_reverse
         from tortoise import migrations
         from tortoise.migrations import operations as ops
-        from tests.migrations.test_writer import _runpython_forward, _runpython_reverse
 
         class Migration(migrations.Migration):
             operations = [
