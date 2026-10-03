@@ -166,14 +166,23 @@ class State:
         return related_models
 
     def _reload(self, models_to_reload: set[tuple[str, str]]) -> None:
+        reloaded_models: list[type[Model]] = []
         for app_label, model_name in models_to_reload:
-            self.apps.unregister_model(app_label, model_name)
-            model_state = self.models[(app_label, model_name)]
+            model_state = self.models.get((app_label, model_name))
+            if model_state is None:
+                # A deleted model can still be reachable from a rendered
+                # relation retained by an older snapshot. It must not be added
+                # back to the current state while related models are reloaded.
+                continue
+            # Old migration-state snapshots may still reference this rendered
+            # model, so remove it from the current registry without mutating it.
+            self.apps.unregister_model(app_label, model_name, detach=False)
             model = model_state.render(self.apps)
             self.apps.register_model(app_label, model)
+            reloaded_models.append(model)
 
         self.apps._init_relations()
-        self.apps._build_initial_querysets()
+        self.apps._build_initial_querysets(reloaded_models)
 
     def reload_model(self, app_label: str, model_name: str) -> None:
         model_state = self.models.get((app_label, model_name))
@@ -218,3 +227,13 @@ class State:
     def clone(self) -> State:
         models = {key: model.clone() for key, model in self.models.items()}
         return self.__class__(models=models, apps=self.apps.clone(model_states=models))
+
+    def snapshot(self) -> State:
+        """Return an isolated state snapshot without re-rendering every model.
+
+        Model states are copied because operations mutate their fields and
+        options. Rendered model classes can be shared: changed models are replaced
+        non-destructively by ``_reload``, leaving this snapshot's classes intact.
+        """
+        models = {key: model.clone() for key, model in self.models.items()}
+        return self.__class__(models=models, apps=self.apps.snapshot())

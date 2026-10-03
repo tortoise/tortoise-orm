@@ -131,7 +131,7 @@ class TortoiseOperation(Operation):
         dry_run: bool,
         state_editor: BaseSchemaEditor | None = None,
     ) -> None:
-        old_state = state.clone() if (not dry_run and state_editor) else None
+        old_state = state.snapshot() if (not dry_run and state_editor) else None
         self.state_forward(app_label, state)
         if dry_run or not state_editor:
             return
@@ -236,7 +236,7 @@ class RenameModel(TortoiseOperation):
         if not model_state_to_change:
             raise IncompatibleStateError()
 
-        state.apps.unregister_model(app_label, self.old_name)
+        state.apps.unregister_model(app_label, self.old_name, detach=False)
 
         old_table = model_state_to_change.table
         model_state_to_change.name = self.new_name
@@ -334,7 +334,7 @@ class DeleteModel(TortoiseOperation):
 
             models_to_reload.add(state.apps.split_reference(field.model_name))
 
-        state.apps.unregister_model(app_label, self.name)
+        state.apps.unregister_model(app_label, self.name, detach=False)
         state.reload_models(models_to_reload)
 
     async def database_forward(

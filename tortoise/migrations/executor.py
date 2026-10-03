@@ -244,7 +244,7 @@ class MigrationExecutor:
         for key in self._full_plan():
             if key not in applied:
                 continue
-            cache[key] = state.clone()
+            cache[key] = state.snapshot()
             migration = self.loader.graph.nodes[key]
             if migration is None:
                 raise ValueError(f"Missing migration for {key}")
