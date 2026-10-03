@@ -135,12 +135,13 @@ async def test_aggregation_with_filter_on_expression(db):
     await Book.create(name="Second!", author=author, rating=3)
     await Book.create(name="Third!", author=author, rating=1)
 
+    q = Q(books__rating__gte=3)
     author_with_filter = (
         await Author.filter(id=author.id)
         .annotate(
-            f_sum=Sum(F("books__rating"), _filter=Q(books__rating__gte=3)),
-            expr_sum=Sum(F("books__rating") * 2, _filter=Q(books__rating__gte=3)),
-            f_count=Count(F("books__id"), _filter=Q(books__rating__gte=3)),
+            f_sum=Sum(F("books__rating"), _filter=q),
+            expr_sum=Sum(F("books__rating") * 2, _filter=q),
+            f_count=Count(F("books__id"), _filter=q),
         )
         .first()
     )
