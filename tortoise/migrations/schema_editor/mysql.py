@@ -365,7 +365,7 @@ class MySQLSchemaEditor(MySQLQuotingMixin, BaseSchemaEditor):
             )
         resolved_fields = self._resolve_fields_to_columns(model, constraint.fields)
         table = self._qualify_table_name(model._meta.db_table, model._meta.schema)
-        index_name = self._generate_index_name_for_table(
+        index_name = constraint.name or self._generate_index_name_for_table(
             "uidx", model._meta.db_table, resolved_fields
         )
         columns = ", ".join([self.quote(f) for f in resolved_fields])

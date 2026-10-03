@@ -38,6 +38,10 @@ Fixed
 - ``Model.update_or_create()`` now applies the caller's defaults after losing a concurrent insert, re-reading the current row through the existing transactional update path. Creation is attempted at most twice, with a final locked read after the last conflict; repeated concurrent deletions that exhaust recovery raise ``OperationalError`` rather than retrying indefinitely. (#2276)
 - psycopg: the connection pool now validates a connection on checkout, so one silently dropped by the network while idle (a firewall or load balancer closing it, a DB restart, ...) gets transparently replaced instead of being handed to the caller and failing with ``psycopg.OperationalError: the connection is closed``. The check is a cheap no-op query on an already-open socket, so the added latency per checkout is negligible next to a real query. (#2285)
 
+Fixed
+^^^^^
+- ``Meta.constraints`` (``UniqueConstraint`` / ``CheckConstraint``) are now emitted in ``CREATE TABLE`` by ``migrate`` and ``generate_schemas``. MySQL ``add_constraint`` honors the constraint ``name``. (#2272)
+
 1.1.8
 -----
 
