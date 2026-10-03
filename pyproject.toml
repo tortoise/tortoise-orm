@@ -12,6 +12,7 @@ dependencies = [
     "iso8601 (>=2.1.0,<3.0.0); python_version < '4.0'",
     "aiosqlite (>=0.16.0,<1.0.0)",
     "anyio",
+    "exceptiongroup (>=1.0.2); python_version < '3.11'",
     "tomlkit (>=0.11.4,<1.0.0); python_version < '3.11'",
     "typing-extensions (>= 4.1.0); python_version < '3.11'",
 ]
