@@ -22,6 +22,10 @@ Changed
 
 Fixed
 ^^^^^
+- Aggregates now apply _filter when the aggregated argument is an F() or a combined expression (e.g. Sum(F("price") * F("qty"), _filter=Q(status="paid"))). Previously the filter was silently dropped and every row was aggregated. (#2290)
+- Negating an already negated Q now cancels out: ~~Q(...) and .exclude(~Q(...)) used to keep a single NOT, so they returned the rows the caller meant to drop. (#2291)
+- PostgreSQL and Oracle ``RemoveIndex`` / partial ``RemoveConstraint`` now schema-qualify ``DROP INDEX``, so indexes on models with ``Meta.schema`` can be dropped when they are not on the connection ``search_path``. (#2288)
+- ``ForeignKeyField``/``OneToOneField`` no longer lose a declared ``source_field`` when deconstructed. ``makemigrations`` wrote the generated ``<field>_id`` backing field name as the column name, so a migrated schema disagreed with ``generate_schemas()`` and neither path reported an error. (#2284)
 - ``QuerySet.distinct().count()`` no longer counts rows duplicated by a join (e.g. filtering on a m2m relation); it now counts distinct primary keys and matches the number of rows the query returns. (#2255)
 - ``DecimalField`` no longer strips the scale it just applied: ``to_python_value()`` called ``.normalize()`` immediately after ``.quantize()``, so a ``DecimalField(max_digits=12, decimal_places=2)`` holding ``100.00`` came back as ``Decimal('1E+2')`` and rendered as ``1E+2`` in strings, f-strings and JSON. (#2271)
 - BlackSheep: ``register_tortoise`` now enables the global connection fallback, so database access works when BlackSheep runs handlers in tasks other than the one that initialized the ORM. (#2248)
@@ -33,6 +37,7 @@ Fixed
 - ``AlterModelOptions`` now clears options that were removed from the model, instead of only merging in the ones that remain; removing a model docstring no longer makes ``makemigrations`` regenerate the same migration on every run. (#2279)
 - ``Model.update_or_create()`` now applies the caller's defaults after losing a concurrent insert, re-reading the current row through the existing transactional update path. Creation is attempted at most twice, with a final locked read after the last conflict; repeated concurrent deletions that exhaust recovery raise ``OperationalError`` rather than retrying indefinitely. (#2276)
 - Migration execution now snapshots rendered model registries and rebuilds querysets only for changed models instead of rebuilding every historical model before each operation, substantially improving large migration plans while preserving old/new operation states. (#2274)
+- psycopg: the connection pool now validates a connection on checkout, so one silently dropped by the network while idle (a firewall or load balancer closing it, a DB restart, ...) gets transparently replaced instead of being handed to the caller and failing with ``psycopg.OperationalError: the connection is closed``. The check is a cheap no-op query on an already-open socket, so the added latency per checkout is negligible next to a real query. (#2285)
 
 1.1.8
 -----
