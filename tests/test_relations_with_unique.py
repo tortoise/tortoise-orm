@@ -44,3 +44,19 @@ async def test_relation_with_unique(db):
     assert fetched_principal.name == "Sang-Heon Jeon3"
     fetched_school = await School.filter(name="School1").prefetch_related("principal").first()
     assert fetched_school.name == "School1"
+
+
+@pytest.mark.asyncio
+async def test_filter_by_fk_instance_uses_to_field(db):
+    # https://github.com/tortoise/tortoise-orm/issues/2225
+    # School's primary key is `uuid`, but Student.school points to to_field="id"
+    # (a non-PK unique field). Filtering by a School instance must use the
+    # `to_field` value (school.id), not the primary key (school.uuid).
+    school = await School.create(id=42, name="School1")
+    await Student.create(name="Sang-Heon Jeon1", school=school)
+
+    assert school.pk != school.id
+
+    found = await Student.filter(school=school).first()
+    assert found is not None
+    assert found.name == "Sang-Heon Jeon1"
