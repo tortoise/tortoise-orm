@@ -3376,6 +3376,7 @@ source = { editable = "." }
 dependencies = [
     { name = "aiosqlite" },
     { name = "anyio" },
+    { name = "exceptiongroup", marker = "python_full_version < '3.11'" },
     { name = "iso8601", marker = "python_full_version < '4'" },
     { name = "pypika-tortoise" },
     { name = "tomlkit", marker = "python_full_version < '3.11'" },
@@ -3464,6 +3465,7 @@ requires-dist = [
     { name = "asyncodbc", marker = "python_full_version < '4' and extra == 'asyncodbc'", specifier = ">=0.1.1,<1.0.0" },
     { name = "asyncpg", marker = "extra == 'asyncpg'" },
     { name = "ciso8601", marker = "implementation_name == 'cpython' and sys_platform != 'win32' and extra == 'accel'" },
+    { name = "exceptiongroup", marker = "python_full_version < '3.11'", specifier = ">=1.0.2" },
     { name = "ipython", marker = "extra == 'ipython'" },
     { name = "iso8601", marker = "python_full_version < '4'", specifier = ">=2.1.0,<3.0.0" },
     { name = "nest-asyncio", marker = "extra == 'ipython'", specifier = ">=1.6.0" },

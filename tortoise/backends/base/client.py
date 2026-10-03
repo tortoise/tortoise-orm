@@ -3,6 +3,7 @@ from __future__ import annotations
 import abc
 import asyncio
 import inspect
+import sys
 from collections.abc import Awaitable, Callable, Sequence
 from typing import Any, Generic, TypeAlias, TypeVar, cast
 
@@ -14,11 +15,17 @@ from tortoise.connection import get_connections
 from tortoise.exceptions import TransactionManagementError
 from tortoise.log import db_client_logger
 
+if sys.version_info < (3, 11):  # pragma: no cover
+    from exceptiongroup import ExceptionGroup
+
 T_conn = TypeVar("T_conn")  # Instance of client connection, such as: asyncpg.Connection()
 
 #: A callable returning a password, awaited first if it returns an awaitable.
 PasswordFactory: TypeAlias = Callable[[], "str | Awaitable[str]"]
 PasswordType: TypeAlias = "str | PasswordFactory | None"
+
+#: A callable taking no arguments, awaited if it returns an awaitable.
+OnCommitCallback: TypeAlias = Callable[[], Any]
 
 
 async def resolve_password(password: PasswordType) -> str | None:
@@ -37,6 +44,25 @@ async def resolve_password(password: PasswordType) -> str | None:
             resolved = await resolved
         return resolved
     return password
+
+
+async def run_on_commit_callbacks(callbacks: Sequence[OnCommitCallback]) -> None:
+    """
+    Call each callback in order, awaiting the ones that return an awaitable.
+
+    :param callbacks: Callables taking no arguments, sync or async.
+    :raises ExceptionGroup: With the exceptions raised by the callbacks, once all have run.
+    """
+    errors: list[Exception] = []
+    for callback in callbacks:
+        try:
+            result = callback()
+            if inspect.isawaitable(result):
+                await result
+        except Exception as exc:
+            errors.append(exc)
+    if errors:
+        raise ExceptionGroup("on_commit callbacks failed", errors)
 
 
 class Capabilities:
@@ -284,6 +310,14 @@ class TransactionalDBClient(BaseDBAsyncClient, abc.ABC):
     """An interface of the DB client that supports transactions."""
 
     _finalized: bool = False
+    _committed: bool = False
+    _on_commit_frames: list[list[OnCommitCallback]] | None = None
+
+    def _outermost(self) -> TransactionalDBClient:
+        client: TransactionalDBClient = self
+        while isinstance(client._parent, TransactionalDBClient):
+            client = client._parent
+        return client
 
     @abc.abstractmethod
     async def begin(self) -> None: ...
@@ -368,6 +402,7 @@ class TransactionContextPooled(TransactionContext):
         # TransactionWrapper connection.
         self.token = get_connections().set(self.connection_name, self.client)
         await self.client.begin()
+        self.client._on_commit_frames = [[]]
         return self.client
 
     async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
@@ -380,13 +415,16 @@ class TransactionContextPooled(TransactionContext):
                 else:
                     await self.client.commit()
         finally:
+            frames, self.client._on_commit_frames = self.client._on_commit_frames, None
             if self.client._parent._pool:
                 await self.client._parent._pool.release(self.client._connection)
             get_connections().reset(self.token)
+        if frames and self.client._committed:
+            await run_on_commit_callbacks(frames[0])
 
 
 class NestedTransactionContext(TransactionContext):
-    __slots__ = ("client", "connection_name")
+    __slots__ = ("client", "connection_name", "_frames")
 
     def __init__(self, client: TransactionalDBClient) -> None:
         self.client = client
@@ -394,16 +432,29 @@ class NestedTransactionContext(TransactionContext):
 
     async def __aenter__(self) -> TransactionalDBClient:
         await self.client.savepoint()
+        self._frames = self.client._outermost()._on_commit_frames
+        if self._frames is not None:
+            self._frames.append([])
         return self.client
 
     async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
-        if not self.client._finalized:
-            if exc_type:
-                # Can't rollback a transaction that already failed.
-                if exc_type is not TransactionManagementError:
-                    await self.client.savepoint_rollback()
+        released = False
+        try:
+            if not self.client._finalized:
+                if exc_type:
+                    # Can't rollback a transaction that already failed.
+                    if exc_type is not TransactionManagementError:
+                        await self.client.savepoint_rollback()
+                else:
+                    await self.client.release_savepoint()
+                    released = True
             else:
-                await self.client.release_savepoint()
+                released = self.client._committed
+        finally:
+            if self._frames:
+                callbacks = self._frames.pop()
+                if released and self._frames:
+                    self._frames[-1].extend(callbacks)
 
 
 class PoolConnectionWrapper(Generic[T_conn]):
