@@ -192,7 +192,7 @@ class BaseExecutor:
         self, include_generated: bool = False
     ) -> tuple[list[str], list[str]]:
         regular_columns = []
-        for column in self.model._meta.fields_db_projection.keys():
+        for column in self.model._meta.fields_db_projection:
             field_object = self.model._meta.fields_map[column]
             if include_generated or not field_object.generated:
                 regular_columns.append(column)
@@ -432,7 +432,7 @@ class BaseExecutor:
                     raise OperationalError(f"Can't update generated field {field}")
                 continue
             if not field_object.pk:
-                if field not in expressions.keys():
+                if field not in expressions:
                     query = query.set(db_column, self.parameter(parameter_idx))
                     parameter_idx += 1
                 else:
@@ -606,14 +606,8 @@ class BaseExecutor:
         instance_id_set: set = {
             pk_field.to_db_value(instance.pk, instance) for instance in instance_list
         }
-        if not instance_id_set:
-            for instance in instance_list:
-                getattr(instance, field)._set_result_for_query([], to_attr)
-            return instance_list
 
         field_object: ManyToManyFieldInstance = self.model._meta.fields_map[field]  # type: ignore
-
-        through_table = Table(field_object.through, schema=field_object.through_schema)
 
         related_pk_field = related_queryset.model._meta.pk
         related_pk_field_name = related_pk_field.model_field_name
@@ -622,39 +616,38 @@ class BaseExecutor:
             related_queryset = related_queryset.only(
                 *related_queryset._fields_for_select, related_pk_field_name
             )
-        qs = related_queryset.filter(**{f"{field_object.related_name}__in": instance_id_set})
-        related_objects_by_pks = {
-            related_pk_field.to_db_value(obj.pk, obj): obj for obj in await qs
-        }
-        if not related_objects_by_pks:
+        related_objects = await related_queryset.filter(
+            **{f"{field_object.related_name}__in": instance_id_set}
+        )
+        if not related_objects:
             for instance in instance_list:
                 getattr(instance, field)._set_result_for_query([], to_attr)
             return instance_list
-
         relation_map: dict = {}
-        backward_field = through_table[field_object.backward_key]
-        forward_field = through_table[field_object.forward_key]
-
-        _, through_rows = await self.db.execute_query(
-            *(
-                self.db.query_class.from_(through_table)
-                .select(backward_field, forward_field)
-                .where(backward_field.isin(instance_id_set))
-                .where(forward_field.isin(tuple(related_objects_by_pks)))
-                .get_parameterized_sql()
-            )
+        related_objects_by_pks = {
+            related_pk_field.to_db_value(obj.pk, obj): obj for obj in related_objects
+        }
+        through_table = Table(field_object.through, schema=field_object.through_schema)
+        backward_key = field_object.backward_key
+        forward_key = field_object.forward_key
+        backward_field = through_table[backward_key]
+        forward_field = through_table[forward_key]
+        subquery = (
+            self.db.query_class.from_(through_table)
+            .select(backward_field, forward_field)
+            .where(backward_field.isin(instance_id_set))
+            .where(forward_field.isin(list(related_objects_by_pks)))
         )
+        _, through_rows = await self.db.execute_query(*subquery.get_parameterized_sql())
 
         reverse_map: dict = {}
         for row in through_rows:
-            forward_key_value = related_pk_field.to_python_value(row[field_object.forward_key])
-            backward_key_value = pk_field.to_python_value(row[field_object.backward_key])
+            forward_key_value = related_pk_field.to_python_value(row[forward_key])
+            backward_key_value = pk_field.to_python_value(row[backward_key])
             reverse_map.setdefault(forward_key_value, []).append(backward_key_value)
-
-        for related_object, instance_pk in [
-            (ro, pk) for ro in related_objects_by_pks.values() for pk in reverse_map.get(ro.pk, [])
-        ]:
-            relation_map.setdefault(instance_pk, []).append(related_object)
+        for related_object in related_objects_by_pks.values():
+            for instance_pk in reverse_map.get(related_object.pk, []):
+                relation_map.setdefault(instance_pk, []).append(related_object)
 
         for instance in instance_list:
             relation_container = getattr(instance, field)
@@ -757,7 +750,7 @@ class BaseExecutor:
                     f"relation {first_level_field} for {self.model._meta.db_table} not found"
                 )
 
-            if first_level_field not in self.prefetch_map.keys():
+            if first_level_field not in self.prefetch_map:
                 self.prefetch_map[first_level_field] = set()
 
             if forwarded_prefetch:
