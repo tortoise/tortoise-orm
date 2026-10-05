@@ -543,6 +543,22 @@ async def test_on_commit_explicit_commit(db_isolated):
 
 @requireCapability(supports_transactions=True)
 @pytest.mark.asyncio
+async def test_on_commit_explicit_commit_then_rollback(db_isolated):
+    """Test a rollback after an explicit commit is rejected, so on_commit callbacks still run."""
+    calls = []
+    with pytest.raises(TransactionManagementError):
+        async with in_transaction() as connection:
+            await Tournament.create(name="Test")
+            await on_commit(lambda: calls.append("committed"))
+            await connection.commit()
+            await connection.rollback()
+
+    assert calls == ["committed"]
+    assert await Tournament.filter(name="Test").exists()
+
+
+@requireCapability(supports_transactions=True)
+@pytest.mark.asyncio
 async def test_on_commit_explicit_rollback(db_isolated):
     """Test on_commit callbacks are dropped after an explicit rollback."""
     calls = []
