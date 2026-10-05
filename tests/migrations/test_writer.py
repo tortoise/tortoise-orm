@@ -491,8 +491,8 @@ def test_writer_handles_enum_fields(tmp_path: Path, monkeypatch) -> None:
             name="Entity",
             fields=[
                 ("id", fields.IntField(pk=True)),
-                ("status", fields.IntEnumField(Status, default=Status.ACTIVE)),  # type: ignore[list-item]
-                ("role", fields.CharEnumField(Role)),  # type: ignore[list-item]
+                ("status", fields.IntEnumField(Status, default=Status.ACTIVE)),
+                ("role", fields.CharEnumField(Role)),
             ],
         ),
     ]

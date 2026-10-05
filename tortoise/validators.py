@@ -11,7 +11,7 @@ from urllib.parse import urlsplit
 from tortoise.exceptions import ValidationError
 
 
-class Validator(metaclass=abc.ABCMeta):
+class Validator(abc.ABC):
     @abc.abstractmethod
     def __call__(self, value: Any) -> None:
         """
@@ -259,8 +259,8 @@ class URLValidator(Validator):
 
         try:
             split_url = urlsplit(value)
-        except ValueError:
-            raise InvalidURL()
+        except ValueError as e:
+            raise InvalidURL() from e
 
         if split_url.scheme.lower() not in self.allowed_schemes:
             raise InvalidScheme(split_url.scheme.lower())
@@ -277,8 +277,8 @@ class URLValidator(Validator):
             potential_ip = host_match[1]
             try:
                 validate_ipv6_address(potential_ip)
-            except ValidationError:
-                raise InvalidURL()
+            except ValidationError as e:
+                raise InvalidURL() from e
 
 
 validate_url = URLValidator()
@@ -324,7 +324,6 @@ class EmailValidator(Validator):
 
     @cached_property
     def _domain_regex(self) -> re.Pattern[str]:
-        print("evaluating domain regex!!!")
         return re.compile(
             r"^" + HOSTNAME_REGEX + DOMAIN_REGEX + TLD_NO_FQDN_REGEX + r"\Z", re.IGNORECASE
         )
@@ -358,7 +357,10 @@ class EmailValidator(Validator):
         if not self._user_regex.match(user_part):
             raise InvalidEmailAddress()
 
-        if domain_part not in self.allowed_domains and not self._validate_domain_part(domain_part):
+        if self.allowed_domains:
+            if domain_part not in self.allowed_domains:
+                raise InvalidEmailAddress()
+        elif not self._validate_domain_part(domain_part):
             raise InvalidEmailAddress()
 
 
@@ -375,8 +377,8 @@ def validate_ipv4_address(value: Any) -> None:
 
     try:
         ipaddress.IPv4Address(value)
-    except ValueError:
-        raise ValidationError(f"'{value}' is not a valid IPv4 address.")
+    except ValueError as e:
+        raise ValidationError(f"'{value}' is not a valid IPv4 address.") from e
 
 
 def validate_ipv6_address(value: Any) -> None:
@@ -387,8 +389,8 @@ def validate_ipv6_address(value: Any) -> None:
     """
     try:
         ipaddress.IPv6Address(value)
-    except ValueError:
-        raise ValidationError(f"'{value}' is not a valid IPv6 address.")
+    except ValueError as e:
+        raise ValidationError(f"'{value}' is not a valid IPv6 address.") from e
 
 
 def validate_ipv46_address(value: Any) -> None:
@@ -402,5 +404,5 @@ def validate_ipv46_address(value: Any) -> None:
     except ValidationError:
         try:
             validate_ipv6_address(value)
-        except ValidationError:
-            raise ValidationError(f"'{value}' is not a valid IPv4 or IPv6 address.")
+        except ValidationError as e:
+            raise ValidationError(f"'{value}' is not a valid IPv4 or IPv6 address.") from e

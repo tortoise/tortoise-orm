@@ -14,6 +14,7 @@ from tests.testmodels import (
     RequiredPKModel,
     Team,
     Tournament,
+    UniqueNameRequired,
     UUIDFkRelatedNullModel,
 )
 from tortoise.contrib.test import requireCapability
@@ -281,6 +282,28 @@ async def test_update_or_create_with_defaults(tournament_model):
     )
     assert created is True
     assert not_exist_name == created_mdl.name
+
+
+@pytest.mark.asyncio
+async def test_update_or_create_falsy_existing_instance(db, monkeypatch):
+    instance = await UniqueNameRequired.create(name="existing", optional="old")
+    monkeypatch.setattr(UniqueNameRequired, "__bool__", lambda self: False, raising=False)
+    updated, created = await UniqueNameRequired.update_or_create(
+        name="existing", defaults={"optional": "updated"}
+    )
+    assert created is False
+    assert updated.pk == instance.pk
+    assert updated.optional == "updated"
+    assert (await UniqueNameRequired.get(pk=instance.pk)).optional == "updated"
+
+
+@pytest.mark.asyncio
+async def test_update_or_create_propagates_unrelated_integrity_error(db):
+    instance = await UniqueNameRequired.create(name="existing", optional="original")
+    with pytest.raises(IntegrityError):
+        await UniqueNameRequired.update_or_create(optional="missing", defaults={"name": "existing"})
+    assert await UniqueNameRequired.all().count() == 1
+    assert (await UniqueNameRequired.get(pk=instance.pk)).optional == "original"
 
 
 @pytest.mark.asyncio
