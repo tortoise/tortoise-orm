@@ -181,7 +181,7 @@ class BaseExecutor:
                     row = {
                         field: row[field]
                         for field in row.keys()
-                        if field not in [model_field, app_field]
+                        if field not in (model_field, app_field)
                     }
                     instance_list.append(model._init_from_db(**row))
                     break
@@ -616,17 +616,6 @@ class BaseExecutor:
             related_queryset = related_queryset.only(
                 *related_queryset._fields_for_select, related_pk_field_name
             )
-        related_objects = await related_queryset.filter(
-            **{f"{field_object.related_name}__in": instance_id_set}
-        )
-        if not related_objects:
-            for instance in instance_list:
-                getattr(instance, field)._set_result_for_query([], to_attr)
-            return instance_list
-        relation_map: dict = {}
-        related_objects_by_pks = {
-            related_pk_field.to_db_value(obj.pk, obj): obj for obj in related_objects
-        }
         through_table = Table(field_object.through, schema=field_object.through_schema)
         backward_key = field_object.backward_key
         forward_key = field_object.forward_key
@@ -636,16 +625,21 @@ class BaseExecutor:
             self.db.query_class.from_(through_table)
             .select(backward_field, forward_field)
             .where(backward_field.isin(instance_id_set))
-            .where(forward_field.isin(list(related_objects_by_pks)))
         )
         _, through_rows = await self.db.execute_query(*subquery.get_parameterized_sql())
+        if not through_rows:
+            for instance in instance_list:
+                getattr(instance, field)._set_result_for_query([], to_attr)
+            return instance_list
 
         reverse_map: dict = {}
         for row in through_rows:
             forward_key_value = related_pk_field.to_python_value(row[forward_key])
             backward_key_value = pk_field.to_python_value(row[backward_key])
             reverse_map.setdefault(forward_key_value, []).append(backward_key_value)
-        for related_object in related_objects_by_pks.values():
+        related_objects = await related_queryset.filter(pk__in=list(reverse_map))
+        relation_map: dict = {}
+        for related_object in related_objects:
             for instance_pk in reverse_map.get(related_object.pk, []):
                 relation_map.setdefault(instance_pk, []).append(related_object)
 

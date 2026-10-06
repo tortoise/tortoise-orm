@@ -165,6 +165,12 @@ async def test_prefetch_m2m_annotate(db):
     )
     for team in event.participants:
         assert team.count_events == 1
+    second_event = await Event.create(name="Second", tournament=tournament)
+    await team.events.add(second_event)
+    event = await Event.get(pk=second_event.pk).prefetch_related(
+        Prefetch("participants", Team.annotate(count_events=Count("events")))
+    )
+    assert event.participants[0].count_events == 2
 
 
 @pytest.mark.asyncio
