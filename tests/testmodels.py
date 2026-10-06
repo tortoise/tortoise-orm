@@ -216,6 +216,29 @@ class O2oPkModelWithM2m(Model):
     nodes: fields.ManyToManyRelation[Node] = fields.ManyToManyField("models.Node")
 
 
+class FkToO2oPk(Model):
+    """Foreign key to a one-to-one primary key model, set up before it (name order)."""
+
+    target: fields.ForeignKeyRelation[O2oPkModelWithM2m] = fields.ForeignKeyField(
+        "models.O2oPkModelWithM2m", related_name="fks"
+    )
+    by_key: fields.ForeignKeyNullableRelation[O2oPkModelWithM2m] = fields.ForeignKeyField(
+        "models.O2oPkModelWithM2m",
+        related_name="fks_by_key",
+        to_field="author_id",
+        null=True,
+        on_delete=NO_ACTION,
+    )
+
+
+class PointsToO2oPk(Model):
+    """Foreign key to a one-to-one primary key model, set up after it (name order)."""
+
+    target: fields.ForeignKeyNullableRelation[O2oPkModelWithM2m] = fields.ForeignKeyField(
+        "models.O2oPkModelWithM2m", related_name="pointers", null=True
+    )
+
+
 class Dest_null(Model):
     name = fields.CharField(max_length=64)
 

@@ -160,7 +160,12 @@ class Apps:
                 )
             return items[0], items[1]
 
+        initialized: set[tuple[type[Model], str]] = set()
+
         def init_fk_o2o_field(model: type[Model], field: str, is_o2o: bool = False) -> None:
+            if (model, field) in initialized:
+                return
+            initialized.add((model, field))
             fk_object = cast(
                 "OneToOneFieldInstance | ForeignKeyFieldInstance", model._meta.fields_map[field]
             )
@@ -172,6 +177,12 @@ class Apps:
                 related_app_name, related_model_name = split_reference(reference)
                 related_model = get_related_model(related_app_name, related_model_name)
 
+            if isinstance(related_model._meta.pk, OneToOneFieldInstance):
+                # A one-to-one primary key: its `<field>_id` backing field, the one to
+                # target, only exists once that one-to-one is initialized.
+                init_fk_o2o_field(
+                    related_model, related_model._meta.pk.model_field_name, is_o2o=True
+                )
             if to_field := fk_object.to_field:
                 related_field = related_model._meta.fields_map.get(to_field)
                 if not related_field:
@@ -184,7 +195,7 @@ class Apps:
                     )
             else:
                 fk_object.to_field = related_model._meta.pk_attr
-                related_field = related_model._meta.pk
+                related_field = related_model._meta.fields_map[related_model._meta.pk_attr]
             key_fk_object = copy(related_field)
             fk_object.to_field_instance = related_field
             fk_object.field_type = fk_object.to_field_instance.field_type
@@ -234,17 +245,21 @@ class Apps:
             if is_o2o and fk_object.pk:
                 model._meta.pk_attr = key_field
 
+        # Table names first: initializing a relation may initialize one of another
+        # model (a one-to-one primary key), which names reverse relations after its table.
+        for model in self.get_models_iterable():
+            if not model._meta._inited and not model._meta.db_table:
+                model._meta.db_table = (
+                    self._table_name_generator(model)
+                    if self._table_name_generator
+                    else (model.__name__.lower())
+                )
+
         for app_name, app in self.apps.items():
             for model_name, model in app.items():
                 if model._meta._inited:
                     continue
                 model._meta._inited = True
-                if not model._meta.db_table:
-                    model._meta.db_table = (
-                        self._table_name_generator(model)
-                        if self._table_name_generator
-                        else (model.__name__.lower())
-                    )
 
                 for field in sorted(model._meta.fk_fields):
                     init_fk_o2o_field(model, field)
