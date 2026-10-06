@@ -172,10 +172,13 @@ class AwaitableQuery(_ChooseDBMixin[MODEL], Generic[MODEL]):
         JOINs in DELETE/UPDATE statements, so the target rows are selected by primary key
         in a subquery instead.
         """
+        projection = self.model._meta.fields_db_projection
+        # A one-to-one primary key is flagged pk along with its `<field>_id` backing
+        # field; only the backing field has a column.
         pk_cols = [
-            table[self.model._meta.fields_db_projection[name]]
+            table[projection[name]]
             for name, field in self.model._meta.fields_map.items()
-            if field.pk
+            if field.pk and name in projection
         ]
         inner = copy(self.query)
         inner._selects = list(pk_cols)
