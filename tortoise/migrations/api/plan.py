@@ -31,10 +31,11 @@ async def plan(
         if label not in configured_apps:
             raise ValueError(f"Unknown app label {label}")
 
-    # Fix Issue #2119: Group all configured apps by connection so MigrationLoader
-    # and StateApps have full visibility into cross-app relationships sharing the connection.
+    # Issue #2119: Partition only selected apps by connection for plan routing,
+    # and supply configured_apps as all_apps_config for transitive dependency closure.
     apps_by_connection: dict[str, dict[str, dict[str, Any]]] = {}
-    for label, app_config in configured_apps.items():
+    for label in selected_apps:
+        app_config = configured_apps[label]
         connection_name = app_config.get("default_connection", "default")
         apps_by_connection.setdefault(connection_name, {})[label] = app_config
 
@@ -47,7 +48,7 @@ async def plan(
         if not executor_targets:
             continue
         connection = get_connection(connection_name)
-        executor = MigrationExecutor(connection, connection_apps)
+        executor = MigrationExecutor(connection, connection_apps, all_apps_config=configured_apps)
         steps = await executor.plan(executor_targets)
         output.extend(_format_steps(steps, connection_name))
 
