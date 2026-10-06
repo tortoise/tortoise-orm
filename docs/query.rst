@@ -379,6 +379,48 @@ Example usage:
 
     result = await qs1.union(qs2)
 
+All QuerySets must select the same fields in the same order. Use ``all=True`` for ``UNION ALL``
+to keep duplicate rows.
+
+Unions of different models
+--------------------------
+
+A union returns model instances, so each row carries which model it belongs to. Because of this,
+rows from different models are never treated as duplicates, even if their values are equal:
+
+.. code-block:: python3
+
+    await Tournament.create(name="Charles")
+    await Reporter.create(name="Charles")
+
+    qs1 = Tournament.filter(name="Charles").only("id", "name")
+    qs2 = Reporter.filter(name="Charles").only("id", "name")
+
+    await qs1.union(qs2)  # [<Tournament>, <Reporter>]
+
+Values instead of model instances
+---------------------------------
+
+Use ``.values()`` or ``.values_list()`` to get plain values instead of model instances. They
+accept the same arguments as on a QuerySet and replace any ``.only()`` of the united QuerySets.
+As no model instances are built, rows with equal values are de-duplicated across models:
+
+.. code-block:: python3
+
+    qs1 = Tournament.filter(name="Charles")
+    qs2 = Reporter.filter(name="Charles")
+
+    await qs1.union(qs2).values("name")  # [{"name": "Charles"}]
+    await qs1.union(qs2, all=True).values("name")  # [{"name": "Charles"}, {"name": "Charles"}]
+    await qs1.union(qs2).values_list("name", flat=True)  # ["Charles"]
+
+``.order_by()``, ``.limit()`` and ``.offset()`` must be called before ``.values()`` /
+``.values_list()``. Values are converted to Python using the fields of the first QuerySet.
+
 .. autoclass:: tortoise.queryset.UnionQuery
     :members:
     :inherited-members:
+
+.. autoclass:: tortoise.queryset.UnionValuesQuery
+
+.. autoclass:: tortoise.queryset.UnionValuesListQuery

@@ -15,6 +15,7 @@ Added
 ^^^^^
 - ``Q.__bool__()`` so ``Q`` objects with no filters/children (including nested empty ``Q`` children) are falsy. (#2227)
 - PostgreSQL ``password`` credential now accepts a sync or async callable, resolved once per new connection, to support short-lived credentials such as AWS RDS/Aurora IAM tokens and Azure Entra ID tokens. (#2261)
+- ``UnionQuery.values()`` and ``UnionQuery.values_list()`` return plain values instead of model instances. Rows with equal values are de-duplicated even when they come from different models, unless ``all=True`` is passed to ``union()``. (#2185)
 
 Changed
 ^^^^^^^

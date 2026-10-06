@@ -2425,39 +2425,67 @@ class UnionQuery(_ChooseDBMixin[MODEL], Generic[MODEL]):
             if select.alias not in [cls.TORTOISE_APP_FIELD, cls.TORTOISE_MODEL_FIELD]
         ]
 
+    @staticmethod
+    def _check_no_annotations(qs: QuerySet[Model]) -> None:
+        if qs._annotations:
+            raise ParamsError("Union queries do not support annotations")
+
     def _make_query(self) -> None:
-        self._union_query = None
+        side_queries: list[tuple[QueryBuilder, list[str]]] = []
         for qs in self._qs:
-            if qs._annotations:
-                raise ParamsError("Union queries do not support annotations")
+            self._check_no_annotations(qs)
             model_annotations = {
                 self.TORTOISE_APP_FIELD: Value(qs.model._meta.app),
                 self.TORTOISE_MODEL_FIELD: Value(qs.model._meta._model.__name__),
             }
             qs = qs.annotate(**model_annotations)
             qs._make_query()
-            qs.query.wrap_set_operation_queries = False
-            if not self._union_query:
-                self._union_query = qs.query
-                self._selects = self._get_selects(qs)
+            side_queries.append((qs.query, self._get_selects(qs)))
+
+        self._combine_queries(side_queries)
+
+    def _combine_queries(
+        self,
+        side_queries: list[tuple[QueryBuilder, list[str]]],
+        order_columns: dict[str, str] | None = None,
+    ) -> None:
+        """
+        Join the already built SELECT of every side with UNION / UNION ALL, then apply
+        ordering, limit and offset to the combined query.
+
+        :param side_queries: ``(query, select names)`` for every side of the union.
+        :param order_columns: Maps the names accepted by ``order_by()`` to the column of the
+            combined query to sort on. Defaults to the select names of the first side.
+        """
+        self._union_query = None
+        for query, selects in side_queries:
+            query.wrap_set_operation_queries = False
+            if self._union_query is None:
+                self._union_query = query
+                self._selects = selects
             else:
-                if self._get_selects(qs) != self._selects:
+                if selects != self._selects:
                     raise ParamsError("Union queries must have the same select fields")
                 self._union_query = (
-                    self._union_query.union_all(qs.query)
+                    self._union_query.union_all(query)
                     if self._all
-                    else self._union_query.union(qs.query)
+                    else self._union_query.union(query)
                 )
 
         if self._union_query is None:
             return
 
+        if order_columns is None:
+            order_columns = {select: select for select in self._selects}
+
         if self._orderings:
             for field_name, order in self._orderings:
-                if field_name not in self._selects:
+                if field_name not in order_columns:
                     raise ParamsError("Order by field must be in the select list for union queries")
 
-                self._union_query = self._union_query.orderby(field_name, order=order)
+                self._union_query = self._union_query.orderby(
+                    order_columns[field_name], order=order
+                )
 
         if self._limit is not None:
             self._union_query = self._union_query.limit(self._limit)
@@ -2573,3 +2601,153 @@ class UnionQuery(_ChooseDBMixin[MODEL], Generic[MODEL]):
             db=self._db,  # type: ignore[arg-type]
             union_query=union_query_clone,
         )
+
+    @staticmethod
+    def _without_only(qs: QuerySet[Model]) -> QuerySet[Model]:
+        """
+        Return a copy of ``qs`` without its ``.only()`` fields, as ``.values()`` and
+        ``.values_list()`` choose the selected fields themselves.
+        """
+        qs = qs._clone()
+        qs._fields_for_select = ()
+        return qs
+
+    def values(self, *args: str, **kwargs: str) -> UnionValuesQuery[MODEL]:
+        """
+        Make the union return dicts instead of model instances.
+
+        Accepts the same arguments as :meth:`QuerySet.values`, and replaces any ``.only()``
+        of the united QuerySets. As no model instances are built, the query does not need to
+        tell the models apart, so rows with equal values are de-duplicated even when they come
+        from different models (unless ``all=True`` was passed to ``union()``).
+
+        :raises FieldError: If duplicate key has been provided.
+        """
+        # Let QuerySet.values() parse the arguments, so both behave the same.
+        fields_for_select = self._without_only(self._qs[0]).values(*args, **kwargs)
+        return UnionValuesQuery(self._clone(), fields_for_select._fields_for_select)
+
+    def values_list(self, *fields_: str, flat: bool = False) -> UnionValuesListQuery[MODEL]:
+        """
+        Make the union return tuples instead of model instances.
+
+        Accepts the same arguments as :meth:`QuerySet.values_list`, and replaces any
+        ``.only()`` of the united QuerySets. Rows with equal values are de-duplicated the same
+        way as with :meth:`values`.
+
+        If ``flat=True`` and only one field is passed, a flat list of values is returned.
+        """
+        fields_for_select = self._without_only(self._qs[0]).values_list(*fields_, flat=flat)
+        return UnionValuesListQuery(self._clone(), fields_for_select.fields, flat)
+
+
+class _UnionFieldSelectQuery(_ChooseDBMixin[MODEL], Generic[MODEL]):
+    """
+    Base for unions that return plain values instead of model instances.
+
+    Every side of the union is built as a ``.values()`` query, so unlike
+    :class:`UnionQuery` no columns identifying the model are added to the query.
+    """
+
+    __slots__ = ("model", "_db", "_union", "_fields_for_select", "_first_values_query")
+
+    def __init__(self, union: UnionQuery[MODEL], fields_for_select: dict[str, str]) -> None:
+        self.model = union.model
+        self._db = union._db
+        self._union = union
+        #: Maps each key of a returned row to the field it is read from
+        self._fields_for_select = fields_for_select
+        self._first_values_query: ValuesQuery | None = None
+
+    def _make_query(self) -> None:
+        side_queries: list[tuple[QueryBuilder, list[str]]] = []
+        self._first_values_query = None
+        for qs in self._union._qs:
+            UnionQuery._check_no_annotations(qs)
+            values_query = UnionQuery._without_only(qs).values(**self._fields_for_select)
+            values_query._make_query()
+            if self._first_values_query is None:
+                self._first_values_query = values_query
+            # ValuesQuery only keeps selects aliased with a key of fields_for_select
+            aliases = [cast(str, select.alias) for select in values_query.query._selects]
+            side_queries.append((values_query.query, aliases))
+
+        # order_by() accepts the field name as well as the key it is returned under
+        order_columns = {field: key for key, field in self._fields_for_select.items()}
+        order_columns.update({key: key for key in self._fields_for_select})
+        self._union._combine_queries(side_queries, order_columns)
+
+    async def _fetch_rows(self) -> list[dict[str, Any]]:
+        union_query = self._union._union_query
+        first_values_query = self._first_values_query
+        if union_query is None or first_values_query is None:
+            return []
+
+        sql = union_query.get_sql(first_values_query.query.QUERY_CLS.SQL_CONTEXT)
+        rows = await self._db.execute_query_dict(sql)  # type: ignore[union-attr]
+
+        # Rows of all sides share the columns of the first side, so its fields convert them
+        converters = [
+            (key, func)
+            for key, func in (
+                (key, first_values_query.resolve_to_python_value(self.model, field))
+                for key, field in self._fields_for_select.items()
+            )
+            if not isinstance(func, types.LambdaType)
+        ]
+        if converters:
+            for row in rows:
+                for key, func in converters:
+                    row[key] = func(row[key])
+        return rows
+
+
+class UnionValuesQuery(_UnionFieldSelectQuery[MODEL]):
+    """
+    A union returning dicts, created by :meth:`UnionQuery.values`.
+    """
+
+    __slots__ = ()
+
+    def __await__(self) -> Generator[Any, None, list[dict[str, Any]]]:
+        self._choose_db_if_not_chosen()
+        self._make_query()
+        return self._execute().__await__()
+
+    async def __aiter__(self) -> AsyncIterator[dict[str, Any]]:
+        for val in await self:
+            yield val
+
+    async def _execute(self) -> list[dict[str, Any]]:
+        return await self._fetch_rows()
+
+
+class UnionValuesListQuery(_UnionFieldSelectQuery[MODEL]):
+    """
+    A union returning tuples (or single values with ``flat=True``), created by
+    :meth:`UnionQuery.values_list`.
+    """
+
+    __slots__ = ("_flat",)
+
+    def __init__(
+        self, union: UnionQuery[MODEL], fields_for_select: dict[str, str], flat: bool
+    ) -> None:
+        super().__init__(union, fields_for_select)
+        self._flat = flat
+
+    def __await__(self) -> Generator[Any, None, list[Any]]:
+        self._choose_db_if_not_chosen()
+        self._make_query()
+        return self._execute().__await__()
+
+    async def __aiter__(self) -> AsyncIterator[Any]:
+        for val in await self:
+            yield val
+
+    async def _execute(self) -> list[Any]:
+        rows = await self._fetch_rows()
+        keys = list(self._fields_for_select)
+        if self._flat:
+            return [row[keys[0]] for row in rows]
+        return [tuple(row[key] for key in keys) for row in rows]
