@@ -39,6 +39,10 @@ Fixed
 - psycopg: the connection pool now validates a connection on checkout, so one silently dropped by the network while idle (a firewall or load balancer closing it, a DB restart, ...) gets transparently replaced instead of being handed to the caller and failing with ``psycopg.OperationalError: the connection is closed``. The check is a cheap no-op query on an already-open socket, so the added latency per checkout is negligible next to a real query. (#2285)
 - Fixed ``prefetch_related()`` on m2m fields ignoring ``select_related()``, ``annotate()``, and ``order_by()`` applied to the prefetched queryset. (#2205)
 
+Fixed
+^^^^^
+- ``GeometryField`` (MySQL) now declares a concrete ``field_type``; previously it was ``None`` (the ``_FieldMeta`` metaclass only auto-assigns it for multi-base fields), so ``to_python_value``/``to_db_value`` raised ``TypeError`` on any non-``None`` value. (#2238)
+
 1.1.8
 -----
 

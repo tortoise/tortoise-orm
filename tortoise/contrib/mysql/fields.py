@@ -10,8 +10,11 @@ if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.models import Model
 
 
-class GeometryField(Field):
+class GeometryField(Field[str]):
+    """MySQL GEOMETRY column, exposed as its WKT string representation."""
+
     SQL_TYPE = "GEOMETRY"
+    field_type = str
 
 
 class UUIDField(UUIDFieldBase):
