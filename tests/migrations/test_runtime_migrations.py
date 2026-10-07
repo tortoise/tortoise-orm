@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib
+import sys
 from pathlib import Path
 from typing import cast
 
@@ -40,20 +41,27 @@ class FakeConnection:
         self.executed_scripts.append(query)
 
 
-def _write_migrations(
-    tmp_path: Path, app_label: str, migrations: list[tuple[str, list[tuple[str, str]]]]
-) -> str:
+def _write_migrations(tmp_path: Path, app_label: str, migrations: list[tuple]) -> str:
+    for mod in list(sys.modules):
+        if mod == app_label or mod.startswith(f"{app_label}."):
+            sys.modules.pop(mod, None)
     package_dir = tmp_path / app_label
     migrations_dir = package_dir / "migrations"
-    migrations_dir.mkdir(parents=True)
+    migrations_dir.mkdir(parents=True, exist_ok=True)
     (package_dir / "__init__.py").write_text("", encoding="ascii")
     (migrations_dir / "__init__.py").write_text("", encoding="ascii")
-    for name, dependencies in migrations:
+    for item in migrations:
+        if len(item) == 3:
+            name, dependencies, run_before = item
+        else:
+            name, dependencies = item
+            run_before = []
         content = [
             "from tortoise import migrations",
             "",
             "class Migration(migrations.Migration):",
             f"    dependencies = {dependencies!r}",
+            f"    run_before = {run_before!r}",
             "",
             "    operations = []",
             "",
@@ -464,3 +472,94 @@ async def test_runpython_historical_models_survive_schema_change(
         assert module.CALLS == ["forward", "reverse", "forward"]
 
         await connection.close()
+
+
+@pytest.mark.asyncio
+async def test_loader_run_before_transitive_dependency(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    app_a_module = _write_migrations(
+        tmp_path,
+        "app_a",
+        [("0001_initial", [], [("app_b", "0001_initial")])],
+    )
+    app_b_module = _write_migrations(
+        tmp_path,
+        "app_b",
+        [("0001_initial", [])],
+    )
+    monkeypatch.syspath_prepend(str(tmp_path))
+
+    apps_config = {
+        "app_a": {"models": [], "default_connection": "default", "migrations": app_a_module}
+    }
+    all_apps_config = {
+        "app_a": {"models": [], "default_connection": "default", "migrations": app_a_module},
+        "app_b": {"models": [], "default_connection": "default", "migrations": app_b_module},
+    }
+
+    class FakeRecorder:
+        async def applied_migrations(self):
+            return []
+
+    loader = MigrationLoader(
+        apps_config,
+        cast(MigrationRecorder, FakeRecorder()),
+        load=False,
+        all_apps_config=all_apps_config,
+    )
+    await loader.build_graph()
+
+    assert "app_b" in loader.apps_config
+    assert "app_b" in loader.migrated_apps
+
+    key_a = MigrationKey(app_label="app_a", name="0001_initial")
+    key_b = MigrationKey(app_label="app_b", name="0001_initial")
+    assert key_a in loader.graph.nodes
+    assert key_b in loader.graph.nodes
+    assert loader.graph.forwards_plan(key_b) == [key_a, key_b]
+
+
+@pytest.mark.asyncio
+async def test_loader_cyclic_dependencies(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    app_a_module = _write_migrations(
+        tmp_path,
+        "app_a",
+        [("0001_initial", [("app_b", "0001_initial")])],
+    )
+    app_b_module = _write_migrations(
+        tmp_path,
+        "app_b",
+        [("0001_initial", [("app_a", "0001_initial")])],
+    )
+    monkeypatch.syspath_prepend(str(tmp_path))
+
+    apps_config = {
+        "app_a": {"models": [], "default_connection": "default", "migrations": app_a_module}
+    }
+    all_apps_config = {
+        "app_a": {"models": [], "default_connection": "default", "migrations": app_a_module},
+        "app_b": {"models": [], "default_connection": "default", "migrations": app_b_module},
+    }
+
+    class FakeRecorder:
+        async def applied_migrations(self):
+            return []
+
+    loader = MigrationLoader(
+        apps_config,
+        cast(MigrationRecorder, FakeRecorder()),
+        load=False,
+        all_apps_config=all_apps_config,
+    )
+    loader.load_disk()
+
+    assert "app_a" in loader.migrated_apps
+    assert "app_b" in loader.migrated_apps
+    assert len(loader.disk_migrations) == 2
+    await loader.build_graph()
+
+    key_a = MigrationKey(app_label="app_a", name="0001_initial")
+    key_b = MigrationKey(app_label="app_b", name="0001_initial")
+    assert key_a in loader.graph.nodes
+    assert key_b in loader.graph.nodes
