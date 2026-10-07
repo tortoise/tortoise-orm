@@ -273,11 +273,13 @@ class ConnectionHandler:
         # Handle case where connections were never initialized (e.g., init failed)
         if self._db_config is None:
             return
-        tasks = [conn.close() for conn in self.all()]
+        storage = self._copy_storage()
+        tasks = [storage[alias].close() for alias in self.db_config if alias in storage]
         await asyncio.gather(*tasks)
         if discard:
             for alias in self.db_config:
-                self.discard(alias)
+                if alias in storage:
+                    self.discard(alias)
 
 
 class _ConnectionsProxy:
