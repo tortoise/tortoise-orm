@@ -1,15 +1,19 @@
 from __future__ import annotations
 
 import datetime as dt
+from importlib import import_module
 from pathlib import Path
 from typing import Any
 
 import pytest
 
+from tests.utils.fake_client import FakeClient
 from tortoise import fields
 from tortoise.fields.base import Field
 from tortoise.migrations.autodetector import MigrationAutodetector
 from tortoise.migrations.operations import CreateModel, RenameField, RenameModel
+from tortoise.migrations.schema_editor.base_postgres import BasePostgresSchemaEditor
+from tortoise.migrations.schema_generator.state import State
 from tortoise.migrations.schema_generator.state_apps import StateApps
 from tortoise.models import Model
 
@@ -398,3 +402,47 @@ async def test_autodetector_no_changes(tmp_path: Path, monkeypatch: pytest.Monke
     )
     changes = await autodetector.changes()
     assert changes == []
+
+
+@pytest.mark.asyncio
+async def test_autodetector_keeps_fields_with_own_source_field(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    module_path = _prepare_migration_package(tmp_path, "srcfield")
+    monkeypatch.syspath_prepend(str(tmp_path))
+
+    class TimestampedModel(Model):
+        id = fields.BigIntField(primary_key=True, source_field="id")
+        created = fields.DatetimeField(auto_now_add=True, source_field="created")
+
+        class Meta:
+            abstract = True
+
+    class Article(TimestampedModel):
+        title = fields.CharField(max_length=100)
+
+        class Meta:
+            app = "srcfield"
+            table = "article"
+
+    apps = StateApps()
+    apps.register_model("srcfield", Article)
+    apps_config = {
+        "srcfield": {"models": [], "default_connection": "default", "migrations": module_path}
+    }
+    await MigrationAutodetector(apps, apps_config).write()
+
+    # The written migration must describe the whole model, so a second run has nothing to add
+    # (previously it added the left-out fields and dropped/re-added the primary key).
+    assert await MigrationAutodetector(apps, apps_config).changes() == []
+
+    migration = import_module(f"{module_path}.0001_initial").Migration("0001_initial", "srcfield")
+    editor = BasePostgresSchemaEditor(
+        FakeClient("postgres", inline_comment=False), collect_sql=True
+    )
+    await migration.apply(
+        State(models={}, apps=StateApps()), schema_editor=editor, collect_sql=True
+    )
+    sql = "\n".join(editor.collected_sql)
+    assert '"id" BIGSERIAL NOT NULL PRIMARY KEY' in sql
+    assert '"created" TIMESTAMPTZ NOT NULL' in sql

@@ -292,6 +292,37 @@ def test_writer_excludes_fk_source_field(tmp_path: Path, monkeypatch) -> None:
     _write_migration(tmp_path, monkeypatch, "0005_fk_source", operations, expected)
 
 
+def test_writer_keeps_fields_with_own_source_field(tmp_path: Path, monkeypatch) -> None:
+    operations = [
+        CreateModel(
+            name="Post",
+            fields=[
+                ("id", fields.BigIntField(primary_key=True, source_field="id")),
+                ("title", fields.CharField(max_length=100, source_field="title")),
+            ],
+        )
+    ]
+    expected = textwrap.dedent(
+        """\
+        from tortoise import migrations
+        from tortoise.migrations import operations as ops
+        from tortoise import fields
+
+        class Migration(migrations.Migration):
+            operations = [
+                ops.CreateModel(
+                    name='Post',
+                    fields=[
+                        ('id', fields.BigIntField(source_field='id', generated=True, primary_key=True, unique=True, db_index=True)),
+                        ('title', fields.CharField(source_field='title', max_length=100)),
+                    ],
+                ),
+            ]
+        """
+    )
+    _write_migration(tmp_path, monkeypatch, "0005_own_source_field", operations, expected)
+
+
 def test_writer_serializes_on_delete_enum(tmp_path: Path, monkeypatch) -> None:
     operations = [
         CreateModel(
