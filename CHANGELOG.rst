@@ -22,6 +22,7 @@ Changed
 
 Fixed
 ^^^^^
+- Models whose primary key is a ``OneToOneField``: a ``ForeignKeyField`` to such a model now gets its own ``<field>_id`` column holding the target's key (it had none, so its value was never written nor read back), whichever model is set up first; ``filter(pk=...)``/``get(pk=...)`` work on it; and ``delete()``/``update()`` with filters on related fields no longer raise ``KeyError``. (#2299)
 - Aggregates now apply _filter when the aggregated argument is an F() or a combined expression (e.g. Sum(F("price") * F("qty"), _filter=Q(status="paid"))). Previously the filter was silently dropped and every row was aggregated. (#2290)
 - Negating an already negated Q now cancels out: ~~Q(...) and .exclude(~Q(...)) used to keep a single NOT, so they returned the rows the caller meant to drop. (#2291)
 - PostgreSQL and Oracle ``RemoveIndex`` / partial ``RemoveConstraint`` now schema-qualify ``DROP INDEX``, so indexes on models with ``Meta.schema`` can be dropped when they are not on the connection ``search_path``. (#2288)

@@ -285,6 +285,13 @@ class MetaInfo:
             field_name=name, field=value, source_field=value.source_field or name
         )
         self._filters.update(field_filters)
+        if value.pk and value.has_db_field:
+            # The backing field of a one-to-one primary key, added by _init_relations.
+            self._filters.update(
+                get_filters_for_field(
+                    field_name="pk", field=value, source_field=value.source_field or name
+                )
+            )
         self.finalise_fields()
 
     @property
