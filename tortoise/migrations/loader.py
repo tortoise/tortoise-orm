@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import pkgutil
 import sys
+from collections import deque
 from importlib import import_module, reload
 
 from tortoise.migrations.graph import MigrationGraph, MigrationKey
@@ -37,23 +38,23 @@ class MigrationLoader:
             return self.apps_config[app_label].get("migrations")
         return self.all_apps_config.get(app_label, {}).get("migrations")
 
-    def _load_app_disk(self, app_label: str) -> None:
+    def _load_app_disk(self, app_label: str) -> list[Migration]:
         module_name = self.migrations_module(app_label)
         if not module_name:
             self.unmigrated_apps.add(app_label)
-            return
+            return []
 
         was_loaded = module_name in sys.modules
         try:
-            module = import_module(
+            module = import_module(  # nosemgrep: python.lang.security.audit.non-literal-import.non-literal-import
                 module_name
-            )  # nosemgrep: python.lang.security.audit.non-literal-import.non-literal-import
+            )
         except ModuleNotFoundError:
             raise
         else:
             if not hasattr(module, "__path__"):
                 self.unmigrated_apps.add(app_label)
-                return
+                return []
             if was_loaded:
                 reload(module)
 
@@ -63,11 +64,12 @@ class MigrationLoader:
             for _, name, is_pkg in pkgutil.iter_modules(module.__path__)
             if not is_pkg and name[0] not in "_~"
         ]
+        app_migrations: list[Migration] = []
         for migration_name in migration_names:
             migration_path = f"{module_name}.{migration_name}"
-            migration_module = import_module(
+            migration_module = import_module(  # nosemgrep: python.lang.security.audit.non-literal-import.non-literal-import
                 migration_path
-            )  # nosemgrep: python.lang.security.audit.non-literal-import.non-literal-import
+            )
             if not hasattr(migration_module, "Migration"):
                 raise ValueError(
                     f"Migration {migration_name} in app {app_label} has no Migration class"
@@ -76,6 +78,8 @@ class MigrationLoader:
             migration_obj = migration_cls(migration_name, app_label)
             key = MigrationKey(app_label=app_label, name=migration_name)
             self.disk_migrations[key] = migration_obj
+            app_migrations.append(migration_obj)
+        return app_migrations
 
     def load_disk(self) -> None:
         # Issue #2119: Iteratively compute transitive dependency closure from all_apps_config
@@ -83,18 +87,16 @@ class MigrationLoader:
         self.unmigrated_apps = set()
         self.migrated_apps = set()
         loaded_apps: set[str] = set()
-        apps_to_load = list(self.apps_config.keys())
+        apps_to_load = deque(self.apps_config.keys())
         while apps_to_load:
-            app_label = apps_to_load.pop(0)
+            app_label = apps_to_load.popleft()
             if app_label in loaded_apps:
                 continue
             loaded_apps.add(app_label)
             if app_label in self.all_apps_config and app_label not in self.apps_config:
                 self.apps_config[app_label] = self.all_apps_config[app_label]
-            self._load_app_disk(app_label)
-            for key, migration in list(self.disk_migrations.items()):
-                if key.app_label != app_label:
-                    continue
+            app_migrations = self._load_app_disk(app_label)
+            for migration in app_migrations:
                 for parent in migration.dependencies:
                     if parent[0] not in loaded_apps and parent[0] in self.all_apps_config:
                         apps_to_load.append(parent[0])
