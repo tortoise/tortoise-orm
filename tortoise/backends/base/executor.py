@@ -13,15 +13,15 @@ from pypika_tortoise.terms import Parameter
 from tortoise.exceptions import OperationalError, UnSupportedError
 from tortoise.expressions import Expression, ResolveContext
 from tortoise.fields.base import DatabaseDefault
-from tortoise.fields.relational import (
-    BackwardFKRelation,
-    BackwardOneToOneRelation,
-    ManyToManyFieldInstance,
-    RelationalField,
-)
+from tortoise.fields.relational import RelationalField
 
 if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.backends.base.client import BaseDBAsyncClient
+    from tortoise.fields.relational import (
+        BackwardFKRelation,
+        BackwardOneToOneRelation,
+        ManyToManyFieldInstance,
+    )
     from tortoise.filters import FilterInfoDict
     from tortoise.models import MODEL, Model
     from tortoise.query_utils import Prefetch
@@ -517,7 +517,7 @@ class BaseExecutor:
         field: str,
         related_query: tuple[str | None, QuerySet],
     ) -> Iterable[Model]:
-        to_attr, related_query = related_query
+        to_attr, related_queryset = related_query
         related_objects_for_fetch: dict[str, list] = {}
         related_field: BackwardFKRelation = self.model._meta.fields_map[field]  # type: ignore
         related_field_name = related_field.to_field_instance.model_field_name
@@ -532,10 +532,10 @@ class BaseExecutor:
                 )
             )
 
-        related_query.resolve_ordering(
-            related_query.model, related_query.model._meta.basetable, [], {}
+        related_queryset.resolve_ordering(
+            related_queryset.model, related_queryset.model._meta.basetable, [], {}
         )
-        related_object_list = await related_query.filter(
+        related_object_list = await related_queryset.filter(
             **{f"{k}__in": v for k, v in related_objects_for_fetch.items()}
         )
 
@@ -560,7 +560,7 @@ class BaseExecutor:
         field: str,
         related_query: tuple[str | None, QuerySet],
     ) -> Iterable[Model]:
-        to_attr, related_query = related_query
+        to_attr, related_queryset = related_query
         related_objects_for_fetch: dict[str, list] = {}
         related_field: BackwardOneToOneRelation = self.model._meta.fields_map[field]  # type: ignore
         related_field_name = related_field.to_field_instance.model_field_name
@@ -575,7 +575,7 @@ class BaseExecutor:
                 )
             )
 
-        related_object_list = await related_query.filter(
+        related_object_list = await related_queryset.filter(
             **{f"{k}__in": v for k, v in related_objects_for_fetch.items()}
         )
 
