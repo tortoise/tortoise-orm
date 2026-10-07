@@ -16,6 +16,7 @@ from typing import Any
 
 from pypika_tortoise.context import DEFAULT_SQL_CONTEXT
 
+from tortoise.fields.relational import ForeignKeyFieldInstance
 from tortoise.indexes import Index
 from tortoise.migrations.constraints import CheckConstraint, UniqueConstraint
 from tortoise.migrations.operations import (
@@ -475,16 +476,19 @@ class MigrationWriter:
     def _format_create_model(
         self, operation: CreateModel, imports: ImportManager, *, indent: str
     ) -> list[str]:
-        source_fields = {
-            field.source_field
-            for _, field in operation.fields
-            if field is not None and hasattr(field, "source_field") and field.source_field
+        # A ForeignKeyField/OneToOneField gets its "<name>_id" backing field generated again
+        # when the model is built, so that field must not be written out. Other fields are
+        # kept even if a source_field matches their name: source_field is only a column name.
+        fk_backing_fields = {
+            f"{name}_id"
+            for name, field in operation.fields
+            if isinstance(field, ForeignKeyFieldInstance)
         }
         field_lines = []
         for name, field in operation.fields:
             if field is None:
                 continue
-            if name in source_fields:
+            if name in fk_backing_fields:
                 continue
             field_expr = self._render_field(field, imports)
             field_lines.append(f"{indent}        ({name!r}, {field_expr}),")

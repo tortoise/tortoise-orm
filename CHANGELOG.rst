@@ -38,6 +38,7 @@ Fixed
 - ``Model.update_or_create()`` now applies the caller's defaults after losing a concurrent insert, re-reading the current row through the existing transactional update path. Creation is attempted at most twice, with a final locked read after the last conflict; repeated concurrent deletions that exhaust recovery raise ``OperationalError`` rather than retrying indefinitely. (#2276)
 - psycopg: the connection pool now validates a connection on checkout, so one silently dropped by the network while idle (a firewall or load balancer closing it, a DB restart, ...) gets transparently replaced instead of being handed to the caller and failing with ``psycopg.OperationalError: the connection is closed``. The check is a cheap no-op query on an already-open socket, so the added latency per checkout is negligible next to a real query. (#2285)
 - Fixed ``prefetch_related()`` on m2m fields ignoring ``select_related()``, ``annotate()``, and ``order_by()`` applied to the prefetched queryset. (#2205)
+- ``makemigrations`` no longer leaves a field out of ``CreateModel`` when its ``source_field`` matches a field name, e.g. ``id = fields.BigIntField(primary_key=True, source_field="id")``. The next run added such fields back with ``AddField`` and dropped and re-added the primary key, which on PostgreSQL left it without a sequence. (#2251)
 
 1.1.8
 -----
