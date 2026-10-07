@@ -11,6 +11,8 @@ if TYPE_CHECKING:  # pragma: nocoverage
 
 
 class GeometryField(Field[str]):
+    """MySQL GEOMETRY column, exposed as its WKT string representation."""
+
     SQL_TYPE = "GEOMETRY"
     field_type = str
 
