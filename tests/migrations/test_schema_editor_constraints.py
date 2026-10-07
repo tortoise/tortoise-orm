@@ -593,3 +593,29 @@ async def test_base_add_constraint_with_condition_raises() -> None:
     with pytest.raises(NotImplementedError, match="Partial unique indexes"):
         await editor.add_constraint(UserAccount, constraint)
     assert len(client.executed) == 0
+
+
+@pytest.mark.asyncio
+async def test_mysql_add_constraint_uses_custom_name() -> None:
+    """MySQL add_constraint must honor UniqueConstraint.name."""
+
+    class Like(Model):
+        id = fields.IntField(pk=True)
+        types = fields.CharField(max_length=10)
+        user_id = fields.IntField()
+        art_id = fields.IntField()
+
+        class Meta:
+            table = "like"
+            app = "models"
+
+    client = FakeClient("mysql")
+    editor = MySQLSchemaEditor(client)
+    constraint = UniqueConstraint(fields=("types", "user_id", "art_id"), name="unique_like")
+    await editor.add_constraint(Like, constraint)
+
+    assert len(client.executed) == 1
+    assert (
+        client.executed[0]
+        == "ALTER TABLE `like` ADD UNIQUE KEY `unique_like` (`types`, `user_id`, `art_id`)"
+    )

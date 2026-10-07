@@ -18,6 +18,7 @@ class MSSQLSchemaGenerator(MSSQLQuotingMixin, BaseSchemaGenerator):
     FIELD_TEMPLATE = "[{name}] {type}{nullable}{unique}{primary}{default}"
     INDEX_CREATE_TEMPLATE = "CREATE INDEX [{index_name}] ON {table_name} ({fields});"
     UNIQUE_CONSTRAINT_CREATE_TEMPLATE = "CONSTRAINT [{index_name}] UNIQUE ({fields})"
+    CHECK_CONSTRAINT_CREATE_TEMPLATE = "CONSTRAINT [{name}] CHECK ({check})"
     GENERATED_PK_TEMPLATE = "[{field_name}] {generated_sql}"
     FK_TEMPLATE = (
         "{constraint}FOREIGN KEY ([{db_column}])"
