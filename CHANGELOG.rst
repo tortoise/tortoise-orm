@@ -54,6 +54,7 @@ Added
 
 Fixed
 ^^^^^
+- SQLite now persists ``TimeField`` values as ISO-8601 times. (#2296)
 - ``MigrationRecorder`` now uses parameterized queries; fixes MariaDB/MySQL rejecting ISO-8601 ``applied_at`` values. (#2132)
 - fix(migrations): use parameterized queries in MigrationRecorder (#2153)
 - Applies model generics on relational fields functions (#2156)

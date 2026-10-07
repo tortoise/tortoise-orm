@@ -463,6 +463,18 @@ async def test_datetime_filter_by_year_month_day(db):
 
 
 @pytest.mark.asyncio
+@test.requireCapability(dialect="sqlite")
+async def test_time_sqlite_create_and_filter(db):
+    """Test creating, reading, and filtering time fields with SQLite."""
+    model = testmodels.TimeFields
+    value = timezone.now().timetz()
+    obj = await model.create(time=value)
+
+    assert (await model.get(id=obj.id)).time == value
+    assert await model.filter(time=value).first() == obj
+
+
+@pytest.mark.asyncio
 @test.requireCapability(dialect=NotIn("sqlite"))  # 'datetime.time' is not supported by sqlite3
 @test.requireCapability(dialect="postgres")
 async def test_time_create(db):
