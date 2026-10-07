@@ -15,7 +15,7 @@ if TYPE_CHECKING:  # pragma: nocoverage
 class MSSQLSchemaGenerator(MSSQLQuotingMixin, BaseSchemaGenerator):
     DIALECT = "mssql"
     TABLE_CREATE_TEMPLATE = "CREATE TABLE {table_name} ({fields}){extra};"
-    FIELD_TEMPLATE = "[{name}] {type}{nullable}{unique}{primary}{default}"
+    FIELD_TEMPLATE = "[{name}] {type}{collate}{nullable}{unique}{primary}{default}"
     INDEX_CREATE_TEMPLATE = "CREATE INDEX [{index_name}] ON {table_name} ({fields});"
     UNIQUE_CONSTRAINT_CREATE_TEMPLATE = "CONSTRAINT [{index_name}] UNIQUE ({fields})"
     GENERATED_PK_TEMPLATE = "[{field_name}] {generated_sql}"
@@ -109,6 +109,7 @@ class MSSQLSchemaGenerator(MSSQLQuotingMixin, BaseSchemaGenerator):
         is_primary_key: bool,
         comment: str,
         default: str,
+        collation: str = "",
     ) -> str:
         if nullable == "":
             unique = ""
@@ -120,6 +121,7 @@ class MSSQLSchemaGenerator(MSSQLQuotingMixin, BaseSchemaGenerator):
             is_primary_key=is_primary_key,
             comment=comment,
             default=default,
+            collation=collation,
         )
 
     def _get_inner_statements(self) -> list[str]:

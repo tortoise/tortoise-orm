@@ -25,7 +25,7 @@ if TYPE_CHECKING:  # pragma: nocoverage
 class BaseSchemaGenerator(SchemaQuotingMixin):
     DIALECT = "sql"
     TABLE_CREATE_TEMPLATE = "CREATE TABLE {exists}{table_name} ({fields}){extra}{comment};"
-    FIELD_TEMPLATE = '"{name}" {type}{nullable}{unique}{primary}{default}{comment}'
+    FIELD_TEMPLATE = '"{name}" {type}{collate}{nullable}{unique}{primary}{default}{comment}'
     INDEX_CREATE_TEMPLATE = (
         'CREATE {index_type}INDEX {exists}"{index_name}" ON {table_name} ({fields}){extra};'
     )
@@ -52,12 +52,14 @@ class BaseSchemaGenerator(SchemaQuotingMixin):
         is_primary_key: bool,
         comment: str,
         default: str,
+        collation: str = "",
     ) -> str:
         # children can override this function to customize their sql queries
 
         return self.FIELD_TEMPLATE.format(
             name=db_column,
             type=field_type,
+            collate=collation,
             nullable=nullable,
             unique="" if is_primary_key else unique,
             comment=comment if self.client.capabilities.inline_comment else "",
@@ -102,6 +104,11 @@ class BaseSchemaGenerator(SchemaQuotingMixin):
         # Databases have their own way of supporting comments for column level
         # needs to be implemented for each supported client
         raise NotImplementedError()  # pragma: nocoverage
+
+    def _column_collation_generator(self, collation: str) -> str:
+        # The collation name is a bare identifier for most dialects. Backends that
+        # need it quoted (e.g. Postgres) override this.
+        return f" COLLATE {collation}"
 
     def _post_table_hook(self) -> str:
         # This method provides a mechanism where you can perform a set of
@@ -248,6 +255,8 @@ class BaseSchemaGenerator(SchemaQuotingMixin):
         nullable = " NOT NULL" if not field_object.null else ""
         unique = " UNIQUE" if field_object.unique else ""
         field_type = field_object.get_for_dialect(self.DIALECT, "SQL_TYPE")
+        db_collation = getattr(field_object, "db_collation", None)
+        collation = self._column_collation_generator(db_collation) if db_collation else ""
         qualified_table_name = self._qualify_table_name(table_name, schema)
 
         field_creation_string, related_table_name = "", ""
@@ -270,6 +279,7 @@ class BaseSchemaGenerator(SchemaQuotingMixin):
                     is_primary_key=field_object.pk,
                     comment="",
                     default=default,
+                    collation=collation,
                 ) + self._create_fk_string(
                     constraint_name=self._get_fk_name(
                         table_name,
@@ -292,6 +302,7 @@ class BaseSchemaGenerator(SchemaQuotingMixin):
                 is_primary_key=field_object.pk,
                 comment=comment,
                 default=default,
+                collation=collation,
             )
         return field_creation_string, related_table_name
 

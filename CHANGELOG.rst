@@ -13,6 +13,7 @@ Changelog
 
 Added
 ^^^^^
+- ``db_collation`` argument on fields to set a column collation, emitted as a ``COLLATE`` clause in the generated schema. (#2266)
 - ``Q.__bool__()`` so ``Q`` objects with no filters/children (including nested empty ``Q`` children) are falsy. (#2227)
 - PostgreSQL ``password`` credential now accepts a sync or async callable, resolved once per new connection, to support short-lived credentials such as AWS RDS/Aurora IAM tokens and Azure Entra ID tokens. (#2261)
 
