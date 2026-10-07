@@ -4,11 +4,16 @@ from collections.abc import Callable
 from functools import wraps
 from typing import TYPE_CHECKING, TypeVar, cast
 
+from tortoise.backends.base.client import TransactionalDBClient, run_on_commit_callbacks
 from tortoise.connection import get_connections
 from tortoise.exceptions import ParamsError
 
 if TYPE_CHECKING:  # pragma: nocoverage
-    from tortoise.backends.base.client import BaseDBAsyncClient, TransactionContext
+    from tortoise.backends.base.client import (
+        BaseDBAsyncClient,
+        OnCommitCallback,
+        TransactionContext,
+    )
 
 T = TypeVar("T")
 FuncType = Callable[..., T]
@@ -42,6 +47,25 @@ def in_transaction(connection_name: str | None = None) -> TransactionContext:
     """
     connection = _get_connection(connection_name)
     return connection._in_transaction()
+
+
+async def on_commit(callback: OnCommitCallback, connection_name: str | None = None) -> None:
+    """
+    Run a callback once the current transaction commits.
+
+    The callback is dropped on rollback, including a savepoint rollback of the block that
+    registered it, and runs immediately outside a transaction.
+
+    :param callback: Callable taking no arguments, sync or async.
+    :param connection_name: name of connection to run with, optional if you have only
+                            one db connection
+    :raises ExceptionGroup: If callbacks raise, once all of them have run.
+    """
+    connection = _get_connection(connection_name)
+    if isinstance(connection, TransactionalDBClient) and connection._on_commit_frames:
+        connection._on_commit_frames[-1].append(callback)
+    else:
+        await run_on_commit_callbacks([callback])
 
 
 def atomic(connection_name: str | None = None) -> Callable[[F], F]:

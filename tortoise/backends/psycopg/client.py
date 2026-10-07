@@ -262,6 +262,7 @@ class TransactionWrapper(PsycopgClient, base_client.TransactionalDBClient):
 
         await self._transaction.__aexit__(None, None, None)
         self._finalized = True
+        self._committed = True
 
     async def release_savepoint(self) -> None:
         await self.commit()

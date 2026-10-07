@@ -6,7 +6,7 @@ import pytest_asyncio
 from tests.testmodels import Event, EventTwo, TeamTwo, Tournament
 from tortoise.context import TortoiseContext
 from tortoise.exceptions import OperationalError, ParamsError
-from tortoise.transactions import in_transaction
+from tortoise.transactions import in_transaction, on_commit
 
 # Optional import for Oracle client that requires system dependencies
 try:
@@ -128,3 +128,23 @@ async def test_two_databases_transaction_paramerror(two_databases):
     ):
         async with in_transaction():
             pass
+
+
+@pytest.mark.asyncio
+async def test_two_databases_on_commit(two_databases):
+    calls = []
+    async with in_transaction("models"):
+        await on_commit(lambda: calls.append("models"), "models")
+        await on_commit(lambda: calls.append("events"), "events")
+        assert calls == ["events"]
+
+    assert calls == ["events", "models"]
+
+
+@pytest.mark.asyncio
+async def test_two_databases_on_commit_paramerror(two_databases):
+    with pytest.raises(
+        ParamsError,
+        match="You are running with multiple databases, so you should specify connection_name",
+    ):
+        await on_commit(lambda: None)
