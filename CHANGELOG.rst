@@ -8,7 +8,7 @@ Changelog
 1.1
 ===
 
-1.1.9 *Unreleased*
+1.1.9
 -----
 
 Added
