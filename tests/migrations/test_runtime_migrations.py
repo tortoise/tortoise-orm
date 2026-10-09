@@ -236,6 +236,40 @@ async def test_loader_builds_graph(tmp_path: Path, monkeypatch: pytest.MonkeyPat
 
 
 @pytest.mark.asyncio
+async def test_loader_resolves_cross_app_latest_and_first(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    latest_a = _write_migrations(
+        tmp_path,
+        "latest_a",
+        [("0001_initial", []), ("0002_second", [("latest_a", "0001_initial")])],
+    )
+    latest_b = _write_migrations(
+        tmp_path,
+        "latest_b",
+        [("0001_initial", [("latest_a", "__latest__"), ("latest_a", "__first__")])],
+    )
+    monkeypatch.syspath_prepend(str(tmp_path))
+
+    apps_config = {
+        "latest_a": {"models": [], "default_connection": "default", "migrations": latest_a},
+        "latest_b": {"models": [], "default_connection": "default", "migrations": latest_b},
+    }
+
+    class FakeRecorder:
+        async def applied_migrations(self):
+            return []
+
+    loader = MigrationLoader(apps_config, cast(MigrationRecorder, FakeRecorder()), load=False)
+    await loader.build_graph()
+
+    b1 = MigrationKey(app_label="latest_b", name="0001_initial")
+    a1 = MigrationKey(app_label="latest_a", name="0001_initial")
+    a2 = MigrationKey(app_label="latest_a", name="0002_second")
+    assert loader.graph.forwards_plan(b1) == [a1, a2, b1]
+
+
+@pytest.mark.asyncio
 async def test_loader_missing_module_raises(tmp_path: Path) -> None:
     apps_config = {
         "app": {"models": [], "default_connection": "default", "migrations": "nope.migrations"}

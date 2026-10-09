@@ -110,23 +110,22 @@ class MigrationGraph:
             if isinstance(node, DummyNode):
                 node.raise_error()
 
-    def root_nodes(self, app_label: str | None = None) -> list[MigrationKey]:
+    def _nodes_without(self, app_label: str | None, edges: str) -> list[MigrationKey]:
         nodes = [
             node.key
             for node in self.node_map.values()
             if (app_label is None or node.key.app_label == app_label)
-            and not any(app_label is None or n.key.app_label == app_label for n in node.parents)
+            and not any(
+                app_label is None or n.key.app_label == app_label for n in getattr(node, edges)
+            )
         ]
         return sorted(nodes)
 
+    def root_nodes(self, app_label: str | None = None) -> list[MigrationKey]:
+        return self._nodes_without(app_label, "parents")
+
     def leaf_nodes(self, app_label: str | None = None) -> list[MigrationKey]:
-        nodes = [
-            node.key
-            for node in self.node_map.values()
-            if (app_label is None or node.key.app_label == app_label)
-            and not any(app_label is None or n.key.app_label == app_label for n in node.children)
-        ]
-        return sorted(nodes)
+        return self._nodes_without(app_label, "children")
 
     def forwards_plan(self, target: MigrationKey) -> list[MigrationKey]:
         if target not in self.nodes:
