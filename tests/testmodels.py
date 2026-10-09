@@ -923,6 +923,7 @@ class Student(Model):
     school: fields.ForeignKeyRelation[School] = fields.ForeignKeyField(
         "models.School", related_name="students", to_field="id"
     )
+    school_id: int
 
 
 class Principal(Model):

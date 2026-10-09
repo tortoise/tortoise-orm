@@ -263,10 +263,10 @@ class Q:
     """
 
     __slots__ = (
+        "_is_negated",
         "children",
         "filters",
         "join_type",
-        "_is_negated",
     )
 
     AND = "AND"
@@ -442,9 +442,14 @@ class Q:
             key in resolve_context.model._meta.fk_fields
             or key in resolve_context.model._meta.o2o_fields
         ):
-            field_object = resolve_context.model._meta.fields_map[key]
+            field_object = cast(RelationalField, resolve_context.model._meta.fields_map[key])
             filter_key = cast(str, field_object.source_field)
-            filter_value = getattr(value, "pk", value)
+            to_field_name = field_object.to_field_instance.model_field_name
+            filter_value = (
+                getattr(value, to_field_name)
+                if isinstance(value, field_object.related_model)
+                else value
+            )
         elif key in resolve_context.model._meta.m2m_fields:
             filter_value = getattr(value, "pk", value)
         elif (
@@ -534,7 +539,7 @@ class Function(Expression):
         Enable populate_field_object where we want to try and preserve the field type.
     """
 
-    __slots__ = ("field", "field_object", "default_values")
+    __slots__ = ("default_values", "field", "field_object")
 
     database_func: type[PypikaFunction] = PypikaFunction
     # Enable populate_field_object where we want to try and preserve the field type.
