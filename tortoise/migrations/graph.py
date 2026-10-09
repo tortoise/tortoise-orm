@@ -114,7 +114,8 @@ class MigrationGraph:
         nodes = [
             node.key
             for node in self.node_map.values()
-            if not node.parents and (app_label is None or node.key.app_label == app_label)
+            if (app_label is None or node.key.app_label == app_label)
+            and not self._has_related_node(node.parents, app_label)
         ]
         return sorted(nodes)
 
@@ -122,9 +123,20 @@ class MigrationGraph:
         nodes = [
             node.key
             for node in self.node_map.values()
-            if not node.children and (app_label is None or node.key.app_label == app_label)
+            if (app_label is None or node.key.app_label == app_label)
+            and not self._has_related_node(node.children, app_label)
         ]
         return sorted(nodes)
+
+    @staticmethod
+    def _has_related_node(related: set[Node], app_label: str | None) -> bool:
+        # For a single-app request only same-app edges decide whether that app has a root or
+        # a leaf: an app whose newest migration is depended on from another app, or whose
+        # first migration depends on another app, still has its own target. The global call
+        # (app_label is None) keeps the original any-app behaviour.
+        if app_label is None:
+            return bool(related)
+        return any(node.key.app_label == app_label for node in related)
 
     def forwards_plan(self, target: MigrationKey) -> list[MigrationKey]:
         if target not in self.nodes:
