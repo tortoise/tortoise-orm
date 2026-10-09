@@ -212,6 +212,19 @@ def test_graph_diamond_is_not_a_cycle() -> None:
     assert plan[-1] == key("d")
     assert sorted(plan) == [key("a"), key("b"), key("c"), key("d")]
 
+    back = graph.backwards_plan(key("a"))
+
+    assert back[0] == key("d")
+    assert back[-1] == key("a")
+    assert sorted(back) == [key("a"), key("b"), key("c"), key("d")]
+
+
+def test_graph_cycle_behind_leaf_reports_cycle_path() -> None:
+    graph = _graph_with_edges(["leaf", "a", "b"], [("leaf", "a"), ("a", "b"), ("b", "a")])
+
+    with pytest.raises(ValueError, match=r"x\.a -> x\.b -> x\.a"):
+        graph.forwards_plan(MigrationKey(app_label="x", name="leaf"))
+
 
 @pytest.mark.asyncio
 async def test_graph_multi_app_dependencies() -> None:
