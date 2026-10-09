@@ -204,19 +204,19 @@ def test_graph_diamond_is_not_a_cycle() -> None:
     graph = _graph_with_edges(
         ["a", "b", "c", "d"], [("b", "a"), ("c", "a"), ("d", "b"), ("d", "c")]
     )
-    key = lambda n: MigrationKey(app_label="x", name=n)  # noqa: E731
+    a, b, c, d = (MigrationKey(app_label="x", name=n) for n in "abcd")
 
-    plan = graph.forwards_plan(key("d"))
+    plan = graph.forwards_plan(d)
 
-    assert plan[0] == key("a")
-    assert plan[-1] == key("d")
-    assert sorted(plan) == [key("a"), key("b"), key("c"), key("d")]
+    assert plan[0] == a
+    assert plan[-1] == d
+    assert sorted(plan) == [a, b, c, d]
 
-    back = graph.backwards_plan(key("a"))
+    back = graph.backwards_plan(a)
 
-    assert back[0] == key("d")
-    assert back[-1] == key("a")
-    assert sorted(back) == [key("a"), key("b"), key("c"), key("d")]
+    assert back[0] == d
+    assert back[-1] == a
+    assert sorted(back) == [a, b, c, d]
 
 
 def test_graph_cycle_behind_leaf_reports_cycle_path() -> None:
