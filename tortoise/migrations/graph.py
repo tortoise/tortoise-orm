@@ -114,7 +114,8 @@ class MigrationGraph:
         nodes = [
             node.key
             for node in self.node_map.values()
-            if not node.parents and (app_label is None or node.key.app_label == app_label)
+            if (app_label is None or node.key.app_label == app_label)
+            and not any(app_label is None or n.key.app_label == app_label for n in node.parents)
         ]
         return sorted(nodes)
 
@@ -122,7 +123,8 @@ class MigrationGraph:
         nodes = [
             node.key
             for node in self.node_map.values()
-            if not node.children and (app_label is None or node.key.app_label == app_label)
+            if (app_label is None or node.key.app_label == app_label)
+            and not any(app_label is None or n.key.app_label == app_label for n in node.children)
         ]
         return sorted(nodes)
 

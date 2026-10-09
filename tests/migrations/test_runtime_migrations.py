@@ -186,6 +186,25 @@ async def test_graph_multi_app_dependencies() -> None:
 
 
 @pytest.mark.asyncio
+async def test_graph_leaf_and_root_nodes_ignore_cross_app_edges() -> None:
+    graph = MigrationGraph()
+    a1 = MigrationKey(app_label="app1", name="0001_initial")
+    a2 = MigrationKey(app_label="app1", name="0002_second")
+    b1 = MigrationKey(app_label="app2", name="0001_initial")
+    for key in (a1, a2, b1):
+        graph.add_node(key, Migration(key.name, key.app_label))
+    graph.add_dependency(a2, a2, a1)
+    graph.add_dependency(b1, b1, a2)
+
+    assert graph.leaf_nodes("app1") == [a2]
+    assert graph.root_nodes("app1") == [a1]
+    assert graph.leaf_nodes("app2") == [b1]
+    assert graph.root_nodes("app2") == [b1]
+    assert graph.leaf_nodes() == [b1]
+    assert graph.root_nodes() == [a1]
+
+
+@pytest.mark.asyncio
 async def test_loader_builds_graph(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     module_path = _write_migrations(
         tmp_path,
