@@ -191,8 +191,9 @@ async def test_graph_leaf_and_root_nodes_ignore_cross_app_edges() -> None:
     a1 = MigrationKey(app_label="app1", name="0001_initial")
     a2 = MigrationKey(app_label="app1", name="0002_second")
     b1 = MigrationKey(app_label="app2", name="0001_initial")
-    for key in (a1, a2, b1):
-        graph.add_node(key, Migration(key.name, key.app_label))
+    graph.add_node(a1, Migration(a1.name, a1.app_label))
+    graph.add_node(a2, Migration(a2.name, a2.app_label))
+    graph.add_node(b1, Migration(b1.name, b1.app_label))
     graph.add_dependency(a2, a2, a1)
     graph.add_dependency(b1, b1, a2)
 
