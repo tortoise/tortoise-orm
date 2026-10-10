@@ -139,6 +139,9 @@ class MigrationGraph:
     def _iterative_dfs(self, start: Node, *, forwards: bool) -> list[MigrationKey]:
         visited: list[MigrationKey] = []
         visited_set: set[Node] = set()
+        # A dict used as an insertion-ordered set: it holds the nodes on the current
+        # DFS path, so a cycle can be reported in path order. A plain set would give
+        # O(1) membership too, but no order to build the cycle message from.
         in_progress: dict[Node, None] = {}
         stack: list[tuple[Node, bool]] = [(start, False)]
         while stack:
