@@ -1475,6 +1475,14 @@ def test_cache_respects_model_config_validators_and_module(db):
     assert Upper is not Lower
     assert Lower(id=1, name="Ab", created="2020-01-01T00:00:00", events=[]).name == "ab"
 
+    for i in range(20):
+        M = pydantic_model_creator(
+            Tournament,
+            name="TournamentLoop",
+            validators={"v": field_validator("name")(classmethod(lambda cls, x, i=i: str(i)))},
+        )
+        assert M(id=1, name="a", created="2020-01-01T00:00:00", events=[]).name == str(i)
+
     A = pydantic_model_creator(Tournament, name="TournamentModule", module="a.b")
     B = pydantic_model_creator(Tournament, name="TournamentModule", module="c.d")
     assert A is not B
