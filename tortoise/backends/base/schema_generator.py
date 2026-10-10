@@ -429,6 +429,7 @@ class BaseSchemaGenerator(SchemaQuotingMixin):
         models_tables = [model._meta.db_table for model in models_to_create]
         for field_name, column_name in model._meta.fields_db_projection.items():
             field_object = model._meta.fields_map[field_name]
+            field_object._validate_indexable(self.DIALECT)
             comment = self._get_field_comment(field_object, qualified_table_name, column_name)
             default = self._get_field_default(field_object, table_name, column_name, model)
 
