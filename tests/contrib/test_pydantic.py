@@ -2,7 +2,7 @@ import copy
 
 import pytest
 import pytest_asyncio
-from pydantic import ConfigDict, ValidationError
+from pydantic import ConfigDict, ValidationError, field_validator
 
 from tests.testmodels import (
     Address,
@@ -1457,6 +1457,28 @@ def test_exclude_readonly(db):
     ModelPydantic = pydantic_model_creator(Event, exclude_readonly=True)
 
     assert "modified" not in ModelPydantic.model_json_schema()["properties"]
+
+
+def test_cache_respects_model_config_validators_and_module(db):
+    assert pydantic_model_creator(Tournament) is not pydantic_model_creator(
+        Tournament, model_config={"extra": "allow"}
+    )
+    assert (
+        pydantic_model_creator(Tournament, model_config={"extra": "allow"}).model_config["extra"]
+        == "allow"
+    )
+
+    v1 = {"v": field_validator("name")(classmethod(lambda cls, x: x.upper()))}
+    v2 = {"v": field_validator("name")(classmethod(lambda cls, x: x.lower()))}
+    Upper = pydantic_model_creator(Tournament, name="TournamentValidated", validators=v1)
+    Lower = pydantic_model_creator(Tournament, name="TournamentValidated", validators=v2)
+    assert Upper is not Lower
+    assert Lower(id=1, name="Ab", created="2020-01-01T00:00:00", events=[]).name == "ab"
+
+    A = pydantic_model_creator(Tournament, name="TournamentModule", module="a.b")
+    B = pydantic_model_creator(Tournament, name="TournamentModule", module="c.d")
+    assert A is not B
+    assert B.__module__ == "c.d"
 
 
 # Fixtures for TestPydanticCycle
