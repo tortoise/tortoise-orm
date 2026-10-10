@@ -2250,6 +2250,7 @@ def test_non_class_annotation(db):
 
     Annotated_Pydantic = pydantic_model_creator(AnnotatedModel)
     assert set(Annotated_Pydantic.model_fields) == {"id", "st"}
+    assert Annotated_Pydantic.model_fields["st"].annotation == Literal["a", "b"]
 
 
 # Tests for computed fields accessing relations (#1440)
