@@ -139,15 +139,27 @@ class MigrationGraph:
     def _iterative_dfs(self, start: Node, *, forwards: bool) -> list[MigrationKey]:
         visited: list[MigrationKey] = []
         visited_set: set[Node] = set()
+        # A dict used as an insertion-ordered set: it holds the nodes on the current
+        # DFS path, so a cycle can be reported in path order. A plain set would give
+        # O(1) membership too, but no order to build the cycle message from.
+        in_progress: dict[Node, None] = {}
         stack: list[tuple[Node, bool]] = [(start, False)]
         while stack:
             node, processed = stack.pop()
             if node in visited_set:
                 continue
             if processed:
+                del in_progress[node]
                 visited_set.add(node)
                 visited.append(node.key)
                 continue
+            if node in in_progress:
+                cycle = list(in_progress)
+                cycle = [*cycle[cycle.index(node) :], node]
+                raise ValueError(
+                    "Circular migration dependency: " + " -> ".join(str(n) for n in cycle)
+                )
+            in_progress[node] = None
             stack.append((node, True))
             neighbors = node.parents if forwards else node.children
             stack.extend((n, False) for n in sorted(neighbors))

@@ -170,6 +170,62 @@ async def test_graph_planning_with_keys() -> None:
     assert graph.backwards_plan(key1) == [key2, key1]
 
 
+def _graph_with_edges(names: list[str], edges: list[tuple[str, str]]) -> MigrationGraph:
+    graph = MigrationGraph()
+    keys = {n: MigrationKey(app_label="x", name=n) for n in names}
+    for key in keys.values():
+        graph.add_node(key, Migration(key.name, key.app_label))
+    for child, parent in edges:
+        graph.add_dependency(keys[child], keys[child], keys[parent])
+    return graph
+
+
+@pytest.mark.parametrize(
+    "edges, start_name",
+    [
+        ([("a", "b"), ("b", "a")], "a"),
+        ([("a", "a")], "a"),
+        ([("a", "b"), ("b", "c"), ("c", "b")], "b"),
+    ],
+)
+def test_graph_cycle_raises_instead_of_hanging(
+    edges: list[tuple[str, str]], start_name: str
+) -> None:
+    graph = _graph_with_edges(["a", "b", "c"], edges)
+    start = MigrationKey(app_label="x", name=start_name)
+
+    with pytest.raises(ValueError, match="Circular migration dependency"):
+        graph.forwards_plan(start)
+    with pytest.raises(ValueError, match="Circular migration dependency"):
+        graph.backwards_plan(start)
+
+
+def test_graph_diamond_is_not_a_cycle() -> None:
+    graph = _graph_with_edges(
+        ["a", "b", "c", "d"], [("b", "a"), ("c", "a"), ("d", "b"), ("d", "c")]
+    )
+    a, b, c, d = (MigrationKey(app_label="x", name=n) for n in "abcd")
+
+    plan = graph.forwards_plan(d)
+
+    assert plan[0] == a
+    assert plan[-1] == d
+    assert sorted(plan) == [a, b, c, d]
+
+    back = graph.backwards_plan(a)
+
+    assert back[0] == d
+    assert back[-1] == a
+    assert sorted(back) == [a, b, c, d]
+
+
+def test_graph_cycle_behind_leaf_reports_cycle_path() -> None:
+    graph = _graph_with_edges(["leaf", "a", "b"], [("leaf", "a"), ("a", "b"), ("b", "a")])
+
+    with pytest.raises(ValueError, match=r"x\.a -> x\.b -> x\.a"):
+        graph.forwards_plan(MigrationKey(app_label="x", name="leaf"))
+
+
 @pytest.mark.asyncio
 async def test_graph_multi_app_dependencies() -> None:
     graph = MigrationGraph()
