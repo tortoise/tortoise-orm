@@ -217,6 +217,9 @@ class PydanticModelCreator:
             and sort_alphabetically is None
             and allow_cycles is None
             and meta_override is None
+            and model_config is None
+            and not validators
+            and module == __name__
             and not exclude_readonly
         )
         if exclude is None:
@@ -267,6 +270,7 @@ class PydanticModelCreator:
 
         self._optional = optional
 
+        self._call_model_config = model_config
         self._validators = validators
         self._module = module
 
@@ -290,6 +294,10 @@ class PydanticModelCreator:
                 f"{self._exclude_read_only};"
                 f"{self.meta.computed}"
             )
+            if self._call_model_config is not None or self._validators or self._module != __name__:
+                hashval += (
+                    f";{self._call_model_config};{sorted(self._validators or {})};{self._module}"
+                )
             self.__hash = (
                 b32encode(sha3_224(hashval.encode("utf-8")).digest()).decode("utf-8").lower()[:6]
             )
@@ -359,7 +367,8 @@ class PydanticModelCreator:
 
         self._name, self._title = self.get_name()
 
-        if self._hash in _MODEL_INDEX:
+        # validators are arbitrary objects without a stable identity, so they bypass the cache
+        if not self._validators and self._hash in _MODEL_INDEX:
             hashed_model = _MODEL_INDEX[self._hash]
             if hashed_model.__name__ == self._name:
                 return _MODEL_INDEX[self._hash]
@@ -389,7 +398,8 @@ class PydanticModelCreator:
         )
         model.__doc__ = _cleandoc(self._cls)
         model.model_config["orig_model"] = self._cls  # type: ignore
-        _MODEL_INDEX[self._hash] = model
+        if not self._validators:
+            _MODEL_INDEX[self._hash] = model
         return model
 
     def _process_field(
