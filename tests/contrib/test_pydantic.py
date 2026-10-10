@@ -1,4 +1,5 @@
 import copy
+from typing import Literal
 
 import pytest
 import pytest_asyncio
@@ -20,11 +21,13 @@ from tests.testmodels import (
     User,
     json_pydantic_default,
 )
+from tortoise import fields
 from tortoise.contrib.pydantic import (
     PydanticModel,
     pydantic_model_creator,
     pydantic_queryset_creator,
 )
+from tortoise.models import Model
 
 
 # Fixtures for TestPydantic
@@ -2236,6 +2239,17 @@ def test_field_with_default_not_optional(db):
         Event_Pydantic(
             event_id=1, name="test", tournament=1, token=None, modified="2024-01-01T00:00:00"
         )
+
+
+def test_non_class_annotation(db):
+    """Annotations whose origin is not a class (Literal) must not crash (#2309)."""
+
+    class AnnotatedModel(Model):
+        id = fields.IntField(primary_key=True)
+        st: Literal["a", "b"] = fields.CharField(max_length=5)
+
+    Annotated_Pydantic = pydantic_model_creator(AnnotatedModel)
+    assert set(Annotated_Pydantic.model_fields) == {"id", "st"}
 
 
 # Tests for computed fields accessing relations (#1440)

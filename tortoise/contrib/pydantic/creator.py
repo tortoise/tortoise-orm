@@ -129,7 +129,7 @@ def is_field_annotation(type_obj: Any) -> bool:
     t = get_origin(type_obj)
     if t is None:
         return False
-    return issubclass(t, Field)
+    return isinstance(t, type) and issubclass(t, Field)
 
 
 def pydantic_queryset_creator(
