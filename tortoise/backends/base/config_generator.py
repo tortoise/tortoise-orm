@@ -199,18 +199,19 @@ def expand_db_url(db_url: str, testing: bool = False) -> dict:
     vmap: dict = {}
     vmap.update(db["vmap"])
     params[vmap["path"]] = path
-    if vmap.get("hostname"):
+    if vmap.get("hostname") and (url.hostname or vmap["hostname"] not in params):
+        # Keep a host given in the query string (e.g. a unix socket directory)
         params[vmap["hostname"]] = url.hostname or None
     try:
         if vmap.get("port") and url.port:
             params[vmap["port"]] = int(url.port)
     except ValueError:
         raise ConfigurationError("Port is not an integer")
-    if vmap.get("username"):
+    if vmap.get("username") and (url.username or vmap["username"] not in params):
         # Pass username as None, instead of empty string,
         # to let asyncpg retrieve username from environment variable or OS user
         params[vmap["username"]] = url.username or None
-    if vmap.get("password"):
+    if vmap.get("password") and (url.password or vmap["password"] not in params):
         # asyncpg accepts None for password, but aiomysql not
         params[vmap["password"]] = (
             None

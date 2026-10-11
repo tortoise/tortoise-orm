@@ -154,6 +154,23 @@ def test_postgres_no_port():
         }
 
 
+def test_postgres_unix_socket_query_params():
+    for scheme, engine in _postgres_scheme_engines.items():
+        res = expand_db_url(
+            f"{scheme}:///test?host=/cloudsql/x:y:z/.s.PGSQL.5432&user=postgres&password=pass"
+        )
+        assert res == {
+            "engine": engine,
+            "credentials": {
+                "database": "test",
+                "host": "/cloudsql/x:y:z/.s.PGSQL.5432",
+                "password": "pass",
+                "port": 5432,
+                "user": "postgres",
+            },
+        }
+
+
 def test_postgres_nonint_port():
     for scheme in _postgres_scheme_engines:
         with pytest.raises(ConfigurationError):
