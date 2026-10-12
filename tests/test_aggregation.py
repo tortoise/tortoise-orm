@@ -5,6 +5,7 @@ import pytest
 from tests.testmodels import (
     Author,
     Book,
+    CommentModel,
     Event,
     MinRelation,
     Team,
@@ -363,3 +364,27 @@ async def test_function_requiring_nested_joins(db):
 
     res = await Tournament.annotate(avg=Avg("events__participants__alias")).values("avg")
     assert res == [{"avg": 6}]
+
+
+@pytest.mark.asyncio
+async def test_avg_of_integer_field_is_not_truncated(db):
+    for rating in (1, 2, 2):
+        await CommentModel.create(
+            message="m",
+            rating=rating,
+            escaped_comment_field="e",
+            multiline_comment="c",
+            commented_by="u",
+        )
+
+    values = await CommentModel.annotate(avg=Avg("rating")).values("avg")
+    assert float(values[0]["avg"]) == pytest.approx(5 / 3)
+
+    values_list = await CommentModel.annotate(avg=Avg("rating")).values_list("avg")
+    assert float(values_list[0][0]) == pytest.approx(5 / 3)
+
+    grouped = await CommentModel.annotate(avg=Avg("rating")).group_by("message").values("avg")
+    assert float(grouped[0]["avg"]) == pytest.approx(5 / 3)
+
+    expression = await CommentModel.annotate(avg=Avg(F("rating") + 1)).values("avg")
+    assert float(expression[0]["avg"]) == pytest.approx(8 / 3)

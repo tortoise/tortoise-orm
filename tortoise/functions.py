@@ -1,6 +1,7 @@
 from pypika_tortoise import SqlContext, functions
 
-from tortoise.expressions import Aggregate, Function
+from tortoise.expressions import Aggregate, Function, ResolveContext, ResolveResult
+from tortoise.fields import DecimalField, FloatField
 
 ##############################################################################
 # Standard functions
@@ -136,3 +137,14 @@ class Avg(Aggregate):
 
     database_func = functions.Avg
     populate_field_object = True
+
+    def resolve(self, resolve_context: ResolveContext) -> ResolveResult:
+        result = super().resolve(resolve_context)
+        # An average is fractional, so only decimal and float columns keep their own type.
+        # Converting it with an integer (or similar) field would silently truncate it, so the
+        # database value is returned as is for those.
+        if self.field_object is not None and not isinstance(
+            self.field_object, (DecimalField, FloatField)
+        ):
+            self.field_object = None
+        return result
