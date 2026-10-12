@@ -171,6 +171,23 @@ def test_postgres_unix_socket_query_params():
         }
 
 
+def test_postgres_url_authority_wins_over_query_params():
+    for scheme, engine in _postgres_scheme_engines.items():
+        res = expand_db_url(
+            f"{scheme}://pguser:pgpass@mydomain.com:5433/test?port=5430&user=ignore-me"
+        )
+        assert res == {
+            "engine": engine,
+            "credentials": {
+                "database": "test",
+                "host": "mydomain.com",
+                "password": "pgpass",
+                "port": 5433,
+                "user": "pguser",
+            },
+        }
+
+
 def test_postgres_nonint_port():
     for scheme in _postgres_scheme_engines:
         with pytest.raises(ConfigurationError):
