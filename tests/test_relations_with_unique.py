@@ -58,17 +58,23 @@ async def test_filter_by_fk_instance_uses_to_field(db):
     # (a non-PK unique field). Filtering by a School instance must use the
     # `to_field` value (school.id), not the primary key (school.uuid).
     school = await School.create(id=42, name="School1")
+    school1 = await School.create(id=1, name=school.name)
+    student1 = await Student.create(name="", school=school1)
     student = await Student.create(name="Sang-Heon Jeon1", school=school)
 
     assert school.pk != school.id
 
-    found = await Student.filter(school=school).first()
-    assert found is not None
+    found = await Student.filter(school=school).get()
     assert found.name == student.name
 
     found2 = await Student.filter(school=school.id).first()
     found3 = await Student.filter(school_id=school.id).first()
-    assert found == found2 == found3
+    found4 = await Student.filter(school__pk=school.pk).first()
+    found5 = await Student.filter(school__name=school.name).order_by("-school_id").first()
+    assert found == found2 == found3 == found4 == found5 == student
+
+    found6 = await Student.filter(school__id=school1.id).get()
+    assert found6 == student1
 
     with pytest.raises(TypeError):
         await Student.filter(school=Principal(id=school.id))
