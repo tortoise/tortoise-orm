@@ -199,9 +199,12 @@ def expand_db_url(db_url: str, testing: bool = False) -> dict:
     vmap: dict = {}
     vmap.update(db["vmap"])
     params[vmap["path"]] = path
-    if vmap.get("hostname") and (url.hostname or vmap["hostname"] not in params):
-        # Keep a host given in the query string (e.g. a unix socket directory)
-        params[vmap["hostname"]] = url.hostname or None
+    if host_key := vmap.get("hostname"):
+        if url.hostname:
+            params[host_key] = url.hostname
+        elif host_key not in params:
+            # Keep a host given in the query string (e.g. a unix socket directory)
+            params[host_key] = None
     try:
         if vmap.get("port") and url.port:
             params[vmap["port"]] = int(url.port)
