@@ -39,6 +39,8 @@ Fixed
 - psycopg: the connection pool now validates a connection on checkout, so one silently dropped by the network while idle (a firewall or load balancer closing it, a DB restart, ...) gets transparently replaced instead of being handed to the caller and failing with ``psycopg.OperationalError: the connection is closed``. The check is a cheap no-op query on an already-open socket, so the added latency per checkout is negligible next to a real query. (#2285)
 - Fixed ``prefetch_related()`` on m2m fields ignoring ``select_related()``, ``annotate()``, and ``order_by()`` applied to the prefetched queryset. (#2205)
 - ``pydantic_model_creator`` no longer raises ``TypeError`` for models with annotations whose origin is not a class, such as ``Literal[...]``. (#2311)
+- Filtering by a related model instance on a ``ForeignKeyField``/``OneToOneField`` declared with a non-primary-key ``to_field`` now uses the ``to_field`` value instead of the instance's primary key, so the generated query targets the correct column. (#2239)
+- Database URLs with an empty host (e.g. ``postgres:///db?host=/var/run/postgresql&user=u``) no longer overwrite ``host``/``user``/``password`` given in the query string, so unix domain sockets work. (#2313)
 
 1.1.8
 -----
