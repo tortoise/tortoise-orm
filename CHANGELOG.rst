@@ -14,7 +14,7 @@ Changelog
 Changed
 ^^^^^^^
 
-- Drop support for Python3.10 (#2317)
+- Drop support for Python3.10 (#2322)
 
 
 1.1
