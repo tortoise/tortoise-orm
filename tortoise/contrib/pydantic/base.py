@@ -1,18 +1,14 @@
 from __future__ import annotations
 
-import sys
 import types
 from typing import TYPE_CHECKING, Any, Union, cast, get_args, get_origin
 
 import pydantic
 from pydantic import BaseModel, ConfigDict, RootModel
 
-if sys.version_info >= (3, 11):  # pragma: nocoverage
-    from typing import Self
-else:
-    from typing_extensions import Self
-
 if TYPE_CHECKING:  # pragma: nocoverage
+    from typing import Self
+
     from tortoise.models import Model
     from tortoise.queryset import QuerySet, QuerySetSingle
 

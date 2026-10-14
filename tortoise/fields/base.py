@@ -2,10 +2,9 @@ from __future__ import annotations
 
 import inspect
 import operator
-import sys
 import warnings
 from collections.abc import Callable
-from enum import Enum
+from enum import Enum, StrEnum
 from functools import reduce
 from typing import TYPE_CHECKING, Any, Generic, TypeVar, overload
 
@@ -15,17 +14,9 @@ from tortoise.exceptions import ConfigurationError, ValidationError
 from tortoise.validators import Validator
 
 if TYPE_CHECKING:  # pragma: nocoverage
-    from tortoise.models import Model
-
-if sys.version_info >= (3, 11):
-    from enum import StrEnum
     from typing import Self
-else:  # pragma: no cover
-    from typing_extensions import Self
 
-    class StrEnum(str, Enum):
-        __str__ = str.__str__
-
+    from tortoise.models import Model
 
 VALUE = TypeVar("VALUE")
 

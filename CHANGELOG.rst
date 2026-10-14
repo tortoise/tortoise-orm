@@ -5,6 +5,18 @@ Changelog
 =========
 
 
+1.2
+===
+
+1.2.0 *Unreleased*
+-----
+
+Changed
+^^^^^^^
+
+- Drop support for Python3.10 (#2322)
+
+
 1.1
 ===
 
