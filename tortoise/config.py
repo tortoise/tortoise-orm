@@ -10,14 +10,9 @@ from tortoise.backends.base.config_generator import generate_config
 from tortoise.exceptions import ConfigurationError
 
 if TYPE_CHECKING:
-    import sys
     from collections.abc import Iterable
     from types import ModuleType
-
-    if sys.version_info >= (3, 11):
-        from typing import Self
-    else:
-        from typing_extensions import Self
+    from typing import Self
 
 
 @dataclass(frozen=True)

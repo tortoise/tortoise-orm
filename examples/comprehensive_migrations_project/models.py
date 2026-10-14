@@ -8,7 +8,7 @@ Models evolve through multiple migration phases showing Create, Alter, and Drop 
 from __future__ import annotations
 
 from decimal import Decimal
-from enum import Enum, IntEnum
+from enum import IntEnum, StrEnum
 
 from tortoise import fields, models
 from tortoise.fields import Now, RandomHex
@@ -24,7 +24,7 @@ class OrderStatus(IntEnum):
     CANCELLED = 5
 
 
-class PaymentMethod(str, Enum):
+class PaymentMethod(StrEnum):
     """Payment method types - demonstrates CharEnumField."""
 
     CREDIT_CARD = "credit_card"
@@ -162,9 +162,10 @@ class EmployeeProfile(models.Model):
     bio = fields.TextField(null=True)
     avatar_hash = fields.BinaryField(null=True)
     settings: dict | None = fields.JSONField(null=True)
+    employee_id: int
 
     def __str__(self) -> str:
-        return f"Profile for {self.employee_id}"  # type: ignore[attr-defined]
+        return f"Profile for {self.employee_id}"
 
 
 class Warehouse(models.Model):

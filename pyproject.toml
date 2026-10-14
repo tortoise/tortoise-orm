@@ -6,25 +6,23 @@ license = { text = "Apache-2.0" }
 readme = "README.rst"
 keywords = ["sql", "mysql", "postgres", "psql", "sqlite", "aiosqlite", "asyncpg", "relational", "database", "rdbms", "orm", "object mapper", "async", "asyncio", "aio", "psycopg"]
 dynamic = ["version"]
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 dependencies = [
     "pypika-tortoise (>=0.6.5,<1.0.0)",
     "iso8601 (>=2.1.0,<3.0.0); python_version < '4.0'",
     "aiosqlite (>=0.16.0,<1.0.0)",
     "anyio",
-    "tomlkit (>=0.11.4,<1.0.0); python_version < '3.11'",
-    "typing-extensions (>= 4.1.0); python_version < '3.11'",
 ]
 classifiers = [
     "License :: OSI Approved :: Apache Software License",
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14",
+    "Programming Language :: Python :: 3.15",
     "Programming Language :: Python :: Implementation :: CPython",
     "Programming Language :: Python :: Implementation :: PyPy",
     "Programming Language :: PL/SQL",
@@ -223,8 +221,10 @@ extend-select = [
     "RUF100", # https://docs.astral.sh/ruff/rules/#ruff-specific-rules-ruf
 ]
 
-[tool.ruff.lint.isort]
-extra-standard-library = ["tomllib"]
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = [
+    "UP042",  # UP042 Class MyEnum inherits from both `str` and `enum.Enum`
+]
 
 [tool.bandit]
 exclude_dirs = [

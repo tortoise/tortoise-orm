@@ -1,20 +1,16 @@
 from __future__ import annotations
 
 import dataclasses
-import sys
 from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
-
-if sys.version_info >= (3, 11):
-    from typing import Self
-else:
-    from typing_extensions import Self
 
 from pydantic import ConfigDict
 
 from tortoise.fields import Field
 
 if TYPE_CHECKING:  # pragma: nocoverage
+    from typing import Self
+
     from tortoise.models import Model
 
 

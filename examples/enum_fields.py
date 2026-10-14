@@ -1,4 +1,4 @@
-from enum import Enum, IntEnum
+from enum import IntEnum, StrEnum
 
 from tortoise import Tortoise, fields, run_async
 from tortoise.fields import Field
@@ -11,7 +11,7 @@ class Service(IntEnum):
     system_administration = 3
 
 
-class Currency(str, Enum):
+class Currency(StrEnum):
     HUF = "HUF"
     EUR = "EUR"
     USD = "USD"

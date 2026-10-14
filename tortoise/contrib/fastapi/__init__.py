@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import sys
 import warnings
 from collections.abc import Generator, Iterable
 from contextlib import AbstractAsyncContextManager, asynccontextmanager
@@ -15,13 +14,9 @@ from tortoise.exceptions import DoesNotExist, IntegrityError
 from tortoise.log import logger
 
 if TYPE_CHECKING:
-    from fastapi import FastAPI, Request
-
-
-if sys.version_info >= (3, 11):
     from typing import Self
-else:
-    from typing_extensions import Self
+
+    from fastapi import FastAPI, Request
 
 
 def tortoise_exception_handlers() -> dict:
@@ -150,6 +145,7 @@ class RegisterTortoise(AbstractAsyncContextManager):
                 "use `FastAPI(exception_handlers=tortoise_exception_handlers())` instead."
                 "See more about it on https://tortoise.github.io/examples/fastapi",
                 DeprecationWarning,
+                stacklevel=2,
             )
             original_call_func = ExceptionMiddleware.__call__
 
@@ -158,7 +154,7 @@ class RegisterTortoise(AbstractAsyncContextManager):
                     self._exception_handlers.update(tortoise_exception_handlers())
                 await original_call_func(self, *args, **kw)
 
-            ExceptionMiddleware.__call__ = wrap_middleware_call  # type:ignore
+            ExceptionMiddleware.__call__ = wrap_middleware_call  # type:ignore[method-assign]
 
     async def init_orm(self) -> TortoiseContext:  # pylint: disable=W0612
         self._context = await Tortoise.init(
