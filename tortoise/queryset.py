@@ -997,6 +997,8 @@ class QuerySet(AwaitableQuery[MODEL]):
 
         :raises ValueError: If objects have no primary key set
         """
+        objects = list(objects)
+        fields = list(fields)
         if any(obj.pk is None for obj in objects):
             raise ValueError("All bulk_update() objects must have a primary key set.")
         return BulkUpdateQuery(
@@ -2065,12 +2067,15 @@ class BulkUpdateQuery(UpdateQuery, Generic[MODEL]):
             limit=limit,
             orderings=orderings,
         )
-        self.fields = fields
-        self._objects = objects
+        self.fields = list(fields)
+        self._objects = list(objects)
         self._batch_size = batch_size
         self._queries: list[QueryBuilder] = []
 
     def _make_queries(self) -> list[tuple[str, list[Any]]]:
+        self._queries = []
+        if not self._objects or not self.fields:
+            return []
         table = self.model._meta.basetable
         self.query = self._db.query_class.update(table)
         if self.capabilities.support_update_limit_order_by and self._limit:
