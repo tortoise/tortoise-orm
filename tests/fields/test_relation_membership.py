@@ -4,7 +4,7 @@ import pytest
 
 from tests import testmodels
 from tortoise.exceptions import FieldError
-from tortoise.expressions import Subquery, Value
+from tortoise.expressions import F, Subquery
 
 
 @pytest.mark.asyncio
@@ -99,10 +99,11 @@ async def test_existing_foreign_key_filters(db) -> None:
 async def test_existing_annotation_filter_name(db) -> None:
     tournament = await testmodels.Tournament.create(name="first")
     relation = await testmodels.MinRelation.create(tournament=tournament)
+    await testmodels.MinRelation.create(tournament=tournament)
 
     result = await (
-        testmodels.MinRelation.annotate(tournament__in=Value(1))
-        .filter(tournament__in=1)
+        testmodels.MinRelation.annotate(tournament__in=F("id"))
+        .filter(tournament__in=relation.pk)
         .values("id")
     )
     assert result == [{"id": relation.pk}]
