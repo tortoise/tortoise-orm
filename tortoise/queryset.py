@@ -997,6 +997,8 @@ class QuerySet(AwaitableQuery[MODEL]):
 
         :raises ValueError: If objects have no primary key set
         """
+        objects = tuple(objects)
+        fields = tuple(fields)
         if any(obj.pk is None for obj in objects):
             raise ValueError("All bulk_update() objects must have a primary key set.")
         return BulkUpdateQuery(

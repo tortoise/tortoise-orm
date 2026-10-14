@@ -8,6 +8,13 @@ Changelog
 1.1
 ===
 
+Unreleased
+----------
+
+Fixed
+^^^^^
+- Preserve object and field iterators across validation and batching in ``bulk_update()``. (#2317)
+
 1.1.9
 -----
 
