@@ -8,6 +8,13 @@ Changelog
 1.1
 ===
 
+Unreleased
+----------
+
+Added
+^^^^^
+- Support forward relation ``in`` and ``not_in`` filters with model instances. (#1819)
+
 1.1.9
 -----
 

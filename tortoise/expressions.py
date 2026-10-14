@@ -435,23 +435,45 @@ class Q:
         return modifier
 
     def _get_actual_filter_params(
-        self, resolve_context: ResolveContext, key: str, value: Table | FilterInfoDict
+        self, resolve_context: ResolveContext, key: str, value: Any
     ) -> tuple[str, Any]:
         filter_key = key
+        filter_value: Any
         model_meta = resolve_context.model._meta
-        if key in model_meta.fk_fields or key in model_meta.o2o_fields:
-            field_object = cast(RelationalField, model_meta.fields_map[key])
+        relation_name, separator, lookup = key.partition("__")
+        if (
+            (relation_name in model_meta.fk_fields or relation_name in model_meta.o2o_fields)
+            and (not separator or lookup in ("in", "not_in"))
+            and (
+                not lookup
+                or (key not in model_meta.filters and key not in resolve_context.custom_filters)
+            )
+        ):
+            field_object = cast(RelationalField, model_meta.fields_map[relation_name])
             filter_key = cast(str, field_object.source_field)
             to_field_name = field_object.to_field_instance.model_field_name
-            filter_value = (
-                getattr(value, to_field_name)
-                if isinstance(value, field_object.related_model)
-                else value
-            )
+            if lookup:
+                filter_key = f"{filter_key}__{lookup}"
+                filter_value = (
+                    value
+                    if isinstance(value, (Expression, Term))
+                    else [
+                        getattr(item, to_field_name)
+                        if isinstance(item, field_object.related_model)
+                        else item
+                        for item in value
+                    ]
+                )
+            else:
+                filter_value = (
+                    getattr(value, to_field_name)
+                    if isinstance(value, field_object.related_model)
+                    else value
+                )
         elif key in model_meta.m2m_fields:
             filter_value = getattr(value, "pk", value)
         elif (
-            key.split("__")[0] in model_meta.fetch_fields
+            relation_name in model_meta.fetch_fields
             or key in resolve_context.custom_filters
             or key in model_meta.filters
         ):
