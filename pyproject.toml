@@ -241,4 +241,4 @@ exclude_dirs = [
 ignore-words-list = "notin,NotIn,brin,BRIN,astroid"
 
 [tool.uv.sources]
-pypika-tortoise = { git = "https://github.com/tortoise/pypika-tortoise", rev = "refs/pull/46/head" }
+pypika-tortoise = { git = "https://github.com/tortoise/pypika-tortoise", rev = "refs/pull/47/head" }
