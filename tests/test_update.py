@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime, timedelta
-from typing import Any
+from typing import Any, cast
 
 import pytest
 from pypika_tortoise.terms import Function as PupikaFunction
@@ -19,6 +19,7 @@ from tests.testmodels import (
     Service,
     SmallIntFields,
     SourceFieldPk,
+    StraightFields,
     Tournament,
     UUIDFields,
 )
@@ -27,6 +28,7 @@ from tortoise.contrib.test import requireCapability
 from tortoise.contrib.test.condition import In, NotEQ
 from tortoise.expressions import Case, F, Q, Subquery, When
 from tortoise.functions import Function, Upper
+from tortoise.queryset import QuerySet
 from tortoise.timezone import UTC
 
 
@@ -39,6 +41,29 @@ async def test_update(db):
 
     tournament = await Tournament.first()
     assert tournament.name == "2"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("relation", ["fk", "o2o"])
+@pytest.mark.parametrize("single", [False, True])
+async def test_update_nullable_relation_to_none(db, relation: str, single: bool):
+    parent = await StraightFields.create(chars="parent")
+    child = StraightFields(chars="child")
+    setattr(child, relation, parent)
+    await child.save()
+    assert getattr(child, f"{relation}_id") == parent.pk
+    query = (
+        cast(QuerySet[StraightFields], StraightFields.get(pk=child.pk))
+        if single
+        else StraightFields.filter(pk=child.pk)
+    )
+
+    assert await query.update(**{relation: None}) == 1
+
+    child = await StraightFields.get(pk=child.pk)
+    assert getattr(child, f"{relation}_id") is None
+    await child.fetch_related(relation)
+    assert getattr(child, relation) is None
 
 
 @pytest.mark.asyncio

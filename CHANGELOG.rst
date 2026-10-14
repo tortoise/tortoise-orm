@@ -8,6 +8,13 @@ Changelog
 1.1
 ===
 
+Unreleased
+----------
+
+Fixed
+^^^^^
+- Allow nullable foreign key and one-to-one relations to be cleared with ``QuerySet.update(relation=None)``. (#1269)
+
 1.1.9
 -----
 
