@@ -8,7 +8,7 @@ Changelog
 1.1
 ===
 
-1.1.9 *Unreleased*
+1.1.9
 -----
 
 Added
@@ -18,7 +18,7 @@ Added
 
 Changed
 ^^^^^^^
-- `tortoise.contrib.starlette` now only supports Starlette 1.0+ (This does not affect FastAPI users; you can continue using FastAPI with any version of Starlette). (#2130)
+- `tortoise.contrib.starlette` now only supports Starlette 1.0+ (This does not affect FastAPI users; you can continue using FastAPI with any version of Starlette). (#2282)
 
 Fixed
 ^^^^^
