@@ -1459,7 +1459,7 @@ def test_exclude_readonly(db):
     assert "modified" not in ModelPydantic.model_json_schema()["properties"]
 
 
-def test_cache_respects_model_config_validators_and_module(db):
+def test_cache_respects_model_config_validators_and_module(db_simple):
     assert pydantic_model_creator(Tournament) is not pydantic_model_creator(
         Tournament, model_config={"extra": "allow"}
     )
