@@ -1107,7 +1107,12 @@ class Model(metaclass=ModelMeta):
             self._await_when_save = {}
 
     async def _wait_for_listeners(self, signal: Signals, *listener_args) -> None:
-        cls_listeners = self._listeners.get(signal, {}).get(self.__class__, [])
+        registered = self._listeners.get(signal, {})
+        cls_listeners = []
+        for model in self.__class__.__mro__:
+            for listener in registered.get(model, ()):
+                if listener not in cls_listeners:
+                    cls_listeners.append(listener)
         listeners = [listener(self.__class__, self, *listener_args) for listener in cls_listeners]
         await asyncio.gather(*listeners)
 
