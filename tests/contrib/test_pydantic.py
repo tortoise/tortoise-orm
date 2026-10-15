@@ -3,7 +3,7 @@ from typing import Annotated, Literal
 
 import pytest
 import pytest_asyncio
-from pydantic import ConfigDict, ValidationError
+from pydantic import ConfigDict, ValidationError, field_validator
 
 from tests.testmodels import (
     Address,
@@ -2339,3 +2339,39 @@ async def test_computed_field_relation_in_model(db, pydantic_cycle_setup):
     # team_size correctly reports the count
     assert empdict["team_size"] == 2
     assert empdict["name_length"] == 4
+
+
+def test_pydantic_creator_cache_model_config(db):
+    default_model = pydantic_model_creator(Tournament)
+    custom_model = pydantic_model_creator(Tournament, model_config=ConfigDict(extra="allow"))
+    assert default_model is not custom_model
+    assert custom_model.model_config.get("extra") == "allow"
+    cached_custom = pydantic_model_creator(Tournament, model_config=ConfigDict(extra="allow"))
+    assert cached_custom is custom_model
+
+
+def test_pydantic_creator_cache_validators(db):
+    default_model = pydantic_model_creator(Tournament)
+
+    def validate_name(cls, v):
+        return v
+
+    custom_model = pydantic_model_creator(
+        Tournament, validators={"val": field_validator("name")(validate_name)}
+    )
+    assert default_model is not custom_model
+
+    cached_custom = pydantic_model_creator(
+        Tournament, validators={"val": field_validator("name")(validate_name)}
+    )
+    assert cached_custom is custom_model
+
+
+def test_pydantic_creator_cache_module(db):
+    default_model = pydantic_model_creator(Tournament)
+    custom_model = pydantic_model_creator(Tournament, module="custom_module")
+    assert default_model is not custom_model
+    assert custom_model.__module__ == "custom_module"
+
+    cached_custom = pydantic_model_creator(Tournament, module="custom_module")
+    assert cached_custom is custom_model

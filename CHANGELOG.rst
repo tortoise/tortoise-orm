@@ -22,6 +22,7 @@ Changed
 
 Fixed
 ^^^^^
+- ``pydantic_model_creator`` now accounts for custom ``model_config``, ``validators``, and ``module`` in caching and default checks, preventing stale model reuse. (#2310)
 - Aggregates now apply _filter when the aggregated argument is an F() or a combined expression (e.g. Sum(F("price") * F("qty"), _filter=Q(status="paid"))). Previously the filter was silently dropped and every row was aggregated. (#2290)
 - Negating an already negated Q now cancels out: ~~Q(...) and .exclude(~Q(...)) used to keep a single NOT, so they returned the rows the caller meant to drop. (#2291)
 - PostgreSQL and Oracle ``RemoveIndex`` / partial ``RemoveConstraint`` now schema-qualify ``DROP INDEX``, so indexes on models with ``Meta.schema`` can be dropped when they are not on the connection ``search_path``. (#2288)
