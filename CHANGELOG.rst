@@ -8,6 +8,14 @@ Changelog
 1.1
 ===
 
+Unreleased
+----------
+
+Fixed
+^^^^^
+- Preserve ``bulk_create()`` conflict field iterators across validation, SQL
+  inspection and execution. (issue #2329)
+
 1.1.9
 -----
 
