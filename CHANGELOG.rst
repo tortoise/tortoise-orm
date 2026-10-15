@@ -26,7 +26,7 @@ Fixed
 - Refresh renamed model fields and foreign-key IDs using their model attribute names. (#2335)
 - Include renamed fields in model dictionaries and default ``values_list()`` projections. (#2339)
 - Resolve bulk create conflict selectors through model source field mappings,
-  with model field names taking precedence over database column names. (issue #2332)
+  with model field names taking precedence over database column names. (#2333)
 
 1.1.9
 -----
