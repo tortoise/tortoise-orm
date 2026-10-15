@@ -14,7 +14,7 @@ Changelog
 Added
 ^^^^^
 - Optional ``submodel_name`` in ``pydantic_queryset_creator()`` to name list items
-  independently of the list schema. (issue #1728)
+  independently of the list schema. (#2328)
 
 1.1.9
 -----
