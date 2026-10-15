@@ -26,7 +26,7 @@ Fixed
 - Refresh renamed model fields and foreign-key IDs using their model attribute names. (#2335)
 - Include renamed fields in model dictionaries and default ``values_list()`` projections. (#2339)
 - Use compatible MySQL bulk upsert assignments for MariaDB and older MySQL
-  versions that do not accept inserted-row aliases. (issue #1422)
+  versions that do not accept inserted-row aliases. (#2331)
 
 1.1.9
 -----
