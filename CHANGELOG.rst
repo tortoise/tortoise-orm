@@ -14,7 +14,7 @@ Unreleased
 Fixed
 ^^^^^
 - Preserve ``bulk_create()`` conflict field iterators across validation, SQL
-  inspection and execution. (issue #2329)
+  inspection and execution. (#2330)
 
 1.1.9
 -----
