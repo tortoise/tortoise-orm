@@ -81,6 +81,7 @@ DB_LOOKUP: dict[str, dict[str, Any]] = {
             "password": "password",  # nosec:B105
         },
         "defaults": {"port": 3306, "charset": "utf8mb4", "sql_mode": "STRICT_TRANS_TABLES"},
+        "allow_blank": {"sql_mode"},
         "cast": {
             "minsize": int,
             "maxsize": int,
@@ -188,9 +189,13 @@ def expand_db_url(db_url: str, testing: bool = False) -> dict:
     params: dict = {}
     for key, val in db["defaults"].items():
         params[key] = val
-    for key, val in urlparse.parse_qs(url.query).items():
+    for key, val in urlparse.parse_qs(url.query, keep_blank_values=True).items():
         cast = db["cast"].get(key, str)
-        params[key] = cast(val[-1])
+        # Only keep blank values that are explicitly supported by the backend.
+        if key not in db.get("allow_blank", ()):
+            val = [value for value in val if value]
+        if val:
+            params[key] = cast(val[-1])
 
     if testing and path:
         path = path.replace("\\{", "{").replace("\\}", "}")

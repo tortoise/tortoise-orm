@@ -122,6 +122,9 @@ class MySQLClient(BaseDBAsyncClient):
             "maxsize": self.pool_maxsize,
             **self.extra,
         }
+        # Both drivers interpolate sql_mode directly into a SET statement.
+        if self._template.get("sql_mode") == "":
+            self._template["sql_mode"] = "''"
         try:
             self._pool = await mysql.create_pool(password=self.password, **self._template)
 

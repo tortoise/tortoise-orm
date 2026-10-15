@@ -55,6 +55,35 @@ async def test_mysql_connection_params():
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "query,expected", [("sql_mode=", "''"), ("sql_mode=%27%27", "''"), ("sql_mode=ANSI", "ANSI")]
+)
+async def test_mysql_url_sql_mode(query, expected):
+    pool = MagicMock()
+    pool.wait_closed = AsyncMock()
+    with patch(
+        "tortoise.backends.mysql.client.mysql.create_pool", new=AsyncMock(return_value=pool)
+    ) as mysql_connect:
+        async with TortoiseContext() as ctx:
+            await ctx.connections._init(
+                {"models": f"mysql://root:foomip@127.0.0.1:3306/test?{query}"}, False
+            )
+            await ctx.connections.get("models").create_connection(with_db=True)
+
+            mysql_connect.assert_awaited_once()
+            assert mysql_connect.await_args.kwargs["sql_mode"] == expected
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("pragma,expected", [("journal_mode", "wal"), ("foreign_keys", 1)])
+async def test_sqlite_blank_string_option_keeps_default(tmp_path, pragma, expected):
+    async with TortoiseContext() as ctx:
+        await ctx.connections._init({"models": f"sqlite://{tmp_path}/test.sqlite?{pragma}="}, False)
+        rows = await ctx.connections.get("models").execute_query_dict(f"PRAGMA {pragma}")
+        assert rows[0][pragma] == expected
+
+
+@pytest.mark.asyncio
 async def test_asyncpg_connection_params():
     try:
         with patch(
