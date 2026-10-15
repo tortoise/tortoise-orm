@@ -11,6 +11,10 @@ Changelog
 Unreleased
 ----------
 
+Added
+^^^^^
+- Support forward relation ``in`` and ``not_in`` filters with model instances. (#2323)
+
 Fixed
 ^^^^^
 - Preserve object and field iterators across validation and batching in ``bulk_update()``. (#2317)
