@@ -11,6 +11,10 @@ Changelog
 Unreleased
 ----------
 
+Added
+^^^^^
+- Support forward relation ``in`` and ``not_in`` filters with model instances. (#2323)
+
 Fixed
 ^^^^^
 - Resolve bulk create conflict selectors through model source field mappings,
