@@ -13,7 +13,7 @@ Unreleased
 
 Fixed
 ^^^^^
-- Use database column names in reverse foreign-key and one-to-one filters with renamed columns or one-to-one primary keys. (#2336)
+- Use database column names in reverse foreign-key and one-to-one filters with renamed columns or one-to-one primary keys. (#2338)
 
 1.1.9
 -----
