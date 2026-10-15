@@ -8,6 +8,8 @@ from tortoise import Model, fields
 from tortoise.backends.asyncpg.client import AsyncpgDBClient
 from tortoise.backends.mysql.client import MySQLClient
 from tortoise.context import tortoise_test_context
+from tortoise.contrib.test import requireCapability
+from tortoise.contrib.test.condition import NotEQ
 
 
 class BulkCreateSourceFieldCollision(Model):
@@ -36,6 +38,7 @@ SELECTORS = [
 ]
 
 
+@requireCapability(dialect=NotEQ("mssql"))
 @pytest.mark.asyncio
 @pytest.mark.parametrize("selectors", SELECTORS)
 @pytest.mark.parametrize("mixed_pk", [False, True])
@@ -97,6 +100,7 @@ def test_bulk_create_source_fields_sql(db, client_type, selectors, mixed_pk):
             ) in statement
 
 
+@requireCapability(dialect=NotEQ("mssql"))
 @pytest.mark.asyncio
 async def test_bulk_create_prefers_model_names_and_keeps_omitted_defaults(db):
     original = await BulkCreateSourceFieldCollision.create(
@@ -114,6 +118,7 @@ async def test_bulk_create_prefers_model_names_and_keeps_omitted_defaults(db):
     assert stored.defaulted == 42
 
 
+@requireCapability(dialect=NotEQ("mssql"))
 @pytest.mark.asyncio
 async def test_bulk_create_conflict_target_prefers_model_name(db):
     original = await BulkCreateSourceFieldCollision.create(name="before", value="key")
@@ -129,6 +134,7 @@ async def test_bulk_create_conflict_target_prefers_model_name(db):
     assert await BulkCreateSourceFieldCollision.all().count() == 1
 
 
+@requireCapability(dialect=NotEQ("mssql"))
 @pytest.mark.asyncio
 async def test_bulk_create_maps_foreign_key_backing_field(db):
     old_parent = await SourceFields.create(chars="old parent")
