@@ -25,6 +25,29 @@ class TestStraightFields:
     model = StraightFields
 
     @pytest.mark.asyncio
+    @pytest.mark.parametrize("refresh_fields", [None, [], (), ["chars"]])
+    async def test_refresh_from_db(self, db, refresh_fields):
+        obj = await self.model.create(chars="before", blip="before")
+        await self.model.filter(pk=obj.pk).update(chars="after", blip="after")
+
+        await obj.refresh_from_db(fields=refresh_fields)
+
+        assert obj.chars == "after"
+        assert obj.blip == ("before" if refresh_fields else "after")
+
+    @pytest.mark.asyncio
+    async def test_refresh_from_db_updates_foreign_key_id(self, db):
+        old_parent = await self.model.create(chars="old parent")
+        new_parent = await self.model.create(chars="new parent")
+        obj = await self.model.create(chars="child", fk_id=old_parent.pk)
+        await self.model.filter(pk=obj.pk).update(fk_id=new_parent.pk)
+
+        await obj.refresh_from_db()
+
+        assert obj.fk_id == new_parent.pk
+        assert obj.chars == "child"
+
+    @pytest.mark.asyncio
     async def test_get_all(self, db):
         obj1 = await self.model.create(chars="aaa")
         assert obj1.eyedee is not None, str(dir(obj1))

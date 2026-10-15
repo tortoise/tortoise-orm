@@ -8,6 +8,13 @@ Changelog
 1.1
 ===
 
+Unreleased
+----------
+
+Fixed
+^^^^^
+- Refresh renamed model fields and foreign-key IDs using their model attribute names. (issue #2334)
+
 1.1.9
 -----
 
