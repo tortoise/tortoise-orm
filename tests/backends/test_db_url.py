@@ -18,6 +18,104 @@ def test_unknown_scheme():
         expand_db_url("moo://baa")
 
 
+@pytest.mark.parametrize(
+    "db_url,option",
+    [
+        ("mysql://root@localhost/test?sql_mode=", "sql_mode"),
+        ("mysql://root@localhost/test?sql_mode=ANSI&sql_mode=", "sql_mode"),
+    ],
+)
+def test_explicit_empty_string_parameter(db_url, option):
+    assert expand_db_url(db_url)["credentials"][option] == ""
+
+
+@pytest.mark.parametrize(
+    "query,expected",
+    [
+        ("sql_mode=&sql_mode=ANSI", "ANSI"),
+        ("sql_mode=ANSI&sql_mode=TRADITIONAL", "TRADITIONAL"),
+    ],
+)
+def test_string_parameter_last_value(query, expected):
+    assert (
+        expand_db_url(f"mysql://root@localhost/test?{query}")["credentials"]["sql_mode"] == expected
+    )
+
+
+@pytest.mark.parametrize(
+    "query,expected",
+    [
+        ("connect_timeout=", None),
+        ("connect_timeout=1.5&connect_timeout=", 1.5),
+        ("connect_timeout=&connect_timeout=1.5", 1.5),
+        ("connect_timeout=1&connect_timeout=2.5", 2.5),
+        ("minsize=", None),
+        ("minsize=2&minsize=", 2),
+        ("echo=", None),
+        ("echo=True&echo=", True),
+    ],
+)
+def test_blank_typed_parameters_keep_previous_behavior(query, expected):
+    option = query.partition("=")[0]
+    credentials = expand_db_url(f"mysql://root@localhost/test?{query}")["credentials"]
+    if expected is None:
+        assert option not in credentials
+    else:
+        assert credentials[option] == expected
+        assert type(credentials[option]) is type(expected)
+
+
+def test_blank_typed_parameter_keeps_default():
+    credentials = expand_db_url("sqlite://test.sqlite?journal_size_limit=")["credentials"]
+    assert credentials["journal_size_limit"] == 16384
+
+
+def test_blank_typed_parameter_does_not_hide_invalid_value():
+    with pytest.raises(ValueError):
+        expand_db_url("mysql://root@localhost/test?connect_timeout=invalid&connect_timeout=")
+
+
+@pytest.mark.parametrize(
+    "db_url,option,expected",
+    [
+        ("mysql://root@localhost/test?charset=", "charset", "utf8mb4"),
+        ("mysql://root@localhost/test?init_command=", "init_command", None),
+        ("sqlite://:memory:?journal_mode=", "journal_mode", "WAL"),
+        ("sqlite://:memory:?foreign_keys=", "foreign_keys", None),
+        ("psycopg://postgres@localhost/test?options=", "options", None),
+        ("postgres://postgres@localhost/test?connection_class=", "connection_class", None),
+        ("postgres://postgres@localhost/test?loop=", "loop", None),
+    ],
+)
+def test_other_blank_backend_options_keep_defaults(db_url, option, expected):
+    credentials = expand_db_url(db_url)["credentials"]
+    if expected is None:
+        assert option not in credentials
+    else:
+        assert credentials[option] == expected
+
+
+@pytest.mark.parametrize("scheme", [*_postgres_scheme_engines, "mysql"])
+def test_blank_connection_fields_keep_fallbacks(scheme):
+    credentials = expand_db_url(f"{scheme}:///test?host=&user=&password=&port=")["credentials"]
+    assert credentials["host"] is None
+    assert credentials["user"] is None
+    assert credentials["password"] == ("" if scheme == "mysql" else None)
+    assert credentials["port"] == (3306 if scheme == "mysql" else 5432)
+
+
+@pytest.mark.parametrize("scheme", [*_postgres_scheme_engines, "mysql"])
+def test_blank_connection_fields_keep_last_nonblank_value(scheme):
+    credentials = expand_db_url(
+        f"{scheme}:///test?host=localhost&host=&user=example&user="
+        "&password=example&password=&port=1234&port="
+    )["credentials"]
+    assert credentials["host"] == "localhost"
+    assert credentials["user"] == "example"
+    assert credentials["password"] == "example"
+    assert credentials["port"] == "1234"
+
+
 def test_sqlite_basic():
     res = expand_db_url("sqlite:///some/test.sqlite")
     assert res == {
