@@ -8,6 +8,14 @@ Changelog
 1.1
 ===
 
+Unreleased
+----------
+
+Fixed
+^^^^^
+- Use compatible MySQL bulk upsert assignments for MariaDB and older MySQL
+  versions that do not accept inserted-row aliases. (issue #1422)
+
 1.1.9
 -----
 
