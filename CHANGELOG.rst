@@ -8,6 +8,14 @@ Changelog
 1.1
 ===
 
+1.1.10 *Unreleased*
+-------------------
+
+Added
+^^^^^
+- Optional ``submodel_name`` in ``pydantic_queryset_creator()`` to name list items
+  independently of the list schema. (issue #1728)
+
 1.1.9
 -----
 
