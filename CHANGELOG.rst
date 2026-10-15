@@ -13,7 +13,7 @@ Unreleased
 
 Fixed
 ^^^^^
-- Include renamed fields in model dictionaries and default ``values_list()`` projections. (#2337)
+- Include renamed fields in model dictionaries and default ``values_list()`` projections. (#2339)
 
 1.1.9
 -----
