@@ -445,8 +445,12 @@ class Q:
             (relation_name in model_meta.fk_fields or relation_name in model_meta.o2o_fields)
             and (not separator or lookup in ("in", "not_in"))
             and (
-                # Keep bare relation conversion, but let exact field or annotation names
-                # take precedence over relation membership lookups.
+                # Keep bare relation conversion (e.g. `filter(tournament=obj)`), but
+                # let exact field or annotation names win over relation lookups. e.g.
+                #
+                #     .annotate(tournament__in=F("id")).filter(tournament__in=relation.pk)
+                #
+                # Here `tournament__in` refers to the annotation, not the FK lookup.
                 not lookup
                 or (key not in model_meta.filters and key not in resolve_context.custom_filters)
             )
