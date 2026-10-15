@@ -11,6 +11,10 @@ Changelog
 Unreleased
 ----------
 
+Added
+^^^^^
+- Support forward relation ``in`` and ``not_in`` filters with model instances. (#2323)
+
 Fixed
 ^^^^^
 - Allow ``sql_mode=`` in MySQL database URLs to clear the default SQL mode,
