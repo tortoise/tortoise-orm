@@ -8,11 +8,12 @@ Changelog
 1.1
 ===
 
-1.1.10 *Unreleased*
--------------------
+Unreleased
+----------
 
 Added
 ^^^^^
+- Support forward relation ``in`` and ``not_in`` filters with model instances. (#2323)
 - Optional ``submodel_name`` in ``pydantic_queryset_creator()`` to name list items
   independently of the list schema. (#2328)
 
