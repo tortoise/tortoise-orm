@@ -17,7 +17,7 @@ Added
 
 Fixed
 ^^^^^
-- Preserve field iterators when refreshing model instances from the database. (#2341)
+- Preserve field iterators when refreshing model instances from the database. (#2342)
 
 1.1.9
 -----
