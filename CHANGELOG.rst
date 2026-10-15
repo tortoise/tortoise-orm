@@ -25,6 +25,8 @@ Fixed
 - ``Case``/``When`` and aggregate ``_filter`` expressions now keep the joins for related fields they reference, so e.g. ``When(tournament__name="a", then=1)`` no longer fails with a missing table. (#2354)
 - Refresh renamed model fields and foreign-key IDs using their model attribute names. (#2335)
 - Include renamed fields in model dictionaries and default ``values_list()`` projections. (#2339)
+- Dispatch model signals to listeners registered on base models, including abstract
+  models, without calling shared listeners more than once. (#2327)
 
 1.1.9
 -----
@@ -40,8 +42,6 @@ Changed
 
 Fixed
 ^^^^^
-- Dispatch model signals to listeners registered on base models, including abstract
-  models, without calling shared listeners more than once. (#2327)
 - Aggregates now apply _filter when the aggregated argument is an F() or a combined expression (e.g. Sum(F("price") * F("qty"), _filter=Q(status="paid"))). Previously the filter was silently dropped and every row was aggregated. (#2290)
 - Negating an already negated Q now cancels out: ~~Q(...) and .exclude(~Q(...)) used to keep a single NOT, so they returned the rows the caller meant to drop. (#2291)
 - PostgreSQL and Oracle ``RemoveIndex`` / partial ``RemoveConstraint`` now schema-qualify ``DROP INDEX``, so indexes on models with ``Meta.schema`` can be dropped when they are not on the connection ``search_path``. (#2288)
