@@ -97,9 +97,13 @@ async def run() -> None:
             "participants", "tournament"
         )
     )
-    print(await participants[0].fetch_related("events"))
 
-    print(await Team.fetch_for_list(participants, "events"))
+    await participants[0].fetch_related("events")
+    print(list(participants[0].events))
+
+    await Team.fetch_for_list(participants, "events")
+    for team in participants:
+        print(team.name, list(team.events))
 
     print(await Team.filter(events__tournament__id=tournament.id))
 
@@ -123,12 +127,10 @@ async def run() -> None:
 
     print(await Address.filter(event=event).first())
 
-    event_reload1 = await Event.filter(id=event.id).first()
-    assert event_reload1 is not None
+    event_reload1 = await Event.filter(id=event.id).get()
     print(await event_reload1.address)
 
-    event_reload2 = await Event.filter(id=event.id).prefetch_related("address").first()
-    assert event_reload2 is not None
+    event_reload2 = await Event.filter(id=event.id).prefetch_related("address").get()
     print(event_reload2.address)
 
     print(dict(await event_reload2.address.event))
