@@ -957,8 +957,12 @@ class QuerySet(AwaitableQuery[MODEL]):
         DEFAULT.  Within a single call, each ``db_default`` field must be treated
         consistently: either **all** instances supply a value or **none** do.
 
-        :param on_conflict: On conflict index name
-        :param update_fields: Update fields when conflicts
+        Field names in ``on_conflict`` and ``update_fields`` are translated to database
+        column names using ``source_field``. Model field names take precedence; other
+        names are treated as database column names for compatibility.
+
+        :param on_conflict: Model field names that identify conflicts
+        :param update_fields: Model field names to update on conflict
         :param ignore_conflicts: Ignore conflicts when inserting
         :param objects: List of objects to bulk create
         :param batch_size: How many objects are created in a single query
@@ -2226,10 +2230,13 @@ class BulkCreateQuery(AwaitableQuery, Generic[MODEL]):
             if omit_fields
             else list(update_fields)
         )
+        projection = self.model._meta.fields_db_projection
+        on_conflict = [projection.get(field, field) for field in self._on_conflict or []]
         alias = f"new_{self.model._meta.db_table}"
-        insert_query = insert_query.as_(alias).on_conflict(*(self._on_conflict or []))
-        insert_query_all = insert_query_all.as_(alias).on_conflict(*(self._on_conflict or []))
+        insert_query = insert_query.as_(alias).on_conflict(*on_conflict)
+        insert_query_all = insert_query_all.as_(alias).on_conflict(*on_conflict)
         for update_field in effective_update_fields:
+            update_field = projection.get(update_field, update_field)
             insert_query = insert_query.do_update(update_field)
             insert_query_all = insert_query_all.do_update(update_field)
         return insert_query, insert_query_all

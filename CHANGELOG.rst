@@ -8,6 +8,14 @@ Changelog
 1.1
 ===
 
+Unreleased
+----------
+
+Fixed
+^^^^^
+- Resolve bulk create conflict selectors through model source field mappings,
+  with model field names taking precedence over database column names. (issue #2332)
+
 1.1.9
 -----
 
