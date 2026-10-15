@@ -13,7 +13,7 @@ Unreleased
 
 Fixed
 ^^^^^
-- Refresh renamed model fields and foreign-key IDs using their model attribute names. (issue #2334)
+- Refresh renamed model fields and foreign-key IDs using their model attribute names. (#2335)
 
 1.1.9
 -----
