@@ -26,7 +26,7 @@ Fixed
 - Refresh renamed model fields and foreign-key IDs using their model attribute names. (#2335)
 - Include renamed fields in model dictionaries and default ``values_list()`` projections. (#2339)
 - Preserve ``bulk_create()`` conflict field iterators across validation, SQL
-  inspection and execution. (issue #2329)
+  inspection and execution. (#2330)
 
 1.1.9
 -----
