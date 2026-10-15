@@ -11,6 +11,10 @@ Changelog
 Unreleased
 ----------
 
+Added
+^^^^^
+- Support forward relation ``in`` and ``not_in`` filters with model instances. (#2323)
+
 Fixed
 ^^^^^
 - Use database column names in reverse foreign-key and one-to-one filters with renamed columns or one-to-one primary keys. (#2338)
