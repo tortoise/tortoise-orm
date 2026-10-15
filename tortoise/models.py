@@ -1486,8 +1486,12 @@ class Model(metaclass=ModelMeta):
         them do.  Mixing explicit values and database defaults for the same field
         raises :exc:`~tortoise.exceptions.OperationalError`.
 
-        :param on_conflict: On conflict index name
-        :param update_fields: Update fields when conflicts
+        Field names in ``on_conflict`` and ``update_fields`` are translated to database
+        column names using ``source_field``. Model field names take precedence; other
+        names are treated as database column names for compatibility.
+
+        :param on_conflict: Model field names that identify conflicts
+        :param update_fields: Model field names to update on conflict
         :param ignore_conflicts: Ignore conflicts when inserting
         :param objects: List of objects to bulk create
         :param batch_size: How many objects are created in a single query
