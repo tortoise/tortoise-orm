@@ -13,7 +13,7 @@ Unreleased
 
 Added
 ^^^^^
-- Support forward relation ``in`` and ``not_in`` filters with model instances. (#1819)
+- Support forward relation ``in`` and ``not_in`` filters with model instances. (#2323)
 
 1.1.9
 -----
