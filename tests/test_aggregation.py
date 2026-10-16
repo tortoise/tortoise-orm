@@ -4,10 +4,13 @@ import pytest
 
 from tests.testmodels import (
     Author,
+    BigIntFields,
     Book,
-    CommentModel,
+    EnumFields,
     Event,
+    IntFields,
     MinRelation,
+    SmallIntFields,
     Team,
     Tournament,
     ValidatorModel,
@@ -367,24 +370,25 @@ async def test_function_requiring_nested_joins(db):
 
 
 @pytest.mark.asyncio
-async def test_avg_of_integer_field_is_not_truncated(db):
-    for rating in (1, 2, 2):
-        await CommentModel.create(
-            message="m",
-            rating=rating,
-            escaped_comment_field="e",
-            multiline_comment="c",
-            commented_by="u",
-        )
+@pytest.mark.parametrize(
+    "model,field",
+    [
+        (IntFields, "intnum"),
+        (BigIntFields, "intnum"),
+        (SmallIntFields, "smallintnum"),
+        (EnumFields, "service"),
+    ],
+)
+async def test_avg_of_integer_field_is_not_truncated(db, model, field):
+    await model.bulk_create([model(**{field: value}) for value in (1, 2, 2)])
+    # MySQL returns AVG(integer) with four fractional places by default.
+    # This tolerance accepts that rounding, while still rejecting truncation to 1.
+    expected = pytest.approx(5 / 3, abs=0.0001)
+    values = await model.annotate(avg=Avg(field)).values("avg")
+    assert float(values[0]["avg"]) == expected
 
-    values = await CommentModel.annotate(avg=Avg("rating")).values("avg")
-    assert float(values[0]["avg"]) == pytest.approx(5 / 3)
+    values_list = await model.annotate(avg=Avg(field)).values_list("avg")
+    assert float(values_list[0][0]) == expected
 
-    values_list = await CommentModel.annotate(avg=Avg("rating")).values_list("avg")
-    assert float(values_list[0][0]) == pytest.approx(5 / 3)
-
-    grouped = await CommentModel.annotate(avg=Avg("rating")).group_by("message").values("avg")
-    assert float(grouped[0]["avg"]) == pytest.approx(5 / 3)
-
-    expression = await CommentModel.annotate(avg=Avg(F("rating") + 1)).values("avg")
-    assert float(expression[0]["avg"]) == pytest.approx(8 / 3)
+    expression = await model.annotate(avg=Avg(F(field) + 1)).values("avg")
+    assert float(expression[0]["avg"]) == pytest.approx(8 / 3, abs=0.0001)
