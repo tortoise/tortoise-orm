@@ -5,6 +5,8 @@ from functools import total_ordering
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from typing import Literal
+
     from tortoise.migrations.migration import Migration
 
 
@@ -110,21 +112,32 @@ class MigrationGraph:
             if isinstance(node, DummyNode):
                 node.raise_error()
 
-    def root_nodes(self, app_label: str | None = None) -> list[MigrationKey]:
-        nodes = [
+    def _filter_boundary_keys(
+        self, attr: Literal["parents", "children"], app_label: str | None
+    ) -> list[MigrationKey]:
+        nodes = self.node_map.values()
+        if app_label is None:
+            return sorted([node.key for node in nodes if not getattr(node, attr)])
+        keys = [
             node.key
-            for node in self.node_map.values()
-            if not node.parents and (app_label is None or node.key.app_label == app_label)
+            for node in nodes
+            if node.key.app_label == app_label
+            and not self._has_related_node(getattr(node, attr), app_label)
         ]
-        return sorted(nodes)
+        return sorted(keys)
+
+    def root_nodes(self, app_label: str | None = None) -> list[MigrationKey]:
+        return self._filter_boundary_keys("parents", app_label)
 
     def leaf_nodes(self, app_label: str | None = None) -> list[MigrationKey]:
-        nodes = [
-            node.key
-            for node in self.node_map.values()
-            if not node.children and (app_label is None or node.key.app_label == app_label)
-        ]
-        return sorted(nodes)
+        return self._filter_boundary_keys("children", app_label)
+
+    @staticmethod
+    def _has_related_node(related: set[Node], app_label: str | None) -> bool:
+        # For a single-app request only same-app edges decide whether that app has a root or
+        # a leaf: an app whose newest migration is depended on from another app, or whose
+        # first migration depends on another app, still has its own target.
+        return any(node.key.app_label == app_label for node in related)
 
     def forwards_plan(self, target: MigrationKey) -> list[MigrationKey]:
         if target not in self.nodes:
