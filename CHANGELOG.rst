@@ -15,6 +15,10 @@ Added
 ^^^^^
 - Support forward relation ``in`` and ``not_in`` filters with model instances. (#2323)
 
+Fixed
+^^^^^
+- ``MigrationGraph.leaf_nodes()``/``root_nodes()`` with an app label no longer treat an edge from another app as making that app leafless or rootless. ``migrate``/``plan`` for ``app.__latest__``/``app.__first__`` planned nothing (or rolled nothing back) when the app's newest migration was depended on from another app, or its first migration depended on another app. (#2305)
+
 1.1.9
 -----
 
