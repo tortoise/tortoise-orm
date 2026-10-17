@@ -53,6 +53,33 @@ async def test_bulk_update(db):
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("object_iterator", [False, True])
+@pytest.mark.parametrize("field_iterator", [False, True])
+@pytest.mark.parametrize("batch_size", [None, 1])
+async def test_bulk_update_iterables(db, object_iterator: bool, field_iterator: bool, batch_size):
+    objects = [await Tournament.create(name="old") for _ in range(2)]
+    for obj in objects:
+        obj.name = "new"
+    updated_objects = iter(objects) if object_iterator else objects
+    updated_fields = iter(["name"]) if field_iterator else ["name"]
+
+    assert (
+        await Tournament.bulk_update(updated_objects, fields=updated_fields, batch_size=batch_size)
+        == 2
+    )
+    assert [obj.name for obj in await Tournament.all().order_by("id")] == ["new", "new"]
+
+
+@pytest.mark.asyncio
+async def test_bulk_update_iterator_still_rejects_missing_primary_key(db):
+    obj = await Tournament.create(name="old")
+    obj.name = "new"
+    with pytest.raises(ValueError, match="All bulk_update.*primary key"):
+        Tournament.bulk_update(iter([obj, Tournament(name="unsaved")]), fields=["name"])
+    assert (await Tournament.get(pk=obj.pk)).name == "old"
+
+
+@pytest.mark.asyncio
 async def test_bulk_update_datetime(db):
     objs = [
         await DatetimeFields.create(datetime=datetime(2021, 1, 1, tzinfo=UTC)),
