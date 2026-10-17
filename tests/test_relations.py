@@ -13,10 +13,12 @@ from tests.testmodels import (
     Employee,
     Event,
     Extra,
+    FkToO2oPk,
     M2mWithO2oPk,
     Node,
     O2oPkModelWithM2m,
     Pair,
+    PointsToO2oPk,
     Reporter,
     Single,
     Team,
@@ -566,6 +568,33 @@ async def test_o2o_fk_model_with_m2m_field(db):
     assert await obj.nodes.all() == []
     await obj.nodes.add(node)
     assert await obj.nodes.all() == [node]
+
+
+@pytest.mark.asyncio
+async def test_fk_to_o2o_pk_model(db):
+    """A foreign key to a one-to-one primary key model gets its own column (name order)."""
+    author = await Author.create(name="a")
+    target = await O2oPkModelWithM2m.create(author=author)
+    for model, reverse in ((FkToO2oPk, "fks"), (PointsToO2oPk, "pointers")):
+        obj = await model.create(target=target)
+        fetched = await model.get(id=obj.id)
+        assert fetched.target_id == author.id
+        assert (await fetched.target).pk == author.id
+        await target.fetch_related(reverse)
+        assert [o.id for o in getattr(target, reverse)] == [obj.id]
+        assert await model.filter(target__author__name="a").count() == 1
+    # Naming the backing field, as makemigrations writes it.
+    obj = await FkToO2oPk.create(target=target, by_key=target)
+    assert (await FkToO2oPk.get(id=obj.id)).by_key_id == author.id
+
+
+@pytest.mark.asyncio
+async def test_o2o_pk_model_filter_by_pk(db):
+    """``pk`` filters on a model whose primary key is a one-to-one."""
+    author = await Author.create(name="a")
+    await O2oPkModelWithM2m.create(author=author)
+    assert await O2oPkModelWithM2m.filter(pk=author.id).count() == 1
+    assert (await O2oPkModelWithM2m.get(pk=author.id)).author_id == author.id
 
 
 @pytest.mark.asyncio

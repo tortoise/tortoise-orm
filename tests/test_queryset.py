@@ -2,6 +2,7 @@ import pytest
 import pytest_asyncio
 
 from tests.testmodels import (
+    Address,
     Author,
     Book,
     Event,
@@ -1219,3 +1220,37 @@ async def test_update_filter_by_related_field(db):
     # negative control: the other author's book keeps its rating
     other = await Book.get(name="A Wizard of Earthsea")
     assert other.rating == 3
+
+
+@pytest.mark.asyncio
+async def test_delete_filter_by_related_field_o2o_pk(db):
+    """Deleting through a related field on a model whose primary key is a one-to-one."""
+    tournament = await Tournament.create(name="t")
+    kept = await Event.create(name="kept", tournament=tournament)
+    gone = await Event.create(name="gone", tournament=tournament)
+    await Address.create(city="a", street="s", event=kept)
+    await Address.create(city="b", street="s", event=gone)
+
+    deleted = await Address.filter(event__name="gone").delete()
+
+    assert deleted == 1
+    assert await Address.filter(event__name="gone").count() == 0
+    # negative control: the other event's address is untouched
+    assert await Address.filter(event__name="kept").count() == 1
+
+
+@pytest.mark.asyncio
+async def test_update_filter_by_related_field_o2o_pk(db):
+    """Updating through a related field on a model whose primary key is a one-to-one."""
+    tournament = await Tournament.create(name="t")
+    kept = await Event.create(name="kept", tournament=tournament)
+    changed = await Event.create(name="changed", tournament=tournament)
+    await Address.create(city="a", street="s", event=kept)
+    await Address.create(city="b", street="s", event=changed)
+
+    updated = await Address.filter(event__name="changed").update(city="c")
+
+    assert updated == 1
+    assert (await Address.get(event_id=changed.event_id)).city == "c"
+    # negative control: the other event's address keeps its city
+    assert (await Address.get(event_id=kept.event_id)).city == "a"
