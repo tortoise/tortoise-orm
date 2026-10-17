@@ -48,6 +48,7 @@ Fixed
 - ``pydantic_model_creator`` no longer raises ``TypeError`` for models with annotations whose origin is not a class, such as ``Literal[...]``. (#2311)
 - Filtering by a related model instance on a ``ForeignKeyField``/``OneToOneField`` declared with a non-primary-key ``to_field`` now uses the ``to_field`` value instead of the instance's primary key, so the generated query targets the correct column. (#2239)
 - Database URLs with an empty host (e.g. ``postgres:///db?host=/var/run/postgresql&user=u``) no longer overwrite ``host``/``user``/``password`` given in the query string, so unix domain sockets work. (#2313)
+- ``bulk_update()`` no longer discards values assigned to ``auto_now``/``auto_now_add`` fields: the conversion for those fields used to substitute a fresh timestamp per object, so an explicitly assigned value could never be written. The value held by each instance is now written as-is, which also makes it possible to apply one deterministic timestamp to all rows in a bulk update. (#2133)
 
 1.1.8
 -----
