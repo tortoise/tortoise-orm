@@ -1,10 +1,15 @@
 from __future__ import annotations
 
+import sys
+from types import ModuleType
+
 import pytest
 import pytest_asyncio
 
 from tests.testmodels import Signals
-from tortoise import BaseDBAsyncClient
+from tortoise import BaseDBAsyncClient, Model, fields
+from tortoise.context import TortoiseContext
+from tortoise.signals import Signals as SignalType
 from tortoise.signals import post_delete, post_save, pre_delete, pre_save
 
 
@@ -99,3 +104,111 @@ async def test_delete(signals_data):
 
     assert signal3.name == "test_pre-delete"
     assert signal4.name == "test_post-delete"
+
+
+@pytest.fixture
+def signal_models(monkeypatch):
+    monkeypatch.setattr(Model, "_listeners", {signal: {} for signal in SignalType})
+
+    class SignalBase(Model):
+        name = fields.CharField(max_length=20)
+
+        class Meta:
+            abstract = True
+
+    class SignalLeft(SignalBase):
+        pass
+
+    class SignalRight(SignalBase):
+        pass
+
+    class SignalChild(SignalLeft, SignalRight):
+        pass
+
+    class SignalOther(Model):
+        pass
+
+    return SignalBase, SignalLeft, SignalRight, SignalChild, SignalOther
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("signal", list(SignalType))
+async def test_inherited_signal_listeners(signal_models, signal):
+    base, left, right, child, other = signal_models
+    calls = []
+    instance = child(name="child")
+
+    for model in (base, left, right, child):
+
+        async def listener(sender, obj, *args, registered_model=model):
+            calls.append((registered_model, sender, obj, args))
+
+        model.register_listener(signal, listener)
+
+    await instance._wait_for_listeners(signal, "argument")
+    assert len(calls) == 4
+    assert {call[0] for call in calls} == {base, left, right, child}
+    assert all(call[1:] == (child, instance, ("argument",)) for call in calls)
+
+    calls.clear()
+    await other()._wait_for_listeners(signal, "argument")
+    assert calls == []
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("signal", list(SignalType))
+async def test_inherited_signal_listener_runs_once(signal_models, signal):
+    base, left, right, child, _ = signal_models
+    calls = []
+
+    class Listener:
+        __hash__ = None
+
+        async def __call__(self, sender, instance, *args):
+            calls.append(instance)
+
+    listener = Listener()
+    for model in (base, left, right, child):
+        model.register_listener(signal, listener)
+
+    instance = child(name="child")
+    await instance._wait_for_listeners(signal)
+    assert calls == [instance]
+
+
+@pytest.mark.asyncio
+async def test_inherited_signals_during_save_and_delete(signal_models, monkeypatch):
+    base, _, _, child, other = signal_models
+    calls = []
+
+    for decorator in (pre_save, post_save, pre_delete, post_delete):
+
+        async def listener(sender, instance, *args, event=decorator.__name__):
+            calls.append((event, sender, instance))
+
+        decorator(base)(listener)
+
+    module = ModuleType("inherited_signal_models")
+    module.__dict__["__models__"] = [child, other]
+    monkeypatch.setitem(sys.modules, module.__name__, module)
+    async with TortoiseContext() as ctx:
+        await ctx.init(db_url="sqlite://:memory:", modules={"models": [module.__name__]})
+        await ctx.generate_schemas()
+        instance = await child.create(name="created")
+        instance.name = "updated"
+        await instance.save(update_fields=["name"])
+        assert (await child.get(pk=instance.pk)).name == "updated"
+        await instance.delete()
+        assert await child.all().count() == 0
+        unrelated = await other.create()
+        await unrelated.delete()
+
+    assert [call[0] for call in calls] == [
+        "pre_save",
+        "post_save",
+        "pre_save",
+        "post_save",
+        "pre_delete",
+        "post_delete",
+    ]
+    assert all(call[1:] == (child, instance) for call in calls)

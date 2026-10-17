@@ -15,6 +15,11 @@ Added
 ^^^^^
 - Support forward relation ``in`` and ``not_in`` filters with model instances. (#2323)
 
+Fixed
+^^^^^
+- Dispatch model signals to listeners registered on base models, including abstract
+  models, without calling shared listeners more than once. (#2327)
+
 1.1.9
 -----
 
