@@ -1236,13 +1236,14 @@ class Model(metaclass=ModelMeta):
 
             user.refresh_from_db(fields=['name'])
 
-        :param fields: The special fields that to be refreshed.
+        :param fields: An iterable of field names to refresh.
         :param using_db: Specific DB connection to use instead of default bound.
 
         :raises OperationalError: If object has never been persisted.
         """
         if not self._saved_in_db:
             raise OperationalError("Can't refresh unpersisted record")
+        fields = tuple(fields) if fields is not None else None
         db = using_db or self._choose_db()
         qs = QuerySet(self.__class__).using_db(db)
         if fields:

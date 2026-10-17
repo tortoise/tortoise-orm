@@ -15,6 +15,10 @@ Added
 ^^^^^
 - Support forward relation ``in`` and ``not_in`` filters with model instances. (#2323)
 
+Fixed
+^^^^^
+- Preserve field iterators when refreshing model instances from the database. (#2342)
+
 1.1.9
 -----
 
