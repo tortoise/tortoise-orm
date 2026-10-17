@@ -1187,6 +1187,178 @@ async def test_union_with_annotate_raises(db):
 
 
 @pytest.mark.asyncio
+async def test_union_values_mixed_models_removes_duplicates(db):
+    await Tournament.create(name="Charles")
+    await Reporter.create(name="Charles")
+
+    qs1 = Tournament.filter(name="Charles")
+    qs2 = Reporter.filter(name="Charles")
+
+    assert await qs1.union(qs2).values("name") == [{"name": "Charles"}]
+
+
+@pytest.mark.asyncio
+async def test_union_values_all_keeps_duplicates(db):
+    await Tournament.create(name="Charles")
+    await Reporter.create(name="Charles")
+
+    qs1 = Tournament.filter(name="Charles")
+    qs2 = Reporter.filter(name="Charles")
+
+    result = await qs1.union(qs2, all=True).values("name")
+    assert result == [{"name": "Charles"}, {"name": "Charles"}]
+
+
+@pytest.mark.asyncio
+async def test_union_values_renamed_key(db):
+    await Tournament.create(name="T1")
+    await Reporter.create(name="R1")
+
+    qs1 = Tournament.filter(name="T1")
+    qs2 = Reporter.filter(name="R1")
+
+    result = await qs1.union(qs2).order_by("title").values(title="name")
+    assert result == [{"title": "R1"}, {"title": "T1"}]
+
+
+@pytest.mark.asyncio
+async def test_union_values_converts_values(db):
+    t1 = await Tournament.create(name="T1")
+    t2 = await Tournament.create(name="T2")
+
+    qs1 = Tournament.filter(id=t1.id)
+    qs2 = Tournament.filter(id=t2.id)
+
+    result = await qs1.union(qs2).order_by("name").values("name", "created")
+    assert result == [
+        {"name": "T1", "created": t1.created},
+        {"name": "T2", "created": t2.created},
+    ]
+
+
+@pytest.mark.asyncio
+async def test_union_values_replaces_only(db):
+    await Tournament.create(name="Charles", desc="D1")
+    await Reporter.create(name="Charles")
+
+    qs1 = Tournament.filter(name="Charles").only("id", "name", "desc")
+    qs2 = Reporter.filter(name="Charles").only("id", "name")
+
+    assert await qs1.union(qs2).values("name") == [{"name": "Charles"}]
+
+
+@pytest.mark.asyncio
+async def test_union_values_chained(db):
+    await Tournament.create(name="Charles")
+    await Tournament.create(name="T2")
+    await Reporter.create(name="Charles")
+
+    qs1 = Tournament.filter(name="Charles")
+    qs2 = Tournament.filter(name="T2")
+    qs3 = Reporter.filter(name="Charles")
+
+    result = await qs1.union(qs2).union(qs3).order_by("name").values("name")
+    assert result == [{"name": "Charles"}, {"name": "T2"}]
+
+
+@pytest.mark.asyncio
+async def test_union_values_awaited_twice(db):
+    await Tournament.create(name="Charles")
+    await Reporter.create(name="Charles")
+
+    query = Tournament.filter(name="Charles").union(Reporter.filter(name="Charles"), all=True)
+    values_query = query.values("name")
+
+    assert await values_query == [{"name": "Charles"}, {"name": "Charles"}]
+    assert await values_query == [{"name": "Charles"}, {"name": "Charles"}]
+
+
+@requireCapability(dialect=NotEQ("mssql"))
+@pytest.mark.asyncio
+async def test_union_values_limit_offset(db):
+    for name in ["A", "C", "E"]:
+        await Tournament.create(name=name)
+    for name in ["B", "D"]:
+        await Reporter.create(name=name)
+
+    qs1 = Tournament.all()
+    qs2 = Reporter.all()
+
+    result = await qs1.union(qs2).order_by("-name").limit(2).offset(1).values("name")
+    assert result == [{"name": "D"}, {"name": "C"}]
+
+
+@pytest.mark.asyncio
+async def test_union_values_list(db):
+    t1 = await Tournament.create(name="Charles")
+    r1 = await Reporter.create(name="Charles")
+
+    qs1 = Tournament.filter(name="Charles")
+    qs2 = Reporter.filter(name="Charles")
+
+    result = await qs1.union(qs2).order_by("id").values_list("id", "name")
+    assert result == sorted({(t1.id, "Charles"), (r1.id, "Charles")})
+
+
+@pytest.mark.asyncio
+async def test_union_values_list_flat(db):
+    await Tournament.create(name="Charles")
+    await Tournament.create(name="T2")
+    await Reporter.create(name="Charles")
+
+    qs1 = Tournament.all()
+    qs2 = Reporter.all()
+
+    result = await qs1.union(qs2).order_by("name").values_list("name", flat=True)
+    assert result == ["Charles", "T2"]
+
+
+@pytest.mark.asyncio
+async def test_union_values_list_flat_multiple_fields_raises(db):
+    qs1 = Tournament.all()
+    qs2 = Reporter.all()
+
+    with pytest.raises(TypeError, match="You can flat value_list only if contains one field"):
+        qs1.union(qs2).values_list("id", "name", flat=True)
+
+
+@pytest.mark.asyncio
+async def test_union_values_duplicate_key_raises(db):
+    qs1 = Tournament.all()
+    qs2 = Reporter.all()
+
+    with pytest.raises(FieldError, match="Duplicate key name"):
+        qs1.union(qs2).values("name", name="id")
+
+
+@pytest.mark.asyncio
+async def test_union_values_unknown_field_raises(db):
+    qs1 = Tournament.all()
+    qs2 = Reporter.all()
+
+    with pytest.raises(FieldError, match='Unknown field "desc" for model "Reporter"'):
+        await qs1.union(qs2).values("name", "desc")
+
+
+@pytest.mark.asyncio
+async def test_union_values_order_by_field_not_in_select_raises(db):
+    qs1 = Tournament.all()
+    qs2 = Reporter.all()
+
+    with pytest.raises(ParamsError, match="Order by field must be in the select list"):
+        await qs1.union(qs2).order_by("id").values("name")
+
+
+@pytest.mark.asyncio
+async def test_union_values_with_annotate_raises(db):
+    qs1 = Tournament.annotate(annotated_value=Value(1))
+    qs2 = Reporter.annotate(annotated_value=Value(1))
+
+    with pytest.raises(ParamsError, match="Union queries do not support annotations"):
+        await qs1.union(qs2).values("name")
+
+
+@pytest.mark.asyncio
 async def test_delete_filter_by_related_field(db):
     """Deleting through a filter on a related field must stay valid (#283)."""
     author1 = await Author.create(name="Conan Doyle")
