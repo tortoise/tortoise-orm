@@ -92,8 +92,13 @@ class MySQLSchemaEditor(MySQLQuotingMixin, BaseSchemaEditor):
         index_name: str | None = None,
         index_type: str | None = None,
         extra: str | None = None,
+        unique: bool = False,
+        nulls_not_distinct: bool = False,
     ) -> str:
-        _ = safe
+        # unique/nulls_not_distinct are only set by the PostgreSQL-specific
+        # PostgreSQLIndex; accepted here so callers can pass them unconditionally,
+        # but they're a no-op on MySQL (nulls_not_distinct has no MySQL equivalent).
+        _ = safe, unique, nulls_not_distinct
         index_sql = self.INDEX_CREATE_TEMPLATE.format(
             index_name=index_name or self._generate_index_name("idx", model, field_names),
             fields=", ".join([self.quote(f) for f in field_names]),
