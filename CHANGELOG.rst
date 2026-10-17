@@ -15,6 +15,10 @@ Added
 ^^^^^
 - Support forward relation ``in`` and ``not_in`` filters with model instances. (#2323)
 
+Fixed
+^^^^^
+- Refresh renamed model fields and foreign-key IDs using their model attribute names. (#2335)
+
 1.1.9
 -----
 
