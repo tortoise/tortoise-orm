@@ -290,6 +290,29 @@ async def test_close_all_without_discard(mocked_db_config, conn_handler):
     assert conn_handler._storage == {"default": conn_1, "other": conn_2}
 
 
+@pytest.mark.asyncio
+@patch("tortoise.connection.ConnectionHandler._create_connection")
+@patch("tortoise.connection.ConnectionHandler.db_config", new_callable=PropertyMock)
+async def test_close_all_does_not_reconnect_on_loop_change(
+    mocked_db_config, mocked_create_connection, conn_handler
+):
+    stale_conn = Mock(_check_loop=Mock(return_value=False))
+    stale_conn.close = AsyncMock()
+    conn_handler._storage = {"default": stale_conn}
+    conn_handler._db_config = {"default": {}}
+    mocked_db_config.return_value = {"default": {}}
+
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        await conn_handler.close_all()
+
+    stale_conn.close.assert_awaited_once()
+    mocked_create_connection.assert_not_called()
+    assert conn_handler._storage == {}
+    loop_warnings = [x for x in w if issubclass(x.category, TortoiseLoopSwitchWarning)]
+    assert loop_warnings == []
+
+
 # --- Event loop validation tests ---
 
 
