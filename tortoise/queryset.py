@@ -1409,7 +1409,9 @@ class UpdateQuery(AwaitableQuery):
                 fk_field: str = field_object.source_field  # type: ignore[assignment]
                 db_field = self.model._meta.fields_map[fk_field].source_field
                 value = self.model._meta.fields_map[fk_field].to_db_value(
-                    getattr(value, field_object.to_field_instance.model_field_name),
+                    getattr(value, field_object.to_field_instance.model_field_name)
+                    if value is not None
+                    else None,
                     None,
                 )
             else:
