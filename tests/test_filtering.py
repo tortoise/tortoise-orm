@@ -169,6 +169,18 @@ async def test_filter_not(db):
 
 
 @pytest.mark.asyncio
+async def test_filter_double_negation(db):
+    await Tournament.create(name="0")
+    await Tournament.create(name="1")
+
+    tournaments = await Tournament.filter(~~Q(name="1"))
+    assert [t.name for t in tournaments] == ["1"]
+
+    tournaments = await Tournament.exclude(~Q(name="1"))
+    assert [t.name for t in tournaments] == ["1"]
+
+
+@pytest.mark.asyncio
 async def test_filter_with_f_expression(db):
     await IntFields.create(intnum=1, intnum_null=1)
     await IntFields.create(intnum=2, intnum_null=1)

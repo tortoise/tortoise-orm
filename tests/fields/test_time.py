@@ -1,12 +1,13 @@
 import contextlib
 import os
+from collections.abc import Callable
 from datetime import date, datetime, time, timedelta
 from datetime import timezone as dt_timezone
-from time import sleep
 from unittest.mock import patch
 from zoneinfo import ZoneInfoNotFoundError
 
 import pytest
+from anyio import sleep
 from iso8601 import ParseError
 
 from tests import testmodels
@@ -63,6 +64,18 @@ def tz_env():
     timezone._reset_timezone_cache()
 
 
+@pytest.fixture
+def enable_tz(tz_env) -> Callable[[str | None], str]:
+    def _enable_tz(zone: str | None = None) -> str:
+        os.environ["USE_TZ"] = "True"
+        if zone is not None:
+            os.environ["TIMEZONE"] = zone
+        timezone._reset_timezone_cache()
+        return zone or "UTC"
+
+    return _enable_tz
+
+
 def test_datetime_both_auto_bad(db):
     """Test that setting both auto_now and auto_now_add raises ConfigurationError."""
     with pytest.raises(
@@ -83,7 +96,7 @@ async def test_datetime_create(db):
     assert obj.datetime_auto - now < timedelta(seconds=1)
     assert obj.datetime_add - now < timedelta(seconds=1)
     datetime_auto = obj.datetime_auto
-    sleep(0.012)
+    await sleep(0.012)
     await obj.save()
     obj2 = await model.get(id=obj.id)
     assert obj2.datetime == now
@@ -96,11 +109,10 @@ async def test_datetime_create(db):
 
 
 @pytest.mark.asyncio
-async def test_datetime_update(db, tz_env):
+async def test_datetime_update(db, enable_tz):
     """Test updating datetime fields via filter().update() with use_tz=True."""
     model = testmodels.DatetimeFields
-    os.environ["USE_TZ"] = "True"
-    timezone._reset_timezone_cache()
+    enable_tz()
 
     obj0 = await model.create(datetime=datetime(2019, 9, 1, 0, 0, 0, tzinfo=get_default_timezone()))
     await model.filter(id=obj0.id).update(
@@ -152,11 +164,10 @@ async def test_datetime_values_list(db):
 
 
 @pytest.mark.asyncio
-async def test_datetime_get_utcnow(db, tz_env):
+async def test_datetime_get_utcnow(db, enable_tz):
     """Test getting datetime using UTC now with use_tz=True."""
     model = testmodels.DatetimeFields
-    os.environ["USE_TZ"] = "True"
-    timezone._reset_timezone_cache()
+    enable_tz()
 
     now = datetime.now(dt_timezone.utc).replace(tzinfo=get_default_timezone())
     await model.create(datetime=now)
@@ -186,52 +197,51 @@ async def test_datetime_count(db):
 
 
 @pytest.mark.asyncio
-async def test_datetime_default_timezone(db, tz_env):
+async def test_datetime_default_timezone(db, enable_tz):
     """Test default timezone is UTC when use_tz=True."""
     model = testmodels.DatetimeFields
-    os.environ["USE_TZ"] = "True"
-    timezone._reset_timezone_cache()
+    enable_tz()
 
     now = timezone.now()
     obj = await model.create(datetime=now)
+    assert isinstance(obj.datetime.tzinfo, ZoneInfo)
     assert obj.datetime.tzinfo.zone == "UTC"
 
     obj_get = await model.get(pk=obj.pk)
+    assert isinstance(obj_get.datetime.tzinfo, ZoneInfo)
     assert obj_get.datetime.tzinfo.zone == "UTC"
     assert obj_get.datetime == now
 
 
 @pytest.mark.asyncio
-async def test_datetime_set_timezone(db, tz_env):
+async def test_datetime_set_timezone(db, enable_tz):
     """Test setting a custom timezone via environment variable with use_tz=True."""
     model = testmodels.DatetimeFields
-    tz = "Asia/Shanghai"
-    os.environ["TIMEZONE"] = tz
-    os.environ["USE_TZ"] = "True"
-    timezone._reset_timezone_cache()
+    tz = enable_tz("Asia/Shanghai")
 
     now = datetime.now(parse_timezone(tz))
     obj = await model.create(datetime=now)
+    assert isinstance(obj.datetime.tzinfo, ZoneInfo)
     assert obj.datetime.tzinfo.zone == tz
 
     obj_get = await model.get(pk=obj.pk)
+    assert isinstance(obj_get.datetime.tzinfo, ZoneInfo)
     assert obj_get.datetime.tzinfo.zone == tz
     assert obj_get.datetime == now
 
 
 @pytest.mark.asyncio
-async def test_datetime_timezone(db, tz_env):
+async def test_datetime_timezone(db, enable_tz):
     """Test timezone handling with USE_TZ enabled."""
     model = testmodels.DatetimeFields
-    tz = "Asia/Shanghai"
-    os.environ["TIMEZONE"] = tz
-    os.environ["USE_TZ"] = "True"
-    timezone._reset_timezone_cache()
+    tz = enable_tz("Asia/Shanghai")
 
     now = datetime.now(parse_timezone(tz))
     obj = await model.create(datetime=now)
+    assert isinstance(obj.datetime.tzinfo, ZoneInfo)
     assert obj.datetime.tzinfo.zone == tz
     obj_get = await model.get(pk=obj.pk)
+    assert isinstance(obj.datetime.tzinfo, ZoneInfo)
     assert obj.datetime.tzinfo.zone == tz
     assert obj_get.datetime == now
 
@@ -302,12 +312,10 @@ async def test_datetime_two_fields_naive_no_comparison_error(db, tz_env):
 
 
 @pytest.mark.asyncio
-async def test_datetime_aware_behavior_unchanged_with_use_tz_true(db, tz_env):
+async def test_datetime_aware_behavior_unchanged_with_use_tz_true(db, enable_tz):
     """Test aware datetime behavior is unchanged with use_tz=True."""
     model = testmodels.DatetimeFields
-    os.environ["USE_TZ"] = "True"
-    os.environ["TIMEZONE"] = "UTC"
-    timezone._reset_timezone_cache()
+    enable_tz("UTC")
 
     aware_dt = timezone.now()
     assert timezone.is_aware(aware_dt)
@@ -352,7 +360,7 @@ async def test_datetime_auto_now_naive_with_use_tz_false(db, tz_env):
     original_auto_now = obj.datetime_auto
 
     # Update object to trigger auto_now
-    sleep(0.01)  # Ensure time difference
+    await sleep(0.01)  # Ensure time difference
     obj.datetime = datetime(2021, 2, 2)
     await obj.save()
 
@@ -367,7 +375,7 @@ async def test_datetime_auto_now_naive_with_use_tz_false(db, tz_env):
 
 @pytest.mark.asyncio
 @test.requireCapability(dialect=NotIn("mssql", "mysql"))
-async def test_datetime_auto_now_add_matches_db_on_create(db, tz_env):
+async def test_datetime_auto_now_add_matches_db_on_create(db, enable_tz):
     """Test auto_now_add value on instance after create() matches what DB returns.
 
     Note: MSSQL (DATETIME2) and MySQL (DATETIME) use timezone-naive columns.
@@ -375,9 +383,7 @@ async def test_datetime_auto_now_add_matches_db_on_create(db, tz_env):
     to be stored and misinterpreted as local time on read with custom timezones.
     """
     model = testmodels.DatetimeFields
-    os.environ["USE_TZ"] = "True"
-    os.environ["TIMEZONE"] = "Asia/Shanghai"
-    timezone._reset_timezone_cache()
+    enable_tz("Asia/Shanghai")
 
     obj = await model.create(datetime=datetime(2021, 1, 1, tzinfo=get_default_timezone()))
     obj_get = await model.get(pk=obj.pk)
@@ -385,12 +391,13 @@ async def test_datetime_auto_now_add_matches_db_on_create(db, tz_env):
     # Instance from create() should match instance from get() — no refresh needed
     assert obj.datetime_add == obj_get.datetime_add
     assert obj.datetime_add.tzinfo is not None
+    assert isinstance(obj.datetime_add.tzinfo, ZoneInfo)
     assert obj.datetime_add.tzinfo.key == "Asia/Shanghai"
 
 
 @pytest.mark.asyncio
 @test.requireCapability(dialect=NotIn("mssql", "mysql"))
-async def test_datetime_auto_now_matches_db_on_save(db, tz_env):
+async def test_datetime_auto_now_matches_db_on_save(db, enable_tz):
     """Test auto_now value on instance after save() matches what DB returns.
 
     Note: MSSQL (DATETIME2) and MySQL (DATETIME) use timezone-naive columns.
@@ -398,12 +405,10 @@ async def test_datetime_auto_now_matches_db_on_save(db, tz_env):
     to be stored and misinterpreted as local time on read with custom timezones.
     """
     model = testmodels.DatetimeFields
-    os.environ["USE_TZ"] = "True"
-    os.environ["TIMEZONE"] = "Asia/Shanghai"
-    timezone._reset_timezone_cache()
+    enable_tz("Asia/Shanghai")
 
     obj = await model.create(datetime=datetime(2021, 1, 1, tzinfo=get_default_timezone()))
-    sleep(0.01)
+    await sleep(0.01)
     obj.datetime = datetime(2021, 2, 2, tzinfo=get_default_timezone())
     await obj.save()
     obj_get = await model.get(pk=obj.pk)
@@ -411,6 +416,7 @@ async def test_datetime_auto_now_matches_db_on_save(db, tz_env):
     # Instance from save() should match instance from get() — no refresh needed
     assert obj.datetime_auto == obj_get.datetime_auto
     assert obj.datetime_auto.tzinfo is not None
+    assert isinstance(obj.datetime_auto.tzinfo, ZoneInfo)
     assert obj.datetime_auto.tzinfo.key == "Asia/Shanghai"
 
 
@@ -427,7 +433,7 @@ async def test_datetime_auto_fields_match_db_with_use_tz_false(db, tz_env):
     assert obj.datetime_add == obj_get.datetime_add
     assert timezone.is_naive(obj.datetime_add)
 
-    sleep(0.01)
+    await sleep(0.01)
     obj.datetime = datetime(2021, 2, 2)
     await obj.save()
     obj_get = await model.get(pk=obj.pk)
@@ -745,6 +751,8 @@ def test_zoneinfo():
     tz_utc = parse_timezone("UTC")
     tz_utc2 = parse_timezone("utc")
     tz_utc3 = parse_timezone("Utc")
+    assert isinstance(tz_utc, ZoneInfo)
+    assert isinstance(tz_utc2, ZoneInfo)
     assert tz_utc.key == tz_utc2.zone == "UTC"
     assert (
         now.replace(tzinfo=UTC)
@@ -781,6 +789,7 @@ def test_timezone(tz_env):
     now_shanghai = datetime.now(tz_shanghai)
     offset = now_shanghai.utcoffset()
     naive_now = timezone.make_naive(utcnow, tz_shanghai.key)
+    assert offset is not None
     assert (utcnow + offset).isoformat().split("+")[0] == naive_now.isoformat()
     # test make_aware
     with pytest.raises(ValueError):
@@ -800,3 +809,55 @@ def test_timezone(tz_env):
         assert (
             localtime_shanghai.utcoffset() == timezone.localtime(timezone=pytz_shanghai).utcoffset()
         )
+
+
+@pytest.mark.asyncio
+async def test_datetime_naive_input_with_custom_timezone(db, enable_tz):
+    """Test naive input honors TIMEZONE instead of hardcoded UTC when use_tz=True."""
+    tz = enable_tz("Asia/Shanghai")
+
+    model = testmodels.DatetimeFields
+    naive_dt = datetime(2026, 9, 7, 9, 0)
+    obj = await model.create(datetime=naive_dt)
+
+    # When we create with a naive dt, the timezone module now assumes
+    # it belongs to the configured timezone (Asia/Shanghai)
+    # So 09:00 naive becomes 09:00+08:00
+    # Reload from DB
+    obj_get = await model.get(id=obj.id)
+
+    # It should still be 09:00+08:00 because it correctly roundtripped
+    expected_dt = timezone.make_aware(naive_dt, tz)
+    assert obj_get.datetime == expected_dt, f"Expected {expected_dt}, got {obj_get.datetime}"
+
+
+@pytest.mark.asyncio
+async def test_datetime_naive_input_with_custom_timezone_update(db, enable_tz):
+    """Test naive input honors TIMEZONE during update."""
+    tz = enable_tz("Asia/Shanghai")
+
+    model = testmodels.DatetimeFields
+    naive_dt = datetime(2026, 9, 7, 9, 0)
+    expected_dt = timezone.make_aware(naive_dt, tz)
+
+    obj = await model.create(datetime=naive_dt)
+    assert obj.datetime == expected_dt, f"Expected {expected_dt}, got {obj.datetime}"
+
+    with pytest.warns(RuntimeWarning, match="received a naive datetime"):
+        await model.filter(id=obj.id).update(datetime_null=naive_dt)
+    obj_get = await model.get(id=obj.id)
+    assert obj_get.datetime_null == expected_dt, (
+        f"Expected {expected_dt}, got {obj_get.datetime_null}"
+    )
+
+    started_at = timezone.localtime()
+    obj.datetime = started_at.replace(tzinfo=None)
+    with pytest.warns(RuntimeWarning, match="received a naive datetime"):
+        await obj.save()
+    now = timezone.localtime()
+    obj = await model.get(id=obj.id)
+    assert obj.datetime == started_at, f"Expected {started_at}, got {obj.datetime}"
+    assert obj.datetime_add < started_at, f"Expected: {obj.datetime_add} < {started_at}"
+    assert now > obj.datetime_auto > started_at, (
+        f"Expected: {now} > {obj.datetime_auto} > {started_at}"
+    )

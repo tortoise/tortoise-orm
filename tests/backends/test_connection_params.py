@@ -139,6 +139,51 @@ async def test_psycopg_connection_params():
 
 
 @pytest.mark.asyncio
+async def test_psycopg_pool_checks_connection_health_on_checkout():
+    """The pool must validate connections on checkout, or a connection dropped by the
+    network while idle (e.g. a firewall/LB closing it silently) is handed straight to a
+    caller and fails with ``psycopg.OperationalError: the connection is closed`` instead of
+    being transparently replaced.
+
+    Regression test for https://github.com/tortoise/tortoise-orm/issues/2007
+    """
+    try:
+        from psycopg_pool import AsyncConnectionPool
+
+        with patch(
+            "tortoise.backends.psycopg.client.PsycopgClient.create_pool", new=AsyncMock()
+        ) as patched_create_pool:
+            patched_create_pool.return_value = AsyncMock()
+            ctx = TortoiseContext()
+            async with ctx:
+                await ctx.connections._init(
+                    {
+                        "models": {
+                            "engine": "tortoise.backends.psycopg",
+                            "credentials": {
+                                "database": "test",
+                                "host": "127.0.0.1",
+                                "password": "foomip",
+                                "port": 5432,
+                                "user": "root",
+                                "timeout": 1,
+                            },
+                        }
+                    },
+                    False,
+                )
+                await ctx.connections.get("models").create_connection(with_db=True)
+
+                patched_create_pool.assert_awaited_once()
+                assert (
+                    patched_create_pool.await_args.kwargs["check"]
+                    is AsyncConnectionPool.check_connection
+                )
+    except ImportError:
+        pytest.skip("psycopg not installed")
+
+
+@pytest.mark.asyncio
 async def test_mysql_session_timezone_uses_configured_tz():
     """Test that MySQL session timezone reflects the configured timezone, not UTC.
 

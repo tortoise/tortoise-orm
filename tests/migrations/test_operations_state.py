@@ -341,6 +341,36 @@ def test_alter_options(state_with_model: State):
     assert model_state.options["ordering"] == ["-id"]
 
 
+def test_alter_options_removes_dropped_key(state_with_model: State):
+    model_state = state_with_model.models[("models", "TestModel")]
+    AlterModelOptions(
+        name="TestModel", options={**model_state.options, "table_description": "A model."}
+    ).state_forward("models", state_with_model)
+    assert model_state.options["table_description"] == "A model."
+
+    options_without_description = {
+        key: value for key, value in model_state.options.items() if key != "table_description"
+    }
+    AlterModelOptions(name="TestModel", options=options_without_description).state_forward(
+        "models", state_with_model
+    )
+
+    assert "table_description" not in model_state.options
+
+
+def test_alter_options_keeps_unmanaged_keys(state_with_model: State):
+    model_state = state_with_model.models[("models", "TestModel")]
+    model_state.options["unique_together"] = (("name",),)
+    model_state.options["table"] = "test_model"
+
+    AlterModelOptions(name="TestModel", options={"ordering": ["-id"]}).state_forward(
+        "models", state_with_model
+    )
+
+    assert model_state.options["unique_together"] == (("name",),)
+    assert model_state.options["table"] == "test_model"
+
+
 def test_add_field(state_with_model: State):
     operation = AddField(model_name="TestModel", name="name", field=fields.TextField())
     operation.state_forward("models", state_with_model)

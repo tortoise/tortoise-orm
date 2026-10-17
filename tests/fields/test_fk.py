@@ -1,6 +1,8 @@
 import pytest
+from pytest import RaisesExc
 
 from tests import testmodels
+from tortoise import fields
 from tortoise.exceptions import (
     IntegrityError,
     NoValuesFetched,
@@ -10,7 +12,7 @@ from tortoise.exceptions import (
 from tortoise.queryset import QuerySet
 
 
-def assert_raises_wrong_type_exception(relation_name: str):
+def assert_raises_wrong_type_exception(relation_name: str) -> RaisesExc:
     """Context manager that asserts ValidationError with wrong type message."""
     return pytest.raises(
         ValidationError, match=f"Invalid type for relationship field '{relation_name}'"
@@ -18,13 +20,13 @@ def assert_raises_wrong_type_exception(relation_name: str):
 
 
 @pytest.mark.asyncio
-async def test_empty(db):
+async def test_empty(db) -> None:
     with pytest.raises(IntegrityError):
         await testmodels.MinRelation.create()
 
 
 @pytest.mark.asyncio
-async def test_minimal__create_by_id(db):
+async def test_minimal__create_by_id(db) -> None:
     tour = await testmodels.Tournament.create(name="Team1")
     rel = await testmodels.MinRelation.create(tournament_id=tour.id)
     assert rel.tournament_id == tour.id
@@ -32,7 +34,7 @@ async def test_minimal__create_by_id(db):
 
 
 @pytest.mark.asyncio
-async def test_minimal__create_by_name(db):
+async def test_minimal__create_by_name(db) -> None:
     tour = await testmodels.Tournament.create(name="Team1")
     rel = await testmodels.MinRelation.create(tournament=tour)
     await rel.fetch_related("tournament")
@@ -41,7 +43,7 @@ async def test_minimal__create_by_name(db):
 
 
 @pytest.mark.asyncio
-async def test_minimal__by_name__created_prefetched(db):
+async def test_minimal__by_name__created_prefetched(db) -> None:
     tour = await testmodels.Tournament.create(name="Team1")
     rel = await testmodels.MinRelation.create(tournament=tour)
     assert rel.tournament == tour
@@ -49,7 +51,7 @@ async def test_minimal__by_name__created_prefetched(db):
 
 
 @pytest.mark.asyncio
-async def test_minimal__by_name__unfetched(db):
+async def test_minimal__by_name__unfetched(db) -> None:
     tour = await testmodels.Tournament.create(name="Team1")
     rel = await testmodels.MinRelation.create(tournament=tour)
     rel = await testmodels.MinRelation.get(id=rel.id)
@@ -57,7 +59,7 @@ async def test_minimal__by_name__unfetched(db):
 
 
 @pytest.mark.asyncio
-async def test_minimal__by_name__re_awaited(db):
+async def test_minimal__by_name__re_awaited(db) -> None:
     tour = await testmodels.Tournament.create(name="Team1")
     rel = await testmodels.MinRelation.create(tournament=tour)
     await rel.fetch_related("tournament")
@@ -66,7 +68,7 @@ async def test_minimal__by_name__re_awaited(db):
 
 
 @pytest.mark.asyncio
-async def test_minimal__by_name__awaited(db):
+async def test_minimal__by_name__awaited(db) -> None:
     tour = await testmodels.Tournament.create(name="Team1")
     rel = await testmodels.MinRelation.create(tournament=tour)
     rel = await testmodels.MinRelation.get(id=rel.id)
@@ -75,7 +77,7 @@ async def test_minimal__by_name__awaited(db):
 
 
 @pytest.mark.asyncio
-async def test_event__create_by_id(db):
+async def test_event__create_by_id(db) -> None:
     tour = await testmodels.Tournament.create(name="Team1")
     rel = await testmodels.Event.create(name="Event1", tournament_id=tour.id)
     assert rel.tournament_id == tour.id
@@ -83,7 +85,7 @@ async def test_event__create_by_id(db):
 
 
 @pytest.mark.asyncio
-async def test_event__create_by_name(db):
+async def test_event__create_by_name(db) -> None:
     tour = await testmodels.Tournament.create(name="Team1")
     rel = await testmodels.Event.create(name="Event1", tournament=tour)
     await rel.fetch_related("tournament")
@@ -92,7 +94,7 @@ async def test_event__create_by_name(db):
 
 
 @pytest.mark.asyncio
-async def test_update_by_name(db):
+async def test_update_by_name(db) -> None:
     tour = await testmodels.Tournament.create(name="Team1")
     tour2 = await testmodels.Tournament.create(name="Team2")
     rel0 = await testmodels.Event.create(name="Event1", tournament=tour)
@@ -107,7 +109,7 @@ async def test_update_by_name(db):
 
 
 @pytest.mark.asyncio
-async def test_update_by_id(db):
+async def test_update_by_id(db) -> None:
     tour = await testmodels.Tournament.create(name="Team1")
     tour2 = await testmodels.Tournament.create(name="Team2")
     rel0 = await testmodels.Event.create(name="Event1", tournament_id=tour.id)
@@ -121,14 +123,14 @@ async def test_update_by_id(db):
 
 
 @pytest.mark.asyncio
-async def test_minimal__uninstantiated_create(db):
+async def test_minimal__uninstantiated_create(db) -> None:
     tour = testmodels.Tournament(name="Team1")
     with pytest.raises(OperationalError, match="You should first call .save()"):
         await testmodels.MinRelation.create(tournament=tour)
 
 
 @pytest.mark.asyncio
-async def test_minimal__uninstantiated_iterate(db):
+async def test_minimal__uninstantiated_iterate(db) -> None:
     tour = testmodels.Tournament(name="Team1")
     with pytest.raises(OperationalError, match="This objects hasn't been instanced, call .save()"):
         async for _ in tour.minrelations:
@@ -136,24 +138,24 @@ async def test_minimal__uninstantiated_iterate(db):
 
 
 @pytest.mark.asyncio
-async def test_minimal__uninstantiated_await(db):
+async def test_minimal__uninstantiated_await(db) -> None:
     tour = testmodels.Tournament(name="Team1")
     with pytest.raises(OperationalError, match="This objects hasn't been instanced, call .save()"):
         await tour.minrelations
 
 
 @pytest.mark.asyncio
-async def test_minimal__unfetched_contains(db):
+async def test_minimal__unfetched_contains(db) -> None:
     tour = await testmodels.Tournament.create(name="Team1")
     with pytest.raises(
         NoValuesFetched,
         match="No values were fetched for this relation, first use .fetch_related()",
     ):
-        "a" in tour.minrelations  # pylint: disable=W0104
+        assert "a" in tour.minrelations  # pylint: disable=W0104
 
 
 @pytest.mark.asyncio
-async def test_minimal__unfetched_iter(db):
+async def test_minimal__unfetched_iter(db) -> None:
     tour = await testmodels.Tournament.create(name="Team1")
     with pytest.raises(
         NoValuesFetched,
@@ -164,7 +166,7 @@ async def test_minimal__unfetched_iter(db):
 
 
 @pytest.mark.asyncio
-async def test_minimal__unfetched_len(db):
+async def test_minimal__unfetched_len(db) -> None:
     tour = await testmodels.Tournament.create(name="Team1")
     with pytest.raises(
         NoValuesFetched,
@@ -174,7 +176,7 @@ async def test_minimal__unfetched_len(db):
 
 
 @pytest.mark.asyncio
-async def test_minimal__unfetched_bool(db):
+async def test_minimal__unfetched_bool(db) -> None:
     tour = await testmodels.Tournament.create(name="Team1")
     with pytest.raises(
         NoValuesFetched,
@@ -184,7 +186,7 @@ async def test_minimal__unfetched_bool(db):
 
 
 @pytest.mark.asyncio
-async def test_minimal__unfetched_getitem(db):
+async def test_minimal__unfetched_getitem(db) -> None:
     tour = await testmodels.Tournament.create(name="Team1")
     with pytest.raises(
         NoValuesFetched,
@@ -194,33 +196,33 @@ async def test_minimal__unfetched_getitem(db):
 
 
 @pytest.mark.asyncio
-async def test_minimal__instantiated_create(db):
+async def test_minimal__instantiated_create(db) -> None:
     tour = await testmodels.Tournament.create(name="Team1")
     await testmodels.MinRelation.create(tournament=tour)
 
 
 @pytest.mark.asyncio
-async def test_minimal__instantiated_create_wrong_type(db):
+async def test_minimal__instantiated_create_wrong_type(db) -> None:
     author = await testmodels.Author.create(name="Author1")
     with assert_raises_wrong_type_exception("tournament"):
         await testmodels.MinRelation.create(tournament=author)
 
 
 @pytest.mark.asyncio
-async def test_minimal__instantiated_iterate(db):
+async def test_minimal__instantiated_iterate(db) -> None:
     tour = await testmodels.Tournament.create(name="Team1")
     async for _ in tour.minrelations:
         pass
 
 
 @pytest.mark.asyncio
-async def test_minimal__instantiated_await(db):
+async def test_minimal__instantiated_await(db) -> None:
     tour = await testmodels.Tournament.create(name="Team1")
     await tour.minrelations
 
 
 @pytest.mark.asyncio
-async def test_minimal__fetched_contains(db):
+async def test_minimal__fetched_contains(db) -> None:
     tour = await testmodels.Tournament.create(name="Team1")
     rel = await testmodels.MinRelation.create(tournament=tour)
     await tour.fetch_related("minrelations")
@@ -228,7 +230,7 @@ async def test_minimal__fetched_contains(db):
 
 
 @pytest.mark.asyncio
-async def test_minimal__fetched_iter(db):
+async def test_minimal__fetched_iter(db) -> None:
     tour = await testmodels.Tournament.create(name="Team1")
     rel = await testmodels.MinRelation.create(tournament=tour)
     await tour.fetch_related("minrelations")
@@ -236,7 +238,7 @@ async def test_minimal__fetched_iter(db):
 
 
 @pytest.mark.asyncio
-async def test_minimal__fetched_len(db):
+async def test_minimal__fetched_len(db) -> None:
     tour = await testmodels.Tournament.create(name="Team1")
     await testmodels.MinRelation.create(tournament=tour)
     await tour.fetch_related("minrelations")
@@ -244,7 +246,7 @@ async def test_minimal__fetched_len(db):
 
 
 @pytest.mark.asyncio
-async def test_minimal__fetched_bool(db):
+async def test_minimal__fetched_bool(db) -> None:
     tour = await testmodels.Tournament.create(name="Team1")
     await tour.fetch_related("minrelations")
     assert not bool(tour.minrelations)
@@ -254,7 +256,7 @@ async def test_minimal__fetched_bool(db):
 
 
 @pytest.mark.asyncio
-async def test_minimal__fetched_getitem(db):
+async def test_minimal__fetched_getitem(db) -> None:
     tour = await testmodels.Tournament.create(name="Team1")
     rel = await testmodels.MinRelation.create(tournament=tour)
     await tour.fetch_related("minrelations")
@@ -265,7 +267,7 @@ async def test_minimal__fetched_getitem(db):
 
 
 @pytest.mark.asyncio
-async def test_event__filter(db):
+async def test_event__filter(db) -> None:
     tour = await testmodels.Tournament.create(name="Team1")
     event1 = await testmodels.Event.create(name="Event1", tournament=tour)
     event2 = await testmodels.Event.create(name="Event2", tournament=tour)
@@ -275,7 +277,7 @@ async def test_event__filter(db):
 
 
 @pytest.mark.asyncio
-async def test_event__all(db):
+async def test_event__all(db) -> None:
     tour = await testmodels.Tournament.create(name="Team1")
     event1 = await testmodels.Event.create(name="Event1", tournament=tour)
     event2 = await testmodels.Event.create(name="Event2", tournament=tour)
@@ -283,7 +285,7 @@ async def test_event__all(db):
 
 
 @pytest.mark.asyncio
-async def test_event__order_by(db):
+async def test_event__order_by(db) -> None:
     tour = await testmodels.Tournament.create(name="Team1")
     event1 = await testmodels.Event.create(name="Event1", tournament=tour)
     event2 = await testmodels.Event.create(name="Event2", tournament=tour)
@@ -292,7 +294,7 @@ async def test_event__order_by(db):
 
 
 @pytest.mark.asyncio
-async def test_event__limit(db):
+async def test_event__limit(db) -> None:
     tour = await testmodels.Tournament.create(name="Team1")
     event1 = await testmodels.Event.create(name="Event1", tournament=tour)
     event2 = await testmodels.Event.create(name="Event2", tournament=tour)
@@ -301,7 +303,7 @@ async def test_event__limit(db):
 
 
 @pytest.mark.asyncio
-async def test_event__offset(db):
+async def test_event__offset(db) -> None:
     tour = await testmodels.Tournament.create(name="Team1")
     await testmodels.Event.create(name="Event1", tournament=tour)
     event2 = await testmodels.Event.create(name="Event2", tournament=tour)
@@ -310,7 +312,7 @@ async def test_event__offset(db):
 
 
 @pytest.mark.asyncio
-async def test_fk_correct_type_assignment(db):
+async def test_fk_correct_type_assignment(db) -> None:
     tour1 = await testmodels.Tournament.create(name="Team1")
     tour2 = await testmodels.Tournament.create(name="Team2")
     event = await testmodels.Event(name="Event1", tournament=tour1)
@@ -321,27 +323,27 @@ async def test_fk_correct_type_assignment(db):
 
 
 @pytest.mark.asyncio
-async def test_fk_wrong_type_assignment(db):
+async def test_fk_wrong_type_assignment(db) -> None:
     tour = await testmodels.Tournament.create(name="Team1")
     author = await testmodels.Author.create(name="Author")
     rel = await testmodels.MinRelation.create(tournament=tour)
 
     with assert_raises_wrong_type_exception("tournament"):
-        rel.tournament = author
+        rel.tournament = author  # type:ignore
 
 
 @pytest.mark.asyncio
-async def test_fk_none_assignment(db):
+async def test_fk_none_assignment(db) -> None:
     manager = await testmodels.Employee.create(name="Manager")
     employee = await testmodels.Employee.create(name="Employee", manager=manager)
 
-    employee.manager = None
+    employee.manager = None  # ty:ignore
     await employee.save()
     assert employee.manager is None
 
 
 @pytest.mark.asyncio
-async def test_fk_update_wrong_type(db):
+async def test_fk_update_wrong_type(db) -> None:
     tour = await testmodels.Tournament.create(name="Team1")
     rel = await testmodels.MinRelation.create(tournament=tour)
     author = await testmodels.Author.create(name="Author1")
@@ -351,7 +353,7 @@ async def test_fk_update_wrong_type(db):
 
 
 @pytest.mark.asyncio
-async def test_fk_bulk_create_wrong_type(db):
+async def test_fk_bulk_create_wrong_type(db) -> None:
     author = await testmodels.Author.create(name="Author")
     with assert_raises_wrong_type_exception("tournament"):
         await testmodels.MinRelation.bulk_create(
@@ -360,7 +362,7 @@ async def test_fk_bulk_create_wrong_type(db):
 
 
 @pytest.mark.asyncio
-async def test_fk_bulk_update_wrong_type(db):
+async def test_fk_bulk_update_wrong_type(db) -> None:
     tour = await testmodels.Tournament.create(name="Team1")
     await testmodels.MinRelation.bulk_create(
         [testmodels.MinRelation(tournament=tour) for _ in range(1, 10)]
@@ -373,3 +375,66 @@ async def test_fk_bulk_update_wrong_type(db):
             [testmodels.MinRelation(id=rel.id, tournament=author) for rel in relations],
             fields=["tournament"],
         )
+
+
+class TestDeconstructSourceField:
+    """``deconstruct()`` reports the column a relational field declared (issue #2283).
+
+    ``makemigrations`` builds migrations from what ``deconstruct()`` returns, so the
+    column name it reports has to be the one ``generate_schemas()`` creates.
+    """
+
+    model = testmodels.FKSourceFields
+
+    @pytest.mark.asyncio
+    async def test_fk_keeps_declared_source_field(self, db) -> None:
+        # After the relations are initialised, source_field holds the name of the
+        # generated `<field>_id` backing field, not the column name. deconstruct() must
+        # still report the column the model declared, or makemigrations writes the wrong
+        # column name and a migrated schema disagrees with generate_schemas().
+        field = self.model._meta.fields_map["renamed"]
+        assert field.source_field == "renamed_id"
+        _, _, kwargs = field.deconstruct()
+        assert kwargs["source_field"] == "renamed_column"
+
+    @pytest.mark.asyncio
+    async def test_o2o_keeps_declared_source_field(self, db) -> None:
+        field = self.model._meta.fields_map["o2o"]
+        assert field.source_field == "o2o_id"
+        _, _, kwargs = field.deconstruct()
+        assert kwargs["source_field"] == "o2o_column"
+
+    @pytest.mark.asyncio
+    async def test_fk_without_source_field_uses_default_column(self, db) -> None:
+        # A field that declared no source_field keeps the `<field>_id` default.
+        field = self.model._meta.fields_map["plain"]
+        _, _, kwargs = field.deconstruct()
+        assert kwargs["source_field"] == "plain_id"
+
+    @pytest.mark.asyncio
+    async def test_source_field_equal_to_field_name(self, db) -> None:
+        # A declared source_field that matches the field name is not overridden by the
+        # `<field>_id` backing field name.
+        field = self.model._meta.fields_map["same"]
+        assert field.source_field == "same_id"
+        _, _, kwargs = field.deconstruct()
+        assert kwargs["source_field"] == "same"
+
+    def test_before_init_models_keeps_declared_source_field(self) -> None:
+        # A field that was never attached to a model has no relations to read back from,
+        # so deconstruct() reports what was declared.
+        field: fields.ForeignKeyRelation[testmodels.FKSourceFields] = fields.ForeignKeyField(
+            "models.FKSourceFields", source_field="loose_column"
+        )
+        assert getattr(field, "model", None) is None
+        _, _, kwargs = field.deconstruct()
+        assert kwargs["source_field"] == "loose_column"
+
+    @pytest.mark.asyncio
+    async def test_source_field_is_always_a_real_column(self, db) -> None:
+        # Whatever deconstruct() reports has to be a column the schema generator creates,
+        # otherwise a migration built from it would not match the running database.
+        for field_name in ("renamed", "same", "plain", "o2o"):
+            field = self.model._meta.fields_map[field_name]
+            _, _, kwargs = field.deconstruct()
+            assert kwargs["source_field"] in self.model._meta.db_fields

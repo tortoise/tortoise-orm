@@ -263,10 +263,10 @@ class Q:
     """
 
     __slots__ = (
+        "_is_negated",
         "children",
         "filters",
         "join_type",
-        "_is_negated",
     )
 
     AND = "AND"
@@ -314,7 +314,7 @@ class Q:
         Returns a negated instance of the Q object, use ``~`` operator.
         """
         q = Q(*self.children, join_type=self.join_type, **self.filters)
-        q.negate()
+        q._is_negated = not self._is_negated
         return q
 
     def __eq__(self, other: object) -> bool:
@@ -325,6 +325,11 @@ class Q:
             and self.join_type == other.join_type
             and self.filters == other.filters
         )
+
+    def __bool__(self) -> bool:
+        if self.filters:
+            return True
+        return any(self.children)
 
     def negate(self) -> None:
         """
@@ -430,29 +435,58 @@ class Q:
         return modifier
 
     def _get_actual_filter_params(
-        self, resolve_context: ResolveContext, key: str, value: Table | FilterInfoDict
+        self, resolve_context: ResolveContext, key: str, value: Any
     ) -> tuple[str, Any]:
         filter_key = key
+        filter_value: Any
+        model_meta = resolve_context.model._meta
+        relation_name, separator, lookup = key.partition("__")
         if (
-            key in resolve_context.model._meta.fk_fields
-            or key in resolve_context.model._meta.o2o_fields
+            (relation_name in model_meta.fk_fields or relation_name in model_meta.o2o_fields)
+            and (not separator or lookup in ("in", "not_in"))
+            and (
+                # Keep bare relation conversion (e.g. `filter(tournament=obj)`), but
+                # let exact field or annotation names win over relation lookups. e.g.
+                #
+                #     .annotate(tournament__in=F("id")).filter(tournament__in=relation.pk)
+                #
+                # Here `tournament__in` refers to the annotation, not the FK lookup.
+                not lookup
+                or (key not in model_meta.filters and key not in resolve_context.custom_filters)
+            )
         ):
-            field_object = resolve_context.model._meta.fields_map[key]
+            field_object = cast(RelationalField, model_meta.fields_map[relation_name])
             filter_key = cast(str, field_object.source_field)
-            filter_value = getattr(value, "pk", value)
-        elif key in resolve_context.model._meta.m2m_fields:
+            to_field_name = field_object.to_field_instance.model_field_name
+            if lookup:
+                filter_key = f"{filter_key}__{lookup}"
+                filter_value = (
+                    value
+                    if isinstance(value, (Expression, Term))
+                    else [
+                        getattr(item, to_field_name)
+                        if isinstance(item, field_object.related_model)
+                        else item
+                        for item in value
+                    ]
+                )
+            else:
+                filter_value = (
+                    getattr(value, to_field_name)
+                    if isinstance(value, field_object.related_model)
+                    else value
+                )
+        elif key in model_meta.m2m_fields:
             filter_value = getattr(value, "pk", value)
         elif (
-            key.split("__")[0] in resolve_context.model._meta.fetch_fields
+            relation_name in model_meta.fetch_fields
             or key in resolve_context.custom_filters
-            or key in resolve_context.model._meta.filters
+            or key in model_meta.filters
         ):
             filter_value = value
         else:
             allowed = sorted(
-                resolve_context.model._meta.fields
-                | resolve_context.model._meta.fetch_fields
-                | set(resolve_context.custom_filters)
+                model_meta.fields | model_meta.fetch_fields | set(resolve_context.custom_filters)
             )
             raise FieldError(f"Unknown filter param '{key}'. Allowed base values are {allowed}")
 
@@ -529,7 +563,7 @@ class Function(Expression):
         Enable populate_field_object where we want to try and preserve the field type.
     """
 
-    __slots__ = ("field", "field_object", "default_values")
+    __slots__ = ("default_values", "field", "field_object")
 
     database_func: type[PypikaFunction] = PypikaFunction
     # Enable populate_field_object where we want to try and preserve the field type.
@@ -629,9 +663,15 @@ class Aggregate(Function):
             function = function.distinct()
         return function
 
-    def _resolve_nested_field(self, resolve_context: ResolveContext, field: str) -> ResolveResult:
-        ret = super()._resolve_nested_field(resolve_context, field)
-        if self.filter:
+    def _resolve_argument(
+        self, resolve_context: ResolveContext, value: Any, *, treat_str_as_field: bool
+    ) -> ResolveResult:
+        ret = super()._resolve_argument(
+            resolve_context, value, treat_str_as_field=treat_str_as_field
+        )
+        # Only the aggregated argument is filtered, whether it is a field name,
+        # an F() or a combined expression; extra function arguments are left as is.
+        if treat_str_as_field and self.filter:
             modifier = QueryModifier()
             modifier &= self.filter.resolve(resolve_context)
             ret.term = PypikaCase().when(modifier.where_criterion, ret.term).else_(None)
