@@ -15,6 +15,11 @@ Added
 ^^^^^
 - Support forward relation ``in`` and ``not_in`` filters with model instances. (#2323)
 
+Fixed
+^^^^^
+- Preserve ``bulk_create()`` conflict field iterators across validation, SQL
+  inspection and execution. (#2330)
+
 1.1.9
 -----
 
