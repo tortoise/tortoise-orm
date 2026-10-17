@@ -244,7 +244,7 @@ class Field(Generic[VALUE], metaclass=_FieldMeta):
                 raise ConfigurationError(
                     f"{self.__class__.__name__} can't set both db_index and index"
                 )
-        if not self.indexable and (unique or db_index):
+        if not self._is_indexable() and (unique or db_index):
             raise ConfigurationError(f"{self.__class__.__name__} can't be indexed")
         if (pk := kwargs.pop("pk", None)) is not None:
             if primary_key is None:
@@ -289,6 +289,21 @@ class Field(Generic[VALUE], metaclass=_FieldMeta):
         # TODO: consider making this not be set from constructor
         self.model: type[Model] = model  # type: ignore
         self.reference: Field | None = None
+
+    def _is_indexable(self, dialect: str | None = None) -> bool:
+        if dialect is not None:
+            return bool(self.get_for_dialect(dialect, "indexable"))
+        if self.indexable:
+            return True
+        return any(
+            bool(getattr(getattr(self, name), "indexable", False))
+            for name in dir(self)
+            if name.startswith("_db_")
+        )
+
+    def _validate_indexable(self, dialect: str) -> None:
+        if not self.pk and (self.unique or self.index) and not self._is_indexable(dialect):
+            raise ConfigurationError(f"{self.__class__.__name__} can't be indexed for {dialect}")
 
     def __copy__(self) -> Field:
         cls = self.__class__

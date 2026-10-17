@@ -8,6 +8,7 @@ from tests.utils.fake_client import FakeClient
 from tortoise import fields
 from tortoise.contrib.postgres.fields import TSVectorField
 from tortoise.contrib.postgres.indexes import GinIndex
+from tortoise.exceptions import ConfigurationError
 from tortoise.indexes import Index
 from tortoise.migrations.schema_editor.base import BaseSchemaEditor
 from tortoise.migrations.schema_editor.base_postgres import BasePostgresSchemaEditor
@@ -51,6 +52,43 @@ async def test_create_model_generates_table_sql() -> None:
     assert 'CREATE TABLE "widget"' in sql
     assert '"id" INT' in sql
     assert "PRIMARY KEY" in sql
+
+
+@pytest.mark.asyncio
+async def test_postgres_create_model_supports_text_field_indexes() -> None:
+    class IndexedTextWidget(Model):
+        id = fields.IntField(primary_key=True)
+        unique_text = fields.TextField(unique=True)
+        indexed_text = fields.TextField(db_index=True)
+
+        class Meta:
+            table = "indexed_text_widget"
+            app = "models"
+
+    client = FakeClient("postgres", inline_comment=False)
+    editor = BasePostgresSchemaEditor(client)
+
+    await editor.create_model(IndexedTextWidget)
+
+    assert '"unique_text" TEXT NOT NULL UNIQUE' in client.executed[0]
+    assert 'ON "indexed_text_widget" ("indexed_text")' in client.executed[0]
+
+
+@pytest.mark.asyncio
+async def test_non_postgres_create_model_rejects_text_field_indexes() -> None:
+    class IndexedTextWidget(Model):
+        id = fields.IntField(primary_key=True)
+        indexed_text = fields.TextField(db_index=True)
+
+        class Meta:
+            table = "indexed_text_widget"
+            app = "models"
+
+    client = FakeClient("sql")
+    editor = TestSchemaEditor(client)
+
+    with pytest.raises(ConfigurationError, match="TextField can't be indexed for sql"):
+        await editor.create_model(IndexedTextWidget)
 
 
 @pytest.mark.asyncio
