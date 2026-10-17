@@ -15,6 +15,11 @@ Added
 ^^^^^
 - Support forward relation ``in`` and ``not_in`` filters with model instances. (#2323)
 
+Fixed
+^^^^^
+- Allow ``sql_mode=`` in MySQL database URLs to clear the default SQL mode,
+  including connection setup with aiomysql and asyncmy. (#2326)
+
 1.1.9
 -----
 
