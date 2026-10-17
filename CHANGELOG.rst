@@ -15,6 +15,11 @@ Added
 ^^^^^
 - Support forward relation ``in`` and ``not_in`` filters with model instances. (#2323)
 
+Fixed
+^^^^^
+- Resolve bulk create conflict selectors through model source field mappings,
+  with model field names taking precedence over database column names. (#2333)
+
 1.1.9
 -----
 
