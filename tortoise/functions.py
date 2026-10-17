@@ -1,6 +1,9 @@
-from pypika_tortoise import SqlContext, functions
+from typing import Any
 
-from tortoise.expressions import Aggregate, Function
+from pypika_tortoise import SqlContext, functions
+from pypika_tortoise.terms import Term
+
+from tortoise.expressions import Aggregate, CombinedExpression, F, Function
 
 ##############################################################################
 # Standard functions
@@ -15,6 +18,55 @@ class Trim(Function):
     """
 
     database_func = functions.Trim
+
+    def __init__(
+        self,
+        field: str | F | CombinedExpression | Function | Term,
+        trim_chars: str = " ",
+        *default_values: Any,
+    ) -> None:
+        super().__init__(field, trim_chars, *default_values)
+
+    database_func = functions.Trim
+
+
+class LTrim(Function):
+    """
+    Trims whitespace from the left side of text.
+
+    :samp:`LTrim("{FIELD_NAME}")`
+    """
+
+    database_func = functions.LTrim
+
+
+class RTrim(Function):
+    """
+    Trims whitespace from the right side of text.
+
+    :samp:`RTrim("{FIELD_NAME}")`
+    """
+
+    database_func = functions.RTrim
+
+
+class Replace(Function):
+    """
+    Replaces all occurrences of a search string with a replacement string.
+
+    :samp:`Replace("{FIELD_NAME}", "search", "replacement")`
+    """
+
+    def __init__(
+        self,
+        field: str | F | CombinedExpression | Function | Term,
+        search: str,
+        replacement: str,
+        *default_values: Any,
+    ) -> None:
+        super().__init__(field, search, replacement, *default_values)
+
+    database_func = functions.Replace
 
 
 class Length(Function):
