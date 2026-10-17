@@ -86,3 +86,30 @@ class BasePostgresSchemaGenerator(BaseSchemaGenerator):
         return super()._get_index_sql(
             model, field_names, safe, index_name=index_name, index_type=index_type, extra=extra
         )
+
+    def _partial_unique_index_sqls(self, model: type[Model], safe: bool) -> list[str]:
+        from tortoise.migrations.constraints import UniqueConstraint
+
+        exists = "IF NOT EXISTS " if safe else ""
+        sqls: list[str] = []
+        for constraint in getattr(model._meta, "constraints", None) or ():
+            if not isinstance(constraint, UniqueConstraint) or not constraint.condition:
+                continue
+            resolved_fields = self._resolve_fields_to_columns(model, constraint.fields)
+            resolved = UniqueConstraint(
+                fields=tuple(resolved_fields),
+                name=constraint.name,
+                condition=constraint.condition,
+            )
+            index_name = self._constraint_name_for_model(model, resolved)
+            sqls.append(
+                self.UNIQUE_INDEX_CREATE_TEMPLATE.format(
+                    exists=exists,
+                    index_name=index_name,
+                    index_type="",
+                    table_name=self._qualify_table_name(model._meta.db_table, model._meta.schema),
+                    fields=", ".join(self.quote(field) for field in resolved_fields),
+                    extra=f" WHERE {constraint.condition}",
+                )
+            )
+        return sqls
