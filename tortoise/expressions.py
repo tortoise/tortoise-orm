@@ -233,7 +233,9 @@ class Subquery(Term):
     def get_sql(self, ctx: SqlContext) -> str:
         self.query._choose_db_if_not_chosen()
         self.query._make_query()
-        return self.query.query.get_parameterized_sql(ctx)[0]
+        if ctx.parameterizer:
+            return self.query.query.get_parameterized_sql(ctx)[0]
+        return self.query.query.get_sql(ctx)
 
     def as_(self, alias: str) -> Selectable:  # type: ignore
         self.query._choose_db_if_not_chosen()
