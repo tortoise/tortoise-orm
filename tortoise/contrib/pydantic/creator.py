@@ -218,6 +218,9 @@ class PydanticModelCreator:
             and allow_cycles is None
             and meta_override is None
             and not exclude_readonly
+            and model_config is None
+            and validators is None
+            and module == __name__
         )
         if exclude is None:
             exclude = ()
@@ -290,6 +293,23 @@ class PydanticModelCreator:
                 f"{self._exclude_read_only};"
                 f"{self.meta.computed}"
             )
+            if self.meta.model_config:
+                hashval += f";{sorted(self.meta.model_config.items())}"
+            if self._validators:
+                v_items = []
+                for k in sorted(self._validators.keys()):
+                    v = self._validators[k]
+                    func = getattr(v, "wrapped", getattr(v, "__func__", v))
+                    code = getattr(func, "__code__", None)
+                    code_bytes = getattr(code, "co_code", None)
+                    consts = getattr(code, "co_consts", None)
+                    dec_info = getattr(v, "decorator_info", None)
+                    v_items.append(
+                        f"{k}:{getattr(func, '__qualname__', repr(func))}:{code_bytes}:{consts}:{repr(dec_info)}"
+                    )
+                hashval += f";{v_items}"
+            if self._module != __name__:
+                hashval += f";{self._module}"
             self.__hash = (
                 b32encode(sha3_224(hashval.encode("utf-8")).digest()).decode("utf-8").lower()[:6]
             )
