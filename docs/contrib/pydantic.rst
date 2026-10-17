@@ -150,6 +150,17 @@ Source to example: :ref:`example_pydantic_tut2`
 
     Tournament_Pydantic_List = pydantic_queryset_creator(Tournament)
 
+Use ``submodel_name`` to give the items a different schema name from the list.
+Existing naming is preserved when this argument is omitted.
+
+.. code-block:: py3
+
+    Tournament_Pydantic_List = pydantic_queryset_creator(
+        Tournament, name="Tournaments", submodel_name="Tournament"
+    )
+
+The list schema has the title ``Tournaments`` and its items reference ``Tournament``.
+
 And now have a `Pydantic Model <https://docs.pydantic.dev/latest/concepts/models/>`__ that can be used for representing schema and serialisation.
 
 The JSON-Schema of ``Tournament_Pydantic_List`` is now:
