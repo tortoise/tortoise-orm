@@ -15,6 +15,11 @@ Added
 ^^^^^
 - Support forward relation ``in`` and ``not_in`` filters with model instances. (#2323)
 
+Fixed
+^^^^^
+- Use compatible MySQL bulk upsert assignments for MariaDB and older MySQL
+  versions that do not accept inserted-row aliases. (#2331)
+
 1.1.9
 -----
 

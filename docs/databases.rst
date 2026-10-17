@@ -217,6 +217,12 @@ MySQL/MariaDB
 
 DB URL is typically in the form of :samp:`mysql://myuser:mypass@db.host:3306/somedb`
 
+Bulk upserts use ``VALUES(column)`` assignments for compatibility with MariaDB
+and older MySQL versions. MySQL 8.0.20 and later deprecate this form and may emit
+a deprecation warning, but still accept it. When using ``asyncmy``, statements
+that produce server warnings also require an extra round trip to fetch and log
+those warnings.
+
 Required Parameters
 -------------------
 
