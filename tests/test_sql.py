@@ -2,7 +2,7 @@ import re
 
 import pytest
 
-from tests.testmodels import CharPkModel, Drink, Event, IntFields
+from tests.testmodels import CharPkModel, Drink, Event, IntFields, Tournament
 from tortoise import connections
 from tortoise.backends.psycopg.client import PsycopgClient
 from tortoise.expressions import F
@@ -287,3 +287,32 @@ def test_m2m_filter_two_relations_same_target_produces_aliased_joins(sql_context
         assert '"drink_topping"' in sql
         assert '"drink__flavors"' in sql
         assert '"drink__toppings"' in sql
+
+
+def test_update_with_like_filter(sql_context):
+    """LIKE wildcards (%) in update queries must not conflict with %s parameter placeholders.
+
+    The LIKE pattern is passed as a parameterized value, so it never appears
+    inline in the SQL template and cannot conflict with driver-level %s
+    substitution (see https://github.com/tortoise/tortoise-orm/issues/1225).
+    """
+    db, dialect, is_psycopg = sql_context
+    sql = Tournament.filter(name__contains="test").update(desc="updated").sql()
+    if dialect == "mysql":
+        expected = "UPDATE `tournament` SET `desc`=%s WHERE CAST(`name` AS CHAR) LIKE %s"
+    elif dialect == "postgres":
+        if is_psycopg:
+            expected = (
+                'UPDATE "tournament" SET "desc"=%s'
+                " WHERE CAST(\"name\" AS VARCHAR) LIKE %s ESCAPE '\\'"
+            )
+        else:
+            expected = (
+                'UPDATE "tournament" SET "desc"=$1'
+                " WHERE CAST(\"name\" AS VARCHAR) LIKE $2 ESCAPE '\\'"
+            )
+    else:
+        expected = (
+            'UPDATE "tournament" SET "desc"=? WHERE CAST("name" AS VARCHAR) LIKE ? ESCAPE \'\\\''
+        )
+    assert sql == expected
