@@ -1221,3 +1221,7 @@ class Drink(Model):
     toppings = fields.ManyToManyField(
         Flavor, related_name="topping_drinks", through="drink_topping"
     )
+
+
+class OnlyGeneratedPk(Model):
+    id = fields.IntField(primary_key=True)
