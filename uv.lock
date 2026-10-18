@@ -2738,7 +2738,7 @@ wheels = [
 [[package]]
 name = "pypika-tortoise"
 version = "0.6.5"
-source = { git = "https://github.com/tortoise/pypika-tortoise?rev=refs%2Fpull%2F47%2Fhead#7e68ffd56f4ae299aca436c07cd473ebce00ef96" }
+source = { git = "https://github.com/tortoise/pypika-tortoise?rev=refs%2Fpull%2F41%2Fhead#15a2b4c4e32b71ba53e608f9912db0e71f4348ad" }
 
 [[package]]
 name = "pytest"
@@ -3509,7 +3509,7 @@ requires-dist = [
     { name = "orjson", marker = "extra == 'accel'" },
     { name = "psycopg", extras = ["binary", "pool"], marker = "extra == 'psycopg'", specifier = ">=3.0.12,<4.0.0" },
     { name = "ptpython", marker = "extra == 'ptpython'", specifier = ">=3.0.0" },
-    { name = "pypika-tortoise", git = "https://github.com/tortoise/pypika-tortoise?rev=refs%2Fpull%2F47%2Fhead" },
+    { name = "pypika-tortoise", git = "https://github.com/tortoise/pypika-tortoise?rev=refs%2Fpull%2F41%2Fhead" },
     { name = "tomlkit", marker = "python_full_version < '3.11'", specifier = ">=0.11.4,<1.0.0" },
     { name = "typing-extensions", marker = "python_full_version < '3.11'", specifier = ">=4.1.0" },
     { name = "uvloop", marker = "implementation_name == 'cpython' and sys_platform != 'win32' and extra == 'accel'" },
