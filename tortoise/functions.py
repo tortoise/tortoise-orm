@@ -32,7 +32,7 @@ class Trim(Function):
         self.chars = chars
 
     def _get_function_field(self, field: Term | str, *default_values) -> PypikaFunction:
-        return self.database_func(field, *default_values, chars=self.chars)  # type:ignore
+        return self.database_func(field, *default_values, chars=self.chars)
 
 
 class Length(Function):
