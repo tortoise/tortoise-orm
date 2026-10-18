@@ -2738,7 +2738,7 @@ wheels = [
 [[package]]
 name = "pypika-tortoise"
 version = "0.6.5"
-source = { git = "https://github.com/tortoise/pypika-tortoise?rev=refs%2Fpull%2F41%2Fhead#15a2b4c4e32b71ba53e608f9912db0e71f4348ad" }
+source = { git = "https://github.com/tortoise/pypika-tortoise?rev=refs%2Fpull%2F41%2Fhead#a2e57bd8fcc891ba2a34ce26b71f339de96b715d" }
 
 [[package]]
 name = "pytest"
