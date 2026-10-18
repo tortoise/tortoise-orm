@@ -551,6 +551,50 @@ async def test_delete_limit_order_by(db, intfields_data):
 
 
 @pytest.mark.asyncio
+async def test_delete_limit_applied_on_any_backend(db):
+    for i in range(1, 6):
+        await IntFields.create(intnum=i)
+    assert await IntFields.all().order_by("-intnum").limit(2).delete() == 2
+    assert await IntFields.all().order_by("intnum").values_list("intnum", flat=True) == [1, 2, 3]
+
+
+@pytest.mark.asyncio
+async def test_delete_limit_offset(db):
+    for i in range(1, 6):
+        await IntFields.create(intnum=i)
+    assert await IntFields.all().order_by("intnum").limit(2).offset(1).delete() == 2
+    assert await IntFields.all().order_by("intnum").values_list("intnum", flat=True) == [1, 4, 5]
+
+
+@pytest.mark.asyncio
+async def test_delete_offset_only(db):
+    for i in range(1, 6):
+        await IntFields.create(intnum=i)
+    assert await IntFields.all().order_by("intnum").offset(3).delete() == 2
+    assert await IntFields.all().order_by("intnum").values_list("intnum", flat=True) == [1, 2, 3]
+
+
+@pytest.mark.asyncio
+async def test_update_limit_applied_on_any_backend(db):
+    for i in range(1, 6):
+        await IntFields.create(intnum=i)
+    assert await IntFields.all().order_by("intnum").limit(2).update(intnum_null=9) == 2
+    assert await IntFields.filter(intnum_null=9).order_by("intnum").values_list(
+        "intnum", flat=True
+    ) == [1, 2]
+
+
+@pytest.mark.asyncio
+async def test_update_limit_offset(db):
+    for i in range(1, 6):
+        await IntFields.create(intnum=i)
+    assert await IntFields.all().order_by("intnum").limit(2).offset(1).update(intnum_null=9) == 2
+    assert await IntFields.filter(intnum_null=9).order_by("intnum").values_list(
+        "intnum", flat=True
+    ) == [2, 3]
+
+
+@pytest.mark.asyncio
 async def test_async_iter(db, intfields_data):
     counter = 0
     async for _ in IntFields.all():

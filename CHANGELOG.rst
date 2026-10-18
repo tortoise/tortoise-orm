@@ -15,6 +15,10 @@ Added
 ^^^^^
 - Support forward relation ``in`` and ``not_in`` filters with model instances. (#2323)
 
+Fixed
+^^^^^
+- ``limit()`` and ``offset()`` are no longer silently ignored by ``QuerySet.update()`` and ``QuerySet.delete()`` on backends without ``UPDATE/DELETE ... LIMIT`` support. (#2343)
+
 1.1.9
 -----
 
