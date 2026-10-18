@@ -199,9 +199,9 @@ class AwaitableQuery(_ChooseDBMixin[MODEL], Generic[MODEL]):
         Return True when the backend cannot express them in the statement itself, so
         the target rows must be selected by primary key through a subquery.
         """
-        if not (limit or offset):
+        if limit is None and not offset:
             return False
-        if limit:
+        if limit is not None:
             self.query._limit = self.query._wrapper_cls(limit)
         if offset:
             self.query._offset = self.query._wrapper_cls(offset)

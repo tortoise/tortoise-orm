@@ -575,6 +575,22 @@ async def test_delete_offset_only(db):
 
 
 @pytest.mark.asyncio
+async def test_delete_limit_zero(db):
+    for i in range(1, 4):
+        await IntFields.create(intnum=i)
+    assert await IntFields.all().order_by("intnum").limit(0).delete() == 0
+    assert await IntFields.all().count() == 3
+
+
+@pytest.mark.asyncio
+async def test_update_limit_zero(db):
+    for i in range(1, 4):
+        await IntFields.create(intnum=i)
+    assert await IntFields.all().order_by("intnum").limit(0).update(intnum_null=9) == 0
+    assert await IntFields.filter(intnum_null=9).count() == 0
+
+
+@pytest.mark.asyncio
 async def test_update_limit_applied_on_any_backend(db):
     for i in range(1, 6):
         await IntFields.create(intnum=i)
