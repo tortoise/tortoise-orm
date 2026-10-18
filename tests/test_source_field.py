@@ -226,7 +226,6 @@ class TestStraightFields:
             )
             .first()
         )
-
         assert obj.all == 2
         assert obj.one == 1
         assert obj.no == 0
@@ -276,6 +275,73 @@ class TestStraightFields:
 
         assert len(obj) == 1
         assert obj[0].chars_trim == "aaa"
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        "raw_val, chars, expected",
+        [
+            # --- Core Edge Cases (Spaces should block stripping) ---
+            # 1. Trailing space with single char stripping (spaces should be preserved)
+            ("xxabcx ", "x", "abcx "),
+            # 2. Leading space with single char stripping (spaces should be preserved)
+            (" xxabcx", "x", " xxabc"),
+            # 3. Mixed spaces and chars on both ends
+            (" x abc x ", "x", " x abc x "),
+            # 4. Char stripped, then blocked by space
+            ("x xabcx x", "x", " xabcx "),
+            # --- Standard Stripping Behaviors ---
+            # 5. Single character stripping (exact match on both ends)
+            ("xxabcxx", "x", "abc"),
+            # 6. Default behavior: strip spaces only
+            ("  abc  ", " ", "abc"),
+            # 7. Character set stripping (unordered)
+            ("xyabc yx", "x y", "abc"),
+            # 8. Multiple characters
+            ("xxyabcxyx", "xy", "abc"),
+            # 9. Target character in the middle (only strips both ends)
+            ("xxaxbcxx", "x", "axbc"),
+            # --- Boundary & Special Cases ---
+            # 10. No matching characters
+            ("abc", "x", "abc"),
+            # 11. Empty string input
+            ("", "x", ""),
+            # 12. All spaces input (strips to empty string)
+            ("    ", " ", ""),
+            # 13. Special characters (tests ValueWrapper quoting/escaping)
+            ("'abc'", "'", "abc"),
+            # 14. chars=None (treated as default)
+            ("  abc  ", None, "abc"),
+        ],
+    )
+    async def test_function_trim_chars(self, db, raw_val, chars, expected):
+        # Auxiliary assertion: ensure the manual `expected` matches Python's native strip
+        if raw_val is not None:
+            assert raw_val.strip(chars) == expected, (
+                "Expected value does not match Python's str.strip()"
+            )
+
+        obj1 = await self.model.create(chars=raw_val)
+        await self.model.filter(eyedee=obj1.eyedee).update(chars=Trim("chars", chars=chars))
+        obj2 = await self.model.get(eyedee=obj1.eyedee)
+
+        assert obj2.chars == expected, (
+            f"SQL TRIM result mismatch! "
+            f"input='{raw_val}', chars='{chars}', "
+            f"expected='{expected}', actual='{obj2.chars}'"
+        )
+
+    @pytest.mark.asyncio
+    async def test_function_trim_nullable(self, db):
+        # Test SQL TRIM(NULL) which should return NULL
+        obj = await self.model.create(chars="dummy", nullable=None)
+
+        res = (
+            await self.model.annotate(trimmed=Trim("nullable", chars="x"))
+            .filter(eyedee=obj.eyedee)
+            .values_list("trimmed", flat=True)
+        )
+
+        assert res[0] is None
 
     @pytest.mark.asyncio
     async def test_filter_by_aggregation_field_upper(self, db):
