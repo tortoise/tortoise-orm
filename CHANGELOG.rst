@@ -18,6 +18,7 @@ Added
 Fixed
 ^^^^^
 - ``DecimalField`` no longer raises ``decimal.InvalidOperation`` for values with more than 28 significant digits. (#2349)
+- fix(expressions): inline subquery parameters when ``params_inline`` is enabled (#2340)
 
 1.1.9
 -----
