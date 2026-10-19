@@ -1,7 +1,7 @@
 import pytest
 import pytest_asyncio
 
-from tests.testmodels import Event, IntFields, Tournament
+from tests.testmodels import Event, IntFields, Team, Tournament
 from tortoise.exceptions import FieldError
 from tortoise.expressions import Case, F, Q, When
 from tortoise.functions import Coalesce, Count
@@ -288,3 +288,15 @@ async def test_aggregate_filter_related_field_joins(db):
     assert await Tournament.annotate(c=Count("id", _filter=Q(events__name="e"))).values_list(
         "c", flat=True
     ) == [1]
+
+
+@pytest.mark.asyncio
+async def test_case_when_m2m_and_multi_hop_joins(db):
+    tournament = await Tournament.create(name="a")
+    event = await Event.create(name="e", tournament=tournament)
+    team = await Team.create(name="t")
+    await event.participants.add(team)
+    case = Case(When(participants__name="t", then=1), default=0)
+    assert await Event.annotate(c=case).values_list("c", flat=True) == [1]
+    case = Case(When(events__participants__name="t", then=1), default=0)
+    assert await Tournament.annotate(c=case).values_list("c", flat=True) == [1]

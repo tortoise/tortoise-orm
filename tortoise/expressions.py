@@ -675,7 +675,7 @@ class Aggregate(Function):
             modifier = QueryModifier()
             modifier &= self.filter.resolve(resolve_context)
             ret.term = PypikaCase().when(modifier.where_criterion, ret.term).else_(None)
-            ret.joins = list(set(ret.joins + modifier.joins))
+            ret.joins = list(dict.fromkeys(ret.joins + modifier.joins))
 
         return ret
 
@@ -738,7 +738,7 @@ class When(Expression):
         if isinstance(self.then, Expression):
             then_result = self.then.resolve(resolve_context)
             then = then_result.term
-            joins = list(set(joins + then_result.joins))
+            joins = list(dict.fromkeys(joins + then_result.joins))
         else:
             then = cast(Term, Term.wrap_constant(self.then))
 
@@ -779,4 +779,4 @@ class Case(Expression):
         else:
             case = case.else_(Term.wrap_constant(self.default))
 
-        return ResolveResult(term=case, joins=list(set(joins)))
+        return ResolveResult(term=case, joins=list(dict.fromkeys(joins)))
