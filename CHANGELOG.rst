@@ -15,6 +15,10 @@ Added
 ^^^^^
 - Support forward relation ``in`` and ``not_in`` filters with model instances. (#2323)
 
+Fixed
+^^^^^
+- ``Case``/``When`` and aggregate ``_filter`` expressions now keep the joins for related fields they reference, so e.g. ``When(tournament__name="a", then=1)`` no longer fails with a missing table. (#2352)
+
 1.1.9
 -----
 
