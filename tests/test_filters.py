@@ -10,6 +10,7 @@ from tests.testmodels import (
     CharFkRelatedModel,
     CharPkModel,
     DecimalFields,
+    IntFields,
 )
 from tortoise.exceptions import FieldError
 from tortoise.fields.base import StrEnum
@@ -65,6 +66,13 @@ async def test_char_field_not_none(db):
     await CharFields.create(char="a", char_null=None)
     await CharFields.create(char="b", char_null="x")
     assert await CharFields.filter(char_null__not=None).values_list("char", flat=True) == ["b"]
+
+
+@pytest.mark.asyncio
+async def test_int_field_not_none(db):
+    await IntFields.create(intnum=1, intnum_null=None)
+    await IntFields.create(intnum=2, intnum_null=5)
+    assert await IntFields.filter(intnum_null__not=None).values_list("intnum", flat=True) == [2]
 
 
 @pytest.mark.asyncio
