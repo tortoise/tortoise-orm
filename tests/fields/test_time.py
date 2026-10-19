@@ -3,6 +3,7 @@ import os
 from collections.abc import Callable
 from datetime import date, datetime, time, timedelta
 from datetime import timezone as dt_timezone
+from time import tzset
 from unittest.mock import patch
 from zoneinfo import ZoneInfoNotFoundError
 
@@ -440,6 +441,28 @@ async def test_datetime_auto_fields_match_db_with_use_tz_false(db, tz_env):
 
     assert obj.datetime_auto == obj_get.datetime_auto
     assert timezone.is_naive(obj.datetime_auto)
+
+
+@pytest.mark.asyncio
+async def test_datetime_auto_fields_not_shifted_with_use_tz_false(db, tz_env):
+    """Test auto_now/auto_now_add are naive local time when host and TIMEZONE differ."""
+    model = testmodels.DatetimeFields
+    os.environ["USE_TZ"] = "False"
+    os.environ["TIMEZONE"] = "Asia/Tokyo"
+    timezone._reset_timezone_cache()
+
+    with patch.dict(os.environ, {"TZ": "America/New_York"}):
+        tzset()
+        try:
+            before = datetime.now()
+            obj = await model.create(datetime=before)
+            after = datetime.now()
+        finally:
+            os.environ.pop("TZ", None)
+            tzset()
+
+    assert before <= obj.datetime_add <= after
+    assert before <= obj.datetime_auto <= after
 
 
 @pytest.mark.asyncio
