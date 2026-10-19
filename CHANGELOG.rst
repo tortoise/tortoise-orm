@@ -15,6 +15,10 @@ Added
 ^^^^^
 - Support forward relation ``in`` and ``not_in`` filters with model instances. (#2323)
 
+Fixed
+^^^^^
+- ``auto_now`` / ``auto_now_add`` values are no longer shifted to ``TIMEZONE`` when ``use_tz=False``. (#2348)
+
 1.1.9
 -----
 
