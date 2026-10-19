@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import inspect
 import re
-from collections.abc import Awaitable, Callable, Generator, Iterable
+from collections.abc import Awaitable, Callable, Generator, Iterable, Iterator
 from copy import copy, deepcopy
 from functools import partial
 from typing import TYPE_CHECKING, Any, TypedDict, TypeVar, cast
@@ -872,7 +872,7 @@ class Model(metaclass=ModelMeta):
             raise TypeError("Model instances without id are unhashable")
         return hash(self.pk)
 
-    def __iter__(self) -> Iterable[tuple[str, Any]]:
+    def __iter__(self) -> Iterator[tuple[str, Any]]:
         for field in self._meta.db_fields:
             yield field, getattr(self, field)
 
