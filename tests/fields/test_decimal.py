@@ -38,17 +38,6 @@ async def test_empty(db):
         await testmodels.DecimalFields.create()
 
 
-def test_to_python_value_high_precision():
-    field = fields.DecimalField(max_digits=40, decimal_places=10)
-    assert field.to_python_value("123456789012345678901234567890.5") == Decimal(
-        "123456789012345678901234567890.5000000000"
-    )
-    field = fields.DecimalField(max_digits=30, decimal_places=2)
-    assert field.to_python_value("1234567890123456789012345678.50") == Decimal(
-        "1234567890123456789012345678.50"
-    )
-
-
 @pytest.mark.asyncio
 async def test_create(db):
     obj0 = await testmodels.DecimalFields.create(decimal=Decimal("1.23456"), decimal_nodec=18.7)
@@ -351,3 +340,14 @@ def test_to_python_value_scale():
     field0 = fields.DecimalField(max_digits=12, decimal_places=0)
     assert str(field0.to_python_value("10")) == "10"
     assert str(field0.to_python_value("100")) == "100"
+
+
+def test_to_python_value_high_precision():
+    field = fields.DecimalField(max_digits=40, decimal_places=10)
+    assert field.to_python_value("123456789012345678901234567890.5") == Decimal(
+        "123456789012345678901234567890.5000000000"
+    )
+    field = fields.DecimalField(max_digits=30, decimal_places=2)
+    assert field.to_python_value("1234567890123456789012345678.50") == Decimal(
+        "1234567890123456789012345678.50"
+    )
