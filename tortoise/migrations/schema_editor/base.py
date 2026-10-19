@@ -238,8 +238,6 @@ class BaseSchemaEditor(SchemaQuotingMixin):
         if not related_model:
             return None
         m2m_schema = model._meta.schema
-        # Respect db_constraint=False: build the through table without FK constraints,
-        # mirroring the runtime schema generator (see base/schema_generator.py).
         template = (
             self.M2M_TABLE_TEMPLATE
             if field.db_constraint
@@ -304,8 +302,6 @@ class BaseSchemaEditor(SchemaQuotingMixin):
             is_pk=key_field.pk,
             comment="",
         )
-        # Respect db_constraint=False: emit the plain column without a FK constraint,
-        # mirroring the runtime schema generator (see base/schema_generator.py).
         if fk_field.db_constraint:
             field_creation_string += self._get_fk_reference_string(
                 constraint_name=self._generate_fk_name(

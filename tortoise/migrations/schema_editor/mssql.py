@@ -32,6 +32,12 @@ class MSSQLSchemaEditor(MSSQLQuotingMixin, BaseSchemaEditor):
         "    {forward_fk}\n"
         "){extra};"
     )
+    M2M_TABLE_NO_CONSTRAINT_TEMPLATE = (
+        "CREATE TABLE {table_name} (\n"
+        "    {backward_key} {backward_type} NOT NULL,\n"
+        "    {forward_key} {forward_type} NOT NULL\n"
+        "){extra};"
+    )
     RENAME_TABLE_TEMPLATE = "EXEC sp_rename '{old_table}', '{new_table}'"
     DELETE_TABLE_TEMPLATE = "DROP TABLE {table}"
     ADD_FIELD_TEMPLATE = "ALTER TABLE {table} ADD {definition}"
@@ -218,7 +224,12 @@ class MSSQLSchemaEditor(MSSQLQuotingMixin, BaseSchemaEditor):
             self._qualify_table_name(related_model._meta.db_table, related_model._meta.schema),
             related_model._meta.db_pk_column,
         )
-        m2m_create_string = self.M2M_TABLE_TEMPLATE.format(
+        template = (
+            self.M2M_TABLE_TEMPLATE
+            if field.db_constraint
+            else self.M2M_TABLE_NO_CONSTRAINT_TEMPLATE
+        )
+        m2m_create_string = template.format(
             table_name=self._qualify_table_name(field.through, m2m_schema),
             backward_table=self._qualify_table_name(model._meta.db_table, model._meta.schema),
             forward_table=self._qualify_table_name(
