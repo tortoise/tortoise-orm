@@ -16,13 +16,6 @@ Changed
 
 - Drop support for Python3.10 (#2322)
 
-
-1.1
-===
-
-Unreleased
-----------
-
 Added
 ^^^^^
 - Support forward relation ``in`` and ``not_in`` filters with model instances. (#2323)
@@ -31,6 +24,10 @@ Fixed
 ^^^^^
 - ``DecimalField`` no longer raises ``decimal.InvalidOperation`` for values with more than 28 significant digits. (#2349)
 - fix(expressions): inline subquery parameters when ``params_inline`` is enabled (#2340)
+
+
+1.1
+===
 
 1.1.9
 -----
