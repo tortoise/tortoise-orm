@@ -6,7 +6,7 @@ import functools
 import json
 import warnings
 from collections.abc import Callable
-from decimal import Context, Decimal
+from decimal import Decimal, getcontext
 from enum import Enum, IntEnum
 from typing import TYPE_CHECKING, Any, Literal, TypeVar, overload
 from uuid import UUID, uuid4
@@ -382,9 +382,9 @@ class DecimalField(Field[T_DECIMAL], Decimal):  # type: ignore
 
     def to_python_value(self, value: Any) -> Decimal | None:
         if value is not None:
-            value = Decimal(value).quantize(
-                self.quant, context=Context(prec=max(28, self.max_digits))
-            )
+            context = getcontext().copy()
+            context.prec = max(context.prec, int(self.max_digits))
+            value = Decimal(value).quantize(self.quant, context=context)
         return value
 
     @property
