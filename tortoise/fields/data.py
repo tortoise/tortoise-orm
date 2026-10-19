@@ -32,7 +32,7 @@ try:
     from pydantic import BaseModel as _PydanticBaseModel
     from pydantic._internal._model_construction import ModelMetaclass as _PydanticModelMetaclass
 except ImportError:
-    _PydanticBaseModel = None  # type: ignore
+    _PydanticBaseModel = None  # type: ignore[assignment,misc]
     _PydanticModelMetaclass = None  # type: ignore[assignment,misc]
 
 if TYPE_CHECKING:  # pragma: nocoverage
@@ -910,7 +910,7 @@ class IntEnumFieldInstance(SmallIntField):
 
         # Automatic description for the field if not specified by the user
         if description is None:
-            description = "\n".join([f"{e.name}: {int(e.value)}" for e in enum_type])[:2048]
+            description = "\n".join(f"{e.name}: {int(e.value)}" for e in enum_type)[:2048]
 
         super().__init__(description=description, **kwargs)
         self.enum_type = enum_type
@@ -966,14 +966,11 @@ class CharEnumFieldInstance(CharField):
     ) -> None:
         # Automatic description for the field if not specified by the user
         if description is None:
-            description = "\n".join([f"{e.name}: {str(e.value)}" for e in enum_type])[:2048]
+            description = "\n".join(f"{e.name}: {e.value}" for e in enum_type)[:2048]
 
         # Automatic CharField max_length
         if max_length == 0:
-            for item in enum_type:
-                item_len = len(str(item.value))
-                if item_len > max_length:
-                    max_length = item_len
+            max_length = max((len(str(i.value)) for i in enum_type), default=0)
 
         super().__init__(description=description, max_length=max_length, **kwargs)
         self.enum_type = enum_type
