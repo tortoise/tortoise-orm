@@ -15,6 +15,10 @@ Added
 ^^^^^
 - Support forward relation ``in`` and ``not_in`` filters with model instances. (#2323)
 
+Fixed
+^^^^^
+- Fix ``field__not=None`` filter returning NULL rows instead of non-NULL rows. (#2351)
+
 1.1.9
 -----
 

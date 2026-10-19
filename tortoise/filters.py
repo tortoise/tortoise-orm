@@ -133,6 +133,8 @@ def between_and(field: Term, value: tuple[Any, Any]) -> Criterion:
 
 
 def not_equal(field: Term, value: Any) -> Criterion:
+    if value is None:
+        return field.notnull()
     return field.ne(value) | field.isnull()
 
 

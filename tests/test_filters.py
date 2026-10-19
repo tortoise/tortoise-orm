@@ -61,6 +61,13 @@ async def test_char_field_not(db, char_fields_data):
 
 
 @pytest.mark.asyncio
+async def test_char_field_not_none(db):
+    await CharFields.create(char="a", char_null=None)
+    await CharFields.create(char="b", char_null="x")
+    assert await CharFields.filter(char_null__not=None).values_list("char", flat=True) == ["b"]
+
+
+@pytest.mark.asyncio
 async def test_char_field_in(db, char_fields_data):
     assert set(await CharFields.filter(char__in=["moo", "baa"]).values_list("char", flat=True)) == {
         "moo",
