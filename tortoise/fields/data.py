@@ -6,7 +6,7 @@ import functools
 import json
 import warnings
 from collections.abc import Callable
-from decimal import Decimal, getcontext
+from decimal import Decimal, InvalidOperation, getcontext
 from enum import Enum, IntEnum
 from typing import TYPE_CHECKING, Any, Literal, TypeVar, overload
 from uuid import UUID, uuid4
@@ -380,12 +380,22 @@ class DecimalField(Field[T_DECIMAL], Decimal):  # type: ignore
         self.decimal_places = decimal_places
         self.quant = Decimal("1" if decimal_places == 0 else f"1.{('0' * decimal_places)}")
 
+    @overload
+    def to_python_value(self, value: None) -> None: ...
+
+    @overload
+    def to_python_value(self, value: Any) -> Decimal: ...
+
     def to_python_value(self, value: Any) -> Decimal | None:
-        if value is not None:
+        if value is None:
+            return None
+        d = Decimal(value)
+        try:
+            return d.quantize(self.quant)
+        except InvalidOperation:
             context = getcontext().copy()
             context.prec = max(context.prec, int(self.max_digits))
-            value = Decimal(value).quantize(self.quant, context=context)
-        return value
+            return d.quantize(self.quant, context=context)
 
     @property
     def SQL_TYPE(self) -> str:  # type: ignore[override]
@@ -683,7 +693,6 @@ class TimeDeltaField(Field[T_TIMEDELTA]):
         self, value: datetime.timedelta | None, instance: type[Model] | Model
     ) -> int | None:
         self.validate(value)
-
         if value is None:
             return None
         return (value.days * 86400000000) + (value.seconds * 1000000) + value.microseconds
