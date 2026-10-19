@@ -8,6 +8,17 @@ Changelog
 1.1
 ===
 
+Unreleased
+----------
+
+Added
+^^^^^
+- Support forward relation ``in`` and ``not_in`` filters with model instances. (#2323)
+
+Fixed
+^^^^^
+- ``DecimalField`` no longer raises ``decimal.InvalidOperation`` for values with more than 28 significant digits. (#2349)
+
 1.1.9
 -----
 
