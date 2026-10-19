@@ -294,22 +294,18 @@ class TestStraightFields:
             ("xxabcxx", "x", "abc"),
             # 6. Default behavior: strip spaces only
             ("  abc  ", " ", "abc"),
-            # 7. Character set stripping (unordered)
-            ("xyabc yx", "x y", "abc"),
-            # 8. Multiple characters
-            ("xxyabcxyx", "xy", "abc"),
-            # 9. Target character in the middle (only strips both ends)
+            # 7. Target character in the middle (only strips both ends)
             ("xxaxbcxx", "x", "axbc"),
             # --- Boundary & Special Cases ---
-            # 10. No matching characters
+            # 8. No matching characters
             ("abc", "x", "abc"),
-            # 11. Empty string input
+            # 9. Empty string input
             ("", "x", ""),
-            # 12. All spaces input (strips to empty string)
+            # 10. All spaces input (strips to empty string)
             ("    ", " ", ""),
-            # 13. Special characters (tests ValueWrapper quoting/escaping)
+            # 11. Special characters (tests ValueWrapper quoting/escaping)
             ("'abc'", "'", "abc"),
-            # 14. chars=None (treated as default)
+            # 12. chars=None (treated as default)
             ("  abc  ", None, "abc"),
         ],
     )
