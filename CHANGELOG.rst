@@ -17,7 +17,7 @@ Added
 
 Fixed
 ^^^^^
-- ``DecimalField`` no longer raises ``decimal.InvalidOperation`` for values with more than 28 significant digits. (#2347)
+- ``DecimalField`` no longer raises ``decimal.InvalidOperation`` for values with more than 28 significant digits. (#2349)
 
 1.1.9
 -----

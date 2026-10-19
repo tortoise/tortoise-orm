@@ -966,7 +966,7 @@ class CharEnumFieldInstance(CharField):
     ) -> None:
         # Automatic description for the field if not specified by the user
         if description is None:
-            description = "\n".join(f"{e.name}: {e.value}" for e in enum_type)[:2048]
+            description = "\n".join(f"{e.name}: {e.value!s}" for e in enum_type)[:2048]
 
         # Automatic CharField max_length
         if max_length == 0:
