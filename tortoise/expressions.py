@@ -675,6 +675,7 @@ class Aggregate(Function):
             modifier = QueryModifier()
             modifier &= self.filter.resolve(resolve_context)
             ret.term = PypikaCase().when(modifier.where_criterion, ret.term).else_(None)
+            ret.joins = list(set(ret.joins + modifier.joins))
 
         return ret
 
@@ -733,12 +734,15 @@ class When(Expression):
         for node in q_objects:
             modifier &= node.resolve(resolve_context)
 
+        joins = modifier.joins
         if isinstance(self.then, Expression):
-            then = self.then.resolve(resolve_context).term
+            then_result = self.then.resolve(resolve_context)
+            then = then_result.term
+            joins = list(set(joins + then_result.joins))
         else:
             then = cast(Term, Term.wrap_constant(self.then))
 
-        return ResolveResult(term=_WhenThen(modifier.where_criterion, then))
+        return ResolveResult(term=_WhenThen(modifier.where_criterion, then), joins=joins)
 
 
 class Case(Expression):
@@ -759,16 +763,20 @@ class Case(Expression):
 
     def resolve(self, resolve_context: ResolveContext) -> ResolveResult:
         case = PypikaCase()
+        joins: list[TableCriterionTuple] = []
         for arg in self.args:
             if not isinstance(arg, When):
                 raise TypeError("expected When objects as args")
             when = arg.resolve(resolve_context)
             when_term = cast(_WhenThen, when.term)
             case = case.when(when_term.when, when_term.then)
+            joins += when.joins
 
         if isinstance(self.default, Expression):
-            case = case.else_(self.default.resolve(resolve_context).term)
+            default_result = self.default.resolve(resolve_context)
+            case = case.else_(default_result.term)
+            joins += default_result.joins
         else:
             case = case.else_(Term.wrap_constant(self.default))
 
-        return ResolveResult(term=case)
+        return ResolveResult(term=case, joins=list(set(joins)))
