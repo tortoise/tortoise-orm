@@ -2094,7 +2094,19 @@ class BulkUpdateQuery(UpdateQuery, Generic[MODEL]):
                 for obj in objects_item:
                     pk_value = self.model._meta.fields_map[pk_attr].to_db_value(obj.pk, None)
                     field_obj = obj._meta.fields_map[field]
-                    field_value = field_obj.to_db_value(getattr(obj, field), obj)
+                    field_value = getattr(obj, field)
+                    if field_value is not None and (
+                        getattr(field_obj, "auto_now", False)
+                        or getattr(field_obj, "auto_now_add", False)
+                    ):
+                        # bulk_update() writes the value held by the instance.
+                        # The auto_now/auto_now_add refresh inside to_db_value()
+                        # is a save()-time behaviour and must not silently
+                        # replace a value that was explicitly assigned, so
+                        # convert the value without passing the instance.
+                        field_value = field_obj.to_db_value(field_value, None)
+                    else:
+                        field_value = field_obj.to_db_value(field_value, obj)
                     case.when(
                         pk == pk_value,
                         (
