@@ -22,7 +22,6 @@ Changed
 
 Fixed
 ^^^^^
-- ``pydantic_model_creator`` now accounts for custom ``model_config``, ``validators``, and ``module`` in caching and default checks, preventing stale model reuse. (#2310)
 - Aggregates now apply _filter when the aggregated argument is an F() or a combined expression (e.g. Sum(F("price") * F("qty"), _filter=Q(status="paid"))). Previously the filter was silently dropped and every row was aggregated. (#2290)
 - Negating an already negated Q now cancels out: ~~Q(...) and .exclude(~Q(...)) used to keep a single NOT, so they returned the rows the caller meant to drop. (#2291)
 - PostgreSQL and Oracle ``RemoveIndex`` / partial ``RemoveConstraint`` now schema-qualify ``DROP INDEX``, so indexes on models with ``Meta.schema`` can be dropped when they are not on the connection ``search_path``. (#2288)
@@ -42,6 +41,7 @@ Fixed
 - ``pydantic_model_creator`` no longer raises ``TypeError`` for models with annotations whose origin is not a class, such as ``Literal[...]``. (#2311)
 - Filtering by a related model instance on a ``ForeignKeyField``/``OneToOneField`` declared with a non-primary-key ``to_field`` now uses the ``to_field`` value instead of the instance's primary key, so the generated query targets the correct column. (#2239)
 - Database URLs with an empty host (e.g. ``postgres:///db?host=/var/run/postgresql&user=u``) no longer overwrite ``host``/``user``/``password`` given in the query string, so unix domain sockets work. (#2313)
+- ``pydantic_model_creator`` now accounts for custom ``model_config``, ``validators``, and ``module`` in caching and default checks, preventing stale model reuse. (#2325)
 
 1.1.8
 -----
