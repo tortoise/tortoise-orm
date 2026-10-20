@@ -269,8 +269,8 @@ async def test_unknown_field_in_when_annotation(db, intfields_data):
 async def test_case_when_related_field_joins(db):
     tournament = await Tournament.create(name="a")
     await Event.create(name="e", tournament=tournament)
-    case = Case(When(tournament__name="a", then=1), default=0)
-    assert await Event.annotate(c=case).values_list("c", flat=True) == [1]
+    case = Case(When(tournament__name="a", then="y"), default="n")
+    assert await Event.annotate(c=case).values_list("c", flat=True) == ["y"]
 
 
 @pytest.mark.asyncio
@@ -296,7 +296,7 @@ async def test_case_when_m2m_and_multi_hop_joins(db):
     event = await Event.create(name="e", tournament=tournament)
     team = await Team.create(name="t")
     await event.participants.add(team)
-    case = Case(When(participants__name="t", then=1), default=0)
-    assert await Event.annotate(c=case).values_list("c", flat=True) == [1]
-    case = Case(When(events__participants__name="t", then=1), default=0)
-    assert await Tournament.annotate(c=case).values_list("c", flat=True) == [1]
+    case = Case(When(participants__name="t", then="y"), default="n")
+    assert await Event.annotate(c=case).values_list("c", flat=True) == ["y"]
+    case = Case(When(events__participants__name="t", then="y"), default="n")
+    assert await Tournament.annotate(c=case).values_list("c", flat=True) == ["y"]
