@@ -187,6 +187,27 @@ class AwaitableQuery(_ChooseDBMixin[MODEL], Generic[MODEL]):
             return pk_cols[0].isin(wrapped)
         return Tuple(*pk_cols).isin(wrapped)
 
+    def _apply_limit_offset(
+        self,
+        table: Table,
+        limit: int | None,
+        offset: int | None,
+        orderings: list[tuple[str, str]],
+    ) -> bool:
+        """Apply limit, offset and ordering for UPDATE/DELETE to the select-shaped query.
+
+        Return True when the backend cannot express them in the statement itself, so
+        the target rows must be selected by primary key through a subquery.
+        """
+        if limit is None and not offset:
+            return False
+        if limit is not None:
+            self.query._limit = self.query._wrapper_cls(limit)
+        if offset:
+            self.query._offset = self.query._wrapper_cls(offset)
+        self.resolve_ordering(self.model, table, orderings, self._annotations)
+        return bool(offset) or not self.capabilities.support_update_limit_order_by
+
     def _join_table_by_field(
         self, table: Table, related_field_name: str, related_field: RelationalField
     ) -> Table:
@@ -797,6 +818,7 @@ class QuerySet(AwaitableQuery[MODEL]):
             custom_filters=self._custom_filters,
             limit=self._limit,
             orderings=self._orderings,
+            offset=self._offset,
         )
 
     def update(self, **kwargs: Any) -> UpdateQuery:
@@ -820,6 +842,7 @@ class QuerySet(AwaitableQuery[MODEL]):
             custom_filters=self._custom_filters,
             limit=self._limit,
             orderings=self._orderings,
+            offset=self._offset,
         )
 
     def count(self) -> CountQuery:
@@ -1353,6 +1376,7 @@ class UpdateQuery(AwaitableQuery):
         "update_kwargs",
         "_orderings",
         "_limit",
+        "_offset",
         "values",
     )
 
@@ -1366,6 +1390,7 @@ class UpdateQuery(AwaitableQuery):
         custom_filters: dict[str, FilterInfoDict],
         limit: int | None,
         orderings: list[tuple[str, str]],
+        offset: int | None = None,
     ) -> None:
         super().__init__(model)
         self.update_kwargs = update_kwargs
@@ -1374,6 +1399,7 @@ class UpdateQuery(AwaitableQuery):
         self._custom_filters = custom_filters
         self._db = db
         self._limit = limit
+        self._offset = offset
         self._orderings = orderings
 
     def _make_query(self) -> None:
@@ -1382,12 +1408,10 @@ class UpdateQuery(AwaitableQuery):
         # JOINs, which are not valid in UPDATE statements on most backends, so the target
         # rows are selected by primary key through a subquery instead (see _pk_in_subquery).
         self.query = copy(self.model._meta.basequery)
-        if self.capabilities.support_update_limit_order_by and self._limit:
-            self.query._limit = self.query._wrapper_cls(self._limit)
-            self.resolve_ordering(self.model, table, self._orderings, self._annotations)
+        use_subquery = self._apply_limit_offset(table, self._limit, self._offset, self._orderings)
 
         self.resolve_filters()
-        if self.query._joins:
+        if self.query._joins or use_subquery:
             self.query = self._db.query_class.update(table).where(self._pk_in_subquery(table))
         else:
             update_query = self._db.query_class.update(table)
@@ -1447,6 +1471,7 @@ class DeleteQuery(AwaitableQuery):
         "_custom_filters",
         "_orderings",
         "_limit",
+        "_offset",
     )
 
     def __init__(
@@ -1458,6 +1483,7 @@ class DeleteQuery(AwaitableQuery):
         custom_filters: dict[str, FilterInfoDict],
         limit: int | None,
         orderings: list[tuple[str, str]],
+        offset: int | None = None,
     ) -> None:
         super().__init__(model)
         self._q_objects = q_objects
@@ -1465,21 +1491,15 @@ class DeleteQuery(AwaitableQuery):
         self._custom_filters = custom_filters
         self._db = db
         self._limit = limit
+        self._offset = offset
         self._orderings = orderings
 
     def _make_query(self) -> None:
         table = self.model._meta.basetable
         self.query = copy(self.model._meta.basequery)
-        if self.capabilities.support_update_limit_order_by and self._limit:
-            self.query._limit = self.query._wrapper_cls(self._limit)
-            self.resolve_ordering(
-                model=self.model,
-                table=table,
-                orderings=self._orderings,
-                annotations=self._annotations,
-            )
+        use_subquery = self._apply_limit_offset(table, self._limit, self._offset, self._orderings)
         self.resolve_filters()
-        if self.query._joins:
+        if self.query._joins or use_subquery:
             self.query = self.model._meta.db.query_class.from_(table).where(
                 self._pk_in_subquery(table)
             )

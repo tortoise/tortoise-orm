@@ -21,6 +21,7 @@ Fixed
 - fix(expressions): inline subquery parameters when ``params_inline`` is enabled (#2340)
 - Use database column names in reverse foreign-key and one-to-one filters with renamed columns or one-to-one primary keys. (#2338)
 - Migrations now honor ``db_constraint=False`` on ``ForeignKeyField``/``ManyToManyField`` and emit the column (and through table) without a ``FOREIGN KEY`` constraint, matching the runtime schema generator. (#2226)
+- ``limit()`` and ``offset()`` are no longer silently ignored by ``QuerySet.update()`` and ``QuerySet.delete()`` on backends without ``UPDATE/DELETE ... LIMIT`` support. (#2343)
 
 1.1.9
 -----
