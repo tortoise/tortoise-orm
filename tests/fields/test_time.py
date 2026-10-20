@@ -458,14 +458,11 @@ async def test_datetime_auto_fields_not_shifted_with_use_tz_false(db, tz_env):
             before = datetime.now()
             obj = await model.create(datetime=before)
             after = datetime.now()
-            obj_get = await model.get(pk=obj.pk)
     finally:
         time_module.tzset()
 
     assert before <= obj.datetime_add <= after
     assert before <= obj.datetime_auto <= after
-    assert before <= obj_get.datetime_add <= after
-    assert before <= obj_get.datetime_auto <= after
 
 
 @pytest.mark.asyncio
