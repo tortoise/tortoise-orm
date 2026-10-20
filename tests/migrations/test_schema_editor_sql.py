@@ -16,6 +16,8 @@ from tortoise.models import Model
 
 
 class TestSchemaEditor(BaseSchemaEditor):
+    __test__ = False
+
     def _get_table_comment_sql(self, table: str, comment: str) -> str:
         return ""
 
