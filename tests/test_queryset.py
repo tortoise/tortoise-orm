@@ -917,6 +917,23 @@ async def test_subquery_filter(db):
 
 
 @pytest.mark.asyncio
+async def test_subquery_params_inline(db):
+    t1 = await Tournament.create(name="Tourney")
+    query = Tournament.filter(
+        id__in=Subquery(Tournament.filter(name="Tourney").values_list("id", flat=True))
+    )
+    sql_inline = query.sql(params_inline=True)
+    assert "'Tourney'" in sql_inline
+    assert "?" not in sql_inline
+    assert "%s" not in sql_inline
+    assert "$1" not in sql_inline
+
+    sql_param = query.sql(params_inline=False)
+    assert "'Tourney'" not in sql_param
+    assert (await query.first()) == t1
+
+
+@pytest.mark.asyncio
 async def test_raw_sql_count(db):
     t1 = await Tournament.create(name="1")
     ret = await Tournament.filter(pk=t1.pk).annotate(count=RawSQL("count(*)")).values("count")
