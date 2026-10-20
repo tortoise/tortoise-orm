@@ -304,17 +304,16 @@ class BaseSchemaEditor(SchemaQuotingMixin):
             comment="",
         )
         if fk_field.db_constraint:
+            related_table = related_model._meta.db_table
             field_creation_string += self._get_fk_reference_string(
                 constraint_name=self._generate_fk_name(
                     model._meta.db_table,
                     db_field,
-                    related_model._meta.db_table,
+                    related_table,
                     to_field_name,
                 ),
                 db_field=db_field,
-                table=self._qualify_table_name(
-                    related_model._meta.db_table, related_model._meta.schema
-                ),
+                table=self._qualify_table_name(related_table, related_model._meta.schema),
                 field=to_field_name,
                 on_delete=fk_field.on_delete,
                 comment=comment,
