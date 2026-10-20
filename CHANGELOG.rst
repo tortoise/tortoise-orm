@@ -55,6 +55,10 @@ Fixed
 - Filtering by a related model instance on a ``ForeignKeyField``/``OneToOneField`` declared with a non-primary-key ``to_field`` now uses the ``to_field`` value instead of the instance's primary key, so the generated query targets the correct column. (#2239)
 - Database URLs with an empty host (e.g. ``postgres:///db?host=/var/run/postgresql&user=u``) no longer overwrite ``host``/``user``/``password`` given in the query string, so unix domain sockets work. (#2313)
 
+Fixed
+^^^^^
+- ``Meta.constraints`` (``UniqueConstraint`` / ``CheckConstraint``) are now emitted in ``CREATE TABLE`` by ``migrate`` and ``generate_schemas``. MySQL ``add_constraint`` honors the constraint ``name``. (#2272)
+
 1.1.8
 -----
 
