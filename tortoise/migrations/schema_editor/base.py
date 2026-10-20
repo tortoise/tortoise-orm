@@ -92,7 +92,6 @@ class BaseSchemaEditor(SchemaQuotingMixin):
         self, model: type[Model], old_field: Field, new_field: Field
     ) -> None:
         """Alter column comment. Override in backends that support column comments."""
-        pass
 
     def _table_generate_extra(self, table: str) -> str:
         return ""
@@ -229,6 +228,13 @@ class BaseSchemaEditor(SchemaQuotingMixin):
     def _get_inner_statements(self) -> list[str]:
         return []
 
+    def _m2m_table_template(self, field: ManyToManyFieldInstance) -> str:
+        return (
+            self.M2M_TABLE_TEMPLATE
+            if field.db_constraint
+            else self.M2M_TABLE_NO_CONSTRAINT_TEMPLATE
+        )
+
     def _get_m2m_table_definition(
         self, model: type[Model], field: ManyToManyFieldInstance
     ) -> str | None:
@@ -238,11 +244,7 @@ class BaseSchemaEditor(SchemaQuotingMixin):
         if not related_model:
             return None
         m2m_schema = model._meta.schema
-        template = (
-            self.M2M_TABLE_TEMPLATE
-            if field.db_constraint
-            else self.M2M_TABLE_NO_CONSTRAINT_TEMPLATE
-        )
+        template = self._m2m_table_template(field)
         m2m_create_string = template.format(
             table_name=self._qualify_table_name(field.through, m2m_schema),
             backward_table=self._qualify_table_name(model._meta.db_table, model._meta.schema),
@@ -271,7 +273,7 @@ class BaseSchemaEditor(SchemaQuotingMixin):
                 lines = m2m_create_string.splitlines()
                 if len(lines) > 1:
                     lines[-2] += ","
-                    indent = "    "
+                    indent = " " * 4
                     lines.insert(-1, indent + unique_index_sql)
                     m2m_create_string = "\n".join(lines)
         return m2m_create_string
@@ -288,10 +290,9 @@ class BaseSchemaEditor(SchemaQuotingMixin):
             if fk_field.description
             else ""
         )
-
-        to_field_name = fk_field.to_field_instance.source_field
-        if not to_field_name:
-            to_field_name = fk_field.to_field_instance.model_field_name
+        to_field_name = (
+            fk_field.to_field_instance.source_field or fk_field.to_field_instance.model_field_name
+        )
 
         related_model = fk_field.related_model
         field_creation_string = self._get_field_sql(
