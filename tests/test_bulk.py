@@ -229,6 +229,7 @@ async def test_bulk_create_model_with_only_generated_pk(db_truncate):
 
 
 @pytest.mark.asyncio
+@requireCapability(dialect=NotEQ("mssql"))
 async def test_bulk_create_model_with_only_generated_pk_explicit_pk(db_truncate):
     """Test bulk create with explicit and default pks when the generated pk is the only column."""
     await OnlyGeneratedPk.bulk_create([OnlyGeneratedPk(id=10), OnlyGeneratedPk()])
