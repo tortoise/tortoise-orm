@@ -9,6 +9,7 @@ from typing import Any
 from tortoise.exceptions import ConfigurationError
 
 urlparse.uses_netloc.append("postgres")
+urlparse.uses_netloc.append("postgresql")
 urlparse.uses_netloc.append("asyncpg")
 urlparse.uses_netloc.append("psycopg")
 urlparse.uses_netloc.append("sqlite")
@@ -127,6 +128,8 @@ DB_LOOKUP: dict[str, dict[str, Any]] = {
 }
 # Create an alias for backwards compatibility
 DB_LOOKUP["postgres"] = DB_LOOKUP["asyncpg"]
+# "postgresql" is the scheme accepted by libpq and pydantic's PostgresDsn
+DB_LOOKUP["postgresql"] = DB_LOOKUP["asyncpg"]
 
 
 def _quote_url_userinfo(db_url: str) -> str:
@@ -196,23 +199,27 @@ def expand_db_url(db_url: str, testing: bool = False) -> dict:
     vmap: dict = {}
     vmap.update(db["vmap"])
     params[vmap["path"]] = path
-    if vmap.get("hostname"):
-        params[vmap["hostname"]] = url.hostname or None
+    if host_key := vmap.get("hostname"):
+        if url.hostname:
+            params[host_key] = url.hostname
+        elif host_key not in params:
+            # Keep a host given in the query string (e.g. a unix socket directory)
+            params[host_key] = None
     try:
         if vmap.get("port") and url.port:
             params[vmap["port"]] = int(url.port)
     except ValueError:
         raise ConfigurationError("Port is not an integer")
-    if vmap.get("username"):
+    if vmap.get("username") and (url.username or vmap["username"] not in params):
         # Pass username as None, instead of empty string,
         # to let asyncpg retrieve username from environment variable or OS user
         params[vmap["username"]] = url.username or None
-    if vmap.get("password"):
+    if vmap.get("password") and (url.password or vmap["password"] not in params):
         # asyncpg accepts None for password, but aiomysql not
         params[vmap["password"]] = (
             None
-            if (not url.password and db_backend in {"postgres", "asyncpg", "psycopg"})
-            else urlparse.unquote_plus(url.password or "")
+            if (not url.password and db_backend in {"postgres", "postgresql", "asyncpg", "psycopg"})
+            else urlparse.unquote(url.password or "")
         )
 
     return {"engine": db["engine"], "credentials": params}

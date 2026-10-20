@@ -1,4 +1,7 @@
+from decimal import Decimal
+
 import pytest
+from pydantic import BaseModel
 
 from tests import testmodels
 from tortoise.contrib.test import requireCapability
@@ -10,6 +13,7 @@ from tortoise.exceptions import (
     IntegrityError,
 )
 from tortoise.fields import JSONField
+from tortoise.indexes import Index
 
 
 @pytest.mark.asyncio
@@ -17,6 +21,12 @@ async def test_empty(db):
     """Test that creating without required JSON field raises IntegrityError."""
     with pytest.raises(IntegrityError):
         await testmodels.JSONFields.create()
+
+
+class MyPydanticModel(BaseModel):
+    name: str
+    idx: Index
+    model_config = dict(arbitrary_types_allowed=True)
 
 
 @pytest.mark.asyncio
@@ -29,6 +39,16 @@ async def test_create(db):
     await obj.save()
     obj2 = await testmodels.JSONFields.get(id=obj.id)
     assert obj == obj2
+    obj3 = await testmodels.JSONFields.create(data="{}", data_decimal=Decimal(0))
+    obj3 = await testmodels.JSONFields.get(id=obj3.id)
+    assert str(obj3.data_decimal) == "0"
+    pyd_model = MyPydanticModel(name="", idx=Index(fields=["data"]))
+    obj4 = await testmodels.JSONFields.create(data="{}", data_index=pyd_model)
+    obj4 = await testmodels.JSONFields.get(id=obj4.id)
+    assert obj4.data_index == {
+        "idx": {"expressions": [], "extra": "", "fields": ["data"], "name": None, "type": ""},
+        "name": "",
+    }
 
 
 @pytest.mark.asyncio
@@ -44,6 +64,12 @@ async def test_error(db):
     with pytest.raises(FieldError):
         obj.data = "error json"
         await obj.save()
+
+    with pytest.raises(TypeError):
+        await testmodels.JSONFields.create(data=Decimal(0))
+
+    with pytest.raises(TypeError):
+        await testmodels.JSONFields.create(data_decimal=Index(fields=["data"]))
 
 
 @pytest.mark.asyncio

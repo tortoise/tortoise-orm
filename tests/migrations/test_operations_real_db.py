@@ -587,3 +587,206 @@ async def test_alter_field_null_change(db_isolated):
             await conn.execute_script(f"DROP TABLE IF EXISTS {q('test_config', dialect)}")
         except Exception:
             pass
+
+
+# ---------------------------------------------------------------------------
+# Issue #2141 reproduction tests
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_alter_field_max_length_preserves_db_default(db_isolated):
+    """Changing max_length on a field with db_default must not lose the default.
+
+    Reproduces https://github.com/tortoise/tortoise-orm/issues/2141 (bug 1).
+
+    On MySQL, MODIFY COLUMN resets the full column definition.  If the
+    migration editor only emits ``MODIFY COLUMN col VARCHAR(20) NOT NULL``
+    without re-applying the DEFAULT, the database default silently disappears.
+    """
+    conn = db_isolated.db()
+    dialect = conn.capabilities.dialect
+
+    if dialect == "sqlite":
+        pytest.skip("SQLite uses table-recreation, not ALTER COLUMN")
+
+    editor = _get_schema_editor(conn)
+
+    # Create table with a VARCHAR(10) column that has db_default=''
+    create_op = CreateModel(
+        name="Profile",
+        fields=[
+            ("id", IntField(primary_key=True)),
+            ("tag", CharField(max_length=50)),
+            ("name", CharField(max_length=10, db_default="")),
+        ],
+        options={"table": "test_profile_2141"},
+    )
+    state = State(models={}, apps=StateApps())
+
+    try:
+        await create_op.run("models", state, dry_run=False, state_editor=editor)
+
+        tbl = q("test_profile_2141", dialect)
+
+        # Verify the default works before any ALTER
+        await conn.execute_script(
+            f"INSERT INTO {tbl} ({q('tag', dialect)}) VALUES ('before_alter')"
+        )
+        rows = await conn.execute_query_dict(
+            f"SELECT * FROM {tbl} WHERE {q('tag', dialect)} = 'before_alter'"
+        )
+        assert rows[0]["name"] == "", "db_default='' should produce empty string"
+
+        # AlterField: change max_length from 10 -> 20, keeping db_default=''
+        alter_op = AlterField(
+            model_name="Profile",
+            name="name",
+            field=CharField(max_length=20, db_default=""),
+        )
+        await alter_op.run("models", state, dry_run=False, state_editor=editor)
+
+        # Insert again omitting 'name' — the default should still work
+        await conn.execute_script(f"INSERT INTO {tbl} ({q('tag', dialect)}) VALUES ('after_alter')")
+        rows = await conn.execute_query_dict(
+            f"SELECT * FROM {tbl} WHERE {q('tag', dialect)} = 'after_alter'"
+        )
+        assert rows[0]["name"] == "", "db_default='' was lost after AlterField changed max_length"
+    finally:
+        try:
+            await conn.execute_script(f"DROP TABLE IF EXISTS {q('test_profile_2141', dialect)}")
+        except Exception:
+            pass
+
+
+@pytest.mark.asyncio
+async def test_alter_field_null_change_preserves_db_default(db_isolated):
+    """Changing nullability on a field with db_default must not lose the default.
+
+    Reproduces a variant of https://github.com/tortoise/tortoise-orm/issues/2141
+    (bug 1) where the trigger is a nullability change instead of max_length.
+    """
+    conn = db_isolated.db()
+    dialect = conn.capabilities.dialect
+
+    if dialect == "sqlite":
+        pytest.skip("SQLite uses table-recreation, not ALTER COLUMN")
+
+    editor = _get_schema_editor(conn)
+
+    # Create table with db_default=99 on an integer column
+    create_op = CreateModel(
+        name="Score",
+        fields=[
+            ("id", IntField(primary_key=True)),
+            ("tag", CharField(max_length=50)),
+            ("value", IntField(null=False, db_default=99)),
+        ],
+        options={"table": "test_score_2141"},
+    )
+    state = State(models={}, apps=StateApps())
+
+    try:
+        await create_op.run("models", state, dry_run=False, state_editor=editor)
+
+        tbl = q("test_score_2141", dialect)
+
+        # Verify the default works before any ALTER
+        await conn.execute_script(f"INSERT INTO {tbl} ({q('tag', dialect)}) VALUES ('before')")
+        rows = await conn.execute_query_dict(
+            f"SELECT * FROM {tbl} WHERE {q('tag', dialect)} = 'before'"
+        )
+        assert rows[0]["value"] == 99
+
+        # AlterField: make nullable, keep same db_default
+        alter_op = AlterField(
+            model_name="Score",
+            name="value",
+            field=IntField(null=True, db_default=99),
+        )
+        await alter_op.run("models", state, dry_run=False, state_editor=editor)
+
+        # The default should still work after the null change
+        await conn.execute_script(f"INSERT INTO {tbl} ({q('tag', dialect)}) VALUES ('after_null')")
+        rows = await conn.execute_query_dict(
+            f"SELECT * FROM {tbl} WHERE {q('tag', dialect)} = 'after_null'"
+        )
+        assert rows[0]["value"] == 99, "db_default=99 was lost after AlterField changed nullability"
+    finally:
+        try:
+            await conn.execute_script(f"DROP TABLE IF EXISTS {q('test_score_2141', dialect)}")
+        except Exception:
+            pass
+
+
+@pytest.mark.asyncio
+async def test_alter_field_description_change_applied(db_isolated):
+    """Changing only a field's description should execute actual DDL.
+
+    Reproduces https://github.com/tortoise/tortoise-orm/issues/2141 (bug 2).
+
+    The migration diff detects description changes (migration file IS created),
+    but ``_alter_field`` has ``pass`` for description changes, so no SQL runs.
+    On PostgreSQL this should emit ``COMMENT ON COLUMN``; on MySQL the COMMENT
+    should appear in a ``MODIFY COLUMN`` clause.
+    """
+    conn = db_isolated.db()
+    dialect = conn.capabilities.dialect
+
+    if dialect == "sqlite":
+        pytest.skip("SQLite does not support column comments")
+
+    editor = _get_schema_editor(conn)
+
+    create_op = CreateModel(
+        name="Item",
+        fields=[
+            ("id", IntField(primary_key=True)),
+            ("name", CharField(max_length=100, description="item name")),
+        ],
+        options={"table": "test_item_2141"},
+    )
+    state = State(models={}, apps=StateApps())
+
+    try:
+        await create_op.run("models", state, dry_run=False, state_editor=editor)
+
+        # AlterField: change only the description
+        alter_op = AlterField(
+            model_name="Item",
+            name="name",
+            field=CharField(max_length=100, description="short item name"),
+        )
+        await alter_op.run("models", state, dry_run=False, state_editor=editor)
+
+        # Verify the comment was actually updated in the database
+        tbl = "test_item_2141"
+        if dialect in ("postgres",):
+            query = (
+                "SELECT col_description(c.oid, a.attnum) AS comment "
+                "FROM pg_class c "
+                "JOIN pg_attribute a ON a.attrelid = c.oid "
+                f"WHERE c.relname = '{tbl}' AND a.attname = 'name'"
+            )
+            rows = await conn.execute_query_dict(query)
+            comment = rows[0]["comment"] if rows else None
+            assert comment == "short item name", (
+                f"PostgreSQL column comment not updated: got {comment!r}"
+            )
+        elif dialect == "mysql":
+            query = (
+                "SELECT COLUMN_COMMENT FROM INFORMATION_SCHEMA.COLUMNS "
+                f"WHERE TABLE_NAME = '{tbl}' AND COLUMN_NAME = 'name'"
+            )
+            rows = await conn.execute_query_dict(query)
+            comment = rows[0]["COLUMN_COMMENT"] if rows else None
+            assert comment == "short item name", (
+                f"MySQL column comment not updated: got {comment!r}"
+            )
+        else:
+            pytest.skip(f"Comment introspection not implemented for {dialect}")
+    finally:
+        try:
+            await conn.execute_script(f"DROP TABLE IF EXISTS {q('test_item_2141', dialect)}")
+        except Exception:
+            pass

@@ -4,17 +4,20 @@ This is the testing Models
 
 import binascii
 import datetime
+import json
 import os
 import re
 import uuid
 from decimal import Decimal
 from enum import Enum, IntEnum
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict
 
 from tortoise import fields
 from tortoise.exceptions import NoValuesFetched, ValidationError
-from tortoise.fields import NO_ACTION
+from tortoise.fields import NO_ACTION, Field
+from tortoise.fields.db_defaults import Now, RandomHex, SqlDefault
 from tortoise.indexes import Index
 from tortoise.manager import Manager
 from tortoise.models import Model
@@ -23,10 +26,12 @@ from tortoise.timezone import UTC
 from tortoise.validators import (
     CommaSeparatedIntegerListValidator,
     MaxValueValidator,
+    MinLengthValidator,
     MinValueValidator,
     RegexValidator,
     validate_ipv4_address,
     validate_ipv6_address,
+    validate_ipv46_address,
 )
 
 
@@ -104,6 +109,7 @@ class Event(Model):
     tournament: fields.ForeignKeyRelation[Tournament] = fields.ForeignKeyField(
         to="models.Tournament", related_name="events"
     )
+    tournament_id: int  # Put it here to improve type hints
     reporter: fields.ForeignKeyNullableRelation[Reporter] = fields.ForeignKeyField(
         to=Reporter, null=True
     )
@@ -141,6 +147,32 @@ class ModelTestPydanticMetaBackwardRelations3(Model):
     two: fields.ForeignKeyRelation[ModelTestPydanticMetaBackwardRelations2] = (
         fields.ForeignKeyField(
             "models.ModelTestPydanticMetaBackwardRelations2", related_name="threes"
+        )
+    )
+
+
+class ModelTestPydanticAnnotatedBackwardRel(Model):
+    """Model with backward_relations=False but an annotated ReverseRelation."""
+
+    annotated_children: fields.ReverseRelation["ModelTestPydanticAnnotatedChild"]
+
+    class PydanticMeta:
+        backward_relations = False
+
+
+class ModelTestPydanticAnnotatedChild(Model):
+    parent: fields.ForeignKeyRelation[ModelTestPydanticAnnotatedBackwardRel] = (
+        fields.ForeignKeyField(
+            "models.ModelTestPydanticAnnotatedBackwardRel", related_name="annotated_children"
+        )
+    )
+
+
+class ModelTestPydanticUnannotatedChild(Model):
+    parent: fields.ForeignKeyRelation[ModelTestPydanticAnnotatedBackwardRel] = (
+        fields.ForeignKeyField(
+            "models.ModelTestPydanticAnnotatedBackwardRel",
+            related_name="unannotated_children",
         )
     )
 
@@ -333,6 +365,24 @@ def raise_if_not_dict_or_list(value: dict | list):
         raise ValidationError("Value must be a dict or list.")
 
 
+class DecimalEncoder(json.JSONEncoder):
+    def default(self, obj: Any) -> Any:
+        if isinstance(obj, Decimal):
+            return str(obj)
+        return super().default(obj)
+
+    @classmethod
+    def dumps(cls, obj: Any) -> str:
+        return json.dumps(obj, cls=cls)
+
+
+class IndexEncoder(DecimalEncoder):
+    def default(self, obj: Any) -> Any:
+        if isinstance(obj, Index):
+            return obj.describe()
+        return super().default(obj)
+
+
 class JSONFields(Model):
     """
     This model contains many JSON blobs
@@ -351,6 +401,10 @@ class JSONFields(Model):
         default=json_pydantic_default, field_type=TestSchemaForJSONField
     )
 
+    # Test cases where encoders are provided
+    data_decimal = fields.JSONField[dict | list](null=True, encoder=DecimalEncoder.dumps)
+    data_index = fields.JSONField[dict | list](null=True, encoder=IndexEncoder.dumps)
+
 
 class UUIDFields(Model):
     id = fields.UUIDField(primary_key=True, default=uuid.uuid1)
@@ -362,6 +416,7 @@ class UUIDFields(Model):
 class MinRelation(Model):
     id = fields.IntField(primary_key=True)
     tournament: fields.ForeignKeyRelation[Tournament] = fields.ForeignKeyField("models.Tournament")
+    tournament_id: int  # Put it here to improve type hints
     participants: fields.ManyToManyRelation[Team] = fields.ManyToManyField("models.Team")
 
 
@@ -388,6 +443,13 @@ class NoID(Model):
 class UniqueName(Model):
     id = fields.IntField(primary_key=True)
     name = fields.CharField(max_length=20, null=True, unique=True)
+    optional = fields.CharField(max_length=20, null=True)
+    other_optional = fields.CharField(max_length=20, null=True)
+
+
+class UniqueNameRequired(Model):
+    id = fields.IntField(primary_key=True)
+    name = fields.CharField(max_length=20, unique=True)
     optional = fields.CharField(max_length=20, null=True)
     other_optional = fields.CharField(max_length=20, null=True)
 
@@ -730,6 +792,59 @@ class SourceFields(Model):
         table_description = "Source mapped fields"
 
 
+class FKSourceFields(Model):
+    """Owned by ``TestDeconstructSourceField`` in tests/fields/test_fk.py.
+
+    Kept separate from :class:`SourceFields` so those tests do not break if the
+    shape of any other test model changes. Self-referencing so every case fits
+    in one table.
+    """
+
+    id = fields.IntField(primary_key=True)
+
+    #: Renames its column.
+    renamed: fields.ForeignKeyNullableRelation["FKSourceFields"] = fields.ForeignKeyField(
+        "models.FKSourceFields",
+        related_name="renamed_rev",
+        null=True,
+        source_field="renamed_column",
+        on_delete=NO_ACTION,
+    )
+    renamed_rev: fields.ReverseRelation["FKSourceFields"]
+
+    #: Declares a source_field equal to the field name itself.
+    same: fields.ForeignKeyNullableRelation["FKSourceFields"] = fields.ForeignKeyField(
+        "models.FKSourceFields",
+        related_name="same_rev",
+        null=True,
+        source_field="same",
+        on_delete=NO_ACTION,
+    )
+    same_rev: fields.ReverseRelation["FKSourceFields"]
+
+    #: Declares no source_field, so the column stays ``plain_id``.
+    plain: fields.ForeignKeyNullableRelation["FKSourceFields"] = fields.ForeignKeyField(
+        "models.FKSourceFields",
+        related_name="plain_rev",
+        null=True,
+        on_delete=NO_ACTION,
+    )
+    plain_rev: fields.ReverseRelation["FKSourceFields"]
+
+    #: OneToOne that renames its column.
+    o2o: fields.OneToOneNullableRelation["FKSourceFields"] = fields.OneToOneField(
+        "models.FKSourceFields",
+        related_name="o2o_rev",
+        null=True,
+        source_field="o2o_column",
+        on_delete=NO_ACTION,
+    )
+    o2o_rev: fields.Field
+
+    class Meta:
+        table = "fk_source_fields"
+
+
 class Service(IntEnum):
     python_programming = 1
     database_design = 2
@@ -743,8 +858,8 @@ class Currency(str, Enum):
 
 
 class EnumFields(Model):
-    service: Service = fields.IntEnumField(Service)
-    currency: Currency = fields.CharEnumField(Currency, default=Currency.HUF)
+    service: Field[Service] = fields.IntEnumField(Service)
+    currency: Field[Currency] = fields.CharEnumField(Currency, default=Currency.HUF)
 
 
 class DoubleFK(Model):
@@ -808,6 +923,7 @@ class Student(Model):
     school: fields.ForeignKeyRelation[School] = fields.ForeignKeyField(
         "models.School", related_name="students", to_field="id"
     )
+    school_id: int  # Put it here to improve type hints
 
 
 class Principal(Model):
@@ -842,16 +958,43 @@ class DefaultModel(Model):
     )
 
 
+class SqlDefaultModel(Model):
+    """Model with SqlDefault expressions for db_default."""
+
+    name = fields.CharField(max_length=100)
+    created_at = fields.DatetimeField(db_default=Now())
+    counter = fields.IntField(db_default=SqlDefault("0"))
+    tracking_id = fields.CharField(max_length=36, null=True, db_default=RandomHex())
+
+    class Meta:
+        table = "sql_default_model"
+
+
+class NoFetchDefaultModel(Model):
+    """Model with fetch_db_defaults = False."""
+
+    int_val = fields.IntField(db_default=1)
+    char_val = fields.CharField(max_length=20, db_default="test")
+
+    class Meta:
+        table = "no_fetch_default"
+        fetch_db_defaults = False
+
+
 class RequiredPKModel(Model):
     id = fields.CharField(primary_key=True, max_length=100)
     name = fields.CharField(max_length=255)
 
 
 class ValidatorModel(Model):
-    regex = fields.CharField(max_length=100, null=True, validators=[RegexValidator("abc.+", re.I)])
+    regex = fields.CharField(
+        max_length=100, null=True, validators=[RegexValidator("abc.+", re.IGNORECASE)]
+    )
     max_length = fields.CharField(max_length=5, null=True)
+    min_length = fields.CharField(max_length=5, null=True, validators=[MinLengthValidator(3)])
     ipv4 = fields.CharField(max_length=100, null=True, validators=[validate_ipv4_address])
     ipv6 = fields.CharField(max_length=100, null=True, validators=[validate_ipv6_address])
+    ipv46 = fields.CharField(max_length=100, null=True, validators=[validate_ipv46_address])
     max_value = fields.IntField(null=True, validators=[MaxValueValidator(20.0)])
     min_value = fields.IntField(null=True, validators=[MinValueValidator(10.0)])
     max_value_decimal = fields.DecimalField(
@@ -1074,7 +1217,7 @@ class Flavor(Model):
 class Drink(Model):
     id = fields.IntField(pk=True)
     name = fields.CharField(max_length=100)
-    flavors = fields.ManyToManyField("models.Flavor", related_name="drinks", through="drink_flavor")
+    flavors = fields.ManyToManyField(Flavor, related_name="drinks", through="drink_flavor")
     toppings = fields.ManyToManyField(
-        "models.Flavor", related_name="topping_drinks", through="drink_topping"
+        Flavor, related_name="topping_drinks", through="drink_topping"
     )

@@ -8,16 +8,36 @@ Note: These tests may run with a session-scoped default context active
 by testing context isolation relative to the current state.
 """
 
-import pytest
+import json
 
+import pytest
+import yaml
+
+from tortoise.config import AppConfig, DBUrlConfig, TortoiseConfig
 from tortoise.connection import ConnectionHandler
 from tortoise.context import (
     TortoiseContext,
     get_current_context,
     require_context,
+    set_global_context,
     tortoise_test_context,
 )
 from tortoise.exceptions import ConfigurationError
+
+
+def _clear_global_context():
+    """Clear the global context to ensure test isolation."""
+    import tortoise.context as ctx_module
+
+    ctx_module._global_context = None
+
+
+@pytest.fixture(autouse=True)
+def cleanup_global_context():
+    """Fixture to clear global context before and after each test."""
+    _clear_global_context()
+    yield
+    _clear_global_context()
 
 
 class TestTortoiseContextInstantiation:
@@ -198,6 +218,26 @@ class TestAsyncContextManager:
         assert ctx.apps is None
         assert ctx.inited is False
 
+    def test_set_global_context_sets_global(self):
+        """set_global_context sets the global context."""
+        ctx = TortoiseContext()
+        set_global_context(ctx)
+
+        # Verify global context is set
+        import tortoise.context as ctx_module
+
+        assert ctx_module._global_context is ctx
+
+    def test_set_global_context_raises_when_already_set(self):
+        """set_global_context raises ConfigurationError when already set."""
+        ctx1 = TortoiseContext()
+        ctx2 = TortoiseContext()
+
+        set_global_context(ctx1)
+
+        with pytest.raises(ConfigurationError):
+            set_global_context(ctx2)
+
 
 class TestGetModel:
     """Test cases for get_model method."""
@@ -270,6 +310,64 @@ class TestInit:
             await ctx.init(config={"connections": {}})
 
         assert 'Config must define "apps" section' in str(exc_info.value)
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("serializer", [json.dumps, yaml.dump])
+    async def test_init_with_config_file(self, tmp_path, serializer):
+        """init() with config_file (JSON/YAML) initializes context correctly."""
+        suffix = ".yaml" if serializer is yaml.dump else ".json"
+        config_file = tmp_path / f"config{suffix}"
+
+        config = TortoiseConfig(
+            connections={"default": DBUrlConfig("sqlite://:memory:")},
+            apps={"models": AppConfig(models=["tests.testmodels"])},
+        )
+        config_dict = config.to_dict()
+        config_file.write_text(serializer(config_dict))
+
+        async with TortoiseContext() as ctx:
+            await ctx.init(config_file=str(config_file))
+
+            assert ctx.inited is True
+            assert ctx._connections is not None
+            conn = ctx.connections.get("default")
+            assert conn is not None
+            assert ctx.apps is not None
+
+    @pytest.mark.asyncio
+    async def test_init_raises_with_config_and_config_file(self, tmp_path):
+        """init() raises when both config and config_file are provided."""
+        config = TortoiseConfig(
+            connections={"default": DBUrlConfig("sqlite://:memory:")},
+            apps={"models": AppConfig(models=["tests.testmodels"])},
+        )
+        config_dict = config.to_dict()
+
+        config_file = tmp_path / "config.json"
+        config_file.write_text(json.dumps(config_dict))
+
+        ctx = TortoiseContext()
+
+        with pytest.raises(ConfigurationError) as exc_info:
+            await ctx.init(
+                config={"connections": {}, "apps": {}},
+                config_file=str(config_file),
+            )
+
+        assert "Cannot specify both 'config' and 'config_file'" in str(exc_info.value)
+
+    @pytest.mark.asyncio
+    async def test_init_raises_with_invalid_config_file_extension(self, tmp_path):
+        """init() raises when config_file has unsupported extension."""
+        config_file = tmp_path / "config.txt"
+        config_file.write_text("some config")
+
+        ctx = TortoiseContext()
+
+        with pytest.raises(ConfigurationError) as exc_info:
+            await ctx.init(config_file=str(config_file))
+
+        assert "Unknown config extension .txt" in str(exc_info.value)
 
 
 class TestGenerateSchemas:
@@ -467,6 +565,9 @@ class TestModelContextResolution:
 class TestTimezoneAndRouters:
     """Test cases for timezone and routers configuration."""
 
+    class TestRouter:
+        pass
+
     def test_context_default_timezone_settings(self):
         """Context has default timezone settings."""
         ctx = TortoiseContext()
@@ -514,6 +615,98 @@ class TestTimezoneAndRouters:
         ) as ctx:
             assert ctx.use_tz is True
             assert ctx.timezone == "Asia/Tokyo"
+
+    @pytest.mark.asyncio
+    async def test_init_routers_empty_list(self):
+        """_init_routers with empty list initializes correctly."""
+        async with TortoiseContext() as ctx:
+            await ctx.init(
+                db_url="sqlite://:memory:",
+                modules={"models": ["tests.testmodels"]},
+                routers=[],
+            )
+
+            assert ctx.routers == []
+
+    @pytest.mark.asyncio
+    async def test_init_routers_with_type(self):
+        """_init_routers accepts router type directly."""
+
+        async with TortoiseContext() as ctx:
+            await ctx.init(
+                db_url="sqlite://:memory:",
+                modules={"models": ["tests.testmodels"]},
+                routers=[TestTimezoneAndRouters.TestRouter],
+            )
+
+            assert ctx.routers == [TestTimezoneAndRouters.TestRouter]
+
+    @pytest.mark.asyncio
+    async def test_init_routers_with_string_path(self):
+        """_init_routers accepts router as string path."""
+        async with TortoiseContext() as ctx:
+            await ctx.init(
+                db_url="sqlite://:memory:",
+                modules={"models": ["tests.testmodels"]},
+                routers=["tortoise.router.ConnectionRouter"],
+            )
+
+            from tortoise.router import ConnectionRouter
+
+            assert ctx.routers == [ConnectionRouter]
+
+    @pytest.mark.asyncio
+    async def test_init_routers_mixed_types_and_strings(self):
+        """_init_routers accepts mixed router types and strings."""
+
+        async with TortoiseContext() as ctx:
+            await ctx.init(
+                db_url="sqlite://:memory:",
+                modules={"models": ["tests.testmodels"]},
+                routers=[TestTimezoneAndRouters.TestRouter, "tortoise.router.ConnectionRouter"],
+            )
+
+            from tortoise.router import ConnectionRouter
+
+            assert ctx.routers == [TestTimezoneAndRouters.TestRouter, ConnectionRouter]
+
+    @pytest.mark.asyncio
+    async def test_init_routers_invalid_router_type(self):
+        """_init_routers raises on invalid router type."""
+        async with TortoiseContext() as ctx:
+            with pytest.raises(ConfigurationError) as exc_info:
+                await ctx.init(
+                    db_url="sqlite://:memory:",
+                    modules={"models": ["tests.testmodels"]},
+                    routers=["not_a_valid_router_path"],
+                )
+
+            assert "Can't import router" in str(exc_info.value)
+
+    @pytest.mark.asyncio
+    async def test_init_routers_invalid_router_item(self):
+        """_init_routers raises when router is neither string nor type."""
+        async with TortoiseContext() as ctx:
+            with pytest.raises(ConfigurationError) as exc_info:
+                await ctx.init(
+                    db_url="sqlite://:memory:",
+                    modules={"models": ["tests.testmodels"]},
+                    routers=[123],
+                )
+
+            assert "Router must be either str or type" in str(exc_info.value)
+
+    @pytest.mark.asyncio
+    async def test_init_routers_none_uses_empty_list(self):
+        """_init_routers with None uses empty list."""
+        async with TortoiseContext() as ctx:
+            await ctx.init(
+                db_url="sqlite://:memory:",
+                modules={"models": ["tests.testmodels"]},
+                routers=None,
+            )
+
+            assert ctx.routers == []
 
 
 class TestTortoiseConfigValidation:

@@ -3,13 +3,17 @@ Test some mysql-specific features
 """
 
 import copy
+import json
 import os
 import ssl
 
 import pytest
 
+from tests.testmodels import Tournament
 from tortoise.backends.base.config_generator import generate_config
 from tortoise.context import TortoiseContext
+from tortoise.contrib.test import requireCapability
+from tortoise.exceptions import UnSupportedError
 
 
 def _get_db_config():
@@ -87,3 +91,65 @@ async def test_ssl_custom():
             await ctx.init(db_config, _create_db=True)
         except ConnectionError:
             pass
+
+
+@requireCapability(dialect="mysql")
+@pytest.mark.asyncio
+async def test_explain(db_simple):
+    await Tournament.create(name="Test")
+    result = await Tournament.all().explain()
+    data = json.loads(result[0]["EXPLAIN"])
+    assert "query_plan" in data or "query_block" in data
+
+
+@requireCapability(dialect="mysql")
+@pytest.mark.asyncio
+async def test_explain_format_traditional(db_simple):
+    await Tournament.create(name="Test")
+    result = await Tournament.all().explain(output_fmt="traditional")
+    assert "table" in result[0]
+    assert result[0]["table"] == "tournament"
+
+
+@requireCapability(dialect="mysql")
+@pytest.mark.asyncio
+async def test_explain_format_tree(db_simple):
+    await Tournament.create(name="Test")
+    result = await Tournament.all().explain(output_fmt="tree")
+    assert isinstance(result[0]["EXPLAIN"], str)
+    assert "->" in result[0]["EXPLAIN"]
+    assert "tournament" in result[0]["EXPLAIN"]
+
+
+@requireCapability(dialect="mysql")
+@pytest.mark.asyncio
+async def test_explain_analyze(db_simple):
+    await Tournament.create(name="Test")
+    # Older MySQL version don't support ANALYZE with JSON format, that's why we use TREE
+    result = await Tournament.all().explain(output_fmt="tree", analyze=True)
+    assert "actual" in result[0]["EXPLAIN"]
+
+
+@requireCapability(dialect="mysql")
+@pytest.mark.asyncio
+async def test_explain_analyze_false(db_simple):
+    await Tournament.create(name="Test")
+    result = await Tournament.all().explain(analyze=False)
+    assert "query_plan" in result[0]["EXPLAIN"] or "query_block" in result[0]["EXPLAIN"]
+    assert "actual" not in result[0]["EXPLAIN"]
+
+
+@requireCapability(dialect="mysql")
+@pytest.mark.asyncio
+async def test_explain_unsupported_format(db_simple):
+    await Tournament.create(name="Test")
+    with pytest.raises(UnSupportedError, match="Unsupported explain format"):
+        await Tournament.all().explain(output_fmt="invalid")
+
+
+@requireCapability(dialect="mysql")
+@pytest.mark.asyncio
+async def test_explain_unsupported_option(db_simple):
+    await Tournament.create(name="Test")
+    with pytest.raises(UnSupportedError, match="Unsupported options"):
+        await Tournament.all().explain(unsupported_option=True)

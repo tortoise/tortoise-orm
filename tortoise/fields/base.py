@@ -19,7 +19,9 @@ if TYPE_CHECKING:  # pragma: nocoverage
 
 if sys.version_info >= (3, 11):
     from enum import StrEnum
+    from typing import Self
 else:  # pragma: no cover
+    from typing_extensions import Self
 
     class StrEnum(str, Enum):
         __str__ = str.__str__
@@ -39,6 +41,38 @@ class _DB_DEFAULT_NOT_SET:
 
 
 DB_DEFAULT_NOT_SET = _DB_DEFAULT_NOT_SET()
+
+
+class DatabaseDefault:
+    """Sentinel indicating that the database should apply its default value.
+
+    When a field has ``db_default`` and the user does not provide a value,
+    this object is set as the attribute value on the model instance.
+
+    During INSERT compilation it is detected via ``isinstance()`` checks:
+    - Single-insert path: columns with DatabaseDefault are omitted from the
+      INSERT statement, so the DB applies its DEFAULT.
+    - Bulk-insert path: columns where *all* instances hold DatabaseDefault
+      are omitted; mixed usage raises ``OperationalError``.
+    """
+
+    def __init__(self, field: Field) -> None:
+        self.field = field
+
+    def __repr__(self) -> str:
+        return f"DatabaseDefault({self.field.model_field_name!r})"
+
+    def __str__(self) -> str:
+        return "<DB_DEFAULT>"
+
+    def __bool__(self) -> bool:
+        """Returns False so that ``if instance.field:`` is falsy for unset db_default fields.
+
+        This is consistent with "no value has been set yet". Users who need to
+        distinguish between DatabaseDefault and other falsy values should use
+        ``isinstance(value, DatabaseDefault)``.
+        """
+        return False
 
 
 class OnDelete(StrEnum):
@@ -82,6 +116,8 @@ class Field(Generic[VALUE], metaclass=_FieldMeta):
     :param default: A default value for the field if not specified on Model creation.
         This can also be a callable for dynamic defaults in which case we will call it.
         The default value will not be part of the schema.
+    :param db_default: A database-level default value. This can be a static value or an
+        instance of :class:`~tortoise.fields.db_defaults.SqlDefault`
     :param unique: Is this field unique?
     :param db_index: Should this field be indexed by itself?
     :param description: Field description. Will also appear in ``Tortoise.describe_model()``
@@ -168,7 +204,7 @@ class Field(Generic[VALUE], metaclass=_FieldMeta):
     # These methods are just to make IDE/Linters happy:
     if TYPE_CHECKING:
 
-        def __new__(cls, *args: Any, **kwargs: Any) -> Field[VALUE]:
+        def __new__(cls, *args: Any, **kwargs: Any) -> Self:
             return super().__new__(cls)
 
         @overload
@@ -306,7 +342,7 @@ class Field(Generic[VALUE], metaclass=_FieldMeta):
                 else:
                     v(value)
             except ValidationError as exc:
-                raise ValidationError(f"{self.model_field_name}: {exc}")
+                raise ValidationError(f"{self.model_field_name}: {exc}") from exc
 
     def has_db_default(self) -> bool:
         return not isinstance(self.db_default, _DB_DEFAULT_NOT_SET)
@@ -318,7 +354,18 @@ class Field(Generic[VALUE], metaclass=_FieldMeta):
 
         It needs to be non-nullable and not have a default or be DB-generated to be required.
         """
-        return self.default is None and not self.null and not self.generated
+        return (
+            self.default is None
+            and not self.null
+            and not self.generated
+            and not self.has_db_default()
+        )
+
+    def get_db_default_value(self) -> DatabaseDefault | None:
+        """Return a DatabaseDefault instance if this field has a db_default, else None."""
+        if self.has_db_default():
+            return DatabaseDefault(self)
+        return None
 
     @property
     def constraints(self) -> dict:
@@ -521,9 +568,9 @@ class Field(Generic[VALUE], metaclass=_FieldMeta):
         if self.description is not None:
             kwargs["description"] = self.description
         if hasattr(self, "db_constraint"):
-            kwargs["db_constraint"] = getattr(self, "db_constraint")
-        if hasattr(self, "to_field") and getattr(self, "to_field") is not None:
-            kwargs["to_field"] = getattr(self, "to_field")
+            kwargs["db_constraint"] = self.db_constraint
+        if hasattr(self, "to_field") and self.to_field is not None:
+            kwargs["to_field"] = self.to_field
         if self.has_db_default():
             kwargs["db_default"] = self.db_default
 
@@ -538,9 +585,13 @@ class Field(Generic[VALUE], metaclass=_FieldMeta):
             if not hasattr(self, name):
                 continue
             value = getattr(self, name)
-            if name == "model_name" and value is not None:
-                if not isinstance(value, str) and hasattr(value, "_meta"):
-                    value = f"{value._meta.app}.{value.__name__}"
+            if (
+                name == "model_name"
+                and value is not None
+                and not isinstance(value, str)
+                and hasattr(value, "_meta")
+            ):
+                value = f"{value._meta.app}.{value.__name__}"
             if value is None and param.default is None:
                 continue
             kwargs[name] = value

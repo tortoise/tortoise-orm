@@ -16,6 +16,7 @@ from tortoise.migrations.operations import (
     AddField,
     AddIndex,
     AlterField,
+    AlterModelOptions,
     CreateModel,
     DeleteModel,
     RemoveConstraint,
@@ -388,3 +389,101 @@ def test_detect_check_constraint_removed() -> None:
     assert len(operations) == 1
     assert isinstance(operations[0], RemoveConstraint)
     assert operations[0].name == "ck_price"
+
+
+def test_generate_alter_field_and_add_index_in_correct_order() -> None:
+    OldWidget = make_model("Widget", "widget", id=fields.IntField(pk=True))
+    NewWidget = make_model(
+        "Widget",
+        "widget",
+        {"indexes": [Index(fields=["value"])]},
+        id=fields.IntField(pk=True),
+        value=fields.IntField(),
+    )
+
+    old_state = build_state("models", OldWidget)
+    new_state = build_state("models", NewWidget)
+
+    operations = OperationGenerator(old_state, new_state).generate()
+    assert len(operations) == 2
+    assert isinstance(operations[0], AddField)
+    assert isinstance(operations[1], AddIndex)
+
+
+def test_generate_alter_field_and_add_constraint_in_correct_order() -> None:
+    OldWidget = make_model("Widget", "widget", id=fields.IntField(pk=True))
+    NewWidget = make_model(
+        "Widget",
+        "widget",
+        {"constraints": [UniqueConstraint(fields=("value",), name="uq_new")]},
+        id=fields.IntField(pk=True),
+        value=fields.IntField(),
+    )
+
+    old_state = build_state("models", OldWidget)
+    new_state = build_state("models", NewWidget)
+
+    operations = OperationGenerator(old_state, new_state).generate()
+    assert len(operations) == 2
+    assert isinstance(operations[0], AddField)
+    assert isinstance(operations[1], AddConstraint)
+
+
+def test_generate_alter_field_and_remove_index_in_correct_order() -> None:
+    OldWidget = make_model(
+        "Widget",
+        "widget",
+        {"indexes": [Index(fields=["value"])]},
+        id=fields.IntField(pk=True),
+        value=fields.IntField(),
+    )
+    NewWidget = make_model("Widget", "widget", id=fields.IntField(pk=True))
+
+    old_state = build_state("models", OldWidget)
+    new_state = build_state("models", NewWidget)
+
+    operations = OperationGenerator(old_state, new_state).generate()
+    assert len(operations) == 2
+    assert isinstance(operations[0], RemoveIndex)
+    assert isinstance(operations[1], RemoveField)
+
+
+def test_removing_table_description_settles_after_one_migration() -> None:
+    """Regression test: dropping a model docstring used to re-emit the same
+    AlterModelOptions on every run, because the operation merged its options into
+    state and could never clear the key it was emitted to remove."""
+    Described = make_model(
+        "Widget", "widget", {"table_description": "A widget."}, id=fields.IntField(pk=True)
+    )
+    Undescribed = make_model("Widget", "widget", id=fields.IntField(pk=True))
+
+    old_state = build_state("models", Described)
+    new_state = build_state("models", Undescribed)
+
+    operations = OperationGenerator(old_state, new_state).generate()
+    assert len(operations) == 1
+    assert isinstance(operations[0], AlterModelOptions)
+
+    for operation in operations:
+        operation.state_forward("models", old_state)
+
+    assert OperationGenerator(old_state, new_state).generate() == []
+
+
+def test_generate_alter_field_and_remove_constraint_in_correct_order() -> None:
+    OldWidget = make_model(
+        "Widget",
+        "widget",
+        {"constraints": [UniqueConstraint(fields=("value",), name="uq_new")]},
+        id=fields.IntField(pk=True),
+        value=fields.IntField(),
+    )
+    NewWidget = make_model("Widget", "widget", id=fields.IntField(pk=True))
+
+    old_state = build_state("models", OldWidget)
+    new_state = build_state("models", NewWidget)
+
+    operations = OperationGenerator(old_state, new_state).generate()
+    assert len(operations) == 2
+    assert isinstance(operations[0], RemoveConstraint)
+    assert isinstance(operations[1], RemoveField)

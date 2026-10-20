@@ -29,6 +29,12 @@ class OracleSchemaEditor(BaseSchemaEditor):
         "    {forward_fk}\n"
         "){extra};"
     )
+    M2M_TABLE_NO_CONSTRAINT_TEMPLATE = (
+        "CREATE TABLE {table_name} (\n"
+        '    "{backward_key}" {backward_type} NOT NULL,\n'
+        '    "{forward_key}" {forward_type} NOT NULL\n'
+        "){extra};"
+    )
     DELETE_TABLE_TEMPLATE = "DROP TABLE {table} CASCADE CONSTRAINTS"
     DELETE_FIELD_TEMPLATE = 'ALTER TABLE {table} DROP COLUMN "{column}"'
 
@@ -122,7 +128,8 @@ class OracleSchemaEditor(BaseSchemaEditor):
             self._qualify_table_name(related_model._meta.db_table, related_model._meta.schema),
             related_model._meta.db_pk_column,
         )
-        m2m_create_string = self.M2M_TABLE_TEMPLATE.format(
+        template = self._m2m_table_template(field)
+        m2m_create_string = template.format(
             table_name=self._qualify_table_name(field.through, m2m_schema),
             backward_table=self._qualify_table_name(model._meta.db_table, model._meta.schema),
             forward_table=self._qualify_table_name(
@@ -158,21 +165,28 @@ class OracleSchemaEditor(BaseSchemaEditor):
     async def _alter_field(self, model: type[Model], old_field: Field, new_field: Field) -> None:
         """Override to use Oracle MODIFY syntax instead of ALTER COLUMN.
 
-        Oracle does not support ``ALTER COLUMN``.  Nullability and default
+        Oracle does not support ``ALTER COLUMN``.  Nullability, type, and default
         changes must use ``ALTER TABLE ... MODIFY ("col" type ...)``.
         """
         db_field = new_field.source_field or new_field.model_field_name
         qualified_table = self._qualify_table_name(model._meta.db_table, model._meta.schema)
 
-        # Handle nullability changes with MODIFY
-        if old_field.null != new_field.null:
-            col_type = new_field.get_for_dialect(self.DIALECT, "SQL_TYPE")
+        # Handle nullability and type changes with MODIFY
+        old_sql_type = old_field.get_for_dialect(self.DIALECT, "SQL_TYPE")
+        new_sql_type = new_field.get_for_dialect(self.DIALECT, "SQL_TYPE")
+        null_changed = old_field.null != new_field.null
+        type_changed = old_sql_type != new_sql_type
+
+        if null_changed or type_changed:
             nullable = "NULL" if new_field.null else "NOT NULL"
             await self._run_sql(
-                f'ALTER TABLE {qualified_table} MODIFY ("{db_field}" {col_type} {nullable})'
+                f'ALTER TABLE {qualified_table} MODIFY ("{db_field}" {new_sql_type} {nullable})'
             )
             old_field = copy(old_field)
             old_field.null = new_field.null
+            for attr in ("max_length", "max_digits", "decimal_places"):
+                if hasattr(new_field, attr):
+                    setattr(old_field, attr, getattr(new_field, attr))
 
         # Handle db_default changes with MODIFY
         old_has_default = old_field.has_db_default()
@@ -180,7 +194,6 @@ class OracleSchemaEditor(BaseSchemaEditor):
         if old_has_default != new_has_default or (
             old_has_default and new_has_default and old_field.db_default != new_field.db_default
         ):
-            col_type = new_field.get_for_dialect(self.DIALECT, "SQL_TYPE")
             if new_has_default:
                 if hasattr(new_field.db_default, "get_sql"):
                     default_sql = new_field.db_default.get_sql(dialect=self.DIALECT)

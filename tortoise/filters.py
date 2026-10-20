@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import operator
-import sys
 from collections.abc import Callable, Iterable, Sequence
 from functools import partial
 from typing import TYPE_CHECKING, Any, TypedDict
@@ -22,23 +21,45 @@ from tortoise.contrib.postgres.fields import ArrayField, TSVectorField
 from tortoise.fields import Field, JSONField
 from tortoise.fields.relational import BackwardFKRelation, ManyToManyFieldInstance
 
-if sys.version_info >= (3, 11):  # pragma：nocoverage
-    from typing import NotRequired
-else:
-    from typing_extensions import NotRequired
-
 if TYPE_CHECKING:  # pragma: nocoverage
+    import sys
+
+    if sys.version_info >= (3, 11):  # pragma：nocoverage
+        from typing import NotRequired
+    else:
+        from typing_extensions import NotRequired
+
     from tortoise.models import Model
+
+    class CommonRelationFilter(TypedDict):
+        field: str
+        backward_key: NotRequired[str]
+        table: NotRequired[Table]
+
+    class FilterInfoDict(TypedDict):
+        field: str
+        backward_key: NotRequired[str]
+        table: NotRequired[Table]
+        operator: Callable
+        value_encoder: NotRequired[Callable]
+        source_field: NotRequired[str]
+        is_tsvector: NotRequired[bool]
 
 
 ##############################################################################
 
 
 class Like(BasicCriterion):
+    """
+    A Like that supports an ESCAPE clause
+
+    :param left: The left side of the LIKE expression (field/term).
+    :param right: The right side of the LIKE expression (pattern/value).
+    :param alias: Optional alias for the column.
+    :param escape: The escape clause to use. Defaults to " ESCAPE '\\'".
+    """
+
     def __init__(self, left, right, alias=None, escape=" ESCAPE '\\'") -> None:
-        """
-        A Like that supports an ESCAPE clause
-        """
         super().__init__(Matching.like, left, right, alias=alias)
         self.escape = escape
 
@@ -264,45 +285,32 @@ def array_length(field: Term, value: int) -> Criterion:
 ##############################################################################
 
 
-class FilterInfoDict(TypedDict):
-    field: str
-    operator: Callable
-    backward_key: NotRequired[str]
-    table: NotRequired[Table]
-    value_encoder: NotRequired[Callable]
-    source_field: NotRequired[str]
-    is_tsvector: NotRequired[bool]
-
-
 def get_m2m_filters(field_name: str, field: ManyToManyFieldInstance) -> dict[str, FilterInfoDict]:
     target_table_pk = field.related_model._meta.pk
+    common_kwargs: CommonRelationFilter = {
+        "field": field.forward_key,
+        "backward_key": field.backward_key,
+        "table": Table(field.through, schema=field.through_schema),
+    }
     return {
         field_name: {
-            "field": field.forward_key,
-            "backward_key": field.backward_key,
+            **common_kwargs,
             "operator": operator.eq,
-            "table": Table(field.through, schema=field.through_schema),
             "value_encoder": target_table_pk.to_db_value,
         },
         f"{field_name}__not": {
-            "field": field.forward_key,
-            "backward_key": field.backward_key,
+            **common_kwargs,
             "operator": not_equal,
-            "table": Table(field.through, schema=field.through_schema),
             "value_encoder": target_table_pk.to_db_value,
         },
         f"{field_name}__in": {
-            "field": field.forward_key,
-            "backward_key": field.backward_key,
+            **common_kwargs,
             "operator": is_in,
-            "table": Table(field.through, schema=field.through_schema),
             "value_encoder": partial(related_list_encoder, field=target_table_pk),
         },
         f"{field_name}__not_in": {
-            "field": field.forward_key,
-            "backward_key": field.backward_key,
+            **common_kwargs,
             "operator": not_in,
-            "table": Table(field.through, schema=field.through_schema),
             "value_encoder": partial(related_list_encoder, field=target_table_pk),
         },
     }
@@ -312,46 +320,39 @@ def get_backward_fk_filters(
     field_name: str, field: BackwardFKRelation
 ) -> dict[str, FilterInfoDict]:
     target_table_pk = field.related_model._meta.pk
+    common_kwargs: CommonRelationFilter = {
+        "field": field.related_model._meta.db_pk_column,
+        "backward_key": field.relation_source_field,
+        "table": Table(field.related_model._meta.db_table),
+    }
     return {
         field_name: {
-            "field": field.related_model._meta.pk_attr,
-            "backward_key": field.relation_field,
+            **common_kwargs,
             "operator": operator.eq,
-            "table": Table(field.related_model._meta.db_table),
             "value_encoder": target_table_pk.to_db_value,
         },
         f"{field_name}__not": {
-            "field": field.related_model._meta.pk_attr,
-            "backward_key": field.relation_field,
+            **common_kwargs,
             "operator": not_equal,
-            "table": Table(field.related_model._meta.db_table),
             "value_encoder": target_table_pk.to_db_value,
         },
         f"{field_name}__in": {
-            "field": field.related_model._meta.pk_attr,
-            "backward_key": field.relation_field,
+            **common_kwargs,
             "operator": is_in,
-            "table": Table(field.related_model._meta.db_table),
             "value_encoder": partial(related_list_encoder, field=target_table_pk),
         },
         f"{field_name}__not_in": {
-            "field": field.related_model._meta.pk_attr,
-            "backward_key": field.relation_field,
+            **common_kwargs,
             "operator": not_in,
-            "table": Table(field.related_model._meta.db_table),
             "value_encoder": partial(related_list_encoder, field=target_table_pk),
         },
         f"{field_name}__isnull": {
-            "field": field.related_model._meta.pk_attr,
-            "backward_key": field.relation_field,
+            **common_kwargs,
             "operator": is_null,
-            "table": Table(field.related_model._meta.db_table),
         },
         f"{field_name}__not_isnull": {
-            "field": field.related_model._meta.pk_attr,
-            "backward_key": field.relation_field,
+            **common_kwargs,
             "operator": not_null,
-            "table": Table(field.related_model._meta.db_table),
         },
     }
 

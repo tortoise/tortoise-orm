@@ -11,10 +11,17 @@ class SqlDefault:
         The SQL string is emitted verbatim into DDL statements.
         Never construct it from untrusted user input.
 
+    .. note::
+        For common expressions that differ across database dialects, prefer the
+        provided convenience subclasses (:class:`Now`, :class:`RandomHex`) over
+        raw SQL strings.  For example, MySQL requires ``CURRENT_TIMESTAMP(6)``
+        for ``DATETIME(6)`` columns, which :class:`Now` handles automatically.
+
     Example::
 
         class MyModel(Model):
-            created_at = fields.DatetimeField(db_default=SqlDefault("CURRENT_TIMESTAMP"))
+            counter = fields.IntField(db_default=SqlDefault("0"))
+            created_at = fields.DatetimeField(db_default=Now())
     """
 
     def __init__(self, sql: str) -> None:

@@ -3,8 +3,7 @@ from __future__ import annotations
 import asyncio
 import inspect
 import re
-import sys
-from collections.abc import Awaitable, Callable, Generator, Iterable
+from collections.abc import Awaitable, Callable, Generator, Iterable, Iterator
 from copy import copy, deepcopy
 from functools import partial
 from typing import TYPE_CHECKING, Any, TypedDict, TypeVar, cast
@@ -38,7 +37,7 @@ from tortoise.fields.relational import (
     OneToOneFieldInstance,
     ReverseRelation,
 )
-from tortoise.filters import FilterInfoDict, get_filters_for_field
+from tortoise.filters import get_filters_for_field
 from tortoise.indexes import Index
 from tortoise.manager import Manager
 from tortoise.queryset import (
@@ -55,10 +54,20 @@ from tortoise.signals import Signals
 from tortoise.transactions import in_transaction
 
 if TYPE_CHECKING:
+    import sys
+
     if sys.version_info >= (3, 11):
         from typing import Self
     else:
         from typing_extensions import Self
+
+    from tortoise.filters import FilterInfoDict
+
+    class FkSetterKwargs(TypedDict):
+        _key: str
+        relation_field: str
+        to_field: str
+
 
 MODEL = TypeVar("MODEL", bound="Model")
 PRIMARY_KEY = TypeVar("PRIMARY_KEY")
@@ -83,12 +92,6 @@ def prepare_default_ordering(meta: Model.Meta) -> tuple[tuple[str, Order], ...]:
     )
 
     return parsed_ordering
-
-
-class FkSetterKwargs(TypedDict):
-    _key: str
-    relation_field: str
-    to_field: str
 
 
 def _fk_setter(
@@ -213,6 +216,8 @@ class MetaInfo:
         "db_native_fields",
         "db_default_fields",
         "db_complex_fields",
+        "db_default_db_columns",
+        "fetch_db_defaults",
         "_default_ordering",
         "_ordering_validated",
     )
@@ -255,6 +260,8 @@ class MetaInfo:
         self.db_native_fields: list[tuple[str, str, Field]] = []
         self.db_default_fields: list[tuple[str, str, Field]] = []
         self.db_complex_fields: list[tuple[str, str, Field]] = []
+        self.db_default_db_columns: tuple[str, ...] = ()
+        self.fetch_db_defaults: bool = getattr(meta, "fetch_db_defaults", True)
 
     @property
     def full_name(self) -> str:
@@ -339,6 +346,13 @@ class MetaInfo:
             if field.generated
         ]
         self.generated_db_fields = tuple(generated_fields)
+
+        db_default_cols = [
+            (field.source_field or field.model_field_name)
+            for field in self.fields_map.values()
+            if field.has_db_default() and not field.generated
+        ]
+        self.db_default_db_columns = tuple(db_default_cols)
 
         self._ordering_validated = True
         for field_name, _ in self._default_ordering:
@@ -528,6 +542,15 @@ class ModelMeta(type):
             pk_attr,
         )
 
+        # Inherit the default ordering from an abstract base model when the
+        # subclass's own Meta does not define one (#2046).
+        if not hasattr(meta_class, "ordering"):
+            for base in bases:
+                base_meta = getattr(base, "_meta", None)
+                if base_meta is not None and base_meta._default_ordering:
+                    meta._default_ordering = base_meta._default_ordering
+                    break
+
         new_class = super().__new__(cls, name, bases, attrs)
         for field in meta.fields_map.values():
             field.model = new_class  # type: ignore
@@ -589,19 +612,18 @@ class ModelMeta(type):
     def _parse_custom_pk(attrs: dict, pk_attr: str, name: str, is_abstract) -> tuple[dict, str]:
         custom_pk_present = False
         for key, value in attrs.items():
-            if isinstance(value, Field):
-                if value.pk:
-                    if custom_pk_present:
-                        raise ConfigurationError(
-                            f"Can't create model {name} with two primary keys,"
-                            " only single primary key is supported"
-                        )
-                    if value.generated and not value.allows_generated:
-                        raise ConfigurationError(
-                            f"Field '{key}' ({value.__class__.__name__}) can't be DB-generated"
-                        )
-                    custom_pk_present = True
-                    pk_attr = key
+            if isinstance(value, Field) and value.pk:
+                if custom_pk_present:
+                    raise ConfigurationError(
+                        f"Can't create model {name} with two primary keys,"
+                        " only single primary key is supported"
+                    )
+                if value.generated and not value.allows_generated:
+                    raise ConfigurationError(
+                        f"Field '{key}' ({value.__class__.__name__}) can't be DB-generated"
+                    )
+                custom_pk_present = True
+                pk_attr = key
 
         if not custom_pk_present and not is_abstract:
             if "id" not in attrs:
@@ -702,7 +724,7 @@ class ModelMeta(type):
             meta.abstract = True
         return meta
 
-    def __getitem__(cls: type[MODEL], key: Any) -> QuerySetSingle[MODEL]:  # type: ignore
+    def __getitem__(cls: type[MODEL], key: Any) -> QuerySetSingle[MODEL]:  # type: ignore[misc]
         return cls._getbypk(key)  # type: ignore
 
 
@@ -738,10 +760,15 @@ class Model(metaclass=ModelMeta):
                 setattr(self, key, field_default())
             else:
                 default = field_object.default
-                if default is None or isinstance(default, (int, float, str, bool, bytes)):
-                    setattr(self, key, default)
+                if default is not None:
+                    if isinstance(default, (int, float, str, bool, bytes)):
+                        setattr(self, key, default)
+                    else:
+                        setattr(self, key, deepcopy(default))
+                elif field_object.has_db_default():
+                    setattr(self, key, field_object.get_db_default_value())
                 else:
-                    setattr(self, key, deepcopy(default))
+                    setattr(self, key, None)
 
     def __setattr__(self, key, value) -> None:
         # set field value override async default function
@@ -808,7 +835,7 @@ class Model(metaclass=ModelMeta):
             #  We want to avoid conditionals and calling .to_python_value()
             # Native fields are fields that are already converted to/from python to DB type
             #  by the DB driver
-            for key, model_field, field in meta.db_native_fields:
+            for key, model_field, _field in meta.db_native_fields:
                 _setattr(self, model_field, kwargs[key])
             # Fields that don't override .to_python_value() are converted without a call
             #  as we already know what we will be doing.
@@ -852,12 +879,12 @@ class Model(metaclass=ModelMeta):
             raise TypeError("Model instances without id are unhashable")
         return hash(self.pk)
 
-    def __iter__(self) -> Iterable[tuple]:
+    def __iter__(self) -> Iterator[tuple[str, Any]]:
         for field in self._meta.db_fields:
             yield field, getattr(self, field)
 
     def __eq__(self, other: object) -> bool:
-        return type(other) is type(self) and self.pk == other.pk  # type: ignore
+        return type(other) is type(self) and self.pk == other.pk  # type: ignore[attr-defined]
 
     def _get_pk_val(self) -> Any:
         return getattr(self, self._meta.pk_attr, None)
@@ -896,8 +923,8 @@ class Model(metaclass=ModelMeta):
     async def _getbypk(cls: type[MODEL], key: Any) -> MODEL:
         try:
             return await cls.get(pk=key)
-        except (DoesNotExist, ValueError):
-            raise ObjectDoesNotExistError(cls, cls._meta.pk_attr, key)
+        except (DoesNotExist, ValueError) as e:
+            raise ObjectDoesNotExistError(cls, cls._meta.pk_attr, key) from e
 
     def clone(self: MODEL, pk: Any = EMPTY) -> MODEL:
         """
@@ -1003,20 +1030,13 @@ class Model(metaclass=ModelMeta):
                 # FK/O2O: store at _{key} for property getter, also set source field
                 _setattr(self, f"_{key}", value)
                 fk_field = meta.fields_map[key]
-                if (
-                    hasattr(fk_field, "to_field_instance")
-                    and fk_field.to_field_instance is not None
-                ):
+                to_field_instance = getattr(fk_field, "to_field_instance", None)
+                if to_field_instance is not None:
                     source_field = fk_field.source_field
                     if source_field is not None:
                         if value is not None:
-                            _setattr(
-                                self,
-                                source_field,
-                                getattr(value, fk_field.to_field_instance.model_field_name, None),
-                            )
-                        else:
-                            _setattr(self, source_field, None)
+                            value = getattr(value, to_field_instance.model_field_name, None)
+                        _setattr(self, source_field, value)
                         populated_source_fields.add(source_field)
             else:
                 # Data fields, source fields, or unknown fields: store directly
@@ -1037,6 +1057,8 @@ class Model(metaclass=ModelMeta):
                 _setattr(self, key, field_default())
             elif field_default is not None:
                 _setattr(self, key, field_default)
+            elif default_field.has_db_default():
+                _setattr(self, key, default_field.get_db_default_value())
             else:
                 _setattr(self, key, None)
 
@@ -1241,10 +1263,7 @@ class Model(metaclass=ModelMeta):
         :param for_write: Whether this query for write.
         :return: BaseDBAsyncClient:
         """
-        if for_write:
-            db = router.db_for_write(cls)
-        else:
-            db = router.db_for_read(cls)
+        db = router.db_for_write(cls) if for_write else router.db_for_read(cls)
         return db or cls._meta.db
 
     @classmethod
@@ -1328,19 +1347,32 @@ class Model(metaclass=ModelMeta):
         """
         A convenience method for updating an object with the given kwargs, creating a new one if necessary.
 
+        Creation is attempted at most twice. Each concurrent insert conflict is followed by a
+        fresh locked read, including after the last creation attempt.
+
         :param defaults: Default values used to update the object.
         :param using_db: Specific DB connection to use instead of default bound
         :param kwargs: Query parameters.
+        :raises OperationalError: If repeated concurrent deletions exhaust conflict recovery.
         """
         if not defaults:
             defaults = {}
         db = using_db or cls._choose_db(True)
-        async with in_transaction(connection_name=db.connection_name) as connection:
-            instance = await cls.select_for_update().using_db(connection).get_or_none(**kwargs)
-            if instance:
-                await instance.update_from_dict(defaults).save(using_db=connection)
-                return instance, False
-        return await cls._create_or_get(db, defaults, **kwargs)
+        for attempt in range(3):
+            async with in_transaction(connection_name=db.connection_name) as connection:
+                instance = await cls.select_for_update().using_db(connection).get_or_none(**kwargs)
+                if instance is not None:
+                    await instance.update_from_dict(defaults).save(using_db=connection)
+                    return instance, False
+            if attempt == 2:
+                break
+            instance, created = await cls._create_or_get(db, defaults, **kwargs)
+            if created:
+                return instance, True
+            # Retry the update path with a fresh instance after a concurrent insert.
+        raise OperationalError(
+            f"{cls.__name__}.update_or_create() could not recover from concurrent deletions"
+        )
 
     @classmethod
     async def create(
@@ -1446,12 +1478,22 @@ class Model(metaclass=ModelMeta):
                 User(name="...", email="...")
             ])
 
+        **db_default behaviour:** Fields with ``db_default`` that are not explicitly
+        set will use the database DEFAULT. However, within a single ``bulk_create``
+        call, each ``db_default`` field must be treated consistently across *all*
+        instances — either every instance provides an explicit value, or none of
+        them do.  Mixing explicit values and database defaults for the same field
+        raises :exc:`~tortoise.exceptions.OperationalError`.
+
         :param on_conflict: On conflict index name
         :param update_fields: Update fields when conflicts
         :param ignore_conflicts: Ignore conflicts when inserting
         :param objects: List of objects to bulk create
         :param batch_size: How many objects are created in a single query
         :param using_db: Specific DB connection to use instead of default bound
+
+        :raises OperationalError: If a ``db_default`` field has mixed usage across
+            instances (some provide a value, others rely on the database default).
         """
         return cls._db_queryset(using_db, for_write=True).bulk_create(
             objects, batch_size, ignore_conflicts, update_fields, on_conflict

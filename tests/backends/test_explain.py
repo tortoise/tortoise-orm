@@ -2,7 +2,8 @@ import pytest
 
 from tests.testmodels import Tournament
 from tortoise.contrib.test import requireCapability
-from tortoise.contrib.test.condition import NotEQ
+from tortoise.contrib.test.condition import NotEQ, NotIn
+from tortoise.exceptions import UnSupportedError
 
 
 @requireCapability(dialect=NotEQ("mssql"))
@@ -18,3 +19,19 @@ async def test_explain(db):
     plan = await Tournament.all().explain()
     # This should have returned *some* information.
     assert len(str(plan)) > 20
+
+
+@requireCapability(dialect=NotIn("postgres", "mysql", "mssql"))
+@pytest.mark.asyncio
+async def test_explain_unsupported_output_fmt(db):
+    await Tournament.create(name="Test")
+    with pytest.raises(UnSupportedError, match="does not support different explain formats"):
+        await Tournament.all().explain(output_fmt="json")
+
+
+@requireCapability(dialect=NotIn("postgres", "mysql", "mssql"))
+@pytest.mark.asyncio
+async def test_explain_unsupported_options(db):
+    await Tournament.create(name="Test")
+    with pytest.raises(UnSupportedError, match="does not support explain options"):
+        await Tournament.all().explain(analyze=True)

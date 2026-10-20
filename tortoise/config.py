@@ -1,10 +1,23 @@
 from __future__ import annotations
 
+import json
+import os
 from collections.abc import Mapping
 from dataclasses import dataclass, field
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
+from tortoise.backends.base.config_generator import generate_config
 from tortoise.exceptions import ConfigurationError
+
+if TYPE_CHECKING:
+    import sys
+    from collections.abc import Iterable
+    from types import ModuleType
+
+    if sys.version_info >= (3, 11):
+        from typing import Self
+    else:
+        from typing_extensions import Self
 
 
 @dataclass(frozen=True)
@@ -46,7 +59,7 @@ class ConnectionConfig:
         return {"engine": self.engine, "credentials": self.credentials}
 
     @classmethod
-    def from_dict(cls, data: Mapping[str, Any]) -> ConnectionConfig:
+    def from_dict(cls, data: Mapping[str, Any]) -> Self:
         if not isinstance(data, Mapping):
             raise ConfigurationError("ConnectionConfig must be created from a mapping")
         credentials = data.get("credentials", {})
@@ -85,7 +98,7 @@ class AppConfig:
         return data
 
     @classmethod
-    def from_dict(cls, data: Mapping[str, Any]) -> AppConfig:
+    def from_dict(cls, data: Mapping[str, Any]) -> Self:
         if not isinstance(data, Mapping):
             raise ConfigurationError("AppConfig must be created from a mapping")
         if "models" not in data:
@@ -159,7 +172,7 @@ class TortoiseConfig:
         return config
 
     @classmethod
-    def from_dict(cls, data: Mapping[str, Any]) -> TortoiseConfig:
+    def from_dict(cls, data: Mapping[str, Any]) -> Self:
         if not isinstance(data, Mapping):
             raise ConfigurationError("TortoiseConfig must be created from a mapping")
 
@@ -201,4 +214,103 @@ class TortoiseConfig:
             routers=routers,
             use_tz=data.get("use_tz"),
             timezone=data.get("timezone"),
+        )
+
+    @classmethod
+    def from_config_file(cls, config_file: str) -> Self:
+        """
+        Load configuration from a YAML or JSON file.
+
+        Args:
+            config_file (str): Path to the configuration file. Supported extensions: .yml, .yaml, .json.
+
+        Returns:
+            Self: The constructed TortoiseConfig.
+
+        Raises:
+            ConfigurationError: If the file is missing, unsupported, or contents are invalid.
+        """
+        _, extension = os.path.splitext(config_file)
+        if extension in (".yml", ".yaml"):
+            import yaml  # pylint: disable=C0415
+
+            with open(config_file) as f:
+                config = yaml.safe_load(f)
+        elif extension == ".json":
+            with open(config_file) as f:
+                config = json.load(f)
+        else:
+            raise ConfigurationError(
+                f"Unknown config extension {extension}, only .yml and .json are supported"
+            )
+        return cls.from_dict(config)
+
+    @classmethod
+    def from_db_url_and_modules(
+        cls, db_url: str, modules: dict[str, Iterable[str | ModuleType]]
+    ) -> Self:
+        """
+        Create a TortoiseConfig instance using a database URL and app modules mapping.
+
+        This factory method builds a configuration dictionary using the provided database URL and modules,
+        and returns a TortoiseConfig instance based on that configuration.
+
+        Args:
+            db_url: Database connection URL as a string.
+            modules:
+                A mapping where keys are app names, and values are iterables of Python module names
+                (as strings or Python module types) containing ORM models.
+
+        Returns:
+            Self: The constructed TortoiseConfig instance.
+
+        Raises:
+            ConfigurationError: If the generated config is invalid.
+        """
+        config_dict = generate_config(db_url, app_modules=modules)
+        return cls.from_dict(config_dict)
+
+    @classmethod
+    def resolve_args(
+        cls,
+        config: dict[str, Any] | Self | None = None,
+        config_file: str | None = None,
+        db_url: str | None = None,
+        modules: dict[str, Iterable[str | ModuleType]] | None = None,
+    ) -> Self:
+        """
+        Parse and resolve multiple configuration argument sources into a unified TortoiseConfig instance.
+
+        Accepts (in order of priority):
+            - `config` dict or TortoiseConfig instance,
+            - `config_file` path,
+            - or both `db_url` and `modules`.
+
+        Args:
+            config (dict[str, Any] | TortoiseConfig | None):
+            config_file (str | None): Path to a config YAML or JSON file.
+            db_url (str | None): Database URL for config generation.
+            modules (dict[str, Iterable[str | ModuleType]] | None): App modules for config generation.
+        Args:
+            config: A configuration dict or TortoiseConfig instance.
+            config_file: Path to config file.
+            db_url: Database URL for config generation.
+            modules: App modules for config generation.
+
+        Returns:
+            TortoiseConfig instance with resolved configuration.
+
+        Raises:
+            ConfigurationError: If arguments are invalid or conflicting.
+        """
+        if config is not None:
+            if config_file is not None:
+                raise ConfigurationError("Cannot specify both 'config' and 'config_file'")
+            return cls.from_dict(config) if isinstance(config, dict) else config
+        elif config_file is not None:
+            return cls.from_config_file(config_file)
+        elif db_url is not None and modules is not None:
+            return cls.from_db_url_and_modules(db_url, modules)
+        raise ConfigurationError(
+            "Must provide either 'config', 'config_file', or both 'db_url' and 'modules'"
         )

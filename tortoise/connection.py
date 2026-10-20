@@ -40,7 +40,6 @@ class ConnectionHandler:
     """
 
     def __init__(self) -> None:
-        """Initialize connection handler with empty storage."""
         self._db_config: DBConfigType | None = None
         self._create_db: bool = False
         # Use ContextVar for task isolation within this handler instance.

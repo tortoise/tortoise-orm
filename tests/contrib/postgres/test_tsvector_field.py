@@ -22,3 +22,13 @@ async def test_tsvector_generated_sql(db_tsvector):
         "GENERATED ALWAYS AS (SETWEIGHT(TO_TSVECTOR('english',COALESCE(\"title\", '')),'A')"
         " || SETWEIGHT(TO_TSVECTOR('english',COALESCE(\"body\", '')),'B')) STORED"
     )
+
+
+@pytest.mark.asyncio
+async def test_tsvector_generated_field_save(db_tsvector):
+    """Test TSVector generated fields can be returned after insert."""
+    skip_if_not_postgres()
+    entry = await TSVectorEntry.create(title="Tortoise ORM", body="Async Python ORM")
+
+    assert isinstance(entry.search_vector, str)
+    assert entry.search_vector

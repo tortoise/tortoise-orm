@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import abc
 import asyncio
-from collections.abc import Sequence
-from typing import Any, Generic, TypeVar, cast
+import inspect
+from collections.abc import Awaitable, Callable, Sequence
+from typing import Any, Generic, TypeAlias, TypeVar, cast
 
 from pypika_tortoise import Query
 
@@ -14,6 +15,28 @@ from tortoise.exceptions import TransactionManagementError
 from tortoise.log import db_client_logger
 
 T_conn = TypeVar("T_conn")  # Instance of client connection, such as: asyncpg.Connection()
+
+#: A callable returning a password, awaited first if it returns an awaitable.
+PasswordFactory: TypeAlias = Callable[[], "str | Awaitable[str]"]
+PasswordType: TypeAlias = "str | PasswordFactory | None"
+
+
+async def resolve_password(password: PasswordType) -> str | None:
+    """
+    Resolve a password that may be supplied as a plain string or as a callable.
+
+    Callables are invoked once per connection attempt, which allows short-lived
+    credentials (AWS RDS IAM tokens, Azure Entra ID tokens, Vault leases, ...) to be
+    refreshed transparently without recreating the client.
+
+    :param password: A string, ``None``, or a sync/async callable returning a string.
+    """
+    if callable(password):
+        resolved = password()
+        if inspect.isawaitable(resolved):
+            resolved = await resolved
+        return resolved
+    return password
 
 
 class Capabilities:
@@ -41,6 +64,7 @@ class Capabilities:
     :param support_json_attributes: indicated if the db supports accessing json attributes
     :param can_rollback_ddl: Whether the database supports transactional DDL.
         Used to determine if migrations can be run atomically.
+    :param support_returning: Indicates that this DB supports INSERT ... RETURNING.
     """
 
     def __init__(
@@ -62,6 +86,7 @@ class Capabilities:
         support_for_posix_regex_queries: bool = False,
         support_json_attributes: bool = False,
         can_rollback_ddl: bool = False,
+        support_returning: bool = False,
     ) -> None:
         super().__setattr__("_mutable", True)
 
@@ -77,6 +102,7 @@ class Capabilities:
         self.support_for_posix_regex_queries = support_for_posix_regex_queries
         self.support_json_attributes = support_json_attributes
         self.can_rollback_ddl = can_rollback_ddl
+        self.support_returning = support_returning
         super().__setattr__("_mutable", False)
 
     def __setattr__(self, attr: str, value: Any) -> None:
@@ -303,14 +329,14 @@ class ConnectionWrapper(Generic[T_conn]):
         self._lock.release()
 
 
-class TransactionContext(Generic[T_conn]):
+class TransactionContext:
     """A context manager interface for transactions. It is returned from in_transaction
     and _in_transaction."""
 
     client: TransactionalDBClient
 
     @abc.abstractmethod
-    async def __aenter__(self) -> T_conn: ...
+    async def __aenter__(self) -> TransactionalDBClient: ...
 
     @abc.abstractmethod
     async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None: ...

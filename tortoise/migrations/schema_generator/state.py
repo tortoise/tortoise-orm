@@ -137,6 +137,8 @@ def get_related_models_recursive(model: type[Model]) -> set[tuple[str, str]]:
     rel_models = get_related_models(model)
 
     for rel_model in rel_models:
+        if rel_model._meta.app is None:
+            continue
         model_tuple = (_require_app_label(rel_model), rel_model.__name__)
         if model_tuple in seen:
             continue

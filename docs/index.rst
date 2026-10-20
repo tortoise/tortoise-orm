@@ -20,7 +20,7 @@ Why was Tortoise ORM built?
 
 Tortoise ORM was built to provide a lightweight, async-native Object-Relational Mapper for Python with a familiar Django-like API.
 
-Tortoise ORM performs well when compared to other Python ORMs. In `our benchmarks <https://github.com/tortoise/orm-benchmarks>`_, where we measure different read and write operations (rows/sec, more is better), it's trading places with Pony ORM:
+Tortoise ORM performs well when compared to other Python ORMs. In `our benchmarks <https://github.com/tortoise/orm-benchmarks>`_, where we measure different read and write operations (rows/sec, more is better), it's trading places with Piccolo:
 
 .. image:: ORM_Perf.png
     :target: https://github.com/tortoise/orm-benchmarks

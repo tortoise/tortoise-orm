@@ -31,6 +31,12 @@ class BaseSchemaEditor(SchemaQuotingMixin):
         ' ("{forward_field}") ON DELETE CASCADE\n'
         "){extra}{comment};"
     )
+    M2M_TABLE_NO_CONSTRAINT_TEMPLATE = (
+        "CREATE TABLE {table_name} (\n"
+        '    "{backward_key}" {backward_type} NOT NULL,\n'
+        '    "{forward_key}" {forward_type} NOT NULL\n'
+        "){extra}{comment};"
+    )
     RENAME_TABLE_TEMPLATE = "ALTER TABLE {old_table} RENAME TO {new_table}"
     DELETE_TABLE_TEMPLATE = "DROP TABLE {table} CASCADE"
     ADD_FIELD_TEMPLATE = "ALTER TABLE {table} ADD COLUMN {definition}"
@@ -39,6 +45,7 @@ class BaseSchemaEditor(SchemaQuotingMixin):
     RENAME_FIELD_TEMPLATE = 'ALTER TABLE {table} RENAME COLUMN "{old_column}" TO "{new_column}"'
     ALTER_FIELD_NULL_TEMPLATE = 'ALTER COLUMN "{column}" DROP NOT NULL'
     ALTER_FIELD_NOT_NULL_TEMPLATE = 'ALTER COLUMN "{column}" SET NOT NULL'
+    ALTER_FIELD_TYPE_TEMPLATE = 'ALTER COLUMN "{column}" TYPE {sql_type}'
     ALTER_FIELD_SET_DEFAULT_TEMPLATE = 'ALTER COLUMN "{column}" SET DEFAULT {default}'
     ALTER_FIELD_DROP_DEFAULT_TEMPLATE = 'ALTER COLUMN "{column}" DROP DEFAULT'
 
@@ -80,6 +87,11 @@ class BaseSchemaEditor(SchemaQuotingMixin):
     def _get_column_comment_sql(self, table: str, column: str, comment: str) -> str:
         # Databases have their own way of supporting comments for column level
         raise NotImplementedError()  # pragma: nocoverage
+
+    async def _alter_column_comment(
+        self, model: type[Model], old_field: Field, new_field: Field
+    ) -> None:
+        """Alter column comment. Override in backends that support column comments."""
 
     def _table_generate_extra(self, table: str) -> str:
         return ""
@@ -216,6 +228,13 @@ class BaseSchemaEditor(SchemaQuotingMixin):
     def _get_inner_statements(self) -> list[str]:
         return []
 
+    def _m2m_table_template(self, field: ManyToManyFieldInstance) -> str:
+        return (
+            self.M2M_TABLE_TEMPLATE
+            if field.db_constraint
+            else self.M2M_TABLE_NO_CONSTRAINT_TEMPLATE
+        )
+
     def _get_m2m_table_definition(
         self, model: type[Model], field: ManyToManyFieldInstance
     ) -> str | None:
@@ -225,7 +244,8 @@ class BaseSchemaEditor(SchemaQuotingMixin):
         if not related_model:
             return None
         m2m_schema = model._meta.schema
-        m2m_create_string = self.M2M_TABLE_TEMPLATE.format(
+        template = self._m2m_table_template(field)
+        m2m_create_string = template.format(
             table_name=self._qualify_table_name(field.through, m2m_schema),
             backward_table=self._qualify_table_name(model._meta.db_table, model._meta.schema),
             forward_table=self._qualify_table_name(
@@ -253,7 +273,7 @@ class BaseSchemaEditor(SchemaQuotingMixin):
                 lines = m2m_create_string.splitlines()
                 if len(lines) > 1:
                     lines[-2] += ","
-                    indent = "    "
+                    indent = " " * 4
                     lines.insert(-1, indent + unique_index_sql)
                     m2m_create_string = "\n".join(lines)
         return m2m_create_string
@@ -270,10 +290,9 @@ class BaseSchemaEditor(SchemaQuotingMixin):
             if fk_field.description
             else ""
         )
-
-        to_field_name = fk_field.to_field_instance.source_field
-        if not to_field_name:
-            to_field_name = fk_field.to_field_instance.model_field_name
+        to_field_name = (
+            fk_field.to_field_instance.source_field or fk_field.to_field_instance.model_field_name
+        )
 
         related_model = fk_field.related_model
         field_creation_string = self._get_field_sql(
@@ -283,21 +302,22 @@ class BaseSchemaEditor(SchemaQuotingMixin):
             unique=key_field.unique,
             is_pk=key_field.pk,
             comment="",
-        ) + self._get_fk_reference_string(
-            constraint_name=self._generate_fk_name(
-                model._meta.db_table,
-                db_field,
-                related_model._meta.db_table,
-                to_field_name,
-            ),
-            db_field=db_field,
-            table=self._qualify_table_name(
-                related_model._meta.db_table, related_model._meta.schema
-            ),
-            field=to_field_name,
-            on_delete=fk_field.on_delete,
-            comment=comment,
         )
+        if fk_field.db_constraint:
+            related_table = related_model._meta.db_table
+            field_creation_string += self._get_fk_reference_string(
+                constraint_name=self._generate_fk_name(
+                    model._meta.db_table,
+                    db_field,
+                    related_table,
+                    to_field_name,
+                ),
+                db_field=db_field,
+                table=self._qualify_table_name(related_table, related_model._meta.schema),
+                field=to_field_name,
+                on_delete=fk_field.on_delete,
+                comment=comment,
+            )
         return field_creation_string
 
     def _get_model_sql_data(self, model: type[Model]) -> ModelSqlData:
@@ -358,6 +378,16 @@ class BaseSchemaEditor(SchemaQuotingMixin):
                     is_pk=field_object.pk,
                     comment=comment,
                 )
+
+            if field_object.has_db_default():
+                if hasattr(field_object.db_default, "get_sql"):
+                    field_creation_string += (
+                        f" DEFAULT {field_object.db_default.get_sql(dialect=self.DIALECT)}"
+                    )
+                else:
+                    db_val = field_object.to_db_value(field_object.db_default, model)
+                    escaped = self._escape_default_value(db_val)
+                    field_creation_string += f" DEFAULT {escaped}"
 
             in_table_definitions.append(field_creation_string)
 
@@ -603,6 +633,13 @@ class BaseSchemaEditor(SchemaQuotingMixin):
         qualified_table = self._qualify_table_name(model._meta.db_table, model._meta.schema)
         if await self._alter_generated_field(model, old_field, new_field):
             return
+        old_sql_type = old_field.get_for_dialect(self.DIALECT, "SQL_TYPE")
+        new_sql_type = new_field.get_for_dialect(self.DIALECT, "SQL_TYPE")
+        if old_sql_type != new_sql_type:
+            changes = self.ALTER_FIELD_TYPE_TEMPLATE.format(
+                column=new_db_field, sql_type=new_sql_type
+            )
+            actions.append(self.ALTER_FIELD_TEMPLATE.format(table=qualified_table, changes=changes))
         if old_field.null != new_field.null:
             if new_field.null:
                 changes = self.ALTER_FIELD_NULL_TEMPLATE.format(column=old_db_field)
@@ -626,8 +663,7 @@ class BaseSchemaEditor(SchemaQuotingMixin):
                 await self.remove_constraint(model, constraint)
 
         if old_field.description != new_field.description:
-            # TODO description management
-            pass
+            await self._alter_column_comment(model, old_field, new_field)
 
         old_has_db_default = old_field.has_db_default()
         new_has_db_default = new_field.has_db_default()
@@ -790,14 +826,15 @@ class BaseSchemaEditor(SchemaQuotingMixin):
         if index_sql:
             await self._run_sql(index_sql)
 
+    def _drop_index_sql(self, model: type[Model], index_name: str) -> str:
+        if "{table}" in self.DROP_INDEX_TEMPLATE:
+            table = self._qualify_table_name(model._meta.db_table, model._meta.schema)
+            return self.DROP_INDEX_TEMPLATE.format(name=index_name, table=table)
+        return f"DROP INDEX {self._qualify_table_name(index_name, model._meta.schema)}"
+
     async def remove_index(self, model: type[Model], index: Index) -> None:
         index_name = self._index_name_for_model(model, index)
-        await self._run_sql(
-            self.DROP_INDEX_TEMPLATE.format(
-                name=index_name,
-                table=self._qualify_table_name(model._meta.db_table, model._meta.schema),
-            )
-        )
+        await self._run_sql(self._drop_index_sql(model, index_name))
 
     async def rename_index(self, model: type[Model], old_index: Index, new_index: Index) -> None:
         old_name = self._index_name_for_model(model, old_index)

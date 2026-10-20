@@ -14,6 +14,15 @@ if TYPE_CHECKING:
 
 
 class Index:
+    """
+    All kinds of index parent class, default is BTreeIndex.
+
+    :param expressions: The expressions of on which the index is desired.
+    :param fields: A tuple of names of the fields on which the index is desired.
+    :param name: The name of the index.
+    :raises ValueError: If params conflict.
+    """
+
     INDEX_TYPE = ""
 
     def __init__(
@@ -22,14 +31,6 @@ class Index:
         fields: tuple[str, ...] | list[str] | None = None,
         name: str | None = None,
     ) -> None:
-        """
-        All kinds of index parent class, default is BTreeIndex.
-
-        :param expressions: The expressions of on which the index is desired.
-        :param fields: A tuple of names of the fields on which the index is desired.
-        :param name: The name of the index.
-        :raises ValueError: If params conflict.
-        """
         self.fields = list(fields or [])
         if not expressions and not fields:
             raise ConfigurationError(
