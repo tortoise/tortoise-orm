@@ -1,4 +1,4 @@
-from decimal import Decimal
+from decimal import ROUND_HALF_UP, Decimal, InvalidOperation, localcontext
 
 import pytest
 
@@ -340,3 +340,33 @@ def test_to_python_value_scale():
     field0 = fields.DecimalField(max_digits=12, decimal_places=0)
     assert str(field0.to_python_value("10")) == "10"
     assert str(field0.to_python_value("100")) == "100"
+
+
+def test_to_python_value_high_precision():
+    field = fields.DecimalField(max_digits=40, decimal_places=10)
+    assert field.to_python_value("123456789012345678901234567890.5") == Decimal(
+        "123456789012345678901234567890.5000000000"
+    )
+    field = fields.DecimalField(max_digits=30, decimal_places=2)
+    assert field.to_python_value("1234567890123456789012345678.50") == Decimal(
+        "1234567890123456789012345678.50"
+    )
+
+
+def test_to_python_value_high_precision_boundaries():
+    field = fields.DecimalField(max_digits=28, decimal_places=0)
+    assert field.to_python_value("1" * 28) == Decimal("1" * 28)
+
+    field = fields.DecimalField(max_digits=30, decimal_places=2)
+    with pytest.raises(InvalidOperation):
+        field.to_python_value("1" * 31)
+
+    field = fields.DecimalField(max_digits="40", decimal_places=10)
+    assert field.to_python_value("1" * 30) == Decimal("1" * 30 + ".0000000000")
+
+
+def test_to_python_value_keeps_context_rounding():
+    field = fields.DecimalField(max_digits=5, decimal_places=2)
+    with localcontext() as ctx:
+        ctx.rounding = ROUND_HALF_UP
+        assert str(field.to_python_value("1.005")) == "1.01"

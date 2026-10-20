@@ -10,12 +10,7 @@ from pypika_tortoise import Case as PypikaCase
 from pypika_tortoise import Field as PypikaField
 from pypika_tortoise import SqlContext, Table
 from pypika_tortoise.functions import AggregateFunction, DistinctOptionFunction
-from pypika_tortoise.terms import (
-    ArithmeticExpression,
-    Criterion,
-    Term,
-    ValueWrapper,
-)
+from pypika_tortoise.terms import ArithmeticExpression, Criterion, Term, ValueWrapper
 from pypika_tortoise.terms import Function as PypikaFunction
 from pypika_tortoise.utils import format_alias_sql
 
@@ -23,10 +18,8 @@ from tortoise.exceptions import FieldError, OperationalError
 from tortoise.fields.base import Field
 from tortoise.fields.data import JSONField
 from tortoise.fields.relational import RelationalField
-from tortoise.filters import FilterInfoDict
 from tortoise.query_utils import (
     QueryModifier,
-    TableCriterionTuple,
     get_joins_for_related_field,
     resolve_field_json_path,
     resolve_nested_field,
@@ -35,7 +28,9 @@ from tortoise.query_utils import (
 if TYPE_CHECKING:  # pragma: nocoverage
     from pypika_tortoise.queries import Selectable
 
+    from tortoise.filters import FilterInfoDict
     from tortoise.models import Model
+    from tortoise.query_utils import TableCriterionTuple
     from tortoise.queryset import AwaitableQuery
 
 
@@ -233,9 +228,9 @@ class Subquery(Term):
     def get_sql(self, ctx: SqlContext) -> str:
         self.query._choose_db_if_not_chosen()
         self.query._make_query()
-        return self.query.query.get_parameterized_sql(ctx)[0]
+        return self.query.query.get_sql(ctx)
 
-    def as_(self, alias: str) -> Selectable:  # type: ignore
+    def as_(self, alias: str) -> Selectable:  # type: ignore[override]
         self.query._choose_db_if_not_chosen()
         self.query._make_query()
         return self.query.query.as_(alias)
@@ -512,9 +507,7 @@ class Q:
                 modifier &= filter_modifier
             else:
                 modifier |= filter_modifier
-        if self._is_negated:
-            modifier = ~modifier
-        return modifier
+        return ~modifier if self._is_negated else modifier
 
     def _resolve_children(self, resolve_context: ResolveContext) -> QueryModifier:
         modifier = QueryModifier()
@@ -524,10 +517,7 @@ class Q:
                 modifier &= node_modifier
             else:
                 modifier |= node_modifier
-
-        if self._is_negated:
-            modifier = ~modifier
-        return modifier
+        return ~modifier if self._is_negated else modifier
 
     def resolve(
         self,
@@ -660,7 +650,7 @@ class Aggregate(Function):
     ) -> DistinctOptionFunction:
         function = cast(DistinctOptionFunction, self.database_func(field, *default_values))
         if self.distinct:
-            function = function.distinct()
+            return function.distinct()
         return function
 
     def _resolve_argument(
@@ -715,16 +705,12 @@ class When(Expression):
         for arg in self.args:
             if not isinstance(arg, Q):
                 raise TypeError("expected Q objects as args")
-            if self.negate:
-                q_objects.append(~arg)
-            else:
-                q_objects.append(arg)
+            q_objects.append(~arg if self.negate else arg)
 
         for key, value in self.kwargs.items():
-            if self.negate:
-                q_objects.append(~Q(**{key: value}))
-            else:
-                q_objects.append(Q(**{key: value}))
+            q = Q(**{key: value})
+            q_objects.append(~q if self.negate else q)
+
         return q_objects
 
     def resolve(self, resolve_context: ResolveContext) -> ResolveResult:
