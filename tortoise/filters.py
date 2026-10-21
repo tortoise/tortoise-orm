@@ -8,12 +8,7 @@ from typing import TYPE_CHECKING, Any, TypedDict
 from pypika_tortoise import SqlContext, Table
 from pypika_tortoise.enums import DatePart, Matching, SqlTypes
 from pypika_tortoise.functions import Cast, Extract, Upper
-from pypika_tortoise.terms import (
-    Array,
-    BasicCriterion,
-    Equality,
-    ValueWrapper,
-)
+from pypika_tortoise.terms import Array, BasicCriterion, Equality, ValueWrapper
 
 from tortoise.contrib.postgres.fields import ArrayField, TSVectorField
 from tortoise.fields import Field, JSONField

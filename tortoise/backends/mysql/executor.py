@@ -1,10 +1,10 @@
 import enum
 from typing import Any
 
-from pypika_tortoise import SqlContext, functions
+from pypika_tortoise import SqlContext
 from pypika_tortoise.enums import SqlTypes
-from pypika_tortoise.functions import Cast, Coalesce
-from pypika_tortoise.terms import BasicCriterion, Criterion
+from pypika_tortoise.functions import Cast, Coalesce, Upper
+from pypika_tortoise.terms import BasicCriterion, Criterion, Term, ValueWrapper
 from pypika_tortoise.utils import format_quotes
 
 from tortoise import Model
@@ -19,8 +19,6 @@ from tortoise.exceptions import UnSupportedError
 from tortoise.fields import BigIntField, IntField, SmallIntField
 from tortoise.filters import (
     Like,
-    Term,
-    ValueWrapper,
     contains,
     ends_with,
     insensitive_contains,
@@ -55,50 +53,40 @@ def escape_like(val: str) -> str:
     return val.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
 
 
+def _mysql_like(field: Term, pattern: str) -> Criterion:
+    return Like(Cast(field, SqlTypes.CHAR), StrWrapper(pattern), escape="")
+
+
+def _mysql_upper_like(field: Term, pattern: str) -> Criterion:
+    return Like(Upper(Cast(field, SqlTypes.CHAR)), Upper(StrWrapper(pattern)), escape="")
+
+
 def mysql_contains(field: Term, value: str) -> Criterion:
-    return Like(
-        functions.Cast(field, SqlTypes.CHAR), StrWrapper(f"%{escape_like(value)}%"), escape=""
-    )
+    return _mysql_like(field, f"%{escape_like(value)}%")
 
 
 def mysql_starts_with(field: Term, value: str) -> Criterion:
-    return Like(
-        functions.Cast(field, SqlTypes.CHAR), StrWrapper(f"{escape_like(value)}%"), escape=""
-    )
+    return _mysql_like(field, f"{escape_like(value)}%")
 
 
 def mysql_ends_with(field: Term, value: str) -> Criterion:
-    return Like(
-        functions.Cast(field, SqlTypes.CHAR), StrWrapper(f"%{escape_like(value)}"), escape=""
-    )
+    return _mysql_like(field, f"%{escape_like(value)}")
 
 
 def mysql_insensitive_exact(field: Term, value: str) -> Criterion:
-    return functions.Upper(functions.Cast(field, SqlTypes.CHAR)).eq(functions.Upper(str(value)))
+    return Upper(Cast(field, SqlTypes.CHAR)).eq(Upper(str(value)))
 
 
 def mysql_insensitive_contains(field: Term, value: str) -> Criterion:
-    return Like(
-        functions.Upper(functions.Cast(field, SqlTypes.CHAR)),
-        functions.Upper(StrWrapper(f"%{escape_like(value)}%")),
-        escape="",
-    )
+    return _mysql_upper_like(field, f"%{escape_like(value)}%")
 
 
 def mysql_insensitive_starts_with(field: Term, value: str) -> Criterion:
-    return Like(
-        functions.Upper(functions.Cast(field, SqlTypes.CHAR)),
-        functions.Upper(StrWrapper(f"{escape_like(value)}%")),
-        escape="",
-    )
+    return _mysql_upper_like(field, f"{escape_like(value)}%")
 
 
 def mysql_insensitive_ends_with(field: Term, value: str) -> Criterion:
-    return Like(
-        functions.Upper(functions.Cast(field, SqlTypes.CHAR)),
-        functions.Upper(StrWrapper(f"%{escape_like(value)}")),
-        escape="",
-    )
+    return _mysql_upper_like(field, f"%{escape_like(value)}")
 
 
 def mysql_search(field: Term, value: str) -> SearchCriterion:
