@@ -3,6 +3,7 @@ from enum import Enum
 
 import pytest
 import pytest_asyncio
+from pypika_tortoise.terms import ComplexCriterion, Not
 
 from tests.testmodels import (
     BooleanFields,
@@ -14,6 +15,7 @@ from tests.testmodels import (
 )
 from tortoise.exceptions import FieldError
 from tortoise.fields.base import StrEnum
+from tortoise.filters import not_equal
 
 
 class MyEnum(str, Enum):
@@ -59,6 +61,14 @@ async def test_char_field_not(db, char_fields_data):
         "baa",
         "oink",
     }
+    pypika_field = CharFields.get_table()["char_null"]
+    cri = not_equal(pypika_field, None)
+    assert isinstance(cri, Not)
+    cri = not_equal(pypika_field, "")
+    assert isinstance(cri, ComplexCriterion)
+    assert await CharFields.filter(char_null__not=None) == (
+        await CharFields.filter(char_null__isnull=False)
+    )
 
 
 @pytest.mark.asyncio
