@@ -352,12 +352,18 @@ async def test_subquery_params_inline(query_api_db) -> None:
 
     Regression test for https://github.com/tortoise/tortoise-orm/issues/1800
     """
-    query = QueryModel.filter(
-        id__in=Subquery(QueryModel.filter(name="alpha").values_list("id"))
-    )
-    sql = query.sql(params_inline=True)
+    queryset = QueryModel.filter(id__in=Subquery(QueryModel.filter(name="alpha").values("id")))
+    sql = queryset.sql(params_inline=True)
     assert "'alpha'" in sql, f"Expected 'alpha' in inline SQL, got: {sql}"
 
     # Also verify parameterized mode still works
-    sql_param = query.sql(params_inline=False)
+    sql_param = queryset.sql(params_inline=False)
     assert "alpha" not in sql_param, f"Expected no 'alpha' in parameterized SQL, got: {sql_param}"
+
+    db = connections.get("default")
+    result = await db.execute_query_dict(sql)
+    result_param = await db.execute_query_dict(sql_param, ["alpha"])
+    assert result == result_param
+
+    ret = await execute_pypika(queryset.query, using_db=db)
+    assert ret.rows == result
