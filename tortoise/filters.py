@@ -8,14 +8,7 @@ from typing import TYPE_CHECKING, Any, TypedDict
 from pypika_tortoise import SqlContext, Table
 from pypika_tortoise.enums import DatePart, Matching, SqlTypes
 from pypika_tortoise.functions import Cast, Extract, Upper
-from pypika_tortoise.terms import (
-    Array,
-    BasicCriterion,
-    Criterion,
-    Equality,
-    Term,
-    ValueWrapper,
-)
+from pypika_tortoise.terms import Array, BasicCriterion, Equality, ValueWrapper
 
 from tortoise.contrib.postgres.fields import ArrayField, TSVectorField
 from tortoise.fields import Field, JSONField
@@ -24,10 +17,12 @@ from tortoise.fields.relational import BackwardFKRelation, ManyToManyFieldInstan
 if TYPE_CHECKING:  # pragma: nocoverage
     import sys
 
-    if sys.version_info >= (3, 11):  # pragma：nocoverage
+    if sys.version_info >= (3, 11):
         from typing import NotRequired
     else:
         from typing_extensions import NotRequired
+
+    from pypika_tortoise.terms import Criterion, Term
 
     from tortoise.models import Model
 
@@ -148,6 +143,8 @@ def between_and(field: Term, value: tuple[Any, Any]) -> Criterion:
 
 
 def not_equal(field: Term, value: Any) -> Criterion:
+    if value is None:
+        return field.notnull()
     return field.ne(value) | field.isnull()
 
 
@@ -163,8 +160,16 @@ def not_null(field: Term, value: Any) -> Criterion:
     return field.isnull()
 
 
+def _like(field: Term, pattern: str) -> Criterion:
+    return Like(Cast(field, SqlTypes.VARCHAR), field.wrap_constant(pattern))
+
+
+def _upper_like(field: Term, pattern: str) -> Criterion:
+    return Like(Upper(Cast(field, SqlTypes.VARCHAR)), field.wrap_constant(Upper(pattern)))
+
+
 def contains(field: Term, value: str) -> Criterion:
-    return Like(Cast(field, SqlTypes.VARCHAR), field.wrap_constant(f"%{escape_like(value)}%"))
+    return _like(field, f"%{escape_like(value)}%")
 
 
 def search(field: Term, value: str) -> Any:
@@ -172,14 +177,14 @@ def search(field: Term, value: str) -> Any:
     pass
 
 
-def posix_regex(field: Term, value: str) -> Any:
+def posix_regex(field: Term, value: str) -> Criterion:
     # Will be overridden in each executor
     raise NotImplementedError(
         "The posix_regex filter operator is not supported by your database backend"
     )
 
 
-def insensitive_posix_regex(field: Term, value: str):
+def insensitive_posix_regex(field: Term, value: str) -> Criterion:
     # Will be overridden in each executor
     raise NotImplementedError(
         "The insensitive_posix_regex filter operator is not supported by your database backend"
@@ -187,11 +192,11 @@ def insensitive_posix_regex(field: Term, value: str):
 
 
 def starts_with(field: Term, value: str) -> Criterion:
-    return Like(Cast(field, SqlTypes.VARCHAR), field.wrap_constant(f"{escape_like(value)}%"))
+    return _like(field, f"{escape_like(value)}%")
 
 
 def ends_with(field: Term, value: str) -> Criterion:
-    return Like(Cast(field, SqlTypes.VARCHAR), field.wrap_constant(f"%{escape_like(value)}"))
+    return _like(field, f"%{escape_like(value)}")
 
 
 def insensitive_exact(field: Term, value: str) -> Criterion:
@@ -199,21 +204,15 @@ def insensitive_exact(field: Term, value: str) -> Criterion:
 
 
 def insensitive_contains(field: Term, value: str) -> Criterion:
-    return Like(
-        Upper(Cast(field, SqlTypes.VARCHAR)), field.wrap_constant(Upper(f"%{escape_like(value)}%"))
-    )
+    return _upper_like(field, f"%{escape_like(value)}%")
 
 
 def insensitive_starts_with(field: Term, value: str) -> Criterion:
-    return Like(
-        Upper(Cast(field, SqlTypes.VARCHAR)), field.wrap_constant(Upper(f"{escape_like(value)}%"))
-    )
+    return _upper_like(field, f"{escape_like(value)}%")
 
 
 def insensitive_ends_with(field: Term, value: str) -> Criterion:
-    return Like(
-        Upper(Cast(field, SqlTypes.VARCHAR)), field.wrap_constant(Upper(f"%{escape_like(value)}"))
-    )
+    return _upper_like(field, f"%{escape_like(value)}")
 
 
 def extract_year_equal(field: Term, value: int) -> Criterion:

@@ -9,7 +9,6 @@ from functools import partial
 from typing import TYPE_CHECKING, Any, TypedDict, TypeVar, cast
 
 from pypika_tortoise import Order, Query, Table
-from pypika_tortoise.terms import Term
 
 from tortoise.backends.base.client import BaseDBAsyncClient
 from tortoise.connection import get_connection
@@ -60,6 +59,8 @@ if TYPE_CHECKING:
         from typing import Self
     else:
         from typing_extensions import Self
+
+    from pypika_tortoise.terms import Term
 
     from tortoise.filters import FilterInfoDict
 
