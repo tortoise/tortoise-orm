@@ -8,7 +8,21 @@ Changelog
 1.1
 ===
 
-1.1.9 *Unreleased*
+Unreleased
+----------
+
+Added
+^^^^^
+- Support forward relation ``in`` and ``not_in`` filters with model instances. (#2323)
+
+Fixed
+^^^^^
+- ``DecimalField`` no longer raises ``decimal.InvalidOperation`` for values with more than 28 significant digits. (#2349)
+- fix(expressions): inline subquery parameters when ``params_inline`` is enabled (#2340)
+- Use database column names in reverse foreign-key and one-to-one filters with renamed columns or one-to-one primary keys. (#2338)
+- Migrations now honor ``db_constraint=False`` on ``ForeignKeyField``/``ManyToManyField`` and emit the column (and through table) without a ``FOREIGN KEY`` constraint, matching the runtime schema generator. (#2226)
+
+1.1.9
 -----
 
 Added
@@ -18,10 +32,12 @@ Added
 
 Changed
 ^^^^^^^
-- `tortoise.contrib.starlette` now only supports Starlette 1.0+ (This does not affect FastAPI users; you can continue using FastAPI with any version of Starlette). (#2130)
+- `tortoise.contrib.starlette` now only supports Starlette 1.0+ (This does not affect FastAPI users; you can continue using FastAPI with any version of Starlette). (#2282)
 
 Fixed
 ^^^^^
+- Aggregates now apply _filter when the aggregated argument is an F() or a combined expression (e.g. Sum(F("price") * F("qty"), _filter=Q(status="paid"))). Previously the filter was silently dropped and every row was aggregated. (#2290)
+- Negating an already negated Q now cancels out: ~~Q(...) and .exclude(~Q(...)) used to keep a single NOT, so they returned the rows the caller meant to drop. (#2291)
 - PostgreSQL and Oracle ``RemoveIndex`` / partial ``RemoveConstraint`` now schema-qualify ``DROP INDEX``, so indexes on models with ``Meta.schema`` can be dropped when they are not on the connection ``search_path``. (#2288)
 - ``ForeignKeyField``/``OneToOneField`` no longer lose a declared ``source_field`` when deconstructed. ``makemigrations`` wrote the generated ``<field>_id`` backing field name as the column name, so a migrated schema disagreed with ``generate_schemas()`` and neither path reported an error. (#2284)
 - ``QuerySet.distinct().count()`` no longer counts rows duplicated by a join (e.g. filtering on a m2m relation); it now counts distinct primary keys and matches the number of rows the query returns. (#2255)
@@ -34,6 +50,11 @@ Fixed
 - Make EmailValidator allowed_domains actually restrict domains. (#2252)
 - ``AlterModelOptions`` now clears options that were removed from the model, instead of only merging in the ones that remain; removing a model docstring no longer makes ``makemigrations`` regenerate the same migration on every run. (#2279)
 - ``Model.update_or_create()`` now applies the caller's defaults after losing a concurrent insert, re-reading the current row through the existing transactional update path. Creation is attempted at most twice, with a final locked read after the last conflict; repeated concurrent deletions that exhaust recovery raise ``OperationalError`` rather than retrying indefinitely. (#2276)
+- psycopg: the connection pool now validates a connection on checkout, so one silently dropped by the network while idle (a firewall or load balancer closing it, a DB restart, ...) gets transparently replaced instead of being handed to the caller and failing with ``psycopg.OperationalError: the connection is closed``. The check is a cheap no-op query on an already-open socket, so the added latency per checkout is negligible next to a real query. (#2285)
+- Fixed ``prefetch_related()`` on m2m fields ignoring ``select_related()``, ``annotate()``, and ``order_by()`` applied to the prefetched queryset. (#2205)
+- ``pydantic_model_creator`` no longer raises ``TypeError`` for models with annotations whose origin is not a class, such as ``Literal[...]``. (#2311)
+- Filtering by a related model instance on a ``ForeignKeyField``/``OneToOneField`` declared with a non-primary-key ``to_field`` now uses the ``to_field`` value instead of the instance's primary key, so the generated query targets the correct column. (#2239)
+- Database URLs with an empty host (e.g. ``postgres:///db?host=/var/run/postgresql&user=u``) no longer overwrite ``host``/``user``/``password`` given in the query string, so unix domain sockets work. (#2313)
 
 1.1.8
 -----

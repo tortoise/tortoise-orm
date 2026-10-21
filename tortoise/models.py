@@ -3,8 +3,7 @@ from __future__ import annotations
 import asyncio
 import inspect
 import re
-import sys
-from collections.abc import Awaitable, Callable, Generator, Iterable
+from collections.abc import Awaitable, Callable, Generator, Iterable, Iterator
 from copy import copy, deepcopy
 from functools import partial
 from typing import TYPE_CHECKING, Any, TypedDict, TypeVar, cast
@@ -38,7 +37,7 @@ from tortoise.fields.relational import (
     OneToOneFieldInstance,
     ReverseRelation,
 )
-from tortoise.filters import FilterInfoDict, get_filters_for_field
+from tortoise.filters import get_filters_for_field
 from tortoise.indexes import Index
 from tortoise.manager import Manager
 from tortoise.queryset import (
@@ -55,10 +54,20 @@ from tortoise.signals import Signals
 from tortoise.transactions import in_transaction
 
 if TYPE_CHECKING:
+    import sys
+
     if sys.version_info >= (3, 11):
         from typing import Self
     else:
         from typing_extensions import Self
+
+    from tortoise.filters import FilterInfoDict
+
+    class FkSetterKwargs(TypedDict):
+        _key: str
+        relation_field: str
+        to_field: str
+
 
 MODEL = TypeVar("MODEL", bound="Model")
 PRIMARY_KEY = TypeVar("PRIMARY_KEY")
@@ -83,12 +92,6 @@ def prepare_default_ordering(meta: Model.Meta) -> tuple[tuple[str, Order], ...]:
     )
 
     return parsed_ordering
-
-
-class FkSetterKwargs(TypedDict):
-    _key: str
-    relation_field: str
-    to_field: str
 
 
 def _fk_setter(
@@ -876,7 +879,7 @@ class Model(metaclass=ModelMeta):
             raise TypeError("Model instances without id are unhashable")
         return hash(self.pk)
 
-    def __iter__(self) -> Iterable[tuple[str, Any]]:
+    def __iter__(self) -> Iterator[tuple[str, Any]]:
         for field in self._meta.db_fields:
             yield field, getattr(self, field)
 

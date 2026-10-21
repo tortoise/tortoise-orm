@@ -31,6 +31,12 @@ class BaseSchemaEditor(SchemaQuotingMixin):
         ' ("{forward_field}") ON DELETE CASCADE\n'
         "){extra}{comment};"
     )
+    M2M_TABLE_NO_CONSTRAINT_TEMPLATE = (
+        "CREATE TABLE {table_name} (\n"
+        '    "{backward_key}" {backward_type} NOT NULL,\n'
+        '    "{forward_key}" {forward_type} NOT NULL\n'
+        "){extra}{comment};"
+    )
     RENAME_TABLE_TEMPLATE = "ALTER TABLE {old_table} RENAME TO {new_table}"
     DELETE_TABLE_TEMPLATE = "DROP TABLE {table} CASCADE"
     ADD_FIELD_TEMPLATE = "ALTER TABLE {table} ADD COLUMN {definition}"
@@ -86,7 +92,6 @@ class BaseSchemaEditor(SchemaQuotingMixin):
         self, model: type[Model], old_field: Field, new_field: Field
     ) -> None:
         """Alter column comment. Override in backends that support column comments."""
-        pass
 
     def _table_generate_extra(self, table: str) -> str:
         return ""
@@ -230,6 +235,13 @@ class BaseSchemaEditor(SchemaQuotingMixin):
     def _get_inner_statements(self) -> list[str]:
         return []
 
+    def _m2m_table_template(self, field: ManyToManyFieldInstance) -> str:
+        return (
+            self.M2M_TABLE_TEMPLATE
+            if field.db_constraint
+            else self.M2M_TABLE_NO_CONSTRAINT_TEMPLATE
+        )
+
     def _get_m2m_table_definition(
         self, model: type[Model], field: ManyToManyFieldInstance
     ) -> str | None:
@@ -239,7 +251,8 @@ class BaseSchemaEditor(SchemaQuotingMixin):
         if not related_model:
             return None
         m2m_schema = model._meta.schema
-        m2m_create_string = self.M2M_TABLE_TEMPLATE.format(
+        template = self._m2m_table_template(field)
+        m2m_create_string = template.format(
             table_name=self._qualify_table_name(field.through, m2m_schema),
             backward_table=self._qualify_table_name(model._meta.db_table, model._meta.schema),
             forward_table=self._qualify_table_name(
@@ -267,7 +280,7 @@ class BaseSchemaEditor(SchemaQuotingMixin):
                 lines = m2m_create_string.splitlines()
                 if len(lines) > 1:
                     lines[-2] += ","
-                    indent = "    "
+                    indent = " " * 4
                     lines.insert(-1, indent + unique_index_sql)
                     m2m_create_string = "\n".join(lines)
         return m2m_create_string
@@ -284,10 +297,9 @@ class BaseSchemaEditor(SchemaQuotingMixin):
             if fk_field.description
             else ""
         )
-
-        to_field_name = fk_field.to_field_instance.source_field
-        if not to_field_name:
-            to_field_name = fk_field.to_field_instance.model_field_name
+        to_field_name = (
+            fk_field.to_field_instance.source_field or fk_field.to_field_instance.model_field_name
+        )
 
         related_model = fk_field.related_model
         field_creation_string = self._get_field_sql(
@@ -297,21 +309,22 @@ class BaseSchemaEditor(SchemaQuotingMixin):
             unique=key_field.unique,
             is_pk=key_field.pk,
             comment="",
-        ) + self._get_fk_reference_string(
-            constraint_name=self._generate_fk_name(
-                model._meta.db_table,
-                db_field,
-                related_model._meta.db_table,
-                to_field_name,
-            ),
-            db_field=db_field,
-            table=self._qualify_table_name(
-                related_model._meta.db_table, related_model._meta.schema
-            ),
-            field=to_field_name,
-            on_delete=fk_field.on_delete,
-            comment=comment,
         )
+        if fk_field.db_constraint:
+            related_table = related_model._meta.db_table
+            field_creation_string += self._get_fk_reference_string(
+                constraint_name=self._generate_fk_name(
+                    model._meta.db_table,
+                    db_field,
+                    related_table,
+                    to_field_name,
+                ),
+                db_field=db_field,
+                table=self._qualify_table_name(related_table, related_model._meta.schema),
+                field=to_field_name,
+                on_delete=fk_field.on_delete,
+                comment=comment,
+            )
         return field_creation_string
 
     def _get_model_sql_data(self, model: type[Model]) -> ModelSqlData:
