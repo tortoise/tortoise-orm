@@ -21,7 +21,7 @@ Fixed
 - fix(expressions): inline subquery parameters when ``params_inline`` is enabled (#2340)
 - Use database column names in reverse foreign-key and one-to-one filters with renamed columns or one-to-one primary keys. (#2338)
 - Migrations now honor ``db_constraint=False`` on ``ForeignKeyField``/``ManyToManyField`` and emit the column (and through table) without a ``FOREIGN KEY`` constraint, matching the runtime schema generator. (#2226)
-- Fix ``field__not=None`` filter returning NULL rows instead of non-NULL rows. (#2351)
+- Fix ``field__not=None`` filter returning NULL rows instead of non-NULL rows. (#2353)
 
 1.1.9
 -----
