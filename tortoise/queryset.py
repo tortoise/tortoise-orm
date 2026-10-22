@@ -139,6 +139,9 @@ class AwaitableQuery(_ChooseDBMixin[MODEL], Generic[MODEL]):
     def resolve_filters(self, fields_for_select: Collection[str] | None = None) -> None:
         """Builds the common filters for a QuerySet."""
         has_aggregate = self._resolve_annotate(fields_for_select)
+        # Captured before the filters below add their joins: only the joins of the
+        # selected fields, the ordering and the annotations are counted here
+        has_joins = bool(self._joined_tables)
 
         modifier = QueryModifier()
         for node in self._q_objects:
@@ -159,7 +162,12 @@ class AwaitableQuery(_ChooseDBMixin[MODEL], Generic[MODEL]):
         self.query._havings = modifier.having_criterion
         self.query._wheres = modifier.where_criterion
 
-        if has_aggregate and (self._joined_tables or self.query._havings or self.query._orderbys):
+        # A join made only by a filter doesn't split values() of aggregates per object
+        if not has_joins and self._joined_tables:
+            has_joins = fields_for_select is None or not all(
+                select.is_aggregate for select in self.query._selects
+            )
+        if has_aggregate and (has_joins or self.query._havings or self.query._orderbys):
             self.query = self.query.groupby(
                 *[self.model._meta.basetable[field] for field in self.model._meta.db_fields]
             )
@@ -1948,13 +1956,7 @@ class ValuesQuery(FieldSelectQuery, Generic[SINGLE]):
             annotations=self._annotations,
             fields_for_select=self._fields_for_select.keys(),
         )
-        self.resolve_filters()
-
-        # remove annotations that are not in fields_for_select
-        self.query._selects = [
-            select for select in self.query._selects if select.alias in self._fields_for_select
-        ]
-
+        self.resolve_filters(self._fields_for_select.keys())
         if self._limit:
             self.query._limit = self.query._wrapper_cls(self._limit)
         if self._offset:
