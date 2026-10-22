@@ -567,7 +567,7 @@ class Function(Expression):
         self.default_values = default_values
 
     def _get_function_field(self, field: Term | str, *default_values) -> PypikaFunction:
-        return self.database_func(field, *default_values)  # type:ignore[arg-type]
+        return self.database_func(field, *default_values)  # type:ignore
 
     def _resolve_nested_field(self, resolve_context: ResolveContext, field: str) -> ResolveResult:
         term, joins, output_field = resolve_nested_field(
@@ -612,11 +612,11 @@ class Function(Expression):
         res = ResolveResult(
             term=term,
             joins=joins,
-            output_field=function_arg.output_field,  # type:ignore[call-overload]
+            output_field=function_arg.output_field,  # type:ignore
         )
 
         if self.populate_field_object and (
-            res_output_field := res.output_field  # type:ignore[call-overload]
+            res_output_field := res.output_field  # type:ignore
         ):
             self.field_object = res_output_field
 
@@ -632,7 +632,7 @@ class Aggregate(Function):
     :param distinct: Flag for aggregate with distinction
     """
 
-    database_func: type[AggregateFunction] = DistinctOptionFunction
+    database_func: type[AggregateFunction] = DistinctOptionFunction  # ty:ignore
 
     def __init__(
         self,
@@ -645,7 +645,7 @@ class Aggregate(Function):
         self.distinct = distinct
         self.filter = _filter
 
-    def _get_function_field(  # type:ignore[override]
+    def _get_function_field(  # type:ignore
         self, field: ArithmeticExpression | PypikaField | str, *default_values
     ) -> DistinctOptionFunction:
         function = cast(DistinctOptionFunction, self.database_func(field, *default_values))
@@ -691,7 +691,7 @@ class When(Expression):
     def __init__(
         self,
         *args: Q,
-        then: str | F | CombinedExpression | Function,
+        then: str | bool | float | F | CombinedExpression | Function,
         negate: bool = False,
         **kwargs: Any,
     ) -> None:
@@ -722,9 +722,10 @@ class When(Expression):
 
         joins = modifier.joins
         if isinstance(self.then, Expression):
-            then_result = self.then.resolve(resolve_context)
-            then = then_result.term
-            joins = list(dict.fromkeys(joins + then_result.joins))
+            resolve_result = self.then.resolve(resolve_context)
+            if then_joins := resolve_result.joins:
+                joins = list(dict.fromkeys(joins + then_joins))
+            then = resolve_result.term
         else:
             then = cast(Term, Term.wrap_constant(self.then))
 
@@ -742,7 +743,7 @@ class Case(Expression):
     def __init__(
         self,
         *args: When,
-        default: str | F | CombinedExpression | Function | None = None,
+        default: str | bool | float | F | CombinedExpression | Function | None = None,
     ) -> None:
         self.args = args
         self.default = default
@@ -760,8 +761,8 @@ class Case(Expression):
 
         if isinstance(self.default, Expression):
             default_result = self.default.resolve(resolve_context)
-            case = case.else_(default_result.term)
             joins += default_result.joins
+            case = case.else_(default_result.term)
         else:
             case = case.else_(Term.wrap_constant(self.default))
 
