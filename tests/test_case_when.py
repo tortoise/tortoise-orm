@@ -1,7 +1,7 @@
 import pytest
 import pytest_asyncio
 
-from tests.testmodels import IntFields
+from tests.testmodels import Event, IntFields, Team, Tournament
 from tortoise.exceptions import FieldError
 from tortoise.expressions import Case, Expression, F, Q, ResolveContext, When
 from tortoise.functions import Coalesce, Count
@@ -292,3 +292,40 @@ def test_invalid_args_and_unimplemented_resolve() -> None:
 
     with pytest.raises(NotImplementedError):
         CustomExpression().resolve(resolve_context)
+
+
+@pytest.mark.asyncio
+async def test_case_when_related_field_joins(db):
+    tournament = await Tournament.create(name="a")
+    await Event.create(name="e", tournament=tournament)
+    case = Case(When(tournament__name="a", then="y"), default="n")
+    assert await Event.annotate(c=case).values_list("c", flat=True) == ["y"]
+
+
+@pytest.mark.asyncio
+async def test_case_then_and_default_related_field_joins(db):
+    tournament = await Tournament.create(name="a")
+    await Event.create(name="e", tournament=tournament)
+    case = Case(When(name="e", then=F("tournament__name")), default=F("tournament__name"))
+    assert await Event.annotate(c=case).values_list("c", flat=True) == ["a"]
+
+
+@pytest.mark.asyncio
+async def test_aggregate_filter_related_field_joins(db):
+    tournament = await Tournament.create(name="a")
+    await Event.create(name="e", tournament=tournament)
+    assert await Tournament.annotate(c=Count("id", _filter=Q(events__name="e"))).values_list(
+        "c", flat=True
+    ) == [1]
+
+
+@pytest.mark.asyncio
+async def test_case_when_m2m_and_multi_hop_joins(db):
+    tournament = await Tournament.create(name="a")
+    event = await Event.create(name="e", tournament=tournament)
+    team = await Team.create(name="t")
+    await event.participants.add(team)
+    case = Case(When(participants__name="t", then="y"), default="n")
+    assert await Event.annotate(c=case).values_list("c", flat=True) == ["y"]
+    case = Case(When(events__participants__name="t", then="y"), default="n")
+    assert await Tournament.annotate(c=case).values_list("c", flat=True) == ["y"]
