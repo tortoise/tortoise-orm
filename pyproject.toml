@@ -239,3 +239,6 @@ exclude_dirs = [
 
 [tool.codespell]
 ignore-words-list = "notin,NotIn,brin,BRIN,astroid"
+
+[tool.uv.sources]
+pypika-tortoise = { git = "https://github.com/tortoise/pypika-tortoise", rev = "refs/pull/49/head" }
