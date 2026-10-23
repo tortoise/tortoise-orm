@@ -27,22 +27,25 @@ class TestStraightFields:
     @pytest.mark.asyncio
     @pytest.mark.parametrize("refresh_fields", [None, [], (), ["chars"]])
     async def test_refresh_from_db(self, db, refresh_fields):
-        obj = await self.model.create(chars="before", blip="before")
-        await self.model.filter(pk=obj.pk).update(chars="after", blip="after")
+        obj = await self.model.create(chars="before1", blip="before2")
+        await self.model.filter(pk=obj.pk).update(chars="after1", blip="after2")
 
         await obj.refresh_from_db(fields=refresh_fields)
 
-        assert obj.chars == "after"
-        assert obj.blip == ("before" if refresh_fields else "after")
+        assert obj.chars == "after1"
+        assert obj.blip == ("before2" if refresh_fields else "after2")
 
     @pytest.mark.asyncio
     async def test_refresh_from_db_updates_foreign_key_id(self, db):
         old_parent = await self.model.create(chars="old parent")
         new_parent = await self.model.create(chars="new parent")
         obj = await self.model.create(chars="child", fk_id=old_parent.pk)
+        assert dict(obj)["fk_id"] == old_parent.pk
         await self.model.filter(pk=obj.pk).update(fk_id=new_parent.pk)
+        assert dict(obj)["fk_id"] == old_parent.pk
 
         await obj.refresh_from_db()
+        assert dict(obj)["fk_id"] == new_parent.pk
 
         assert obj.fk_id == new_parent.pk
         assert obj.chars == "child"
