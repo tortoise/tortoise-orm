@@ -23,6 +23,7 @@ Fixed
 - Migrations now honor ``db_constraint=False`` on ``ForeignKeyField``/``ManyToManyField`` and emit the column (and through table) without a ``FOREIGN KEY`` constraint, matching the runtime schema generator. (#2226)
 - Fix ``field__not=None`` filter returning NULL rows instead of non-NULL rows. (#2353)
 - ``Case``/``When`` and aggregate ``_filter`` expressions now keep the joins for related fields they reference, so e.g. ``When(tournament__name="a", then=1)`` no longer fails with a missing table. (#2354)
+- Refresh renamed model fields and foreign-key IDs using their model attribute names. (#2335)
 
 1.1.9
 -----
