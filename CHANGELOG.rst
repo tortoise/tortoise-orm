@@ -24,7 +24,7 @@ Fixed
 - Fix ``field__not=None`` filter returning NULL rows instead of non-NULL rows. (#2353)
 - ``Case``/``When`` and aggregate ``_filter`` expressions now keep the joins for related fields they reference, so e.g. ``When(tournament__name="a", then=1)`` no longer fails with a missing table. (#2354)
 - Refresh renamed model fields and foreign-key IDs using their model attribute names. (#2335)
-- ``MigrationGraph.leaf_nodes()``/``root_nodes()`` with an app label no longer treat an edge from another app as making that app leafless or rootless. ``migrate``/``plan`` for ``app.__latest__``/``app.__first__`` planned nothing (or rolled nothing back) when the app's newest migration was depended on from another app, or its first migration depended on another app. (#2305)
+- ``MigrationGraph.leaf_nodes()``/``root_nodes()`` with an app label no longer treat an edge from another app as making that app leafless or rootless. ``migrate``/``plan`` for ``app.__latest__``/``app.__first__`` planned nothing (or rolled nothing back) when the app's newest migration was depended on from another app, or its first migration depended on another app. (#2307)
 
 1.1.9
 -----

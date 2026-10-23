@@ -2,11 +2,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from functools import total_ordering
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 
 if TYPE_CHECKING:
-    from typing import Literal
-
     from tortoise.migrations.migration import Migration
 
 
