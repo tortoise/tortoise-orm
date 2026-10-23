@@ -959,6 +959,9 @@ class QuerySet(AwaitableQuery[MODEL]):
         DEFAULT.  Within a single call, each ``db_default`` field must be treated
         consistently: either **all** instances supply a value or **none** do.
 
+        Field option iterables are materialized when the query is constructed, so
+        SQL inspection and execution use the same field names.
+
         :param on_conflict: On conflict index name
         :param update_fields: Update fields when conflicts
         :param ignore_conflicts: Ignore conflicts when inserting
@@ -969,6 +972,8 @@ class QuerySet(AwaitableQuery[MODEL]):
         :raises OperationalError: If a ``db_default`` field has mixed usage across
             instances (some provide a value, others rely on the database default).
         """
+        update_fields = tuple(update_fields) if update_fields is not None else None
+        on_conflict = tuple(on_conflict) if on_conflict is not None else None
         if ignore_conflicts:
             if update_fields:
                 raise ValueError("ignore_conflicts and update_fields are mutually exclusive.")
