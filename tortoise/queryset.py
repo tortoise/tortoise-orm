@@ -709,7 +709,9 @@ class QuerySet(AwaitableQuery[MODEL]):
             raise ValueError(".values_list() cannot be used with .only()")
 
         fields_for_select_list = fields_ or [
-            field for field in self.model._meta.fields_map if field in self.model._meta.db_fields
+            field
+            for field in self.model._meta.fields_map
+            if field in self.model._meta.fields_db_projection
         ] + list(self._annotations.keys())
         return ValuesListQuery(
             db=self._db,

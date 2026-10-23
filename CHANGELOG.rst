@@ -23,6 +23,9 @@ Fixed
 - Migrations now honor ``db_constraint=False`` on ``ForeignKeyField``/``ManyToManyField`` and emit the column (and through table) without a ``FOREIGN KEY`` constraint, matching the runtime schema generator. (#2226)
 - Fix ``field__not=None`` filter returning NULL rows instead of non-NULL rows. (#2353)
 - ``Case``/``When`` and aggregate ``_filter`` expressions now keep the joins for related fields they reference, so e.g. ``When(tournament__name="a", then=1)`` no longer fails with a missing table. (#2354)
+- Refresh renamed model fields and foreign-key IDs using their model attribute names. (#2335)
+- Include renamed fields in model dictionaries and default ``values_list()`` projections. (#2339)
+- Fix ``get_or_create`` function raises "Object does not exist". (#2116)
 - ``bulk_update()`` now filters on the primary key list once per batch instead of once per field, avoiding duplicate ``IN`` conditions that made PostgreSQL fall back to a sequential scan. (#2358)
 
 1.1.9
