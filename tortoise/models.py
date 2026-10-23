@@ -881,7 +881,7 @@ class Model(metaclass=ModelMeta):
         return hash(self.pk)
 
     def __iter__(self) -> Iterator[tuple[str, Any]]:
-        for field in self._meta.db_fields:
+        for field in self._meta.fields_db_projection:
             yield field, getattr(self, field)
 
     def __eq__(self, other: object) -> bool:
@@ -1253,7 +1253,7 @@ class Model(metaclass=ModelMeta):
             qs = qs.only(*fields)
         obj = await qs.get(pk=self.pk)
 
-        for field in fields or self._meta.db_fields:
+        for field in fields or self._meta.fields_db_projection:
             setattr(self, field, getattr(obj, field, None))
 
     @classmethod
