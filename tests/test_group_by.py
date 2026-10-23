@@ -367,3 +367,28 @@ async def test_select_subquery_with_group_by(db, group_by_data):
         await Author.annotate(top_rating=subquery).order_by("id").values_list("name", "top_rating")
     )
     assert ret == [(a1.name, 9.0), (a2.name, 9.0)]
+
+
+@pytest.mark.asyncio
+async def test_count_with_group_by(db, group_by_data):
+    query = Book.annotate(count=Count("id")).group_by("author_id")
+
+    assert await query.count() == 2
+    assert await query.count() == len(await query.values("author_id", "count"))
+
+
+@pytest.mark.asyncio
+async def test_count_with_group_by_and_aggregate_filter(db, group_by_data):
+    query = Book.annotate(count=Count("id")).group_by("author_id").filter(count__gt=6)
+
+    assert await query.count() == 1
+    assert await query.count() == len(await query.values("author_id", "count"))
+
+
+@pytest.mark.asyncio
+async def test_count_with_group_by_with_join(db, group_by_data):
+    query = Book.annotate(count=Count("id")).group_by("author__name").filter(count__gt=6)
+
+    assert await query.count() == 1
+    assert await query.limit(1).count() == 1
+    assert await query.offset(1).count() == 0
