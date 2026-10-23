@@ -730,6 +730,11 @@ class QuerySet(AwaitableQuery[MODEL]):
             group_bys=self._group_bys,
             force_indexes=self._force_indexes,
             use_indexes=self._use_indexes,
+            select_for_update=self._select_for_update,
+            select_for_update_nowait=self._select_for_update_nowait,
+            select_for_update_skip_locked=self._select_for_update_skip_locked,
+            select_for_update_of=self._select_for_update_of,
+            select_for_update_no_key=self._select_for_update_no_key,
         )
 
     def values(self, *args: str, **kwargs: str) -> ValuesQuery[Literal[False]]:
@@ -785,6 +790,11 @@ class QuerySet(AwaitableQuery[MODEL]):
             group_bys=self._group_bys,
             force_indexes=self._force_indexes,
             use_indexes=self._use_indexes,
+            select_for_update=self._select_for_update,
+            select_for_update_nowait=self._select_for_update_nowait,
+            select_for_update_skip_locked=self._select_for_update_skip_locked,
+            select_for_update_of=self._select_for_update_of,
+            select_for_update_no_key=self._select_for_update_no_key,
         )
 
     def delete(self) -> DeleteQuery:
@@ -1768,6 +1778,11 @@ class ValuesListQuery(FieldSelectQuery, Generic[SINGLE]):
         "_force_indexes",
         "_use_indexes",
         "_fields_to_select_sql",
+        "_select_for_update",
+        "_select_for_update_nowait",
+        "_select_for_update_skip_locked",
+        "_select_for_update_of",
+        "_select_for_update_no_key",
     )
 
     def __init__(
@@ -1788,6 +1803,11 @@ class ValuesListQuery(FieldSelectQuery, Generic[SINGLE]):
         group_bys: tuple[str, ...],
         force_indexes: set[str],
         use_indexes: set[str],
+        select_for_update: bool = False,
+        select_for_update_nowait: bool = False,
+        select_for_update_skip_locked: bool = False,
+        select_for_update_of: set[str] | None = None,
+        select_for_update_no_key: bool = False,
     ) -> None:
         super().__init__(model, annotations)
         if flat and (len(fields_for_select_list) != 1):
@@ -1809,6 +1829,11 @@ class ValuesListQuery(FieldSelectQuery, Generic[SINGLE]):
         self._group_bys = group_bys
         self._force_indexes = force_indexes
         self._use_indexes = use_indexes
+        self._select_for_update = select_for_update
+        self._select_for_update_nowait = select_for_update_nowait
+        self._select_for_update_skip_locked = select_for_update_skip_locked
+        self._select_for_update_of = select_for_update_of or set()
+        self._select_for_update_no_key = select_for_update_no_key
         self._fields_to_select_sql = {
             *self._fields_for_select_list,
             *(key for key, value in self.fields.items() if value in self._fields_for_select_list),
@@ -1837,6 +1862,13 @@ class ValuesListQuery(FieldSelectQuery, Generic[SINGLE]):
             self.query._distinct = True
         if self._group_bys:
             self.query._groupbys = self._resolve_group_bys(*self._group_bys)
+        if self._select_for_update:
+            self.query = self.query.for_update(
+                self._select_for_update_nowait,
+                self._select_for_update_skip_locked,
+                self._select_for_update_of,
+                self._select_for_update_no_key,
+            )
 
         if self._force_indexes:
             self.query._force_indexes = []
@@ -1901,6 +1933,11 @@ class ValuesQuery(FieldSelectQuery, Generic[SINGLE]):
         "_group_bys",
         "_force_indexes",
         "_use_indexes",
+        "_select_for_update",
+        "_select_for_update_nowait",
+        "_select_for_update_skip_locked",
+        "_select_for_update_of",
+        "_select_for_update_no_key",
     )
 
     def __init__(
@@ -1920,6 +1957,11 @@ class ValuesQuery(FieldSelectQuery, Generic[SINGLE]):
         group_bys: tuple[str, ...],
         force_indexes: set[str],
         use_indexes: set[str],
+        select_for_update: bool = False,
+        select_for_update_nowait: bool = False,
+        select_for_update_skip_locked: bool = False,
+        select_for_update_of: set[str] | None = None,
+        select_for_update_no_key: bool = False,
     ) -> None:
         super().__init__(model, annotations)
         self._fields_for_select = fields_for_select
@@ -1935,6 +1977,11 @@ class ValuesQuery(FieldSelectQuery, Generic[SINGLE]):
         self._group_bys = group_bys
         self._force_indexes = force_indexes
         self._use_indexes = use_indexes
+        self._select_for_update = select_for_update
+        self._select_for_update_nowait = select_for_update_nowait
+        self._select_for_update_skip_locked = select_for_update_skip_locked
+        self._select_for_update_of = select_for_update_of or set()
+        self._select_for_update_no_key = select_for_update_no_key
 
     def _make_query(self) -> None:
         self._joined_tables = []
@@ -1965,6 +2012,13 @@ class ValuesQuery(FieldSelectQuery, Generic[SINGLE]):
             self.query._distinct = True
         if self._group_bys:
             self.query._groupbys = self._resolve_group_bys(*self._group_bys)
+        if self._select_for_update:
+            self.query = self.query.for_update(
+                self._select_for_update_nowait,
+                self._select_for_update_skip_locked,
+                self._select_for_update_of,
+                self._select_for_update_no_key,
+            )
 
         if self._force_indexes:
             self.query._force_indexes = []
