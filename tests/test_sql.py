@@ -239,7 +239,9 @@ async def test_bulk_update_multiple_fields(sql_context):
     obj2 = await IntFields.create(intnum=2, intnum_null=20)
     obj1.intnum, obj1.intnum_null = 3, 30
     obj2.intnum, obj2.intnum_null = 4, 40
-    sql = IntFields.bulk_update([obj1, obj2], fields=["intnum", "intnum_null"]).sql()
+    [(sql, params)] = IntFields.bulk_update(
+        [obj1, obj2], fields=["intnum", "intnum_null"]
+    )._make_queries()
 
     if dialect == "mysql":
         expected = (
@@ -275,6 +277,53 @@ async def test_bulk_update_multiple_fields(sql_context):
             'WHERE "id" IN (?,?)'
         )
     assert sql == expected
+    assert params == [obj1.pk, 3, obj2.pk, 4, obj1.pk, 30, obj2.pk, 40, obj1.pk, obj2.pk]
+
+
+@pytest.mark.asyncio
+async def test_bulk_update_multiple_fields_batch_size(sql_context):
+    db, dialect, is_psycopg = sql_context
+    obj1 = await IntFields.create(intnum=1, intnum_null=10)
+    obj2 = await IntFields.create(intnum=2, intnum_null=20)
+    obj1.intnum, obj1.intnum_null = 3, 30
+    obj2.intnum, obj2.intnum_null = 4, 40
+    queries = IntFields.bulk_update(
+        [obj1, obj2], fields=["intnum", "intnum_null"], batch_size=1
+    )._make_queries()
+
+    if dialect == "mysql":
+        expected = (
+            "UPDATE `intfields` "
+            "SET `intnum`=CASE WHEN `id`=%s THEN %s END,"
+            "`intnum_null`=CASE WHEN `id`=%s THEN %s END "
+            "WHERE `id` IN (%s)"
+        )
+    elif dialect == "postgres":
+        if is_psycopg:
+            expected = (
+                'UPDATE "intfields" '
+                'SET "intnum"=CASE WHEN "id"=%s THEN CAST(%s AS INT) END,'
+                '"intnum_null"=CASE WHEN "id"=%s THEN CAST(%s AS INT) END '
+                'WHERE "id" IN (%s)'
+            )
+        else:
+            expected = (
+                'UPDATE "intfields" '
+                'SET "intnum"=CASE WHEN "id"=$1 THEN CAST($2 AS INT) END,'
+                '"intnum_null"=CASE WHEN "id"=$3 THEN CAST($4 AS INT) END '
+                'WHERE "id" IN ($5)'
+            )
+    else:
+        expected = (
+            'UPDATE "intfields" '
+            'SET "intnum"=CASE WHEN "id"=? THEN ? END,'
+            '"intnum_null"=CASE WHEN "id"=? THEN ? END '
+            'WHERE "id" IN (?)'
+        )
+    assert queries == [
+        (expected, [obj1.pk, 3, obj1.pk, 30, obj1.pk]),
+        (expected, [obj2.pk, 4, obj2.pk, 40, obj2.pk]),
+    ]
 
 
 @pytest.mark.asyncio
