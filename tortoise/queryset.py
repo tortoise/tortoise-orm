@@ -2084,17 +2084,15 @@ class BulkUpdateQuery(UpdateQuery, Generic[MODEL]):
 
         self.resolve_filters()
         pk_attr = self.model._meta.pk_attr
-        source_pk_attr = self.model._meta.fields_map[pk_attr].source_field or pk_attr
+        model_pk_field = self.model._meta.fields_map[pk_attr]
+        source_pk_attr = model_pk_field.source_field or pk_attr
         pk = Field(source_pk_attr)
         for objects_item in chunk(self._objects, self._batch_size):
             query = copy(self.query)
-            pk_list = [
-                self.model._meta.fields_map[pk_attr].to_db_value(obj.pk, None)
-                for obj in objects_item
-            ]
+            pk_list = [model_pk_field.to_db_value(obj.pk, None) for obj in objects_item]
             for field in self.fields:
                 case = Case()
-                for obj, pk_value in zip(objects_item, pk_list):
+                for obj, pk_value in zip(objects_item, pk_list, strict=False):
                     field_obj = obj._meta.fields_map[field]
                     field_value = field_obj.to_db_value(getattr(obj, field), obj)
                     case.when(
