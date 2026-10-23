@@ -1284,9 +1284,11 @@ class Model(metaclass=ModelMeta):
         :param kwargs: Query parameters.
         :raises IntegrityError: If create failed
         :raises TransactionManagementError: If transaction error
-        :raises ParamsError: If defaults conflict with kwargs
+        :raises ParamsError: If defaults conflict with kwargs, or if neither defaults nor kwargs is provided.
         """
         if not defaults:
+            if not kwargs and defaults is None:
+                raise ParamsError("You must provide filter kwargs or specify `defaults`")
             defaults = {}
         db = using_db or cls._choose_db(True)
         try:
@@ -1356,8 +1358,11 @@ class Model(metaclass=ModelMeta):
         :param using_db: Specific DB connection to use instead of default bound
         :param kwargs: Query parameters.
         :raises OperationalError: If repeated concurrent deletions exhaust conflict recovery.
+        :raises ParamsError: If neither defaults nor kwargs is provided.
         """
         if not defaults:
+            if not kwargs and defaults is None:
+                raise ParamsError("You must provide filter kwargs or specify `defaults`")
             defaults = {}
         db = using_db or cls._choose_db(True)
         for attempt in range(3):
