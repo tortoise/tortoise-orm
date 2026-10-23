@@ -23,7 +23,7 @@ Fixed
 - Migrations now honor ``db_constraint=False`` on ``ForeignKeyField``/``ManyToManyField`` and emit the column (and through table) without a ``FOREIGN KEY`` constraint, matching the runtime schema generator. (#2226)
 - Fix ``field__not=None`` filter returning NULL rows instead of non-NULL rows. (#2353)
 - ``Case``/``When`` and aggregate ``_filter`` expressions now keep the joins for related fields they reference, so e.g. ``When(tournament__name="a", then=1)`` no longer fails with a missing table. (#2354)
-- ``bulk_update()`` now filters on the primary key list once per batch instead of once per field, avoiding duplicate ``IN`` conditions that made PostgreSQL fall back to a sequential scan. (#2358
+- ``bulk_update()`` now filters on the primary key list once per batch instead of once per field, avoiding duplicate ``IN`` conditions that made PostgreSQL fall back to a sequential scan. (#2358)
 
 1.1.9
 -----
