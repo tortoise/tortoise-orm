@@ -29,7 +29,6 @@ from tortoise.fields.relational import (
     OneToOneFieldInstance,
     RelationalField,
 )
-from tortoise.filters import FilterInfoDict
 from tortoise.query_utils import (
     Prefetch,
     QueryModifier,
@@ -45,6 +44,7 @@ from tortoise.utils import chunk
 QUERY: QueryBuilder = QueryBuilder()
 
 if TYPE_CHECKING:  # pragma: nocoverage
+    from tortoise.filters import FilterInfoDict
     from tortoise.models import Model
 
 MODEL = TypeVar("MODEL", bound="Model")

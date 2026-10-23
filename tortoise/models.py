@@ -3,14 +3,12 @@ from __future__ import annotations
 import asyncio
 import inspect
 import re
-import sys
 from collections.abc import Awaitable, Callable, Generator, Iterable, Iterator
 from copy import copy, deepcopy
 from functools import partial
 from typing import TYPE_CHECKING, Any, TypedDict, TypeVar, cast
 
 from pypika_tortoise import Order, Query, Table
-from pypika_tortoise.terms import Term
 
 from tortoise.backends.base.client import BaseDBAsyncClient
 from tortoise.connection import get_connection
@@ -38,7 +36,7 @@ from tortoise.fields.relational import (
     OneToOneFieldInstance,
     ReverseRelation,
 )
-from tortoise.filters import FilterInfoDict, get_filters_for_field
+from tortoise.filters import get_filters_for_field
 from tortoise.indexes import Index
 from tortoise.manager import Manager
 from tortoise.queryset import (
@@ -55,10 +53,22 @@ from tortoise.signals import Signals
 from tortoise.transactions import in_transaction
 
 if TYPE_CHECKING:
+    import sys
+
     if sys.version_info >= (3, 11):
         from typing import Self
     else:
         from typing_extensions import Self
+
+    from pypika_tortoise.terms import Term
+
+    from tortoise.filters import FilterInfoDict
+
+    class FkSetterKwargs(TypedDict):
+        _key: str
+        relation_field: str
+        to_field: str
+
 
 MODEL = TypeVar("MODEL", bound="Model")
 PRIMARY_KEY = TypeVar("PRIMARY_KEY")
@@ -83,12 +93,6 @@ def prepare_default_ordering(meta: Model.Meta) -> tuple[tuple[str, Order], ...]:
     )
 
     return parsed_ordering
-
-
-class FkSetterKwargs(TypedDict):
-    _key: str
-    relation_field: str
-    to_field: str
 
 
 def _fk_setter(
@@ -1249,7 +1253,7 @@ class Model(metaclass=ModelMeta):
             qs = qs.only(*fields)
         obj = await qs.get(pk=self.pk)
 
-        for field in fields or self._meta.db_fields:
+        for field in fields or self._meta.fields_db_projection:
             setattr(self, field, getattr(obj, field, None))
 
     @classmethod
