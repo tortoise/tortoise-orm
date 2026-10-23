@@ -11,7 +11,7 @@ from pypika_tortoise.analytics import Count
 from pypika_tortoise.functions import Cast
 from pypika_tortoise.functions import Count as DistinctCount
 from pypika_tortoise.queries import QueryBuilder, _SetOperation
-from pypika_tortoise.terms import Case, Field, Function, Star, Term, Tuple, ValueWrapper
+from pypika_tortoise.terms import Case, Field, Function, Star, Term, Tuple, Values, ValueWrapper
 
 from tortoise.backends.base.client import BaseDBAsyncClient, Capabilities
 from tortoise.exceptions import (
@@ -2228,12 +2228,17 @@ class BulkCreateQuery(AwaitableQuery, Generic[MODEL]):
             if omit_fields
             else list(update_fields)
         )
-        alias = f"new_{self.model._meta.db_table}"
-        insert_query = insert_query.as_(alias).on_conflict(*(self._on_conflict or []))
-        insert_query_all = insert_query_all.as_(alias).on_conflict(*(self._on_conflict or []))
+        is_mysql = self._db.capabilities.dialect == "mysql"
+        if not is_mysql:
+            alias = f"new_{self.model._meta.db_table}"
+            insert_query = insert_query.as_(alias)
+            insert_query_all = insert_query_all.as_(alias)
+        insert_query = insert_query.on_conflict(*(self._on_conflict or []))
+        insert_query_all = insert_query_all.on_conflict(*(self._on_conflict or []))
         for update_field in effective_update_fields:
-            insert_query = insert_query.do_update(update_field)
-            insert_query_all = insert_query_all.do_update(update_field)
+            value = Values(update_field) if is_mysql else None
+            insert_query = insert_query.do_update(update_field, value)
+            insert_query_all = insert_query_all.do_update(update_field, value)
         return insert_query, insert_query_all
 
     def _make_queries(self, omit_fields: set[str] | None = None) -> tuple[str, str]:
