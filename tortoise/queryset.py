@@ -2074,6 +2074,9 @@ class BulkUpdateQuery(UpdateQuery, Generic[MODEL]):
         self._queries: list[QueryBuilder] = []
 
     def _make_queries(self) -> list[tuple[str, list[Any]]]:
+        self._queries = []
+        if not self._objects or not self.fields:
+            return []
         table = self.model._meta.basetable
         self.query = self._db.query_class.update(table)
         if self.capabilities.support_update_limit_order_by and self._limit:
