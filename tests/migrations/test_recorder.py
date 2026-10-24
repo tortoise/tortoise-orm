@@ -3,6 +3,7 @@ import warnings
 import pytest
 
 from tortoise.backends.base.client import Capabilities
+from tortoise.backends.mysql import MySQLClient
 from tortoise.exceptions import DBConnectionError, OperationalError
 from tortoise.migrations.executor import MigrationExecutor
 from tortoise.migrations.recorder import MigrationRecorder
@@ -215,6 +216,15 @@ async def test_recorder_propagates_query_errors_when_table_exists() -> None:
 @pytest.mark.asyncio
 async def test_recorder_detects_migrations_table_on_real_database(db_isolated) -> None:
     connection = db_isolated.db()
+    if (
+        isinstance(connection, MySQLClient)
+        and connection.storage_engine
+        and connection.storage_engine.lower() != "innodb"
+    ):
+        pytest.skip(
+            "The migrations table's unique key exceeds MyISAM's 1000-byte key limit, "
+            "a pre-existing limitation unrelated to this test"
+        )
     executor = MigrationExecutor(connection, {})
     recorder = executor.recorder
 
