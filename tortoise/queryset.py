@@ -2348,7 +2348,7 @@ class BulkCreateQuery(AwaitableQuery, Generic[MODEL]):
         if all(not o._custom_generated_pk for o in self._objects):
             return insert_sql
 
-        return ";".join([insert_sql, insert_sql_all])
+        return insert_sql + ";" + insert_sql_all
 
 
 class UnionCountQuery(AwaitableQuery):
