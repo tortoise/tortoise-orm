@@ -1,4 +1,5 @@
 import copy
+from typing import Annotated, Literal
 
 import pytest
 import pytest_asyncio
@@ -20,11 +21,13 @@ from tests.testmodels import (
     User,
     json_pydantic_default,
 )
+from tortoise import fields
 from tortoise.contrib.pydantic import (
     PydanticModel,
     pydantic_model_creator,
     pydantic_queryset_creator,
 )
+from tortoise.models import Model
 
 
 # Fixtures for TestPydantic
@@ -2119,7 +2122,7 @@ def test_int_enum(db):
     EnumFields_Pydantic = pydantic_model_creator(EnumFields)
     with pytest.raises(ValidationError) as exc_info:
         EnumFields_Pydantic.model_validate({"id": 1, "service": 4, "currency": "HUF"})
-    assert [
+    assert exc_info.value.errors(include_url=False) == [
         {
             "type": "enum",
             "loc": ("service",),
@@ -2127,12 +2130,12 @@ def test_int_enum(db):
             "input": 4,
             "ctx": {"expected": "1, 2 or 3"},
         }
-    ] == exc_info.value.errors(include_url=False)
+    ]
     with pytest.raises(ValidationError) as exc_info:
         EnumFields_Pydantic.model_validate(
             {"id": 1, "service": "a string, not int", "currency": "HUF"}
         )
-    assert [
+    assert exc_info.value.errors(include_url=False) == [
         {
             "type": "enum",
             "loc": ("service",),
@@ -2140,14 +2143,14 @@ def test_int_enum(db):
             "input": "a string, not int",
             "ctx": {"expected": "1, 2 or 3"},
         }
-    ] == exc_info.value.errors(include_url=False)
+    ]
 
 
 def test_str_enum(db):
     EnumFields_Pydantic = pydantic_model_creator(EnumFields)
     with pytest.raises(ValidationError) as exc_info:
         EnumFields_Pydantic.model_validate({"id": 1, "service": 3, "currency": "GoofyGooberDollar"})
-    assert [
+    assert exc_info.value.errors(include_url=False) == [
         {
             "type": "enum",
             "loc": ("currency",),
@@ -2155,10 +2158,10 @@ def test_str_enum(db):
             "input": "GoofyGooberDollar",
             "ctx": {"expected": "'HUF', 'EUR' or 'USD'"},
         }
-    ] == exc_info.value.errors(include_url=False)
+    ]
     with pytest.raises(ValidationError) as exc_info:
         EnumFields_Pydantic.model_validate({"id": 1, "service": 3, "currency": 1})
-    assert [
+    assert exc_info.value.errors(include_url=False) == [
         {
             "type": "enum",
             "loc": ("currency",),
@@ -2166,14 +2169,14 @@ def test_str_enum(db):
             "input": 1,
             "ctx": {"expected": "'HUF', 'EUR' or 'USD'"},
         }
-    ] == exc_info.value.errors(include_url=False)
+    ]
 
 
 def test_enum(db):
     EnumFields_Pydantic = pydantic_model_creator(EnumFields)
     with pytest.raises(ValidationError) as exc_info:
         EnumFields_Pydantic.model_validate({"id": 1, "service": 4, "currency": 1})
-    assert [
+    assert exc_info.value.errors(include_url=False) == [
         {
             "type": "enum",
             "loc": ("service",),
@@ -2188,11 +2191,11 @@ def test_enum(db):
             "input": 1,
             "ctx": {"expected": "'HUF', 'EUR' or 'USD'"},
         },
-    ] == exc_info.value.errors(include_url=False)
+    ]
 
     # should simply not raise any error:
     EnumFields_Pydantic.model_validate({"id": 1, "service": 3, "currency": "HUF"})
-    assert {
+    assert EnumFields_Pydantic.model_json_schema() == {
         "$defs": {
             "Currency": {
                 "enum": ["HUF", "EUR", "USD"],
@@ -2225,7 +2228,7 @@ def test_enum(db):
         "required": ["id", "service"],
         "title": "EnumFields",
         "type": "object",
-    } == EnumFields_Pydantic.model_json_schema()
+    }
 
 
 def test_nullable_fk_not_required(db):
@@ -2266,6 +2269,26 @@ def test_field_with_default_not_optional(db):
         Event_Pydantic(
             event_id=1, name="test", tournament=1, token=None, modified="2024-01-01T00:00:00"
         )
+
+
+def test_non_class_annotation() -> None:
+    """Annotations whose origin is not a class (Literal) must not crash (#2309)."""
+    from tortoise.validators import RegexValidator
+
+    class AnnotatedModel(Model):
+        id = fields.IntField(primary_key=True)
+        st: Literal["a", "b"] = fields.CharField(max_length=5)  # type: ignore
+        st2: Annotated[Literal["a", "b"], "a/b"] = fields.CharField(  # type: ignore
+            max_length=1,
+            validators=[RegexValidator("^[ab]$", flags=0)],
+        )
+
+    Annotated_Pydantic = pydantic_model_creator(AnnotatedModel)
+    assert sorted(Annotated_Pydantic.model_fields) == ["id", "st", "st2"]
+    st_annotation = Annotated_Pydantic.model_fields["st"].annotation
+    st2_annotation = Annotated_Pydantic.model_fields["st2"].annotation
+    assert st2_annotation == st_annotation
+    assert st_annotation == Literal["a", "b"]  # type:ignore[comparison-overlap]
 
 
 # Tests for computed fields accessing relations (#1440)

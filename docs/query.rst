@@ -122,6 +122,15 @@ query around related entities:
     # Gets all tournaments where teams with "junior" in their name are participating
     await Tournament.filter(event__participants__name__icontains='junior').distinct()
 
+Forward foreign key and one-to-one relations support ``in`` and ``not_in`` with
+related model instances or referenced values. Model instances use the relation's
+``to_field`` when it points to a unique field other than the primary key.
+
+.. code-block:: python3
+
+    await Event.filter(tournament__in=[first_tournament, second_tournament])
+    await Event.filter(tournament__not_in=[first_tournament])
+
 
 Usually you not only want to filter by related data, but also get that related data as well.
 You could do it using ``.prefetch_related()``:

@@ -53,6 +53,21 @@ async def test_bulk_update(db):
 
 
 @pytest.mark.asyncio
+async def test_bulk_update_multiple_fields_batch_size(db):
+    objs = [await IntFields.create(intnum=i, intnum_null=i) for i in range(3)]
+    for obj in objs:
+        obj.intnum += 10
+        obj.intnum_null += 20
+    rows_affected = await IntFields.bulk_update(
+        objs, fields=["intnum", "intnum_null"], batch_size=1
+    )
+    assert rows_affected == 3
+    assert await IntFields.filter(pk__in=[o.pk for o in objs]).order_by("id").values_list(
+        "intnum", "intnum_null"
+    ) == [(10, 20), (11, 21), (12, 22)]
+
+
+@pytest.mark.asyncio
 async def test_bulk_update_datetime(db):
     objs = [
         await DatetimeFields.create(datetime=datetime(2021, 1, 1, tzinfo=UTC)),
