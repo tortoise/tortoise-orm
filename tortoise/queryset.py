@@ -2086,15 +2086,15 @@ class BulkUpdateQuery(UpdateQuery, Generic[MODEL]):
 
         self.resolve_filters()
         pk_attr = self.model._meta.pk_attr
-        source_pk_attr = self.model._meta.fields_map[pk_attr].source_field or pk_attr
+        model_pk_field = self.model._meta.fields_map[pk_attr]
+        source_pk_attr = model_pk_field.source_field or pk_attr
         pk = Field(source_pk_attr)
         for objects_item in chunk(self._objects, self._batch_size):
             query = copy(self.query)
+            pk_list = [model_pk_field.to_db_value(obj.pk, None) for obj in objects_item]
             for field in self.fields:
                 case = Case()
-                pk_list = []
-                for obj in objects_item:
-                    pk_value = self.model._meta.fields_map[pk_attr].to_db_value(obj.pk, None)
+                for obj, pk_value in zip(objects_item, pk_list, strict=False):
                     field_obj = obj._meta.fields_map[field]
                     field_value = field_obj.to_db_value(getattr(obj, field), obj)
                     case.when(
@@ -2110,9 +2110,8 @@ class BulkUpdateQuery(UpdateQuery, Generic[MODEL]):
                             else self.query._wrapper_cls(field_value)
                         ),
                     )
-                    pk_list.append(pk_value)
                 query = query.set(field, case)
-                query = query.where(pk.isin(pk_list))
+            query = query.where(pk.isin(pk_list))
             self._queries.append(query)
         return [query.get_parameterized_sql() for query in self._queries]
 
