@@ -217,9 +217,9 @@ class PydanticModelCreator:
             and sort_alphabetically is None
             and allow_cycles is None
             and meta_override is None
-            and not exclude_readonly
             and model_config is None
-            and validators is None
+            and not validators
+            and not exclude_readonly
             and module == __name__
         )
         if exclude is None:
@@ -270,6 +270,7 @@ class PydanticModelCreator:
 
         self._optional = optional
 
+        self._call_model_config = model_config
         self._validators = validators
         self._module = module
 
@@ -278,12 +279,10 @@ class PydanticModelCreator:
     @property
     def _hash(self) -> str:
         if self.__hash == "":
-            field_info = []
-            for name, prop in self._properties.items():
-                if isinstance(prop, tuple):
-                    field_info.append(f"{name}:{prop[0]}")
-                else:
-                    field_info.append(f"{name}:computed")
+            field_info = [
+                f"{name}:{prop[0]}" if isinstance(prop, tuple) else f"{name}:computed"
+                for name, prop in self._properties.items()
+            ]
             hashval = (
                 f"{self._fqname};"
                 f"{field_info};"
@@ -293,26 +292,11 @@ class PydanticModelCreator:
                 f"{self._exclude_read_only};"
                 f"{self.meta.computed}"
             )
-            if self.meta.model_config:
-                hashval += f";{sorted(self.meta.model_config.items())}"
-            if self._validators:
-                v_items = []
-                for k in sorted(self._validators.keys()):
-                    v = self._validators[k]
-                    func = getattr(v, "wrapped", getattr(v, "__func__", v))
-                    code = getattr(func, "__code__", None)
-                    code_bytes = getattr(code, "co_code", None)
-                    consts = getattr(code, "co_consts", None)
-                    dec_info = getattr(v, "decorator_info", None)
-                    v_items.append(
-                        f"{k}:{getattr(func, '__qualname__', repr(func))}:{code_bytes}:{consts}:{repr(dec_info)}"
-                    )
-                hashval += f";{v_items}"
-            if self._module != __name__:
-                hashval += f";{self._module}"
-            self.__hash = (
-                b32encode(sha3_224(hashval.encode("utf-8")).digest()).decode("utf-8").lower()[:6]
-            )
+            if self._call_model_config is not None or self._validators or self._module != __name__:
+                hashval += (
+                    f";{self._call_model_config};{sorted(self._validators or {})};{self._module}"
+                )
+            self.__hash = b32encode(sha3_224(hashval.encode()).digest()).decode().lower()[:6]
         return self.__hash
 
     def get_name(self) -> tuple[str, str]:
@@ -337,11 +321,10 @@ class PydanticModelCreator:
         return pconfig
 
     def _initialize_field_map(self) -> FieldMap:
-        return (
-            FieldMap(self.meta)
-            if self._exclude_read_only
-            else FieldMap(self.meta, pk_field=self._model_description.pk_field)
-        )
+        if self._exclude_read_only:
+            return FieldMap(self.meta)
+        pk_field = self._model_description.pk_field  # ty:ignore[invalid-attribute-access]
+        return FieldMap(self.meta, pk_field=pk_field)
 
     def _construct_field_map(self) -> None:
         self._field_map.field_map_update(fields=self._model_description.data_fields, meta=self.meta)
@@ -379,10 +362,11 @@ class PydanticModelCreator:
 
         self._name, self._title = self.get_name()
 
-        if self._hash in _MODEL_INDEX:
+        # validators are arbitrary objects without a stable identity, so they bypass the cache
+        if not self._validators and self._hash in _MODEL_INDEX:
             hashed_model = _MODEL_INDEX[self._hash]
             if hashed_model.__name__ == self._name:
-                return _MODEL_INDEX[self._hash]
+                return hashed_model
 
         self._pconfig = self._initialize_pconfig()
         computed_fields: dict[str, Any] = {}
@@ -409,7 +393,8 @@ class PydanticModelCreator:
         )
         model.__doc__ = _cleandoc(self._cls)
         model.model_config["orig_model"] = self._cls  # type: ignore
-        _MODEL_INDEX[self._hash] = model
+        if not self._validators:
+            _MODEL_INDEX[self._hash] = model
         return model
 
     def _process_field(
