@@ -116,10 +116,7 @@ class FieldMap(MutableMapping[str, Field | ComputedFieldDescription]):
     def computed_field_map_update(self, computed: tuple[str, ...], cls: type[Model]) -> None:
         self._field_map.update(
             {
-                k: ComputedFieldDescription(
-                    function=getattr(cls, k),
-                    description=None,
-                )
+                k: ComputedFieldDescription(function=getattr(cls, k), description=None)
                 for k in computed
             }
         )
