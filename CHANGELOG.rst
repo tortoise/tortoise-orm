@@ -5,11 +5,16 @@ Changelog
 =========
 
 
-1.1
+1.2
 ===
 
-Unreleased
-----------
+1.2.0 *Unreleased*
+-----
+
+Changed
+^^^^^^^
+
+- Drop support for Python3.10 (#2322)
 
 Added
 ^^^^^
@@ -26,6 +31,11 @@ Fixed
 - Refresh renamed model fields and foreign-key IDs using their model attribute names. (#2335)
 - Include renamed fields in model dictionaries and default ``values_list()`` projections. (#2339)
 - Fix ``get_or_create`` function raises "Object does not exist". (#2116)
+- Preserve field iterators when refreshing model instances from the database. (#2342)
+
+
+1.1
+===
 
 1.1.9
 -----

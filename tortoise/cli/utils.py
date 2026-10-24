@@ -4,6 +4,7 @@ import importlib
 import importlib.util
 import os
 import sys
+import tomllib
 from collections.abc import Iterable
 from pathlib import Path
 from types import ModuleType
@@ -11,11 +12,6 @@ from typing import Any
 
 from tortoise.config import TortoiseConfig
 from tortoise.exceptions import ConfigurationError
-
-if sys.version_info >= (3, 11):
-    import tomllib
-else:
-    import tomlkit as tomllib
 
 
 class CLIError(Exception):

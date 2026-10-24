@@ -81,7 +81,7 @@ class AsyncpgDBClient(BasePostgresClient):
         if self._pool:  # pragma: nobranch
             try:
                 await asyncio.wait_for(self._pool.close(), 10)
-            except asyncio.TimeoutError:  # pragma: nocoverage
+            except TimeoutError:  # pragma: nocoverage
                 self._pool.terminate()
             self._pool = None
             self.log.debug("Closed connection pool %s with params: %s", self._pool, self._template)
