@@ -2130,7 +2130,7 @@ class BulkUpdateQuery(UpdateQuery, Generic[MODEL]):
     def sql(self, params_inline=False) -> str:
         self._choose_db_if_not_chosen()
         queries = self._make_queries()
-        return ";".join([sql for sql, _ in queries])
+        return ";".join(sql for sql, _ in queries)
 
 
 class BulkCreateQuery(AwaitableQuery, Generic[MODEL]):
