@@ -26,6 +26,7 @@ Fixed
 - Refresh renamed model fields and foreign-key IDs using their model attribute names. (#2335)
 - Include renamed fields in model dictionaries and default ``values_list()`` projections. (#2339)
 - Fix ``get_or_create`` function raises "Object does not exist". (#2116)
+- Preserve field iterators when refreshing model instances from the database. (#2342)
 - ``bulk_update()`` now filters on the primary key list once per batch instead of once per field, avoiding duplicate ``IN`` conditions that made PostgreSQL fall back to a sequential scan. (#2358)
 
 1.1.9
