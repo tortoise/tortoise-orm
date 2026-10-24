@@ -279,12 +279,10 @@ class PydanticModelCreator:
     @property
     def _hash(self) -> str:
         if self.__hash == "":
-            field_info = []
-            for name, prop in self._properties.items():
-                if isinstance(prop, tuple):
-                    field_info.append(f"{name}:{prop[0]}")
-                else:
-                    field_info.append(f"{name}:computed")
+            field_info = [
+                f"{name}:{prop[0]}" if isinstance(prop, tuple) else f"{name}:computed"
+                for name, prop in self._properties.items()
+            ]
             hashval = (
                 f"{self._fqname};"
                 f"{field_info};"
@@ -298,9 +296,7 @@ class PydanticModelCreator:
                 hashval += (
                     f";{self._call_model_config};{sorted(self._validators or {})};{self._module}"
                 )
-            self.__hash = (
-                b32encode(sha3_224(hashval.encode("utf-8")).digest()).decode("utf-8").lower()[:6]
-            )
+            self.__hash = b32encode(sha3_224(hashval.encode()).digest()).decode().lower()[:6]
         return self.__hash
 
     def get_name(self) -> tuple[str, str]:
@@ -325,11 +321,10 @@ class PydanticModelCreator:
         return pconfig
 
     def _initialize_field_map(self) -> FieldMap:
-        return (
-            FieldMap(self.meta)
-            if self._exclude_read_only
-            else FieldMap(self.meta, pk_field=self._model_description.pk_field)
-        )
+        if self._exclude_read_only:
+            return FieldMap(self.meta)
+        pk_field = self._model_description.pk_field  # ty:ignore[invalid-attribute-access]
+        return FieldMap(self.meta, pk_field=pk_field)
 
     def _construct_field_map(self) -> None:
         self._field_map.field_map_update(fields=self._model_description.data_fields, meta=self.meta)
@@ -371,7 +366,7 @@ class PydanticModelCreator:
         if not self._validators and self._hash in _MODEL_INDEX:
             hashed_model = _MODEL_INDEX[self._hash]
             if hashed_model.__name__ == self._name:
-                return _MODEL_INDEX[self._hash]
+                return hashed_model
 
         self._pconfig = self._initialize_pconfig()
         computed_fields: dict[str, Any] = {}
