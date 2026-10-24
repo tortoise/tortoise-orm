@@ -213,7 +213,7 @@ def expand_db_url(db_url: str, testing: bool = False) -> dict:
     if vmap.get("username") and (url.username or vmap["username"] not in params):
         # Pass username as None, instead of empty string,
         # to let asyncpg retrieve username from environment variable or OS user
-        params[vmap["username"]] = url.username or None
+        params[vmap["username"]] = urlparse.unquote(url.username) if url.username else None
     if vmap.get("password") and (url.password or vmap["password"] not in params):
         # asyncpg accepts None for password, but aiomysql not
         params[vmap["password"]] = (
