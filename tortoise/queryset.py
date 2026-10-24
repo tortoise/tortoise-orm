@@ -2068,8 +2068,8 @@ class BulkUpdateQuery(UpdateQuery, Generic[MODEL]):
             limit=limit,
             orderings=orderings,
         )
-        self.fields = list(fields)
-        self._objects = list(objects)
+        self.fields = fields
+        self._objects = objects
         self._batch_size = batch_size
         self._queries: list[QueryBuilder] = []
 

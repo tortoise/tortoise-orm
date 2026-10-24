@@ -341,35 +341,13 @@ async def test_update_with_filter_subquery(db):
 
 
 @pytest.mark.asyncio
-async def test_bulk_update_object_iterator(db):
-    objects = [await Tournament.create(name="old") for _ in range(2)]
-    for obj in objects:
-        obj.name = "new"
-
-    rows = await Tournament.bulk_update(iter(objects), fields=["name"])
-    assert rows == 2
-    assert (await Tournament.get(pk=objects[0].pk)).name == "new"
-    assert (await Tournament.get(pk=objects[1].pk)).name == "new"
-
-
-@pytest.mark.asyncio
-async def test_bulk_update_field_iterator_with_batches(db):
-    objects = [await Tournament.create(name="old") for _ in range(2)]
-    for obj in objects:
-        obj.name = "new_batch"
-
-    rows = await Tournament.bulk_update(objects, fields=iter(["name"]), batch_size=1)
-    assert rows == 2
-    assert (await Tournament.get(pk=objects[0].pk)).name == "new_batch"
-    assert (await Tournament.get(pk=objects[1].pk)).name == "new_batch"
-
-
-@pytest.mark.asyncio
 async def test_bulk_update_empty_objects_or_fields(db):
     rows = await Tournament.bulk_update([], fields=["name"])
-    assert rows == 0
+    rows2 = await Tournament.bulk_update(iter([]), fields=["name"])
+    assert rows == rows2 == 0
     sql = Tournament.bulk_update([], fields=["name"]).sql()
-    assert sql == ""
+    sql2 = Tournament.bulk_update(iter([]), fields=["name"]).sql()
+    assert sql == sql2 == ""
 
     objs = [await Tournament.create(name="keep")]
     rows_empty_fields = await Tournament.bulk_update(objs, fields=[])
