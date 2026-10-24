@@ -1,8 +1,10 @@
 """Test coverage for DatetimeField auto_now and auto_now_add bug fix."""
 
+import datetime
+
 import pytest
 
-from tortoise import fields
+from tortoise import fields, timezone
 from tortoise.exceptions import ConfigurationError
 
 
@@ -88,3 +90,24 @@ def test_timefield_both_flags_raises():
         ConfigurationError, match="You can choose only 'auto_now' or 'auto_now_add'"
     ):
         fields.TimeField(auto_now=True, auto_now_add=True)
+
+
+@pytest.mark.parametrize("flag", ["auto_now", "auto_now_add"])
+def test_datetimefield_auto_value_stays_naive_without_use_tz(monkeypatch, flag):
+    """With use_tz=False the auto value is timezone.now() as is, not shifted to TIMEZONE."""
+    naive_now = datetime.datetime(2026, 10, 18, 20, 23, 13)
+    monkeypatch.setenv("USE_TZ", "False")
+    monkeypatch.setenv("TIMEZONE", "Asia/Tokyo")
+    monkeypatch.setattr(timezone, "now", lambda: naive_now)
+
+    field = fields.DatetimeField(**{flag: True})
+    field.model_field_name = "stamp"
+
+    class Instance:
+        _saved_in_db = False
+        stamp = None
+
+    instance = Instance()
+    assert field.to_db_value(None, instance) == naive_now
+    assert instance.stamp == naive_now
+    assert instance.stamp.tzinfo is None
