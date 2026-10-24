@@ -64,7 +64,6 @@ Fixed
 - ``pydantic_model_creator`` no longer raises ``TypeError`` for models with annotations whose origin is not a class, such as ``Literal[...]``. (#2311)
 - Filtering by a related model instance on a ``ForeignKeyField``/``OneToOneField`` declared with a non-primary-key ``to_field`` now uses the ``to_field`` value instead of the instance's primary key, so the generated query targets the correct column. (#2239)
 - Database URLs with an empty host (e.g. ``postgres:///db?host=/var/run/postgresql&user=u``) no longer overwrite ``host``/``user``/``password`` given in the query string, so unix domain sockets work. (#2313)
-- ``pydantic_model_creator`` now accounts for custom ``model_config``, ``validators``, and ``module`` in caching and default checks, preventing stale model reuse. (#2325)
 
 1.1.8
 -----
