@@ -268,6 +268,12 @@ class URLValidator(Validator):
         if split_url.hostname is None or len(split_url.hostname) > self.MAX_HOSTNAME_LENGTH:
             raise InvalidURL()
 
+        try:
+            # Accessing port validates its numeric range.
+            _ = split_url.port
+        except ValueError as e:
+            raise InvalidURL() from e
+
         if not self._url_regex.search(value):
             raise InvalidURL()
 
