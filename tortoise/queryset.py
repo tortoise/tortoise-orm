@@ -999,6 +999,7 @@ class QuerySet(AwaitableQuery[MODEL]):
 
         :raises ValueError: If objects have no primary key set
         """
+        objects = tuple(objects)
         if any(obj.pk is None for obj in objects):
             raise ValueError("All bulk_update() objects must have a primary key set.")
         return BulkUpdateQuery(
@@ -1010,7 +1011,7 @@ class QuerySet(AwaitableQuery[MODEL]):
             limit=self._limit,
             orderings=self._orderings,
             objects=objects,
-            fields=fields,
+            fields=tuple(fields),
             batch_size=batch_size,
         )
 
@@ -2129,7 +2130,7 @@ class BulkUpdateQuery(UpdateQuery, Generic[MODEL]):
     def sql(self, params_inline=False) -> str:
         self._choose_db_if_not_chosen()
         queries = self._make_queries()
-        return ";".join([sql for sql, _ in queries])
+        return ";".join(sql for sql, _ in queries)
 
 
 class BulkCreateQuery(AwaitableQuery, Generic[MODEL]):
@@ -2347,7 +2348,7 @@ class BulkCreateQuery(AwaitableQuery, Generic[MODEL]):
         if all(not o._custom_generated_pk for o in self._objects):
             return insert_sql
 
-        return ";".join([insert_sql, insert_sql_all])
+        return insert_sql + ";" + insert_sql_all
 
 
 class UnionCountQuery(AwaitableQuery):
