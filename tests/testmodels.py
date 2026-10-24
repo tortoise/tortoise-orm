@@ -218,7 +218,11 @@ class O2oPkModelWithM2m(Model):
 
 
 class FkToO2oPk(Model):
-    """Foreign key to a one-to-one primary key model, set up before it (name order)."""
+    """Foreign key to a one-to-one primary key model, set up before it.
+
+    Models are set up in name order (``dir()`` of the module, see ``Apps._discover_models``):
+    FkToO2oPk comes before O2oPkModelWithM2m, PointsToO2oPk after it.
+    """
 
     target: fields.ForeignKeyRelation[O2oPkModelWithM2m] = fields.ForeignKeyField(
         "models.O2oPkModelWithM2m", related_name="fks"
@@ -230,10 +234,20 @@ class FkToO2oPk(Model):
         null=True,
         on_delete=NO_ACTION,
     )
+    by_relation: fields.ForeignKeyNullableRelation[O2oPkModelWithM2m] = fields.ForeignKeyField(
+        "models.O2oPkModelWithM2m",
+        related_name="fks_by_relation",
+        to_field="author",
+        null=True,
+        on_delete=NO_ACTION,
+    )
+    by_o2o: fields.ForeignKeyNullableRelation["O2O_null"] = fields.ForeignKeyField(
+        "models.O2O_null", related_name="fks", to_field="event", null=True, on_delete=NO_ACTION
+    )
 
 
 class PointsToO2oPk(Model):
-    """Foreign key to a one-to-one primary key model, set up after it (name order)."""
+    """Foreign key to a one-to-one primary key model, set up after it (see FkToO2oPk)."""
 
     target: fields.ForeignKeyNullableRelation[O2oPkModelWithM2m] = fields.ForeignKeyField(
         "models.O2oPkModelWithM2m", related_name="pointers", null=True

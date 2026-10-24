@@ -9,6 +9,7 @@ from tests.testmodels import (
     Address,
     Author,
     BookNoConstraint,
+    Dest_null,
     DoubleFK,
     Employee,
     Event,
@@ -16,6 +17,7 @@ from tests.testmodels import (
     FkToO2oPk,
     M2mWithO2oPk,
     Node,
+    O2O_null,
     O2oPkModelWithM2m,
     Pair,
     PointsToO2oPk,
@@ -594,9 +596,26 @@ async def test_fk_to_o2o_pk_model(db):
         await target.fetch_related(reverse)
         assert [o.id for o in getattr(target, reverse)] == [obj.id]
         assert await model.filter(target__author__name="a").count() == 1
-    # Naming the backing field, as makemigrations writes it.
-    obj = await FkToO2oPk.create(target=target, by_key=target)
-    assert (await FkToO2oPk.get(id=obj.id)).by_key_id == author.id
+    # Naming the backing field, as makemigrations writes it, or the one-to-one itself.
+    obj = await FkToO2oPk.create(target=target, by_key=target, by_relation=target)
+    fetched = await FkToO2oPk.get(id=obj.id)
+    assert fetched.by_key_id == author.id
+    assert fetched.by_relation_id == author.id
+    assert FkToO2oPk._meta.fields_map["by_relation"].to_field == "author_id"
+
+
+@pytest.mark.asyncio
+async def test_fk_to_field_o2o(db):
+    """A foreign key whose ``to_field`` names a one-to-one targets its backing column."""
+    dest = await Dest_null.create(name="d")
+    o2o = await O2O_null.create(name="o", event=dest)
+    author = await Author.create(name="a")
+    target = await O2oPkModelWithM2m.create(author=author)
+    obj = await FkToO2oPk.create(target=target, by_o2o=o2o)
+    fetched = await FkToO2oPk.get(id=obj.id)
+    assert fetched.by_o2o_id == dest.id
+    assert (await fetched.by_o2o).id == o2o.id
+    assert FkToO2oPk._meta.fields_map["by_o2o"].to_field == "event_id"
 
 
 @pytest.mark.asyncio
