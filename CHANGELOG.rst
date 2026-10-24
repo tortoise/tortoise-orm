@@ -26,6 +26,7 @@ Fixed
 - Refresh renamed model fields and foreign-key IDs using their model attribute names. (#2335)
 - Include renamed fields in model dictionaries and default ``values_list()`` projections. (#2339)
 - Fix ``get_or_create`` function raises "Object does not exist". (#2116)
+- Preserve field iterators when refreshing model instances from the database. (#2342)
 
 1.1.9
 -----
