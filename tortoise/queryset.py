@@ -1830,7 +1830,7 @@ class ValuesListQuery(FieldSelectQuery, Generic[SINGLE]):
             fields_for_select=self._fields_for_select_list,
         )
         self.resolve_filters(self._fields_to_select_sql)
-        if self._limit:
+        if self._limit is not None:
             self.query._limit = self.query._wrapper_cls(self._limit)
         if self._offset:
             self.query._offset = self.query._wrapper_cls(self._offset)
@@ -1958,7 +1958,7 @@ class ValuesQuery(FieldSelectQuery, Generic[SINGLE]):
             select for select in self.query._selects if select.alias in self._fields_for_select
         ]
 
-        if self._limit:
+        if self._limit is not None:
             self.query._limit = self.query._wrapper_cls(self._limit)
         if self._offset:
             self.query._offset = self.query._wrapper_cls(self._offset)
