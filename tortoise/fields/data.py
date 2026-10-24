@@ -16,7 +16,7 @@ from pypika_tortoise.enums import SqlTypes
 from pypika_tortoise.terms import Term
 
 from tortoise import timezone
-from tortoise.exceptions import ConfigurationError, FieldError
+from tortoise.exceptions import ConfigurationError, FieldError, ValidationError
 from tortoise.fields.base import Field
 from tortoise.timezone import get_default_timezone, get_use_tz
 from tortoise.validators import MaxLengthValidator
@@ -130,6 +130,21 @@ class IntField(Field[T_INT], int):
             "ge": -2147483648,
             "le": 2147483647,
         }
+
+    def validate(self, value: Any) -> None:
+        super().validate(value)
+        # Reject values the database column cannot hold, rather than letting each backend
+        # silently truncate or fail in its own way.
+        if isinstance(value, Enum):
+            value = value.value
+        if value is None or isinstance(value, bool) or not isinstance(value, int):
+            return
+        constraints = self.constraints
+        if value < constraints["ge"] or value > constraints["le"]:
+            raise ValidationError(
+                f"{self.model_field_name}: Value {value} is out of range "
+                f"[{constraints['ge']}, {constraints['le']}]"
+            )
 
     class _db_postgres:
         GENERATED_SQL = "SERIAL NOT NULL PRIMARY KEY"
