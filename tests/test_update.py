@@ -38,6 +38,7 @@ async def test_update(db):
     assert rows_affected == 2
 
     tournament = await Tournament.first()
+    assert tournament is not None
     assert tournament.name == "2"
 
 
@@ -58,8 +59,8 @@ async def test_bulk_update(db):
 @pytest.mark.parametrize("batch_size", [None, 1])
 async def test_bulk_update_iterables(db, object_iterator: bool, field_iterator: bool, batch_size):
     objects = [await Tournament.create(name="old") for _ in range(2)]
-    for obj in objects:
-        obj.name = "new"
+    for i, obj in enumerate(objects, 1):
+        obj.name = f"new{i}"
     updated_objects = iter(objects) if object_iterator else objects
     updated_fields = iter(["name"]) if field_iterator else ["name"]
 
@@ -67,7 +68,7 @@ async def test_bulk_update_iterables(db, object_iterator: bool, field_iterator: 
         await Tournament.bulk_update(updated_objects, fields=updated_fields, batch_size=batch_size)
         == 2
     )
-    assert [obj.name for obj in await Tournament.all().order_by("id")] == ["new", "new"]
+    assert await Tournament.all().order_by("id").values_list("name", flat=True) == ["new1", "new2"]
 
 
 @pytest.mark.asyncio
@@ -76,7 +77,7 @@ async def test_bulk_update_iterator_still_rejects_missing_primary_key(db):
     obj.name = "new"
     with pytest.raises(ValueError, match="All bulk_update.*primary key"):
         Tournament.bulk_update(iter([obj, Tournament(name="unsaved")]), fields=["name"])
-    assert (await Tournament.get(pk=obj.pk)).name == "old"
+    assert (await Tournament.get(pk=obj.pk).only("name")).name == "old"
 
 
 @pytest.mark.asyncio
@@ -84,7 +85,7 @@ async def test_bulk_update_multiple_fields_batch_size(db):
     objs = [await IntFields.create(intnum=i, intnum_null=i) for i in range(3)]
     for obj in objs:
         obj.intnum += 10
-        obj.intnum_null += 20
+        obj.intnum_null = (obj.intnum_null or 0) + 20
     rows_affected = await IntFields.bulk_update(
         objs, fields=["intnum", "intnum_null"], batch_size=1
     )
@@ -215,6 +216,7 @@ async def test_update_relation(db):
     await Event.create(name="1", tournament=tournament_first)
     await Event.all().update(tournament=tournament_second)
     event = await Event.first()
+    assert event is not None
     assert event.tournament_id == tournament_second.id
 
 
@@ -231,7 +233,7 @@ async def test_update_with_custom_function(db):
     json = await JSONFields.create(data={})
     assert json.data_default == {"a": 1}
 
-    json.data_default = JsonSet(F("data_default"), "$.a", 2)
+    json.data_default = JsonSet(F("data_default"), "$.a", 2)  # ty:ignore[invalid-assignment]
     await json.save()
 
     json_update = await JSONFields.get(pk=json.pk)
@@ -246,7 +248,7 @@ async def test_update_with_custom_function(db):
 async def test_refresh_from_db(db):
     int_field = await IntFields.create(intnum=1, intnum_null=2)
     int_field_in_db = await IntFields.get(pk=int_field.pk)
-    int_field_in_db.intnum = F("intnum") + 1
+    int_field_in_db.intnum = F("intnum") + 1  # ty:ignore[invalid-assignment]
     await int_field_in_db.save(update_fields=["intnum"])
     assert int_field_in_db.intnum != 2
     assert int_field_in_db.intnum_null == 2
@@ -255,7 +257,7 @@ async def test_refresh_from_db(db):
     assert int_field_in_db.intnum == 2
     assert int_field_in_db.intnum_null == 2
 
-    int_field_in_db.intnum = F("intnum") + 1
+    int_field_in_db.intnum = F("intnum") + 1  # ty:ignore[invalid-assignment]
     await int_field_in_db.save()
     assert int_field_in_db.intnum != 3
     assert int_field_in_db.intnum_null == 2
