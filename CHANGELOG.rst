@@ -30,6 +30,7 @@ Fixed
 - ``bulk_update()`` now filters on the primary key list once per batch instead of once per field, avoiding duplicate ``IN`` conditions that made PostgreSQL fall back to a sequential scan. (#2358)
 - ``auto_now`` / ``auto_now_add`` values are no longer shifted to ``TIMEZONE`` when ``use_tz=False``. (#2350)
 - ``pydantic_model_creator`` no longer returns a cached class that ignores the ``model_config``, ``validators`` or ``module`` of the current call. (#2312)
+- Preserve object and field iterators across validation and batching in ``bulk_update()``. (#2320)
 - ``MigrationGraph.leaf_nodes()``/``root_nodes()`` with an app label no longer treat an edge from another app as making that app leafless or rootless. ``migrate``/``plan`` for ``app.__latest__``/``app.__first__`` planned nothing (or rolled nothing back) when the app's newest migration was depended on from another app, or its first migration depended on another app. (#2307)
 
 1.1.9
