@@ -1,5 +1,5 @@
 import copy
-from typing import Annotated, Literal
+from typing import Annotated, Any, Literal
 
 import pytest
 import pytest_asyncio
@@ -28,6 +28,7 @@ from tortoise.contrib.pydantic import (
     pydantic_queryset_creator,
 )
 from tortoise.models import Model
+from tortoise.validators import RegexValidator
 
 
 # Fixtures for TestPydantic
@@ -1398,7 +1399,7 @@ async def test_json_field(db):
     }
 
 
-def test_override_default_model_config_by_config_class(db):
+def test_override_default_model_config_by_config_class(db_simple):
     """Pydantic meta's config_class should be able to override default config."""
     # Save original value to restore after test
     original_value = CamelCaseAliasPerson.PydanticMeta.model_config.get("from_attributes")
@@ -1419,7 +1420,7 @@ def test_override_default_model_config_by_config_class(db):
             CamelCaseAliasPerson.PydanticMeta.model_config["from_attributes"] = original_value
 
 
-def test_override_meta_pydantic_config_by_model_creator(db):
+def test_override_meta_pydantic_config_by_model_creator(db_simple):
     model_config = ConfigDict(title="Another title!")
 
     ModelPydantic = pydantic_model_creator(
@@ -1431,7 +1432,7 @@ def test_override_meta_pydantic_config_by_model_creator(db):
     assert model_config["title"] == ModelPydantic.model_config["title"]
 
 
-def test_config_classes_merge_all_configs(db):
+def test_config_classes_merge_all_configs(db_simple):
     """Model creator should merge all 3 configs.
 
     - It merges (Default, Meta's config_class and creator's config_class) together.
@@ -1456,7 +1457,7 @@ def test_config_classes_merge_all_configs(db):
     )
 
 
-def test_exclude_readonly(db):
+def test_exclude_readonly(db_simple):
     ModelPydantic = pydantic_model_creator(Event, exclude_readonly=True)
 
     assert "modified" not in ModelPydantic.model_json_schema()["properties"]
@@ -1896,7 +1897,7 @@ async def test_computed_field_schema(db, pydantic_computed_setup):
 
 
 # Tests for TestPydanticUpdate
-def test_create_schema(db):
+def test_create_schema(db_simple):
     UserCreate_Pydantic = pydantic_model_creator(
         User,
         name="UserCreate",
@@ -1930,7 +1931,7 @@ def test_create_schema(db):
     }
 
 
-def test_update_schema(db):
+def test_update_schema(db_simple):
     """All fields of this schema should be optional.
     This demonstrates an example PATCH endpoint in an API, where a client may want
     to update a single field of a model without modifying the rest.
@@ -1966,7 +1967,7 @@ def test_update_schema(db):
 
 
 # Tests for TestPydanticOptionalUpdate
-def test_optional_update(db):
+def test_optional_update(db_simple):
     UserUpdateAllOptional_Pydantic = pydantic_model_creator(
         User,
         name="UserUpdateAllOptional",
@@ -2027,7 +2028,7 @@ def test_optional_update(db):
 
 
 # Tests for TestPydanticMutlipleModelUses
-def test_no_relations_model_reused(db):
+def test_no_relations_model_reused(db_simple):
     NoRelationsModel = IntFields
     Pydantic1 = pydantic_model_creator(NoRelationsModel)
     Pydantic2 = pydantic_model_creator(NoRelationsModel)
@@ -2035,7 +2036,7 @@ def test_no_relations_model_reused(db):
     assert Pydantic1 is Pydantic2
 
 
-def test_no_relations_model_one_exclude(db):
+def test_no_relations_model_one_exclude(db_simple):
     NoRelationsModel = IntFields
     Pydantic1 = pydantic_model_creator(NoRelationsModel)
     Pydantic2 = pydantic_model_creator(NoRelationsModel, exclude=("id",))
@@ -2045,7 +2046,7 @@ def test_no_relations_model_one_exclude(db):
     assert "id" not in Pydantic2.model_json_schema()["required"]
 
 
-def test_no_relations_model_both_exclude(db):
+def test_no_relations_model_both_exclude(db_simple):
     NoRelationsModel = IntFields
     Pydantic1 = pydantic_model_creator(NoRelationsModel, exclude=("id",))
     Pydantic2 = pydantic_model_creator(NoRelationsModel, exclude=("id",))
@@ -2055,7 +2056,7 @@ def test_no_relations_model_both_exclude(db):
     assert "id" not in Pydantic2.model_json_schema()["required"]
 
 
-def test_no_relations_model_exclude_diff(db):
+def test_no_relations_model_exclude_diff(db_simple):
     NoRelationsModel = IntFields
     Pydantic1 = pydantic_model_creator(NoRelationsModel, exclude=("id",))
     Pydantic2 = pydantic_model_creator(NoRelationsModel, exclude=("name",))
@@ -2063,7 +2064,7 @@ def test_no_relations_model_exclude_diff(db):
     assert Pydantic1 is not Pydantic2
 
 
-def test_no_relations_model_exclude_readonly(db):
+def test_no_relations_model_exclude_readonly(db_simple):
     NoRelationsModel = IntFields
     Pydantic1 = pydantic_model_creator(NoRelationsModel)
     Pydantic2 = pydantic_model_creator(NoRelationsModel, exclude_readonly=True)
@@ -2073,7 +2074,7 @@ def test_no_relations_model_exclude_readonly(db):
     assert "id" not in Pydantic2.model_json_schema()["properties"]
 
 
-def test_model_with_relations_reused(db):
+def test_model_with_relations_reused(db_simple):
     ModelWithRelations = Event
     Pydantic1 = pydantic_model_creator(ModelWithRelations)
     Pydantic2 = pydantic_model_creator(ModelWithRelations)
@@ -2081,7 +2082,7 @@ def test_model_with_relations_reused(db):
     assert Pydantic1 is Pydantic2
 
 
-def test_model_with_relations_exclude(db):
+def test_model_with_relations_exclude(db_simple):
     ModelWithRelations = Event
     Pydantic1 = pydantic_model_creator(ModelWithRelations)
     Pydantic2 = pydantic_model_creator(ModelWithRelations, exclude=("event_id",))
@@ -2091,7 +2092,7 @@ def test_model_with_relations_exclude(db):
     assert "event_id" not in Pydantic2.model_json_schema()["properties"]
 
 
-def test_model_with_relations_exclude_readonly(db):
+def test_model_with_relations_exclude_readonly(db_simple):
     ModelWithRelations = Event
     Pydantic1 = pydantic_model_creator(ModelWithRelations)
     Pydantic2 = pydantic_model_creator(ModelWithRelations, exclude_readonly=True)
@@ -2101,7 +2102,7 @@ def test_model_with_relations_exclude_readonly(db):
     assert "event_id" not in Pydantic2.model_json_schema()["properties"]
 
 
-def test_named_no_relations_model(db):
+def test_named_no_relations_model(db_simple):
     NoRelationsModel = IntFields
     Pydantic1 = pydantic_model_creator(NoRelationsModel, name="Foo")
     Pydantic2 = pydantic_model_creator(NoRelationsModel, name="Foo")
@@ -2109,7 +2110,7 @@ def test_named_no_relations_model(db):
     assert Pydantic1 is Pydantic2
 
 
-def test_named_model_with_relations(db):
+def test_named_model_with_relations(db_simple):
     ModelWithRelations = Event
     Pydantic1 = pydantic_model_creator(ModelWithRelations, name="Foo")
     Pydantic2 = pydantic_model_creator(ModelWithRelations, name="Foo")
@@ -2118,7 +2119,7 @@ def test_named_model_with_relations(db):
 
 
 # Tests for TestPydanticEnum
-def test_int_enum(db):
+def test_int_enum(db_simple):
     EnumFields_Pydantic = pydantic_model_creator(EnumFields)
     with pytest.raises(ValidationError) as exc_info:
         EnumFields_Pydantic.model_validate({"id": 1, "service": 4, "currency": "HUF"})
@@ -2146,7 +2147,7 @@ def test_int_enum(db):
     ]
 
 
-def test_str_enum(db):
+def test_str_enum(db_simple):
     EnumFields_Pydantic = pydantic_model_creator(EnumFields)
     with pytest.raises(ValidationError) as exc_info:
         EnumFields_Pydantic.model_validate({"id": 1, "service": 3, "currency": "GoofyGooberDollar"})
@@ -2172,7 +2173,7 @@ def test_str_enum(db):
     ]
 
 
-def test_enum(db):
+def test_enum(db_simple):
     EnumFields_Pydantic = pydantic_model_creator(EnumFields)
     with pytest.raises(ValidationError) as exc_info:
         EnumFields_Pydantic.model_validate({"id": 1, "service": 4, "currency": 1})
@@ -2273,7 +2274,6 @@ def test_field_with_default_not_optional(db):
 
 def test_non_class_annotation() -> None:
     """Annotations whose origin is not a class (Literal) must not crash (#2309)."""
-    from tortoise.validators import RegexValidator
 
     class AnnotatedModel(Model):
         id = fields.IntField(primary_key=True)
@@ -2369,3 +2369,40 @@ async def test_computed_field_relation_in_model(db, pydantic_cycle_setup):
     # team_size correctly reports the count
     assert empdict["team_size"] == 2
     assert empdict["name_length"] == 4
+
+
+def test_pydantic_creator_cache_model_config(db_simple) -> None:
+    default_model = pydantic_model_creator(Tournament)
+    custom_model = pydantic_model_creator(Tournament, model_config=ConfigDict(extra="allow"))
+    assert default_model is not custom_model
+    assert custom_model.model_config.get("extra") == "allow"
+    cached_custom = pydantic_model_creator(Tournament, model_config=ConfigDict(extra="allow"))
+    assert cached_custom is custom_model
+
+
+def test_pydantic_creator_bypasses_cache_for_validators(db_simple) -> None:
+    default_model = pydantic_model_creator(Tournament)
+
+    def validate_name(cls, v) -> Any:
+        return v
+
+    custom_model = pydantic_model_creator(
+        Tournament, validators={"val": field_validator("name")(validate_name)}
+    )
+    assert default_model is not custom_model
+
+    # validators bypass the cache, so a second call rebuilds the model
+    second_custom = pydantic_model_creator(
+        Tournament, validators={"val": field_validator("name")(validate_name)}
+    )
+    assert second_custom is not custom_model
+
+
+def test_pydantic_creator_cache_module(db_simple) -> None:
+    default_model = pydantic_model_creator(Tournament)
+    custom_model = pydantic_model_creator(Tournament, module="custom_module")
+    assert default_model is not custom_model
+    assert custom_model.__module__ == "custom_module"
+
+    cached_custom = pydantic_model_creator(Tournament, module="custom_module")
+    assert cached_custom is custom_model
