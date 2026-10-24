@@ -8,6 +8,31 @@ Changelog
 1.1
 ===
 
+Unreleased
+----------
+
+Added
+^^^^^
+- Support forward relation ``in`` and ``not_in`` filters with model instances. (#2323)
+
+Fixed
+^^^^^
+- ``DecimalField`` no longer raises ``decimal.InvalidOperation`` for values with more than 28 significant digits. (#2349)
+- fix(expressions): inline subquery parameters when ``params_inline`` is enabled (#2340)
+- Use database column names in reverse foreign-key and one-to-one filters with renamed columns or one-to-one primary keys. (#2338)
+- Migrations now honor ``db_constraint=False`` on ``ForeignKeyField``/``ManyToManyField`` and emit the column (and through table) without a ``FOREIGN KEY`` constraint, matching the runtime schema generator. (#2226)
+- Fix ``field__not=None`` filter returning NULL rows instead of non-NULL rows. (#2353)
+- ``Case``/``When`` and aggregate ``_filter`` expressions now keep the joins for related fields they reference, so e.g. ``When(tournament__name="a", then=1)`` no longer fails with a missing table. (#2354)
+- Refresh renamed model fields and foreign-key IDs using their model attribute names. (#2335)
+- Include renamed fields in model dictionaries and default ``values_list()`` projections. (#2339)
+- Fix ``get_or_create`` function raises "Object does not exist". (#2116)
+- Preserve field iterators when refreshing model instances from the database. (#2342)
+- ``bulk_update()`` now filters on the primary key list once per batch instead of once per field, avoiding duplicate ``IN`` conditions that made PostgreSQL fall back to a sequential scan. (#2358)
+- ``auto_now`` / ``auto_now_add`` values are no longer shifted to ``TIMEZONE`` when ``use_tz=False``. (#2350)
+- ``pydantic_model_creator`` no longer returns a cached class that ignores the ``model_config``, ``validators`` or ``module`` of the current call. (#2312)
+- Preserve object and field iterators across validation and batching in ``bulk_update()``. (#2320)
+- Avoid accumulating duplicate query statements when previewing SQL or executing repeatedly. (#2321)
+
 1.1.9
 -----
 
@@ -22,7 +47,6 @@ Changed
 
 Fixed
 ^^^^^
-- Support passing object and field iterators to ``bulk_update()`` and avoid accumulating duplicate query statements when previewing SQL or executing repeatedly. (#2317, #2319)
 - Aggregates now apply _filter when the aggregated argument is an F() or a combined expression (e.g. Sum(F("price") * F("qty"), _filter=Q(status="paid"))). Previously the filter was silently dropped and every row was aggregated. (#2290)
 - Negating an already negated Q now cancels out: ~~Q(...) and .exclude(~Q(...)) used to keep a single NOT, so they returned the rows the caller meant to drop. (#2291)
 - PostgreSQL and Oracle ``RemoveIndex`` / partial ``RemoveConstraint`` now schema-qualify ``DROP INDEX``, so indexes on models with ``Meta.schema`` can be dropped when they are not on the connection ``search_path``. (#2288)
