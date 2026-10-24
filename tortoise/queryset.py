@@ -11,7 +11,7 @@ from pypika_tortoise.analytics import Count
 from pypika_tortoise.functions import Cast
 from pypika_tortoise.functions import Count as DistinctCount
 from pypika_tortoise.queries import QueryBuilder, _SetOperation
-from pypika_tortoise.terms import Case, Field, Function, Star, Term, Tuple, ValueWrapper
+from pypika_tortoise.terms import Case, Field, Function, Star, Term, ValueWrapper
 
 from tortoise.backends.base.client import BaseDBAsyncClient, Capabilities
 from tortoise.exceptions import (
@@ -172,20 +172,14 @@ class AwaitableQuery(_ChooseDBMixin[MODEL], Generic[MODEL]):
         JOINs in DELETE/UPDATE statements, so the target rows are selected by primary key
         in a subquery instead.
         """
-        pk_cols = [
-            table[self.model._meta.fields_db_projection[name]]
-            for name, field in self.model._meta.fields_map.items()
-            if field.pk
-        ]
+        pk_col = table[self.model._meta.db_pk_column]
         inner = copy(self.query)
-        inner._selects = list(pk_cols)
+        inner._selects = [pk_col]
         alias = "_t"
         wrapped = self.model._meta.db.query_class.from_(inner.as_(alias)).select(
-            *[Table(alias)[col.name] for col in pk_cols]
+            Table(alias)[pk_col.name]
         )
-        if len(pk_cols) == 1:
-            return pk_cols[0].isin(wrapped)
-        return Tuple(*pk_cols).isin(wrapped)
+        return pk_col.isin(wrapped)
 
     def _join_table_by_field(
         self, table: Table, related_field_name: str, related_field: RelationalField

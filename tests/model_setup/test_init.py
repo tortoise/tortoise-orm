@@ -511,3 +511,13 @@ async def test_bad_models():
                 },
             }
         )
+
+
+@pytest.mark.asyncio
+async def test_init_models_fk_to_o2o_pk_of_initialised_app():
+    await _reset_tortoise()
+    Tortoise.init_models(["tests.model_setup.model_o2o_pk_apps"], "app1")
+    Tortoise.init_models(["tests.model_setup.model_o2o_pk_apps"], "app2")
+    team = Tortoise.apps["app2"]["Team"]
+    assert team._meta.fields_db_projection["event_id"] == "event_id"
+    assert team._meta.fields_map["event"].to_field == "tournament_id"

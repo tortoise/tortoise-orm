@@ -284,3 +284,28 @@ async def test_non_exist_field_in_o2o_reference_init():
             )
     finally:
         await _teardown_tortoise()
+
+
+@pytest.mark.asyncio
+async def test_o2o_pk_cycle_init():
+    await _reset_tortoise()
+    try:
+        with pytest.raises(ConfigurationError, match="is part of a cycle"):
+            await Tortoise.init(
+                {
+                    "connections": {
+                        "default": {
+                            "engine": "tortoise.backends.sqlite",
+                            "credentials": {"file_path": ":memory:"},
+                        }
+                    },
+                    "apps": {
+                        "models": {
+                            "models": ["tests.model_setup.model_bad_rel10"],
+                            "default_connection": "default",
+                        }
+                    },
+                }
+            )
+    finally:
+        await _teardown_tortoise()

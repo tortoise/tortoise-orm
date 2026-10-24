@@ -31,6 +31,7 @@ Fixed
 - ``auto_now`` / ``auto_now_add`` values are no longer shifted to ``TIMEZONE`` when ``use_tz=False``. (#2350)
 - ``pydantic_model_creator`` no longer returns a cached class that ignores the ``model_config``, ``validators`` or ``module`` of the current call. (#2312)
 - Preserve object and field iterators across validation and batching in ``bulk_update()``. (#2320)
+- Models whose primary key is a ``OneToOneField``: a ``ForeignKeyField`` to such a model now gets its ``<field>_id`` column (it had none); ``pk`` filters work on them, and so do ``delete()``/``update()`` with filters on related fields. A ``to_field`` naming a ``OneToOneField`` now targets its ``<field>_id`` column, and one-to-one fields referencing each other in a cycle raise ``ConfigurationError``. (#2299)
 
 1.1.9
 -----
