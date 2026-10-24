@@ -189,7 +189,7 @@ class DomainNameValidator(Validator):
         if not (self.accept_idna or value.isascii()):
             raise InvalidDomainName()
 
-        if not self.regex.search(value):
+        if not self.regex.fullmatch(value):
             raise InvalidDomainName()
 
 
