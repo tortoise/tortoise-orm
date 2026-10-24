@@ -28,6 +28,7 @@ Fixed
 - Fix ``get_or_create`` function raises "Object does not exist". (#2116)
 - Preserve field iterators when refreshing model instances from the database. (#2342)
 - ``bulk_update()`` now filters on the primary key list once per batch instead of once per field, avoiding duplicate ``IN`` conditions that made PostgreSQL fall back to a sequential scan. (#2358)
+- ``auto_now`` / ``auto_now_add`` values are no longer shifted to ``TIMEZONE`` when ``use_tz=False``. (#2350)
 
 1.1.9
 -----
