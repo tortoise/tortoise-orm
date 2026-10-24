@@ -6,7 +6,7 @@ import functools
 import json
 import warnings
 from collections.abc import Callable
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation, getcontext
 from enum import Enum, IntEnum
 from typing import TYPE_CHECKING, Any, Literal, TypeVar, overload
 from uuid import UUID, uuid4
@@ -32,7 +32,7 @@ try:
     from pydantic import BaseModel as _PydanticBaseModel
     from pydantic._internal._model_construction import ModelMetaclass as _PydanticModelMetaclass
 except ImportError:
-    _PydanticBaseModel = None  # type: ignore
+    _PydanticBaseModel = None  # type: ignore[assignment,misc]
     _PydanticModelMetaclass = None  # type: ignore[assignment,misc]
 
 if TYPE_CHECKING:  # pragma: nocoverage
@@ -380,10 +380,22 @@ class DecimalField(Field[T_DECIMAL], Decimal):  # type: ignore
         self.decimal_places = decimal_places
         self.quant = Decimal("1" if decimal_places == 0 else f"1.{('0' * decimal_places)}")
 
+    @overload
+    def to_python_value(self, value: None) -> None: ...
+
+    @overload
+    def to_python_value(self, value: Any) -> Decimal: ...
+
     def to_python_value(self, value: Any) -> Decimal | None:
-        if value is not None:
-            value = Decimal(value).quantize(self.quant)
-        return value
+        if value is None:
+            return None
+        d = Decimal(value)
+        try:
+            return d.quantize(self.quant)
+        except InvalidOperation:
+            context = getcontext().copy()
+            context.prec = max(context.prec, int(self.max_digits))
+            return d.quantize(self.quant, context=context)
 
     @property
     def SQL_TYPE(self) -> str:  # type: ignore[override]
@@ -489,7 +501,7 @@ class DatetimeField(Field[T_DATETIME], datetime.datetime):
             self.auto_now
             or (self.auto_now_add and getattr(instance, self.model_field_name) is None)
         ):
-            now = timezone.localtime()
+            now = timezone.localtime() if get_use_tz() else timezone.now()
             # Convert to match what would be read from DB (apply timezone conversion)
             now_python = self.to_python_value(now)
             setattr(instance, self.model_field_name, now_python)
@@ -681,7 +693,6 @@ class TimeDeltaField(Field[T_TIMEDELTA]):
         self, value: datetime.timedelta | None, instance: type[Model] | Model
     ) -> int | None:
         self.validate(value)
-
         if value is None:
             return None
         return (value.days * 86400000000) + (value.seconds * 1000000) + value.microseconds
@@ -899,7 +910,7 @@ class IntEnumFieldInstance(SmallIntField):
 
         # Automatic description for the field if not specified by the user
         if description is None:
-            description = "\n".join([f"{e.name}: {int(e.value)}" for e in enum_type])[:2048]
+            description = "\n".join(f"{e.name}: {int(e.value)}" for e in enum_type)[:2048]
 
         super().__init__(description=description, **kwargs)
         self.enum_type = enum_type
@@ -955,14 +966,11 @@ class CharEnumFieldInstance(CharField):
     ) -> None:
         # Automatic description for the field if not specified by the user
         if description is None:
-            description = "\n".join([f"{e.name}: {str(e.value)}" for e in enum_type])[:2048]
+            description = "\n".join(f"{e.name}: {e.value!s}" for e in enum_type)[:2048]
 
         # Automatic CharField max_length
         if max_length == 0:
-            for item in enum_type:
-                item_len = len(str(item.value))
-                if item_len > max_length:
-                    max_length = item_len
+            max_length = max((len(str(i.value)) for i in enum_type), default=0)
 
         super().__init__(description=description, max_length=max_length, **kwargs)
         self.enum_type = enum_type
