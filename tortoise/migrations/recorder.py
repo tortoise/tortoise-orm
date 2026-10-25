@@ -72,9 +72,8 @@ class MigrationRecorder:
     async def _table_exists(self) -> bool:
         """Report whether the migrations table exists, using the dialect's catalog.
 
-        A missing table means no migrations have been applied yet. Asking the catalog
-        instead of catching a failed ``SELECT`` keeps connection, authentication and
-        permission errors from being mistaken for an empty migration history.
+        A missing table means no migrations have been applied yet. Errors from this
+        catalog lookup propagate instead of being mistaken for an empty migration history.
         """
         if self._dialect == "sqlite":
             query = "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?"
@@ -102,7 +101,7 @@ class MigrationRecorder:
             )
             values = [self.table_name]
         else:
-            # Unknown dialect: let the SELECT itself report any problem.
+            # Unknown dialect: fall back to querying the migrations table.
             return True
         _, rows = await self.connection.execute_query(query, values)
         return bool(rows)
@@ -115,7 +114,10 @@ class MigrationRecorder:
         )
         if not await self._table_exists():
             return []
-        _, rows = await self.connection.execute_query(query)
+        try:
+            _, rows = await self.connection.execute_query(query)
+        except Exception:
+            return []
         return [MigrationKey(app_label=row["app"], name=row["name"]) for row in rows]
 
     async def record_applied(self, app: str, name: str) -> None:

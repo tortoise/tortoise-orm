@@ -200,7 +200,7 @@ async def test_recorder_propagates_connection_errors(dialect: str) -> None:
 
 
 @pytest.mark.asyncio
-async def test_recorder_propagates_query_errors_when_table_exists() -> None:
+async def test_recorder_query_errors_mean_no_migrations_when_table_exists() -> None:
     class DeniedSelectConnection(FakeConnection):
         async def execute_query(self, query: str, values: list | None = None):
             if not query.startswith("SELECT 1 "):
@@ -209,8 +209,7 @@ async def test_recorder_propagates_query_errors_when_table_exists() -> None:
 
     recorder = MigrationRecorder(DeniedSelectConnection("postgres"))
 
-    with pytest.raises(OperationalError):
-        await recorder.applied_migrations()
+    assert await recorder.applied_migrations() == []
 
 
 @pytest.mark.asyncio

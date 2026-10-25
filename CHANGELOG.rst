@@ -34,7 +34,7 @@ Fixed
 - Avoid accumulating duplicate query statements when previewing SQL or executing repeatedly. (#2321)
 - Percent-decode database URL usernames once, preserving plus signs and query-string overrides. (#2379)
 - Allow hashing model instances with zero or empty-string primary keys. (#2381)
-- ``MigrationRecorder.applied_migrations()`` now returns an empty list only when the migrations table does not exist; connection, authentication, timeout and permission errors propagate instead of being reported as "no migrations applied". (#2382)
+- ``MigrationRecorder.applied_migrations()`` now checks for the migrations table before querying history, allowing catalog lookup errors to propagate while retaining the empty-list fallback for history query errors. (#2382)
 
 1.1.9
 -----
