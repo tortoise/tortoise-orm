@@ -190,10 +190,11 @@ def expand_db_url(db_url: str, testing: bool = False) -> dict:
         params[key] = val
     for key, val in urlparse.parse_qs(url.query).items():
         cast = db["cast"].get(key, str)
+        last_value = val[-1]
         if cast is bool:
-            params[key] = val[-1].lower() not in {"false", "0", "no", "off"}
+            params[key] = last_value.lower() in ("true", "1", "yes", "on")
         else:
-            params[key] = cast(val[-1])
+            params[key] = cast(last_value)
 
     if testing and path:
         path = path.replace("\\{", "{").replace("\\}", "}")
