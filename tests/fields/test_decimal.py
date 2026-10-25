@@ -1,4 +1,4 @@
-from decimal import Decimal
+from decimal import ROUND_HALF_UP, Decimal, InvalidOperation, localcontext
 
 import pytest
 
@@ -309,3 +309,64 @@ async def test_aggregate_max_with_f_expression(db):
         .values("max_decimal")
     )
     assert values[0] == {"max_decimal": None}
+
+
+@pytest.mark.asyncio
+async def test_scale_is_preserved(db):
+    # Decimal.__eq__ compares numerically, so `== Decimal("27.27")` cannot see
+    # the scale. Assert on the string form, which is what reaches a template,
+    # an f-string or a JSON serializer.
+    obj0 = await testmodels.DecimalFields.create(decimal=Decimal("100.00"), decimal_nodec=10)
+    obj = await testmodels.DecimalFields.get(id=obj0.id)
+    assert str(obj.decimal) == "100.0000"
+    assert str(obj.decimal_nodec) == "10"
+    assert obj.decimal.as_tuple().exponent == -4
+    assert obj.decimal_nodec.as_tuple().exponent == 0
+
+
+def test_to_python_value_scale():
+    field = fields.DecimalField(max_digits=12, decimal_places=2)
+    for value, expected in (
+        ("100.00", "100.00"),
+        ("100", "100.00"),
+        ("10", "10.00"),
+        ("1000000", "1000000.00"),
+        ("0", "0.00"),
+        ("1234.5", "1234.50"),
+        ("12.3456", "12.35"),
+    ):
+        assert str(field.to_python_value(value)) == expected
+
+    field0 = fields.DecimalField(max_digits=12, decimal_places=0)
+    assert str(field0.to_python_value("10")) == "10"
+    assert str(field0.to_python_value("100")) == "100"
+
+
+def test_to_python_value_high_precision():
+    field = fields.DecimalField(max_digits=40, decimal_places=10)
+    assert field.to_python_value("123456789012345678901234567890.5") == Decimal(
+        "123456789012345678901234567890.5000000000"
+    )
+    field = fields.DecimalField(max_digits=30, decimal_places=2)
+    assert field.to_python_value("1234567890123456789012345678.50") == Decimal(
+        "1234567890123456789012345678.50"
+    )
+
+
+def test_to_python_value_high_precision_boundaries():
+    field = fields.DecimalField(max_digits=28, decimal_places=0)
+    assert field.to_python_value("1" * 28) == Decimal("1" * 28)
+
+    field = fields.DecimalField(max_digits=30, decimal_places=2)
+    with pytest.raises(InvalidOperation):
+        field.to_python_value("1" * 31)
+
+    field = fields.DecimalField(max_digits="40", decimal_places=10)
+    assert field.to_python_value("1" * 30) == Decimal("1" * 30 + ".0000000000")
+
+
+def test_to_python_value_keeps_context_rounding():
+    field = fields.DecimalField(max_digits=5, decimal_places=2)
+    with localcontext() as ctx:
+        ctx.rounding = ROUND_HALF_UP
+        assert str(field.to_python_value("1.005")) == "1.01"

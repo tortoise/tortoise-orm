@@ -144,7 +144,7 @@ async def test_update(db):
         "❤️.website",
     ],
 )
-def test_domain_name_validator_valid(value):
+def test_domain_name_validator_valid(value) -> None:
     validate_domain_name(value)
 
 
@@ -158,12 +158,12 @@ def test_domain_name_validator_valid(value):
         "💻.tech",
     ],
 )
-def test_domain_name_validator_invalid(value):
+def test_domain_name_validator_invalid(value) -> None:
     with pytest.raises(InvalidDomainName):
         validate_domain_name(value)
 
 
-def test_domain_name_validator_invalid_idn_disabled():
+def test_domain_name_validator_invalid_idn_disabled() -> None:
     validator = DomainNameValidator(accept_idna=False)
     with pytest.raises(InvalidDomainName):
         validator("münchen.de")
@@ -184,7 +184,7 @@ def test_domain_name_validator_invalid_idn_disabled():
         "http://example.com#fragment",
     ],
 )
-def test_url_validator_valid(value):
+def test_url_validator_valid(value) -> None:
     validate_url(value)
 
 
@@ -195,12 +195,12 @@ def test_url_validator_valid(value):
         "https://example.com",
     ],
 )
-def test_url_validator_valid_custom_schemes(value):
+def test_url_validator_valid_custom_schemes(value) -> None:
     validator = URLValidator(allowed_schemes=["http", "https"])
     validator(value)
 
 
-def test_url_validator_invalid_scheme():
+def test_url_validator_invalid_scheme() -> None:
     validator = URLValidator(allowed_schemes=["http", "https"])
     with pytest.raises(InvalidScheme):
         validator("ftp://example.com")
@@ -218,64 +218,92 @@ def test_url_validator_invalid_scheme():
         "http://" + "a" * 254 + ".com",
     ],
 )
-def test_url_validator_invalid(value):
+def test_url_validator_invalid(value) -> None:
     with pytest.raises(InvalidURL):
         validate_url(value)
 
 
-def test_url_validator_max_length():
+def test_url_validator_max_length() -> None:
     long_url = "http://example.com/" + "a" * 2100
     with pytest.raises(InvalidURL):
         validate_url(long_url)
 
 
-@pytest.mark.parametrize(
-    "value",
-    [
-        "user@example.com",
-        "user.name@example.com",
-        "user+tag@example.co.uk",
-        "user@sub.domain.com",
-        "user@[192.168.1.1]",
-        "user@[::1]",
-        "a+b@example.com",
-        "a-b@example.com",
-        "a_b@example.com",
-        "test@test.co.uk",
-    ],
-)
-def test_email_validator_valid(value):
-    validate_email(value)
-
-
-def test_email_validator_valid_allowed_domains():
-    validator = EmailValidator(allowed_domains=["example.com", "test.com"])
-    validator("user@example.com")
-    validator("user@test.com")
-
-
-def test_email_validator_invalid_allowed_domains():
-    validator = EmailValidator(allowed_domains=["example.com"])
-    validator("user@example.com")
-    with pytest.raises(InvalidEmailAddress):
-        validator("user@")
-    with pytest.raises(InvalidEmailAddress):
-        validator("user@invalid..com")
-
-
-@pytest.mark.parametrize(
-    "value",
-    [
-        "",
-        "not-an-email",
-        "user@",
-        "@example.com",
-        "user@.com",
-        "user@com.",
-        "user@com..com",
-        "a" * 330 + "@example.com",
-    ],
-)
-def test_email_validator_invalid(value):
-    with pytest.raises(InvalidEmailAddress):
+class TestEmailValidator:
+    @pytest.mark.parametrize(
+        "value",
+        [
+            "user@example.com",
+            "user.name@example.com",
+            "user+tag@example.co.uk",
+            "user@sub.domain.com",
+            "user@[192.168.1.1]",
+            "user@[::1]",
+            "a+b@example.com",
+            "a-b@example.com",
+            "a_b@example.com",
+            "test@test.co.uk",
+        ],
+    )
+    def test_email_validator_valid(self, value) -> None:
         validate_email(value)
+
+    def test_email_validator_valid_allowed_domains(self) -> None:
+        validator = EmailValidator(allowed_domains=["example.com", "test.com"])
+        validator("user@example.com")
+        validator("user@test.com")
+
+    def test_email_validator_invalid_allowed_domains(self) -> None:
+        validator = EmailValidator(allowed_domains=["example.com"])
+        validator("user@example.com")
+        with pytest.raises(InvalidEmailAddress):
+            validator("user@")
+        with pytest.raises(InvalidEmailAddress):
+            validator("user@invalid..com")
+
+    def test_email_validator_rejects_domain_outside_allowed_domains(self) -> None:
+        # a well-formed address whose domain is not allowlisted must be rejected
+        validator = EmailValidator(allowed_domains=["example.com"])
+        with pytest.raises(InvalidEmailAddress):
+            validator("attacker@evil.com")
+        with pytest.raises(InvalidEmailAddress):
+            validator("user@totally-unrelated.co.uk")
+
+    @pytest.mark.parametrize(
+        "validator",
+        [
+            EmailValidator(),
+            EmailValidator(None),
+            EmailValidator(allowed_domains=None),
+            EmailValidator([]),
+            EmailValidator(allowed_domains=[]),
+        ],
+    )
+    def test_email_validator_empty_allowed_domains(self, validator) -> None:
+        validator("allow@any.domain")
+        with pytest.raises(InvalidEmailAddress):
+            validator("not-allow@invalid-domain")
+        with pytest.raises(InvalidEmailAddress):
+            validator("not-allow-invalid-user-part@@example.com")
+
+    def test_email_validator_allowed_domains_bypass_domain_syntax(self) -> None:
+        # an allowlisted domain is accepted even if it is not a valid public domain
+        validator = EmailValidator(allowed_domains=["localhost"])
+        validator("user@localhost")
+
+    @pytest.mark.parametrize(
+        "value",
+        [
+            "",
+            "not-an-email",
+            "user@",
+            "@example.com",
+            "user@.com",
+            "user@com.",
+            "user@com..com",
+            "a" * 330 + "@example.com",
+        ],
+    )
+    def test_email_validator_invalid(self, value) -> None:
+        with pytest.raises(InvalidEmailAddress):
+            validate_email(value)

@@ -14,6 +14,7 @@ from tests.testmodels import (
     RequiredPKModel,
     Team,
     Tournament,
+    UniqueNameRequired,
     UUIDFkRelatedNullModel,
 )
 from tortoise.contrib.test import requireCapability
@@ -224,6 +225,17 @@ async def test_eq(tournament_model):
 
 @pytest.mark.asyncio
 async def test_get_or_create(tournament_model):
+    # regression test for #1634: instance fields are silently dropped by the
+    # classmethod, so this must raise instead of creating an all-None row
+    with pytest.raises(ParamsError, match="You must provide filter kwargs or specify `defaults`"):
+        await Tournament(name="Test").get_or_create()
+    # No filter kwargs + defaults={} is only meaningful when the table is empty or
+    # has exactly one row. With a non-empty table having multiple rows it raises
+    # MultipleObjectsReturned (covered at the end of this test).
+    obj, created = await Tournament.get_or_create({})
+    assert created is False
+    assert obj.name == "Test"
+
     mdl = tournament_model
     fetched_mdl, created = await Tournament.get_or_create(name="Test")
     assert created is False
@@ -234,9 +246,22 @@ async def test_get_or_create(tournament_model):
     mdl2 = await Tournament.get(name="Test2")
     assert new_mdl == mdl2
 
+    # now the table has two rows, the same call raises MultipleObjectsReturned
+    with pytest.raises(MultipleObjectsReturned):
+        await Tournament.get_or_create({})
+
 
 @pytest.mark.asyncio
 async def test_update_or_create(tournament_model):
+    with pytest.raises(ParamsError, match="You must provide filter kwargs or specify `defaults`"):
+        await Tournament(name="Test").update_or_create()
+    # No filter kwargs + defaults={} is only meaningful when the table is empty or
+    # has exactly one row. With a non-empty table having multiple rows it raises
+    # MultipleObjectsReturned (covered at the end of this test).
+    obj, created = await Tournament.update_or_create({})
+    assert created is False
+    assert obj.name == "Test"
+
     mdl = tournament_model
     fetched_mdl, created = await Tournament.update_or_create(name="Test")
     assert created is False
@@ -246,6 +271,10 @@ async def test_update_or_create(tournament_model):
     assert mdl != new_mdl
     mdl2 = await Tournament.get(name="Test2")
     assert new_mdl == mdl2
+
+    # now the table has two rows, the same call raises MultipleObjectsReturned
+    with pytest.raises(MultipleObjectsReturned):
+        await Tournament.update_or_create({})
 
 
 @pytest.mark.asyncio
@@ -281,6 +310,28 @@ async def test_update_or_create_with_defaults(tournament_model):
     )
     assert created is True
     assert not_exist_name == created_mdl.name
+
+
+@pytest.mark.asyncio
+async def test_update_or_create_falsy_existing_instance(db, monkeypatch):
+    instance = await UniqueNameRequired.create(name="existing", optional="old")
+    monkeypatch.setattr(UniqueNameRequired, "__bool__", lambda self: False, raising=False)
+    updated, created = await UniqueNameRequired.update_or_create(
+        name="existing", defaults={"optional": "updated"}
+    )
+    assert created is False
+    assert updated.pk == instance.pk
+    assert updated.optional == "updated"
+    assert (await UniqueNameRequired.get(pk=instance.pk)).optional == "updated"
+
+
+@pytest.mark.asyncio
+async def test_update_or_create_propagates_unrelated_integrity_error(db):
+    instance = await UniqueNameRequired.create(name="existing", optional="original")
+    with pytest.raises(IntegrityError):
+        await UniqueNameRequired.update_or_create(optional="missing", defaults={"name": "existing"})
+    assert await UniqueNameRequired.all().count() == 1
+    assert (await UniqueNameRequired.get(pk=instance.pk)).optional == "original"
 
 
 @pytest.mark.asyncio

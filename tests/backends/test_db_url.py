@@ -64,7 +64,7 @@ def test_sqlite_testing():
     file_path = res["credentials"]["file_path"]
     assert "/some/test-" in file_path
     assert ".sqlite" in file_path
-    assert "sqlite:///some/test-{}.sqlite" != file_path
+    assert file_path != "sqlite:///some/test-{}.sqlite"
     assert res == {
         "engine": "tortoise.backends.sqlite",
         "credentials": {
@@ -154,6 +154,40 @@ def test_postgres_no_port():
         }
 
 
+def test_postgres_unix_socket_query_params():
+    for scheme, engine in _postgres_scheme_engines.items():
+        res = expand_db_url(
+            f"{scheme}:///test?host=/cloudsql/x:y:z/.s.PGSQL.5432&user=postgres&password=pass"
+        )
+        assert res == {
+            "engine": engine,
+            "credentials": {
+                "database": "test",
+                "host": "/cloudsql/x:y:z/.s.PGSQL.5432",
+                "password": "pass",
+                "port": 5432,
+                "user": "postgres",
+            },
+        }
+
+
+def test_postgres_url_authority_wins_over_query_params():
+    for scheme, engine in _postgres_scheme_engines.items():
+        res = expand_db_url(
+            f"{scheme}://pguser:pgpass@mydomain.com:5433/test?port=5430&user=ignore-me"
+        )
+        assert res == {
+            "engine": engine,
+            "credentials": {
+                "database": "test",
+                "host": "mydomain.com",
+                "password": "pgpass",
+                "port": 5433,
+                "user": "pguser",
+            },
+        }
+
+
 def test_postgres_nonint_port():
     for scheme in _postgres_scheme_engines:
         with pytest.raises(ConfigurationError):
@@ -167,7 +201,7 @@ def test_postgres_testing():
         )
         database = res["credentials"]["database"]
         assert "test_" in database
-        assert "test_{}" != database
+        assert database != "test_{}"
         assert res == {
             "engine": engine,
             "credentials": {
@@ -247,7 +281,7 @@ def test_mysql_pre_encoded_percent_in_password():
 
 
 def test_postgres_plus_sign_in_password():
-    for scheme, engine in _postgres_scheme_engines.items():
+    for scheme in _postgres_scheme_engines:
         res = expand_db_url(f"{scheme}://postgres:p%2Bss+word@127.0.0.1:54321/test")
         assert res["credentials"]["password"] == "p+ss+word"
 
@@ -324,7 +358,7 @@ def test_mysql_nonint_port():
 def test_mysql_testing():
     res = expand_db_url(r"mysql://root:@127.0.0.1:3306/test_\{\}", testing=True)
     assert "test_" in res["credentials"]["database"]
-    assert "test_{}" != res["credentials"]["database"]
+    assert res["credentials"]["database"] != "test_{}"
     assert res == {
         "engine": "tortoise.backends.mysql",
         "credentials": {
@@ -441,3 +475,17 @@ def test_generate_config_many_apps():
             "peanuts": {"models": ["peanut.models"], "default_connection": "default"},
         },
     }
+
+
+@pytest.mark.parametrize("scheme", ["asyncpg", "mysql"])
+@pytest.mark.parametrize(
+    "encoded, expected", [("first%40last", "first@last"), ("a+b", "a+b"), ("%252F", "%2F")]
+)
+def test_username_is_percent_decoded_once(scheme, encoded, expected):
+    config = expand_db_url(f"{scheme}://{encoded}:example@localhost/db")
+    assert config["credentials"]["user"] == expected
+
+
+def test_query_string_username_is_not_decoded_twice():
+    config = expand_db_url("asyncpg://localhost/db?user=%252F")
+    assert config["credentials"]["user"] == "%2F"

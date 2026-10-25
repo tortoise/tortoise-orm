@@ -10,12 +10,7 @@ from pypika_tortoise import Case as PypikaCase
 from pypika_tortoise import Field as PypikaField
 from pypika_tortoise import SqlContext, Table
 from pypika_tortoise.functions import AggregateFunction, DistinctOptionFunction
-from pypika_tortoise.terms import (
-    ArithmeticExpression,
-    Criterion,
-    Term,
-    ValueWrapper,
-)
+from pypika_tortoise.terms import ArithmeticExpression, Criterion, Term, ValueWrapper
 from pypika_tortoise.terms import Function as PypikaFunction
 from pypika_tortoise.utils import format_alias_sql
 
@@ -23,10 +18,8 @@ from tortoise.exceptions import FieldError, OperationalError
 from tortoise.fields.base import Field
 from tortoise.fields.data import JSONField
 from tortoise.fields.relational import RelationalField
-from tortoise.filters import FilterInfoDict
 from tortoise.query_utils import (
     QueryModifier,
-    TableCriterionTuple,
     get_joins_for_related_field,
     resolve_field_json_path,
     resolve_nested_field,
@@ -35,7 +28,9 @@ from tortoise.query_utils import (
 if TYPE_CHECKING:  # pragma: nocoverage
     from pypika_tortoise.queries import Selectable
 
+    from tortoise.filters import FilterInfoDict
     from tortoise.models import Model
+    from tortoise.query_utils import TableCriterionTuple
     from tortoise.queryset import AwaitableQuery
 
 
@@ -233,9 +228,9 @@ class Subquery(Term):
     def get_sql(self, ctx: SqlContext) -> str:
         self.query._choose_db_if_not_chosen()
         self.query._make_query()
-        return self.query.query.get_parameterized_sql(ctx)[0]
+        return self.query.query.get_sql(ctx)
 
-    def as_(self, alias: str) -> Selectable:  # type: ignore
+    def as_(self, alias: str) -> Selectable:  # type: ignore[override]
         self.query._choose_db_if_not_chosen()
         self.query._make_query()
         return self.query.query.as_(alias)
@@ -263,10 +258,10 @@ class Q:
     """
 
     __slots__ = (
+        "_is_negated",
         "children",
         "filters",
         "join_type",
-        "_is_negated",
     )
 
     AND = "AND"
@@ -314,7 +309,7 @@ class Q:
         Returns a negated instance of the Q object, use ``~`` operator.
         """
         q = Q(*self.children, join_type=self.join_type, **self.filters)
-        q.negate()
+        q._is_negated = not self._is_negated
         return q
 
     def __eq__(self, other: object) -> bool:
@@ -325,6 +320,11 @@ class Q:
             and self.join_type == other.join_type
             and self.filters == other.filters
         )
+
+    def __bool__(self) -> bool:
+        if self.filters:
+            return True
+        return any(self.children)
 
     def negate(self) -> None:
         """
@@ -430,29 +430,58 @@ class Q:
         return modifier
 
     def _get_actual_filter_params(
-        self, resolve_context: ResolveContext, key: str, value: Table | FilterInfoDict
+        self, resolve_context: ResolveContext, key: str, value: Any
     ) -> tuple[str, Any]:
         filter_key = key
+        filter_value: Any
+        model_meta = resolve_context.model._meta
+        relation_name, separator, lookup = key.partition("__")
         if (
-            key in resolve_context.model._meta.fk_fields
-            or key in resolve_context.model._meta.o2o_fields
+            (relation_name in model_meta.fk_fields or relation_name in model_meta.o2o_fields)
+            and (not separator or lookup in ("in", "not_in"))
+            and (
+                # Keep bare relation conversion (e.g. `filter(tournament=obj)`), but
+                # let exact field or annotation names win over relation lookups. e.g.
+                #
+                #     .annotate(tournament__in=F("id")).filter(tournament__in=relation.pk)
+                #
+                # Here `tournament__in` refers to the annotation, not the FK lookup.
+                not lookup
+                or (key not in model_meta.filters and key not in resolve_context.custom_filters)
+            )
         ):
-            field_object = resolve_context.model._meta.fields_map[key]
+            field_object = cast(RelationalField, model_meta.fields_map[relation_name])
             filter_key = cast(str, field_object.source_field)
-            filter_value = getattr(value, "pk", value)
-        elif key in resolve_context.model._meta.m2m_fields:
+            to_field_name = field_object.to_field_instance.model_field_name
+            if lookup:
+                filter_key = f"{filter_key}__{lookup}"
+                filter_value = (
+                    value
+                    if isinstance(value, (Expression, Term))
+                    else [
+                        getattr(item, to_field_name)
+                        if isinstance(item, field_object.related_model)
+                        else item
+                        for item in value
+                    ]
+                )
+            else:
+                filter_value = (
+                    getattr(value, to_field_name)
+                    if isinstance(value, field_object.related_model)
+                    else value
+                )
+        elif key in model_meta.m2m_fields:
             filter_value = getattr(value, "pk", value)
         elif (
-            key.split("__")[0] in resolve_context.model._meta.fetch_fields
+            relation_name in model_meta.fetch_fields
             or key in resolve_context.custom_filters
-            or key in resolve_context.model._meta.filters
+            or key in model_meta.filters
         ):
             filter_value = value
         else:
             allowed = sorted(
-                resolve_context.model._meta.fields
-                | resolve_context.model._meta.fetch_fields
-                | set(resolve_context.custom_filters)
+                model_meta.fields | model_meta.fetch_fields | set(resolve_context.custom_filters)
             )
             raise FieldError(f"Unknown filter param '{key}'. Allowed base values are {allowed}")
 
@@ -478,9 +507,7 @@ class Q:
                 modifier &= filter_modifier
             else:
                 modifier |= filter_modifier
-        if self._is_negated:
-            modifier = ~modifier
-        return modifier
+        return ~modifier if self._is_negated else modifier
 
     def _resolve_children(self, resolve_context: ResolveContext) -> QueryModifier:
         modifier = QueryModifier()
@@ -490,10 +517,7 @@ class Q:
                 modifier &= node_modifier
             else:
                 modifier |= node_modifier
-
-        if self._is_negated:
-            modifier = ~modifier
-        return modifier
+        return ~modifier if self._is_negated else modifier
 
     def resolve(
         self,
@@ -529,7 +553,7 @@ class Function(Expression):
         Enable populate_field_object where we want to try and preserve the field type.
     """
 
-    __slots__ = ("field", "field_object", "default_values")
+    __slots__ = ("default_values", "field", "field_object")
 
     database_func: type[PypikaFunction] = PypikaFunction
     # Enable populate_field_object where we want to try and preserve the field type.
@@ -543,7 +567,7 @@ class Function(Expression):
         self.default_values = default_values
 
     def _get_function_field(self, field: Term | str, *default_values) -> PypikaFunction:
-        return self.database_func(field, *default_values)  # type:ignore[arg-type]
+        return self.database_func(field, *default_values)  # type:ignore
 
     def _resolve_nested_field(self, resolve_context: ResolveContext, field: str) -> ResolveResult:
         term, joins, output_field = resolve_nested_field(
@@ -588,11 +612,11 @@ class Function(Expression):
         res = ResolveResult(
             term=term,
             joins=joins,
-            output_field=function_arg.output_field,  # type:ignore[call-overload]
+            output_field=function_arg.output_field,  # type:ignore
         )
 
         if self.populate_field_object and (
-            res_output_field := res.output_field  # type:ignore[call-overload]
+            res_output_field := res.output_field  # type:ignore
         ):
             self.field_object = res_output_field
 
@@ -608,7 +632,7 @@ class Aggregate(Function):
     :param distinct: Flag for aggregate with distinction
     """
 
-    database_func: type[AggregateFunction] = DistinctOptionFunction
+    database_func: type[AggregateFunction] = DistinctOptionFunction  # ty:ignore
 
     def __init__(
         self,
@@ -621,20 +645,27 @@ class Aggregate(Function):
         self.distinct = distinct
         self.filter = _filter
 
-    def _get_function_field(  # type:ignore[override]
+    def _get_function_field(  # type:ignore
         self, field: ArithmeticExpression | PypikaField | str, *default_values
     ) -> DistinctOptionFunction:
         function = cast(DistinctOptionFunction, self.database_func(field, *default_values))
         if self.distinct:
-            function = function.distinct()
+            return function.distinct()
         return function
 
-    def _resolve_nested_field(self, resolve_context: ResolveContext, field: str) -> ResolveResult:
-        ret = super()._resolve_nested_field(resolve_context, field)
-        if self.filter:
+    def _resolve_argument(
+        self, resolve_context: ResolveContext, value: Any, *, treat_str_as_field: bool
+    ) -> ResolveResult:
+        ret = super()._resolve_argument(
+            resolve_context, value, treat_str_as_field=treat_str_as_field
+        )
+        # Only the aggregated argument is filtered, whether it is a field name,
+        # an F() or a combined expression; extra function arguments are left as is.
+        if treat_str_as_field and self.filter:
             modifier = QueryModifier()
             modifier &= self.filter.resolve(resolve_context)
             ret.term = PypikaCase().when(modifier.where_criterion, ret.term).else_(None)
+            ret.joins = list(dict.fromkeys(ret.joins + modifier.joins))
 
         return ret
 
@@ -660,7 +691,7 @@ class When(Expression):
     def __init__(
         self,
         *args: Q,
-        then: str | F | CombinedExpression | Function,
+        then: str | bool | float | F | CombinedExpression | Function,
         negate: bool = False,
         **kwargs: Any,
     ) -> None:
@@ -674,16 +705,12 @@ class When(Expression):
         for arg in self.args:
             if not isinstance(arg, Q):
                 raise TypeError("expected Q objects as args")
-            if self.negate:
-                q_objects.append(~arg)
-            else:
-                q_objects.append(arg)
+            q_objects.append(~arg if self.negate else arg)
 
         for key, value in self.kwargs.items():
-            if self.negate:
-                q_objects.append(~Q(**{key: value}))
-            else:
-                q_objects.append(Q(**{key: value}))
+            q = Q(**{key: value})
+            q_objects.append(~q if self.negate else q)
+
         return q_objects
 
     def resolve(self, resolve_context: ResolveContext) -> ResolveResult:
@@ -693,12 +720,16 @@ class When(Expression):
         for node in q_objects:
             modifier &= node.resolve(resolve_context)
 
+        joins = modifier.joins
         if isinstance(self.then, Expression):
-            then = self.then.resolve(resolve_context).term
+            resolve_result = self.then.resolve(resolve_context)
+            if then_joins := resolve_result.joins:
+                joins = list(dict.fromkeys(joins + then_joins))
+            then = resolve_result.term
         else:
             then = cast(Term, Term.wrap_constant(self.then))
 
-        return ResolveResult(term=_WhenThen(modifier.where_criterion, then))
+        return ResolveResult(term=_WhenThen(modifier.where_criterion, then), joins=joins)
 
 
 class Case(Expression):
@@ -712,23 +743,27 @@ class Case(Expression):
     def __init__(
         self,
         *args: When,
-        default: str | F | CombinedExpression | Function | None = None,
+        default: str | bool | float | F | CombinedExpression | Function | None = None,
     ) -> None:
         self.args = args
         self.default = default
 
     def resolve(self, resolve_context: ResolveContext) -> ResolveResult:
         case = PypikaCase()
+        joins: list[TableCriterionTuple] = []
         for arg in self.args:
             if not isinstance(arg, When):
                 raise TypeError("expected When objects as args")
             when = arg.resolve(resolve_context)
             when_term = cast(_WhenThen, when.term)
             case = case.when(when_term.when, when_term.then)
+            joins += when.joins
 
         if isinstance(self.default, Expression):
-            case = case.else_(self.default.resolve(resolve_context).term)
+            default_result = self.default.resolve(resolve_context)
+            joins += default_result.joins
+            case = case.else_(default_result.term)
         else:
             case = case.else_(Term.wrap_constant(self.default))
 
-        return ResolveResult(term=case)
+        return ResolveResult(term=case, joins=list(dict.fromkeys(joins)))
