@@ -208,8 +208,8 @@ def expand_db_url(db_url: str, testing: bool = False) -> dict:
     try:
         if vmap.get("port") and url.port:
             params[vmap["port"]] = int(url.port)
-    except ValueError:
-        raise ConfigurationError("Port is not an integer")
+    except ValueError as e:
+        raise ConfigurationError("Port is not an integer") from e
     if vmap.get("username") and (url.username or vmap["username"] not in params):
         # Pass username as None, instead of empty string,
         # to let asyncpg retrieve username from environment variable or OS user
