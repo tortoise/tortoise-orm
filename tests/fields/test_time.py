@@ -13,7 +13,7 @@ from iso8601 import ParseError
 from tests import testmodels
 from tortoise import fields, timezone
 from tortoise.contrib import test
-from tortoise.contrib.test.condition import NotIn
+from tortoise.contrib.test.condition import In, NotIn
 from tortoise.exceptions import ConfigurationError, IntegrityError
 from tortoise.expressions import F
 from tortoise.timezone import UTC, ZoneInfo, get_default_timezone, parse_timezone
@@ -463,20 +463,7 @@ async def test_datetime_filter_by_year_month_day(db):
 
 
 @pytest.mark.asyncio
-@test.requireCapability(dialect="sqlite")
-async def test_time_sqlite_create_and_filter(db):
-    """Test creating, reading, and filtering time fields with SQLite."""
-    model = testmodels.TimeFields
-    value = timezone.now().timetz()
-    obj = await model.create(time=value)
-
-    assert (await model.get(id=obj.id)).time == value
-    assert await model.filter(time=value).first() == obj
-
-
-@pytest.mark.asyncio
-@test.requireCapability(dialect=NotIn("sqlite"))  # 'datetime.time' is not supported by sqlite3
-@test.requireCapability(dialect="postgres")
+@test.requireCapability(dialect=In("sqlite", "postgres"))
 async def test_time_create(db):
     """Test creating time fields (postgres)."""
     model = testmodels.TimeFields
@@ -484,11 +471,11 @@ async def test_time_create(db):
     obj0 = await model.create(time=now)
     obj1 = await model.get(id=obj0.id)
     assert obj1.time == now
+    assert await model.filter(time=now).first() == obj0
 
 
 @pytest.mark.asyncio
-@test.requireCapability(dialect=NotIn("sqlite"))  # 'datetime.time' is not supported by sqlite3
-@test.requireCapability(dialect="postgres")
+@test.requireCapability(dialect=In("sqlite", "postgres"))
 async def test_time_cast(db):
     """Test time field accepts ISO format string (postgres)."""
     model = testmodels.TimeFields
@@ -498,8 +485,7 @@ async def test_time_cast(db):
 
 
 @pytest.mark.asyncio
-@test.requireCapability(dialect=NotIn("sqlite"))  # 'datetime.time' is not supported by sqlite3
-@test.requireCapability(dialect="postgres")
+@test.requireCapability(dialect=In("sqlite", "postgres"))
 async def test_time_values(db):
     """Test time field in values() query (postgres)."""
     model = testmodels.TimeFields
@@ -510,8 +496,7 @@ async def test_time_values(db):
 
 
 @pytest.mark.asyncio
-@test.requireCapability(dialect=NotIn("sqlite"))  # 'datetime.time' is not supported by sqlite3
-@test.requireCapability(dialect="postgres")
+@test.requireCapability(dialect=In("sqlite", "postgres"))
 async def test_time_values_list(db):
     """Test time field in values_list() query (postgres)."""
     model = testmodels.TimeFields
@@ -522,8 +507,7 @@ async def test_time_values_list(db):
 
 
 @pytest.mark.asyncio
-@test.requireCapability(dialect=NotIn("sqlite"))  # 'datetime.time' is not supported by sqlite3
-@test.requireCapability(dialect="postgres")
+@test.requireCapability(dialect=In("sqlite", "postgres"))
 async def test_time_get(db):
     """Test getting by time field (postgres)."""
     model = testmodels.TimeFields

@@ -583,6 +583,12 @@ class TimeField(Field[T_TIME], datetime.time):
     class _db_oracle:
         SQL_TYPE = "NVARCHAR2(8)"
 
+    class _db_mysql:
+        SQL_TYPE = "TIME(6)"
+
+    class _db_postgres:
+        SQL_TYPE = "TIMETZ"
+
     @overload
     def __init__(
         self: TimeField[datetime.time],
@@ -652,12 +658,6 @@ class TimeField(Field[T_TIME], datetime.time):
                 value = value.replace(tzinfo=get_default_timezone())
         self.validate(value)
         return value
-
-    class _db_mysql:
-        SQL_TYPE = "TIME(6)"
-
-    class _db_postgres:
-        SQL_TYPE = "TIMETZ"
 
 
 class TimeDeltaField(Field[T_TIMEDELTA]):
