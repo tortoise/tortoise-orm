@@ -32,6 +32,7 @@ Fixed
 - ``pydantic_model_creator`` no longer returns a cached class that ignores the ``model_config``, ``validators`` or ``module`` of the current call. (#2312)
 - Preserve object and field iterators across validation and batching in ``bulk_update()``. (#2320)
 - Avoid accumulating duplicate query statements when previewing SQL or executing repeatedly. (#2321)
+- Percent-decode database URL usernames once, preserving plus signs and query-string overrides. (#2379)
 
 1.1.9
 -----
