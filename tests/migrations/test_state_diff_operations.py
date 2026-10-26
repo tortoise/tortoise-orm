@@ -216,7 +216,8 @@ def test_generate_recreate_generated_field_restores_indexes_constraints() -> Non
     operations = OperationGenerator(old_state, new_state).generate()
     assert any(isinstance(op, RemoveField) for op in operations)
     assert any(isinstance(op, AddField) for op in operations)
-    assert any(isinstance(op, AddIndex) and op.index.INDEX_TYPE == "GIN" for op in operations)
+    # AddField recreates the db_index index itself, so only the GIN index is re-added
+    assert [op.index.INDEX_TYPE for op in operations if isinstance(op, AddIndex)] == ["GIN"]
     assert any(
         isinstance(op, AddConstraint)
         and isinstance(op.constraint, UniqueConstraint)
