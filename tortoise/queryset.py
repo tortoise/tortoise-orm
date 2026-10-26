@@ -839,6 +839,7 @@ class QuerySet(AwaitableQuery[MODEL]):
             force_indexes=self._force_indexes,
             use_indexes=self._use_indexes,
             distinct=self._distinct,
+            group_bys=self._group_bys,
         )
 
     def exists(self) -> ExistsQuery:
@@ -1570,6 +1571,7 @@ class CountQuery(AwaitableQuery):
         "_force_indexes",
         "_use_indexes",
         "_distinct",
+        "_group_bys",
     )
 
     def __init__(
@@ -1584,6 +1586,7 @@ class CountQuery(AwaitableQuery):
         force_indexes: set[str],
         use_indexes: set[str],
         distinct: bool = False,
+        group_bys: tuple[str, ...] = (),
     ) -> None:
         super().__init__(model)
         self._q_objects = q_objects
@@ -1595,8 +1598,36 @@ class CountQuery(AwaitableQuery):
         self._force_indexes = force_indexes
         self._use_indexes = use_indexes
         self._distinct = distinct
+        self._group_bys = group_bys
+
+    def _make_grouped_query(self) -> None:
+        # Count the groups, i.e. the rows ``.values(*group_bys)`` would return.
+        grouped: ValuesListQuery[Literal[False]] = ValuesListQuery(
+            model=self.model,
+            db=self._db,
+            q_objects=self._q_objects,
+            single=False,
+            raise_does_not_exist=False,
+            fields_for_select_list=self._group_bys,
+            limit=None,
+            offset=None,
+            distinct=self._distinct,
+            orderings=[],
+            flat=False,
+            annotations=self._annotations,
+            custom_filters=self._custom_filters,
+            group_bys=self._group_bys,
+            force_indexes=self._force_indexes,
+            use_indexes=self._use_indexes,
+        )
+        grouped._make_query()
+        grouped.query._orderbys = []
+        self.query = self._db.query_class.from_(grouped.query.as_("_t")).select(Count(Star()))
 
     def _make_query(self) -> None:
+        if self._group_bys:
+            self._make_grouped_query()
+            return
         self.query = copy(self.model._meta.basequery)
         self.resolve_filters()
         count_term: Function
