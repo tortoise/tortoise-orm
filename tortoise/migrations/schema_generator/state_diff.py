@@ -318,15 +318,8 @@ class StateFieldDiff:
         self.old_state = old_state
         self.new_state = new_state
 
-    def _generated_field_recreate_ops(
-        self, field_name: str, field: Field
-    ) -> list[TortoiseOperation]:
+    def _generated_field_recreate_ops(self, field_name: str) -> list[TortoiseOperation]:
         operations: list[TortoiseOperation] = []
-        if getattr(field, "index", False):
-            operations.append(
-                AddIndex(model_name=self.new_state.name, index=Index(fields=(field_name,)))
-            )
-
         old_indexes = _normalize_indexes(self.old_state.options.get("indexes", ()))
         new_indexes = _normalize_indexes(self.new_state.options.get("indexes", ()))
         old_index_sigs = {_index_signature(index) for index in old_indexes}
@@ -398,7 +391,7 @@ class StateFieldDiff:
                     operations.append(
                         AddField(model_name=self.new_state.name, name=name, field=new_field)
                     )
-                    operations.extend(self._generated_field_recreate_ops(name, new_field))
+                    operations.extend(self._generated_field_recreate_ops(name))
                 else:
                     operations.append(
                         AlterField(model_name=self.new_state.name, name=name, field=new_field)

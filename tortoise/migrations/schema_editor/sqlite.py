@@ -141,6 +141,9 @@ class SqliteSchemaEditor(SqliteQuotingMixin, BaseSchemaEditor):
         if unique_field:
             await self.add_constraint(model, UniqueConstraint(fields=(db_field,)))
 
+        if field.index and not field.pk:
+            await self.add_index(model, Index(fields=(db_field,)))
+
     async def add_constraint(self, model, constraint) -> None:
         from tortoise.migrations.constraints import CheckConstraint
 
