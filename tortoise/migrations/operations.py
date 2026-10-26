@@ -654,6 +654,17 @@ def _set_option_list(model_state: ModelState, key: str, values: list) -> None:
         model_state.options.pop(key, None)
 
 
+def _is_field_db_index(model: type[Model], index: Index) -> bool:
+    # A plain unnamed single-column Index is the one db_index=True already creates
+    if type(index) is not Index or index.name or index.expressions or len(index.fields) != 1:
+        return False
+    for field_name, db_field in model._meta.fields_db_projection.items():
+        if db_field == index.fields[0]:
+            field = model._meta.fields_map[field_name]
+            return field.index and not field.pk
+    return False
+
+
 class AddIndex(TortoiseOperation):
     def __init__(self, model_name: str, index: Index) -> None:
         self.model_name = model_name
@@ -679,7 +690,8 @@ class AddIndex(TortoiseOperation):
         if not state_editor:
             return
         model = new_state.apps.get_model(f"{app_label}.{self.model_name}")
-        await state_editor.add_index(model, self.index)
+        if not _is_field_db_index(model, self.index):
+            await state_editor.add_index(model, self.index)
 
     async def database_backward(
         self,
@@ -691,7 +703,8 @@ class AddIndex(TortoiseOperation):
         if not state_editor:
             return
         model = old_state.apps.get_model(f"{app_label}.{self.model_name}")
-        await state_editor.remove_index(model, self.index)
+        if not _is_field_db_index(model, self.index):
+            await state_editor.remove_index(model, self.index)
 
 
 class RemoveIndex(TortoiseOperation):
@@ -743,7 +756,8 @@ class RemoveIndex(TortoiseOperation):
         model = old_state.apps.get_model(f"{app_label}.{self.model_name}")
         model_state = old_state.models[(app_label, self.model_name)]
         index = self._find_index(model_state)
-        await state_editor.remove_index(model, index)
+        if not _is_field_db_index(model, index):
+            await state_editor.remove_index(model, index)
 
     async def database_backward(
         self,
@@ -757,7 +771,8 @@ class RemoveIndex(TortoiseOperation):
         model = new_state.apps.get_model(f"{app_label}.{self.model_name}")
         model_state = new_state.models[(app_label, self.model_name)]
         index = self._find_index(model_state)
-        await state_editor.add_index(model, index)
+        if not _is_field_db_index(model, index):
+            await state_editor.add_index(model, index)
 
 
 class RenameIndex(TortoiseOperation):

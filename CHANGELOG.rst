@@ -38,6 +38,7 @@ Fixed
 - Parse false boolean values in database URL options correctly. (#2377)
 - Reject domain names with trailing newlines in ``DomainNameValidator``. (#2386)
 - ``QuerySet.exists()`` now respects ``limit()`` and ``offset()``, so ``limit(0)`` or an offset past the last row returns ``False``. (#2389)
+- Migrations now create the index for fields added with ``db_index=True``; ``AddField`` previously only added the column. (#2384)
 
 1.1.9
 -----

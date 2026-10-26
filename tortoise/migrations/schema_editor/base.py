@@ -521,6 +521,7 @@ class BaseSchemaEditor(SchemaQuotingMixin):
 
         if isinstance(field, ForeignKeyFieldInstance):
             key_field_name = field.source_field or field_name
+            db_field = model._meta.fields_db_projection[key_field_name]
             field_definition = self._get_fk_field_definition(model, key_field_name)
         else:
             db_field = model._meta.fields_db_projection[field_name]
@@ -566,6 +567,9 @@ class BaseSchemaEditor(SchemaQuotingMixin):
                 definition=field_definition,
             )
         )
+
+        if field.index and not field.pk:
+            await self.add_index(model, Index(fields=(db_field,)))
 
     async def _alter_m2m_field(
         self,
