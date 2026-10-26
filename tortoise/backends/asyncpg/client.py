@@ -201,6 +201,7 @@ class TransactionWrapper(AsyncpgDBClient, TransactionalDBClient):
             raise TransactionManagementError("Transaction already finalised")
         await self.transaction.commit()
         self._finalized = True
+        self._committed = True
 
     async def release_savepoint(self) -> None:
         return await self.commit()

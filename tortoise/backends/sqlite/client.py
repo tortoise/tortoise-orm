@@ -18,6 +18,7 @@ from tortoise.backends.base.client import (
     NestedTransactionContext,
     TransactionalDBClient,
     TransactionContext,
+    run_on_commit_callbacks,
 )
 from tortoise.backends.sqlite.executor import SqliteExecutor
 from tortoise.backends.sqlite.schema_generator import SqliteSchemaGenerator
@@ -195,6 +196,7 @@ class SqliteTransactionContext(TransactionContext):
         await self.ensure_connection()
         self.token = get_connections().set(self.connection_name, self.connection)
         await self.connection.begin()
+        self.connection._on_commit_frames = [[]]
         return self.connection
 
     async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
@@ -207,8 +209,11 @@ class SqliteTransactionContext(TransactionContext):
                 else:
                     await self.connection.commit()
         finally:
+            frames, self.connection._on_commit_frames = self.connection._on_commit_frames, None
             get_connections().reset(self.token)
             self._trxlock.release()
+        if frames and self.connection._committed:
+            await run_on_commit_callbacks(frames[0])
 
 
 class SqliteTransactionWrapper(SqliteClient, TransactionalDBClient):
@@ -251,6 +256,7 @@ class SqliteTransactionWrapper(SqliteClient, TransactionalDBClient):
             raise TransactionManagementError("Transaction already finalised")
         await self._connection.commit()
         self._finalized = True
+        self._committed = True
 
     async def savepoint(self) -> None:
         self._savepoint = _gen_savepoint_name()
