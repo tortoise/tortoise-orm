@@ -138,7 +138,7 @@ class BasePostgresSchemaEditor(BaseSchemaEditor):
                 condition=constraint.condition,
             )
             constraint_name = self._constraint_name_for_model(model, resolved_constraint)
-            await self._run_sql(self.DROP_INDEX_TEMPLATE.format(name=constraint_name))
+            await self._run_sql(self._drop_index_sql(model, constraint_name))
             return
         await super().remove_constraint(model, constraint)
 

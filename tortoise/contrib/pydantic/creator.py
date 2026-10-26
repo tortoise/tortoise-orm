@@ -7,7 +7,7 @@ from collections.abc import Iterator, MutableMapping
 from copy import copy
 from enum import Enum, IntEnum
 from hashlib import sha3_224
-from typing import TYPE_CHECKING, Any, TypeAlias, cast
+from typing import TYPE_CHECKING, Any, TypeAlias, cast, get_args, get_origin
 
 from pydantic import ConfigDict, computed_field, create_model
 from pydantic import Field as PydanticField
@@ -71,20 +71,20 @@ class FieldMap(MutableMapping[str, Field | ComputedFieldDescription]):
             self.field_map_update([pk_field], meta)
         self.computed_fields: dict[str, ComputedFieldDescription] = {}
 
-    def __delitem__(self, __key: str) -> None:
-        self._field_map.__delitem__(__key)
+    def __delitem__(self, key: str, /) -> None:
+        del self._field_map[key]
 
-    def __getitem__(self, __key: str) -> Field | ComputedFieldDescription:
-        return self._field_map.__getitem__(__key)
+    def __getitem__(self, key: str, /) -> Field | ComputedFieldDescription:
+        return self._field_map[key]
+
+    def __setitem__(self, key: str, value: Field | ComputedFieldDescription, /) -> None:
+        self._field_map[key] = value
 
     def __len__(self) -> int:  # pragma: no-coverage
         return self._field_map.__len__()
 
     def __iter__(self) -> Iterator[str]:
         return self._field_map.__iter__()
-
-    def __setitem__(self, __key: str, __value: Field | ComputedFieldDescription) -> None:
-        self._field_map.__setitem__(__key, __value)
 
     def sort_alphabetically(self) -> None:
         self._field_map = {k: self._field_map[k] for k in sorted(self._field_map)}
@@ -116,13 +116,17 @@ class FieldMap(MutableMapping[str, Field | ComputedFieldDescription]):
     def computed_field_map_update(self, computed: tuple[str, ...], cls: type[Model]) -> None:
         self._field_map.update(
             {
-                k: ComputedFieldDescription(
-                    function=getattr(cls, k),
-                    description=None,
-                )
+                k: ComputedFieldDescription(function=getattr(cls, k), description=None)
                 for k in computed
             }
         )
+
+
+def is_field_annotation(type_obj: Any) -> bool:
+    t = get_origin(type_obj)
+    if t is None:
+        return False
+    return isinstance(t, type) and issubclass(t, Field)
 
 
 def pydantic_queryset_creator(
@@ -177,7 +181,7 @@ def pydantic_queryset_creator(
     )
     model.__doc__ = _cleandoc(cls)
     model.model_config["title"] = name or f"{submodel.model_config['title']}_list"
-    model.model_config["submodel"] = submodel  # type: ignore[typeddict-unknown-key]
+    model.model_config["submodel"] = submodel  # type: ignore
     return model
 
 
@@ -210,7 +214,10 @@ class PydanticModelCreator:
             and sort_alphabetically is None
             and allow_cycles is None
             and meta_override is None
+            and model_config is None
+            and not validators
             and not exclude_readonly
+            and module == __name__
         )
         if exclude is None:
             exclude = ()
@@ -250,8 +257,8 @@ class PydanticModelCreator:
 
         self._pconfig: ConfigDict
 
-        self._properties: dict[str, PropertyValue] = dict()
-        self._relational_fields_index: list[tuple[str, str]] = list()
+        self._properties: dict[str, PropertyValue] = {}
+        self._relational_fields_index: list[tuple[str, str]] = []
 
         self._model_description: ModelDescription = ModelDescription.from_model(cls)
 
@@ -260,6 +267,7 @@ class PydanticModelCreator:
 
         self._optional = optional
 
+        self._call_model_config = model_config
         self._validators = validators
         self._module = module
 
@@ -268,12 +276,10 @@ class PydanticModelCreator:
     @property
     def _hash(self) -> str:
         if self.__hash == "":
-            field_info = []
-            for name, prop in self._properties.items():
-                if isinstance(prop, tuple):
-                    field_info.append(f"{name}:{prop[0]}")
-                else:
-                    field_info.append(f"{name}:computed")
+            field_info = [
+                f"{name}:{prop[0]}" if isinstance(prop, tuple) else f"{name}:computed"
+                for name, prop in self._properties.items()
+            ]
             hashval = (
                 f"{self._fqname};"
                 f"{field_info};"
@@ -283,9 +289,11 @@ class PydanticModelCreator:
                 f"{self._exclude_read_only};"
                 f"{self.meta.computed}"
             )
-            self.__hash = (
-                b32encode(sha3_224(hashval.encode("utf-8")).digest()).decode("utf-8").lower()[:6]
-            )
+            if self._call_model_config is not None or self._validators or self._module != __name__:
+                hashval += (
+                    f";{self._call_model_config};{sorted(self._validators or {})};{self._module}"
+                )
+            self.__hash = b32encode(sha3_224(hashval.encode()).digest()).decode().lower()[:6]
         return self.__hash
 
     def get_name(self) -> tuple[str, str]:
@@ -310,11 +318,10 @@ class PydanticModelCreator:
         return pconfig
 
     def _initialize_field_map(self) -> FieldMap:
-        return (
-            FieldMap(self.meta)
-            if self._exclude_read_only
-            else FieldMap(self.meta, pk_field=self._model_description.pk_field)
-        )
+        if self._exclude_read_only:
+            return FieldMap(self.meta)
+        pk_field = self._model_description.pk_field  # ty:ignore[invalid-attribute-access]
+        return FieldMap(self.meta, pk_field=pk_field)
 
     def _construct_field_map(self) -> None:
         self._field_map.field_map_update(fields=self._model_description.data_fields, meta=self.meta)
@@ -352,10 +359,11 @@ class PydanticModelCreator:
 
         self._name, self._title = self.get_name()
 
-        if self._hash in _MODEL_INDEX:
+        # validators are arbitrary objects without a stable identity, so they bypass the cache
+        if not self._validators and self._hash in _MODEL_INDEX:
             hashed_model = _MODEL_INDEX[self._hash]
             if hashed_model.__name__ == self._name:
-                return _MODEL_INDEX[self._hash]
+                return hashed_model
 
         self._pconfig = self._initialize_pconfig()
         computed_fields: dict[str, Any] = {}
@@ -364,6 +372,9 @@ class PydanticModelCreator:
             if isinstance(getattr(v, "decorator_info", None), ComputedFieldInfo):
                 computed_fields[k] = v
             else:
+                if v and is_field_annotation(v[0]):
+                    # `tortoise.fields.base.Field[EnumType]` -> `EnumType`
+                    v = (get_args(v[0])[0], *v[1:])
                 common_fields[k] = v
         base_model = type(
             "BasePydanticModel",
@@ -378,8 +389,9 @@ class PydanticModelCreator:
             **common_fields,
         )
         model.__doc__ = _cleandoc(self._cls)
-        model.model_config["orig_model"] = self._cls  # type: ignore[typeddict-unknown-key]
-        _MODEL_INDEX[self._hash] = model
+        model.model_config["orig_model"] = self._cls  # type: ignore
+        if not self._validators:
+            _MODEL_INDEX[self._hash] = model
         return model
 
     def _process_field(
@@ -470,7 +482,7 @@ class PydanticModelCreator:
         model = self._get_submodel(python_type, field_name)
         if model:
             self._relational_fields_index.append((field_name, model.__name__))
-            return list[model]  # type: ignore
+            return list[model]  # type: ignore[valid-type]
         return None
 
     def _process_data_field(
@@ -486,7 +498,7 @@ class PydanticModelCreator:
             json_schema_extra["readOnly"] = constraints["readOnly"]
             del constraints["readOnly"]
         fconfig.update(constraints)
-        python_type: type[Enum] | type[IntEnum] | type
+        python_type: type[Enum | IntEnum] | type
         if isinstance(field, (IntEnumFieldInstance, CharEnumFieldInstance)):
             python_type = field.enum_type
         else:
@@ -515,13 +527,13 @@ class PydanticModelCreator:
                 if orm_obj is not None:
                     try:
                         return original_func(orm_obj)
-                    except NoValuesFetched:
+                    except NoValuesFetched as e:
                         raise NoValuesFetched(
-                            f"Computed field '{original_func.__name__}' tried to access a "
-                            f"relation that has not been fetched. Either include the relation "
-                            f"in the Pydantic model so it is auto-prefetched, or call "
+                            f"Computed field '{getattr(original_func, '__name__', repr(original_func))}' "
+                            f"tried to access a relation that has not been fetched. Either include the "
+                            f"relation in the Pydantic model so it is auto-prefetched, or call "
                             f"fetch_related() before serialization."
-                        )
+                        ) from e
                 return original_func(self_pydantic)
 
             comment = _cleandoc(func)
@@ -531,7 +543,7 @@ class PydanticModelCreator:
 
     @staticmethod
     def _create_submodel(
-        cls: type[Model],
+        model_cls: type[Model],
         *,
         stack: tuple[StackEntry, ...],
         exclude: tuple[str, ...] = (),
@@ -542,7 +554,7 @@ class PydanticModelCreator:
         sort_alphabetically: bool | None = None,
     ) -> type[PydanticModel] | None:
         """Create a Pydantic submodel with recursion protection against cyclic references."""
-        if not allow_cycles and cls in (c[0] for c in stack[:-1]):
+        if not allow_cycles and model_cls in (c[0] for c in stack[:-1]):
             return None
 
         level = 1
@@ -552,7 +564,7 @@ class PydanticModelCreator:
 
             level += 1
         pmc = PydanticModelCreator(
-            cls,
+            model_cls,
             exclude=exclude,
             include=include,
             computed=computed,
