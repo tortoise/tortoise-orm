@@ -465,7 +465,7 @@ async def test_datetime_filter_by_year_month_day(db):
 @pytest.mark.asyncio
 @test.requireCapability(dialect=In("sqlite", "postgres"))
 async def test_time_create(db):
-    """Test creating time fields (postgres)."""
+    """Test creating time fields (sqlite/postgres)."""
     model = testmodels.TimeFields
     now = timezone.now().timetz()
     obj0 = await model.create(time=now)
@@ -476,18 +476,37 @@ async def test_time_create(db):
 
 @pytest.mark.asyncio
 @test.requireCapability(dialect=In("sqlite", "postgres"))
-async def test_time_cast(db):
-    """Test time field accepts ISO format string (postgres)."""
+@pytest.mark.parametrize("value", ["21:00+00:00", "23:59:59+08:00", "01:23:45.123456+03:30"])
+async def test_time_cast(db, value: str):
+    """Test time field accepts ISO format string (sqlite/postgres)."""
     model = testmodels.TimeFields
-    obj0 = await model.create(time="21:00+00:00")
+    obj0 = await model.create(time=value)
     obj1 = await model.get(id=obj0.id)
-    assert obj1.time == time.fromisoformat("21:00+00:00")
+    assert obj1.time == time.fromisoformat(value)
+    await model.create(time=obj1.time.replace(second=(obj1.time.second + 1) % 60))
+    obj2 = await model.filter(time=value).get()
+    assert obj2 == obj1
+
+
+@pytest.mark.asyncio
+@test.requireCapability(dialect=In("sqlite", "postgres"))
+@pytest.mark.parametrize("value", ["00:00:00", "23:59:59.999999"])
+async def test_time_create_native_str(db, value: str):
+    """Test creating time fields (sqlite/postgres)."""
+    model = testmodels.TimeFields
+    obj0 = await model.create(time=value)
+    obj1 = await model.get(id=obj0.id)
+    assert obj1.time == time.fromisoformat(value + "+00:00")
+    await model.create(time=obj1.time.replace(second=(obj1.time.second + 1) % 60))
+    with pytest.warns(RuntimeWarning):
+        obj2 = await model.filter(time=value).first()
+    assert obj2 == obj1
 
 
 @pytest.mark.asyncio
 @test.requireCapability(dialect=In("sqlite", "postgres"))
 async def test_time_values(db):
-    """Test time field in values() query (postgres)."""
+    """Test time field in values() query (sqlite/postgres)."""
     model = testmodels.TimeFields
     now = timezone.now().timetz()
     obj0 = await model.create(time=now)
@@ -498,7 +517,7 @@ async def test_time_values(db):
 @pytest.mark.asyncio
 @test.requireCapability(dialect=In("sqlite", "postgres"))
 async def test_time_values_list(db):
-    """Test time field in values_list() query (postgres)."""
+    """Test time field in values_list() query (sqlite/postgres)."""
     model = testmodels.TimeFields
     now = timezone.now().timetz()
     obj0 = await model.create(time=now)
@@ -509,7 +528,7 @@ async def test_time_values_list(db):
 @pytest.mark.asyncio
 @test.requireCapability(dialect=In("sqlite", "postgres"))
 async def test_time_get(db):
-    """Test getting by time field (postgres)."""
+    """Test getting by time field (sqlite/postgres)."""
     model = testmodels.TimeFields
     now = timezone.now().timetz()
     await model.create(time=now)

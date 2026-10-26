@@ -646,6 +646,8 @@ class TimeField(Field[T_TIME], datetime.time):
             setattr(instance, self.model_field_name, now_python)
             return now
         if value is not None:
+            if isinstance(value, str):
+                value = datetime.time.fromisoformat(value)
             if isinstance(value, datetime.timedelta):
                 return value
             if get_use_tz() and timezone.is_naive(value):
