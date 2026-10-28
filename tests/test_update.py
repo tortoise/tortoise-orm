@@ -113,6 +113,21 @@ async def test_bulk_update_datetime(db):
 
 
 @pytest.mark.asyncio
+async def test_bulk_update_datetime_auto_now_respects_assigned_value(db):
+    objs = [
+        await DatetimeFields.create(datetime=datetime(2021, 1, 1, tzinfo=UTC)),
+        await DatetimeFields.create(datetime=datetime(2021, 1, 1, tzinfo=UTC)),
+    ]
+    assigned = datetime(2021, 6, 1, 12, 0, 0, tzinfo=UTC)
+    for obj in objs:
+        obj.datetime_auto = assigned
+    rows_affected = await DatetimeFields.bulk_update(objs, fields=["datetime_auto"])
+    assert rows_affected == 2
+    assert (await DatetimeFields.get(pk=objs[0].pk)).datetime_auto == assigned
+    assert (await DatetimeFields.get(pk=objs[1].pk)).datetime_auto == assigned
+
+
+@pytest.mark.asyncio
 async def test_bulk_update_pk_non_id(db):
     tournament = await Tournament.create(name="")
     events = [
