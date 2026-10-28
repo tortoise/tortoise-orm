@@ -26,6 +26,11 @@ class MigrationRecorder:
         return f'"{name}"'
 
     def _placeholder(self, pos: int) -> str:
+        # A client whose driver binds parameters differently from its dialect's norm (psycopg
+        # uses ``%s`` on PostgreSQL) names its own placeholder.
+        client_placeholder = getattr(self.connection, "placeholder", None)
+        if client_placeholder is not None:
+            return client_placeholder(pos)
         if self._dialect == "mysql":
             return "%s"
         if self._dialect == "postgres":

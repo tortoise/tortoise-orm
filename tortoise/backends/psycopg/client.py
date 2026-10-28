@@ -80,6 +80,11 @@ class PsycopgClient(postgres_client.BasePostgresClient):
     _connection: psycopg.AsyncConnection
     default_timeout: float = 30
 
+    @staticmethod
+    def placeholder(position: int) -> str:
+        """Psycopg binds parameters with ``%s``, not the numbered ``$n`` of other PostgreSQL clients."""
+        return "%s"
+
     @postgres_client.translate_exceptions
     async def create_connection(self, with_db: bool) -> None:
         if self._pool is not None:
