@@ -14,8 +14,8 @@ from tests import testmodels
 from tortoise import fields, timezone
 from tortoise.contrib import test
 from tortoise.contrib.test.condition import In, NotIn
-from tortoise.exceptions import ConfigurationError, IntegrityError
-from tortoise.expressions import F
+from tortoise.exceptions import ConfigurationError, IntegrityError, OperationalError
+from tortoise.expressions import F, Q
 from tortoise.timezone import UTC, ZoneInfo, get_default_timezone, parse_timezone
 
 # ============================================================================
@@ -492,13 +492,13 @@ async def test_time_cast(db, value: str):
 @test.requireCapability(dialect=In("sqlite", "postgres"))
 @pytest.mark.parametrize("value", ["00:00:00", "23:59:59.999999"])
 async def test_time_create_native_str(db, value: str):
-    """Test creating time fields (sqlite/postgres)."""
+    """Test filtering time fields (sqlite/postgres)."""
     model = testmodels.TimeFields
     obj0 = await model.create(time=value)
     obj1 = await model.get(id=obj0.id)
     assert obj1.time == time.fromisoformat(value + "+00:00")
     await model.create(time=obj1.time.replace(second=(obj1.time.second + 1) % 60))
-    with pytest.warns(RuntimeWarning):
+    with pytest.warns(RuntimeWarning, match="TimeField time received a naive time"):
         obj2 = await model.filter(time=value).first()
     assert obj2 == obj1
 
@@ -534,6 +534,37 @@ async def test_time_get(db):
     await model.create(time=now)
     obj = await model.get(time=now)
     assert obj.time == now
+
+
+@pytest.mark.asyncio
+@test.requireCapability(dialect=In("sqlite", "postgres"))
+async def test_time_filter(db):
+    """Test getting by time field (sqlite/postgres)."""
+    model = testmodels.TimeFields
+    dt = timezone.now()
+    now = dt.timetz()
+    obj = await model.create(time=now)
+    hour_str = f"{dt:%H}"
+    # Does not support filter with __hour/__minute/__second
+    with (
+        pytest.raises(OperationalError),
+        pytest.warns(RuntimeWarning, match="TimeField time received a naive time"),
+    ):
+        await model.filter(time__hour=hour_str)
+    # But you can use startswith/contains/endswith
+    assert await model.filter(time__startswith=hour_str + ":").get() == obj
+    minute_str = f"{dt:%M}"
+    assert await model.filter(time__contains=":" + minute_str + ":").get() == obj
+    second_str = f"{dt:%S}"
+    assert (
+        await model.filter(
+            (Q(time__endswith=":" + second_str) & ~Q(time__contains="+") & ~Q(time__contains="-"))
+            | Q(time__contains=":" + second_str + ".")
+            | Q(time__contains=":" + second_str + "+")
+            | Q(time__contains=":" + second_str + "-")
+        ).get()
+        == obj
+    )
 
 
 # ============================================================================
