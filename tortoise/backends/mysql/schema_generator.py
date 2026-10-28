@@ -18,6 +18,7 @@ class MySQLSchemaGenerator(MySQLQuotingMixin, BaseSchemaGenerator):
     INDEX_CREATE_TEMPLATE = "{index_type}KEY `{index_name}` ({fields}){extra}"
     UNIQUE_CONSTRAINT_CREATE_TEMPLATE = "UNIQUE KEY `{index_name}` ({fields})"
     UNIQUE_INDEX_CREATE_TEMPLATE = UNIQUE_CONSTRAINT_CREATE_TEMPLATE
+    CHECK_CONSTRAINT_CREATE_TEMPLATE = "CONSTRAINT `{name}` CHECK ({check})"
     FIELD_TEMPLATE = "`{name}` {type}{nullable}{unique}{primary}{comment}{default}"
     GENERATED_PK_TEMPLATE = "`{field_name}` {generated_sql}{comment}"
     FK_TEMPLATE = (
