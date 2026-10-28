@@ -163,6 +163,15 @@ def test_state_snapshot_does_not_render_unchanged_models():
         snapshot = state.snapshot()
 
     assert render.call_count == 0
+    assert snapshot.models.keys() == state.models.keys()
+    assert snapshot.models is not state.models
+    for key, model_state in state.models.items():
+        snapshot_model_state = snapshot.models[key]
+        assert snapshot_model_state is not model_state
+        assert snapshot_model_state.fields.keys() == model_state.fields.keys()
+        assert snapshot_model_state.fields is not model_state.fields
+        assert snapshot_model_state.options == model_state.options
+        assert snapshot_model_state.options is not model_state.options
     for model_name, model in state.apps.apps["app"].items():
         assert snapshot.apps.get_model("app", model_name) is model
 
