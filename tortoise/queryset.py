@@ -2250,7 +2250,23 @@ class BulkCreateQuery(AwaitableQuery, Generic[MODEL]):
 
         columns = self._filter_columns(omit_fields)
         if not columns:
-            return default_sql, default_sql
+            columns_all = (
+                self._filter_columns(omit_fields, include_generated=True)
+                if self.model._meta.generated_db_fields
+                else []
+            )
+            if not columns_all:
+                return default_sql, default_sql
+            insert_query_all = self._executor._prepare_insert_statement(
+                columns_all,
+                has_generated=False,
+                ignore_conflicts=self._ignore_conflicts,
+            )
+            if self._update_fields:
+                _, insert_query_all = self._apply_on_conflict(
+                    insert_query_all, insert_query_all, self._update_fields, omit_fields
+                )
+            return default_sql, insert_query_all.get_sql()
         insert_query = self._executor._prepare_insert_statement(
             columns, ignore_conflicts=self._ignore_conflicts
         )
