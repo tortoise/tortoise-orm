@@ -252,7 +252,7 @@ def test_state_snapshot_keeps_removed_field_in_old_state():
     assert old_model is not new_model
 
 
-def test_state_snapshot_survives_model_deletion():
+def test_state_snapshot_keeps_deleted_model_accessible():
     state = State(models={}, apps=StateApps())
     CreateModel(
         name="Obsolete",
