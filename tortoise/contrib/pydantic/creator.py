@@ -133,6 +133,7 @@ def pydantic_queryset_creator(
     cls: type[Model],
     *,
     name: str | None = None,
+    submodel_name: str | None = None,
     exclude: tuple[str, ...] = (),
     include: tuple[str, ...] = (),
     computed: tuple[str, ...] = (),
@@ -143,10 +144,10 @@ def pydantic_queryset_creator(
     Function to build a `Pydantic Model <https://docs.pydantic.dev/latest/concepts/models/>`__ list off Tortoise Model.
 
     :param cls: The Tortoise Model to put in a list.
-    :param name: Specify a custom name explicitly, instead of a generated name.
-
-        The list generated name is currently naive and merely adds a "s" to the end
-        of the singular name.
+    :param name: Specify a custom name for the list model. Also names the item model
+        unless ``submodel_name`` is provided.
+    :param submodel_name: Specify a custom name for the item model independently of the list.
+        When ``name`` is omitted, the list name is the item name followed by ``_list``.
     :param exclude: Extra fields to exclude from the provided model.
     :param include: Extra fields to include from the provided model.
     :param computed: Extra computed fields to include from the provided model.
@@ -170,7 +171,7 @@ def pydantic_queryset_creator(
         computed=computed,
         allow_cycles=allow_cycles,
         sort_alphabetically=sort_alphabetically,
-        name=name,
+        name=submodel_name if submodel_name is not None else name,
     )
     lname = name or f"{submodel.__name__}_list"
 
