@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import cast
 
 import pytest
+from pypika_tortoise import SQLLiteQuery
 
 from tortoise.backends.base.client import BaseDBAsyncClient, Capabilities
 from tortoise.context import TortoiseContext
@@ -21,6 +22,7 @@ from tortoise.migrations.schema_generator.state_apps import StateApps
 class FakeConnection:
     def __init__(self, *, applied: list[MigrationKey] | None = None) -> None:
         self.capabilities = Capabilities("sqlite", inline_comment=True)
+        self.query_class = SQLLiteQuery
         self.connection_name = "default"
         self._applied = applied or []
         self.executed_scripts: list[str] = []

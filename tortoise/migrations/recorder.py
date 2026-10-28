@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
+from pypika_tortoise import Table
+
 from tortoise import fields
 from tortoise.migrations.graph import MigrationKey
 from tortoise.models import Model
@@ -12,26 +14,6 @@ class MigrationRecorder:
         self.connection = connection
         self.table_name = table_name
         self.model = self._make_model(table_name)
-        if connection is None:
-            self._dialect = ""
-        else:
-            capabilities = getattr(connection, "capabilities", None)
-            self._dialect = getattr(capabilities, "dialect", "")
-
-    def _quote(self, name: str) -> str:
-        if self._dialect == "mysql":
-            return f"`{name}`"
-        if self._dialect == "mssql":
-            return f"[{name}]"
-        return f'"{name}"'
-
-    def _placeholder(self, pos: int) -> str:
-        if self._dialect == "mysql":
-            return "%s"
-        if self._dialect == "postgres":
-            return f"${pos}"
-        # sqlite, mssql, oracle: ?-style (native or via ODBC)
-        return "?"
 
     def _make_model(self, table_name: str) -> type[Model]:
         class MigrationRecord(Model):
@@ -70,30 +52,34 @@ class MigrationRecorder:
             raise
 
     async def applied_migrations(self) -> list[MigrationKey]:
+        table = Table(self.table_name)
         query = (
-            f"SELECT {self._quote('app')}, {self._quote('name')} "  # nosec B608
-            f"FROM {self._quote(self.table_name)} "
-            f"ORDER BY {self._quote('applied_at')}, {self._quote('app')}, {self._quote('name')}"
+            self.connection.query_class.from_(table)
+            .select(table.app, table.name)
+            .orderby(table.applied_at)
+            .orderby(table.app)
+            .orderby(table.name)
         )
         try:
-            _, rows = await self.connection.execute_query(query)
+            _, rows = await self.connection.execute_query(*query.get_parameterized_sql())
         except Exception:
             return []
         return [MigrationKey(app_label=row["app"], name=row["name"]) for row in rows]
 
     async def record_applied(self, app: str, name: str) -> None:
-        applied_at = datetime.now(timezone.utc)
         query = (
-            f"INSERT INTO {self._quote(self.table_name)} "  # nosec B608
-            f"({self._quote('app')}, {self._quote('name')}, {self._quote('applied_at')}) "
-            f"VALUES ({self._placeholder(1)}, {self._placeholder(2)}, {self._placeholder(3)})"
+            self.connection.query_class.into(Table(self.table_name))
+            .columns("app", "name", "applied_at")
+            .insert(app, name, datetime.now(timezone.utc))
         )
-        await self.connection.execute_insert(query, [app, name, applied_at])
+        await self.connection.execute_insert(*query.get_parameterized_sql())
 
     async def record_unapplied(self, app: str, name: str) -> None:
+        table = Table(self.table_name)
         query = (
-            f"DELETE FROM {self._quote(self.table_name)} "  # nosec B608
-            f"WHERE {self._quote('app')} = {self._placeholder(1)} "
-            f"AND {self._quote('name')} = {self._placeholder(2)}"
+            self.connection.query_class.from_(table)
+            .where(table.app == app)
+            .where(table.name == name)
+            .delete()
         )
-        await self.connection.execute_query(query, [app, name])
+        await self.connection.execute_query(*query.get_parameterized_sql())
