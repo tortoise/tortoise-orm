@@ -92,6 +92,7 @@ class StateApps(Apps):
             model._meta._inited = False
 
     def _build_initial_querysets(self, models: Iterable[type[Model]] | None = None) -> None:
+        """Rebuild querysets only for the given models, or all models when omitted."""
         # Skip building querysets when no DB config is available (state-only mode)
         # This allows pure state operations to work without database connections
         if self._connections._db_config is None:
