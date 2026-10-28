@@ -17,6 +17,7 @@ Added
 
 Fixed
 ^^^^^
+- Set ``Prefetch`` ``to_attr`` to ``None`` when every forward relation is null. (#2374)
 - ``DecimalField`` no longer raises ``decimal.InvalidOperation`` for values with more than 28 significant digits. (#2349)
 - fix(expressions): inline subquery parameters when ``params_inline`` is enabled (#2340)
 - Use database column names in reverse foreign-key and one-to-one filters with renamed columns or one-to-one primary keys. (#2338)
