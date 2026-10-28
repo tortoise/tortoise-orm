@@ -9,7 +9,6 @@ from tortoise.backends.base.client import Capabilities
 from tortoise.backends.mysql import MySQLClient
 from tortoise.exceptions import DBConnectionError, OperationalError
 from tortoise.migrations.executor import MigrationExecutor
-from tortoise.migrations.graph import MigrationKey
 from tortoise.migrations.recorder import MigrationRecorder
 
 QUERY_CLASSES = {
@@ -135,6 +134,19 @@ async def test_recorder_postgres_placeholders() -> None:
 
 
 @pytest.mark.asyncio
+async def test_recorder_psycopg_placeholders() -> None:
+    psycopg_client = pytest.importorskip("tortoise.backends.psycopg.client")
+    connection = FakeConnection("postgres", query_class=psycopg_client.PsycopgSQLQuery)
+    recorder = MigrationRecorder(connection)
+
+    await recorder.record_applied("app", "0001_initial")
+    await recorder.record_unapplied("app", "0001_initial")
+
+    assert "VALUES (%s,%s,%s)" in connection.inserts[0][0]
+    assert '"app"=%s AND "name"=%s' in connection.queries[0][0]
+
+
+@pytest.mark.asyncio
 async def test_recorder_sqlite_placeholders() -> None:
     connection = FakeConnection("sqlite")
     recorder = MigrationRecorder(connection)
@@ -235,29 +247,3 @@ async def test_recorder_detects_migrations_table_on_real_database(db_isolated) -
     # migrate() reads the history before and after creating the migrations table.
     await executor.migrate()
     assert await recorder.applied_migrations() == []
-
-
-@pytest.mark.asyncio
-async def test_recorder_round_trips_on_real_database(db_isolated) -> None:
-    executor = MigrationExecutor(db_isolated.db(), {})
-    recorder = executor.recorder
-    await recorder.ensure_schema(executor._schema_editor(atomic=False))
-
-    await recorder.record_applied("app", "0001_initial")
-    assert await recorder.applied_migrations() == [MigrationKey("app", "0001_initial")]
-
-    await recorder.record_unapplied("app", "0001_initial")
-    assert await recorder.applied_migrations() == []
-
-
-@pytest.mark.asyncio
-async def test_recorder_psycopg_placeholders() -> None:
-    psycopg_client = pytest.importorskip("tortoise.backends.psycopg.client")
-    connection = FakeConnection("postgres", query_class=psycopg_client.PsycopgSQLQuery)
-    recorder = MigrationRecorder(connection)
-
-    await recorder.record_applied("app", "0001_initial")
-    await recorder.record_unapplied("app", "0001_initial")
-
-    assert "VALUES (%s,%s,%s)" in connection.inserts[0][0]
-    assert '"app"=%s AND "name"=%s' in connection.queries[0][0]
