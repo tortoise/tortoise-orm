@@ -1,20 +1,19 @@
 import warnings
+from datetime import datetime
 
 import pytest
+from pypika_tortoise import MySQLQuery, OracleQuery, PostgreSQLQuery, SQLLiteQuery
+from pypika_tortoise.dialects import MSSQLQuery
 
-from tortoise.backends.base.client import Capabilities
+from tortoise.migrations.graph import MigrationKey
 from tortoise.migrations.recorder import MigrationRecorder
 
 
 class FakeConnection:
-    def __init__(self, dialect: str) -> None:
-        self.capabilities = Capabilities(dialect)
-        self.executed_scripts: list[str] = []
+    def __init__(self, query_class: type) -> None:
+        self.query_class = query_class
         self.inserts: list[tuple[str, list]] = []
         self.queries: list[tuple[str, list | None]] = []
-
-    async def execute_script(self, query: str) -> None:
-        self.executed_scripts.append(query)
 
     async def execute_insert(self, query: str, values: list) -> int:
         self.inserts.append((query, values))
@@ -27,7 +26,7 @@ class FakeConnection:
 
 @pytest.mark.asyncio
 async def test_recorder_quotes_mysql_identifiers() -> None:
-    connection = FakeConnection("mysql")
+    connection = FakeConnection(MySQLQuery)
     recorder = MigrationRecorder(connection)
 
     await recorder.record_applied("app", "0001_initial")
@@ -36,28 +35,27 @@ async def test_recorder_quotes_mysql_identifiers() -> None:
     assert connection.inserts
     insert_query, insert_values = connection.inserts[0]
     assert "INSERT INTO `tortoise_migrations`" in insert_query
-    assert "(`app`, `name`, `applied_at`)" in insert_query
+    assert "(`app`,`name`,`applied_at`)" in insert_query
     assert "%s" in insert_query
     assert insert_values[0] == "app"
     assert insert_values[1] == "0001_initial"
 
     assert connection.queries
     select_query = connection.queries[0][0]
-    assert "SELECT `app`, `name`" in select_query
+    assert "SELECT `app`,`name`" in select_query
 
 
 @pytest.mark.asyncio
 async def test_recorder_quotes_mssql_identifiers() -> None:
-    connection = FakeConnection("mssql")
+    connection = FakeConnection(MSSQLQuery)
     recorder = MigrationRecorder(connection)
 
     await recorder.record_unapplied("app", "0001_initial")
 
     assert connection.queries
     delete_query, delete_values = connection.queries[0]
-    assert "DELETE FROM [tortoise_migrations]" in delete_query
-    assert "[app] = ?" in delete_query
-    assert "[name] = ?" in delete_query
+    assert 'DELETE FROM "tortoise_migrations"' in delete_query
+    assert '"app"=? AND "name"=?' in delete_query
     assert delete_values == ["app", "0001_initial"]
 
 
@@ -69,9 +67,7 @@ async def test_recorder_uses_parameterized_insert() -> None:
     datetime strings with timezone info (e.g. '2026-03-04T18:06:51+00:00').
     See https://github.com/tortoise/tortoise-orm/issues/2132
     """
-    from datetime import datetime
-
-    connection = FakeConnection("mysql")
+    connection = FakeConnection(MySQLQuery)
     recorder = MigrationRecorder(connection)
 
     await recorder.record_applied("models", "0001_init")
@@ -79,7 +75,7 @@ async def test_recorder_uses_parameterized_insert() -> None:
     assert len(connection.inserts) == 1
     query, values = connection.inserts[0]
     # Query must use placeholders, not inline values
-    assert "VALUES (%s, %s, %s)" in query
+    assert "VALUES (%s,%s,%s)" in query
     assert values[0] == "models"
     assert values[1] == "0001_init"
     assert isinstance(values[2], datetime)
@@ -88,44 +84,42 @@ async def test_recorder_uses_parameterized_insert() -> None:
 @pytest.mark.asyncio
 async def test_recorder_uses_parameterized_delete() -> None:
     """Ensure record_unapplied uses parameterized queries."""
-    connection = FakeConnection("mysql")
+    connection = FakeConnection(MySQLQuery)
     recorder = MigrationRecorder(connection)
 
     await recorder.record_unapplied("models", "0001_init")
 
     assert len(connection.queries) == 1
     query, values = connection.queries[0]
-    assert "WHERE `app` = %s" in query
-    assert "`name` = %s" in query
+    assert "WHERE `app`=%s AND `name`=%s" in query
     assert values == ["models", "0001_init"]
 
 
 @pytest.mark.asyncio
 async def test_recorder_postgres_placeholders() -> None:
-    connection = FakeConnection("postgres")
+    connection = FakeConnection(PostgreSQLQuery)
     recorder = MigrationRecorder(connection)
 
     await recorder.record_applied("app", "0001_initial")
 
     assert len(connection.inserts) == 1
     query, values = connection.inserts[0]
-    assert "VALUES ($1, $2, $3)" in query
+    assert "VALUES ($1,$2,$3)" in query
 
 
 @pytest.mark.asyncio
 async def test_recorder_sqlite_placeholders() -> None:
-    connection = FakeConnection("sqlite")
+    connection = FakeConnection(SQLLiteQuery)
     recorder = MigrationRecorder(connection)
 
     await recorder.record_applied("app", "0001_initial")
     await recorder.record_unapplied("app", "0001_initial")
 
     insert_query = connection.inserts[0][0]
-    assert "VALUES (?, ?, ?)" in insert_query
+    assert "VALUES (?,?,?)" in insert_query
 
     delete_query = connection.queries[0][0]
-    assert '"app" = ?' in delete_query
-    assert '"name" = ?' in delete_query
+    assert '"app"=? AND "name"=?' in delete_query
 
 
 def test_recorder_model_emits_no_field_deprecation_warnings() -> None:
@@ -137,7 +131,7 @@ def test_recorder_model_emits_no_field_deprecation_warnings() -> None:
         # Reset filters so the repo-wide ``ignore:`pk` deprecation`` filter in
         # pyproject.toml doesn't mask a regression here.
         warnings.simplefilter("always")
-        MigrationRecorder(FakeConnection("sqlite"))
+        MigrationRecorder(FakeConnection(SQLLiteQuery))
 
     messages = [str(w.message) for w in caught if issubclass(w.category, DeprecationWarning)]
     assert not any("`pk` is deprecated" in m for m in messages), messages
@@ -146,7 +140,7 @@ def test_recorder_model_emits_no_field_deprecation_warnings() -> None:
 
 @pytest.mark.asyncio
 async def test_recorder_oracle_placeholders() -> None:
-    connection = FakeConnection("oracle")
+    connection = FakeConnection(OracleQuery)
     recorder = MigrationRecorder(connection)
 
     await recorder.record_applied("app", "0001_initial")
@@ -154,34 +148,15 @@ async def test_recorder_oracle_placeholders() -> None:
 
     insert_query = connection.inserts[0][0]
     assert 'INSERT INTO "tortoise_migrations"' in insert_query
-    assert "VALUES (?, ?, ?)" in insert_query
+    assert "VALUES (?,?,?)" in insert_query
 
     delete_query = connection.queries[0][0]
-    assert '"app" = ?' in delete_query
-    assert '"name" = ?' in delete_query
-
-
-@pytest.mark.asyncio
-async def test_recorder_uses_client_placeholder() -> None:
-    class PsycopgLikeConnection(FakeConnection):
-        @staticmethod
-        def placeholder(position: int) -> str:
-            return "%s"
-
-    connection = PsycopgLikeConnection("postgres")
-    recorder = MigrationRecorder(connection)
-
-    await recorder.record_applied("app", "0001_initial")
-    await recorder.record_unapplied("app", "0001_initial")
-
-    assert "VALUES (%s, %s, %s)" in connection.inserts[0][0]
-    assert '"app" = %s' in connection.queries[0][0]
+    assert '"app"=? AND "name"=?' in delete_query
 
 
 @pytest.mark.asyncio
 async def test_recorder_round_trips_on_real_database(db_isolated) -> None:
     from tortoise.migrations.executor import MigrationExecutor
-    from tortoise.migrations.graph import MigrationKey
 
     executor = MigrationExecutor(db_isolated.db(), {})
     recorder = executor.recorder
@@ -192,3 +167,16 @@ async def test_recorder_round_trips_on_real_database(db_isolated) -> None:
 
     await recorder.record_unapplied("app", "0001_initial")
     assert await recorder.applied_migrations() == []
+
+
+@pytest.mark.asyncio
+async def test_recorder_psycopg_placeholders() -> None:
+    psycopg_client = pytest.importorskip("tortoise.backends.psycopg.client")
+    connection = FakeConnection(psycopg_client.PsycopgSQLQuery)
+    recorder = MigrationRecorder(connection)
+
+    await recorder.record_applied("app", "0001_initial")
+    await recorder.record_unapplied("app", "0001_initial")
+
+    assert "VALUES (%s,%s,%s)" in connection.inserts[0][0]
+    assert '"app"=%s AND "name"=%s' in connection.queries[0][0]
