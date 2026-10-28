@@ -126,6 +126,8 @@ class StateApps(Apps):
         operations replace changed models (and their related models) instead of
         mutating them, so an apps registry only needs its mappings copied to keep
         the previous version available to database operations.
+        Snapshot isolation requires treating these shared classes, including
+        their ``_meta``, as immutable and replacing them through ``State._reload``.
         """
         state_apps = self.__class__(
             default_connections=dict(self._default_connections),

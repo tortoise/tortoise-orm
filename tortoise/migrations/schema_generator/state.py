@@ -234,6 +234,8 @@ class State:
         Model states are copied because operations mutate their fields and
         options. Rendered model classes can be shared: changed models are replaced
         non-destructively by ``_reload``, leaving this snapshot's classes intact.
+        This requires treating rendered model classes, including their ``_meta``,
+        as immutable; state changes must replace them through ``_reload``.
         """
         models = {key: model.clone() for key, model in self.models.items()}
         return self.__class__(models=models, apps=self.apps.snapshot())
