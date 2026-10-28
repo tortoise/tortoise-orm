@@ -329,6 +329,7 @@ class BaseSchemaEditor(SchemaQuotingMixin):
 
         for field_name, db_field in model._meta.fields_db_projection.items():
             field_object = model._meta.fields_map[field_name]
+            field_object._validate_indexable(self.DIALECT)
             comment = (
                 self._get_column_comment_sql(
                     table=qualified_table_name,
@@ -513,6 +514,7 @@ class BaseSchemaEditor(SchemaQuotingMixin):
 
     async def add_field(self, model: type[Model], field_name: str) -> None:
         field = model._meta.fields_map[field_name]
+        field._validate_indexable(self.DIALECT)
         if isinstance(field, ManyToManyFieldInstance):
             table_string = self._get_m2m_table_definition(model, field)
             if table_string:
@@ -627,6 +629,7 @@ class BaseSchemaEditor(SchemaQuotingMixin):
         return False
 
     async def _alter_field(self, model: type[Model], old_field: Field, new_field: Field) -> None:
+        new_field._validate_indexable(self.DIALECT)
         actions: list[str] = []
         old_db_field = old_field.source_field or old_field.model_field_name
         new_db_field = new_field.source_field or new_field.model_field_name
