@@ -165,7 +165,7 @@ class DomainNameValidator(Validator):
 
     @cached_property
     def _accept_idna_regex(self) -> re.Pattern[str]:
-        return re.compile(r"^" + HOSTNAME_REGEX + DOMAIN_REGEX + TLD_REGEX + r"$", re.IGNORECASE)
+        return re.compile(r"^" + HOSTNAME_REGEX + DOMAIN_REGEX + TLD_REGEX + r"\Z", re.IGNORECASE)
 
     @cached_property
     def _do_not_accept_idna_regex(self) -> re.Pattern[str]:
@@ -174,7 +174,7 @@ class DomainNameValidator(Validator):
             + self.ASCII_ONLY_HOSTNAME_REGEX
             + self.ASCII_ONLY_DOMAIN_REGEX
             + self.ASCII_ONLY_TLD_REGEX
-            + r"$",
+            + r"\Z",
             re.IGNORECASE,
         )
 
