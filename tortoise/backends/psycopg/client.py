@@ -53,6 +53,11 @@ def password_factory_connection_class(
     return PasswordFactoryConnection
 
 
+def _join_multi(value: Any) -> Any:
+    """libpq takes several hosts or ports as one comma separated string."""
+    return ",".join(map(str, value)) if isinstance(value, (list, tuple)) else value
+
+
 class PsycopgSQLQuery(PostgreSQLQuery):
     @classmethod
     def _builder(cls, **kwargs) -> PostgreSQLQueryBuilder:
@@ -97,13 +102,17 @@ class PsycopgClient(postgres_client.BasePostgresClient):
             else:
                 self.server_settings["sslmode"] = "require"
 
+        conninfo_settings = dict(self.server_settings)
+        if (session_attrs := extra.pop("target_session_attrs", None)) is not None:
+            conninfo_settings["target_session_attrs"] = session_attrs
+
         conninfo = psycopg.conninfo.make_conninfo(
-            host=self.host,
-            port=self.port,
+            host=_join_multi(self.host),
+            port=_join_multi(self.port),
             user=self.user,
             password=None if callable(self.password) else self.password,
             dbname=self.database if with_db else None,
-            **self.server_settings,
+            **conninfo_settings,
         )
 
         connection_class: type[psycopg.AsyncConnection] = psycopg.AsyncConnection
