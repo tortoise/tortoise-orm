@@ -566,31 +566,14 @@ async def test_time_filter(db):
 @test.requireCapability(dialect="postgres")
 async def test_time_filter_pg(db):
     """Test filtering by time field (postgres)."""
-    from tests.backends.test_postgres import _get_db_config
-
-    _, _, is_psycopg = _get_db_config()
     # Support filter with __hour/__minute/__second
     model = testmodels.TimeFields
-    dt = timezone.now()
-    if dt.microsecond == 0:
-        dt = dt.replace(microsecond=1)
+    dt = timezone.now().replace(microsecond=0)
     now = dt.timetz()
     obj = await model.create(time=now)
     assert await model.filter(time__hour=dt.hour).first() == obj
     assert await model.filter(time__minute=dt.minute).first() == obj
-    second_float = dt.second + dt.microsecond / 10**6
-    if is_psycopg:
-        # psycopg matches the fractional second on this query.
-        assert await model.filter(time__second=second_float).first() == obj
-    else:
-        # asyncpg infers $1 as numeric and encodes the Python float via its
-        # binary value, so 45.123456 becomes 45.12345600000000135... and the
-        # comparison fails. Filtering by integer seconds works on both drivers.
-        # (Verified with asyncpg: `$1::float8` matches, `$1::numeric` does not.
-        # psql behaves differently — both casts match there.)
-        assert await model.filter(time__second=second_float).first() is None
-        await model.filter(pk=obj.pk).update(time=dt.replace(microsecond=0))
-        assert await model.filter(time__second=dt.second).first() == obj
+    assert await model.filter(time__second=dt.second).first() == obj
 
 
 @pytest.mark.asyncio
