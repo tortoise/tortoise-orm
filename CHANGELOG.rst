@@ -14,6 +14,7 @@ Unreleased
 Added
 ^^^^^
 - Support forward relation ``in`` and ``not_in`` filters with model instances. (#2323)
+- SQLite now persists ``TimeField`` values as ISO-8601 times. (#2297)
 
 Fixed
 ^^^^^
