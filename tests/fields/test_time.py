@@ -491,8 +491,9 @@ async def test_time_cast(db, value: str):
 @pytest.mark.asyncio
 @test.requireCapability(dialect=In("sqlite", "postgres"))
 @pytest.mark.parametrize("value", ["00:00:00", "23:59:59.999999"])
-async def test_time_create_native_str(db, value: str):
+async def test_time_create_native_str(db, enable_tz, value: str):
     """Test filtering time fields (sqlite/postgres)."""
+    enable_tz()
     model = testmodels.TimeFields
     obj0 = await model.create(time=value)
     obj1 = await model.get(id=obj0.id)
