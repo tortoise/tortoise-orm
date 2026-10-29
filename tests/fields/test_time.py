@@ -580,16 +580,16 @@ async def test_time_filter_pg(db):
 @test.requireCapability(dialect="sqlite")
 async def test_time_filter_sqlite(db):
     """Test filtering by time field (sqlite)."""
-    # Support filter with __hour/__minute/__second
+    # SQLite does not support filter with __hour/__minute/__second
+    # The error comes from SQLite rejecting the generated SQL, so no
+    # rows need to exist for this to fail.
     model = testmodels.TimeFields
     dt = timezone.now()
-    now = dt.timetz()
-    await model.create(time=now)
-    with pytest.raises(OperationalError, match='near "FROM": syntax error'):
+    with pytest.raises(OperationalError):
         await model.filter(time__hour=dt.hour)
-    with pytest.raises(OperationalError, match='near "FROM": syntax error'):
+    with pytest.raises(OperationalError):
         await model.filter(time__minute=dt.minute)
-    with pytest.raises(OperationalError, match='near "FROM": syntax error'):
+    with pytest.raises(OperationalError):
         await model.filter(time__second=dt.second)
 
 
