@@ -135,6 +135,8 @@ PostgreSQL
 
 DB URL is typically in the form of :samp:`postgres://postgres:pass@db.host:5432/somedb`, or, if connecting via Unix domain socket :samp:`postgres:///somedb`.
 
+To fail over between several servers, list the hosts separated by commas, each with an optional port: :samp:`postgres://postgres:pass@host1:5432,host2:5433/somedb?target_session_attrs=read-write`. This works with both ``asyncpg`` and ``psycopg``.
+
 Required Parameters
 -------------------
 

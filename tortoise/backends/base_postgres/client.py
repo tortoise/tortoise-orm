@@ -64,8 +64,8 @@ class BasePostgresClient(BaseDBAsyncClient, abc.ABC):
         user: str | None = None,
         password: PasswordType = None,
         database: str | None = None,
-        host: str | None = None,
-        port: SupportsInt = 5432,
+        host: str | list[str] | tuple[str, ...] | None = None,
+        port: SupportsInt | list[SupportsInt] | tuple[SupportsInt, ...] = 5432,
         **kwargs: Any,
     ) -> None:
         super().__init__(**kwargs)
@@ -73,8 +73,13 @@ class BasePostgresClient(BaseDBAsyncClient, abc.ABC):
         self.user = user
         self.password = password
         self.database = database
-        self.host = host
-        self.port = int(port)  # make sure port is int type
+        # several hosts (and one port each) make a failover list, as libpq and asyncpg accept
+        self.host = list(host) if isinstance(host, (list, tuple)) else host
+        self.port = (
+            [int(p) for p in port]
+            if isinstance(port, (list, tuple))
+            else int(port)  # make sure port is int type
+        )
         self.extra = kwargs.copy()
         # we can't deep copy kwargs because of ssl context
         # since server_settings is a dict, we copy it again

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 import urllib.parse as urlparse
 import uuid
 from collections.abc import Iterable
@@ -165,9 +166,47 @@ def _quote_url_userinfo(db_url: str) -> str:
     return scheme + username_quoted + ":" + password_quoted + after_userinfo
 
 
+_MULTI_HOST_BACKENDS = {"postgres", "postgresql", "asyncpg", "psycopg"}
+
+
+def _split_multi_host(hostinfo: str) -> tuple[list[str], list[int | None]]:
+    """Split the host part of a libpq style multi-host URL, ``h1:5432,h2:5433``.
+
+    A host without a port gets None as its port.
+    """
+    hosts: list[str] = []
+    ports: list[int | None] = []
+    for entry in hostinfo.split(","):
+        host, sep, port = entry.rpartition(":")
+        if not sep or host.endswith(":") or (entry.startswith("[") and not host.endswith("]")):
+            # No port: a bare host, or an IPv6 literal whose colons belong to the address
+            host, port = entry, ""
+        host = host.strip().strip("[]").strip().lower()
+        if not host:
+            raise ConfigurationError("Empty host in multi-host DB_URL")
+        try:
+            number = int(port) if port.strip() else None
+        except ValueError as e:
+            raise ConfigurationError("Port is not an integer") from e
+        if number is not None and not 0 <= number <= 65535:
+            raise ConfigurationError("Port is not an integer")
+        hosts.append(host)
+        ports.append(number)
+    return hosts, ports
+
+
 def expand_db_url(db_url: str, testing: bool = False) -> dict:
     # Quote special characters in userinfo to avoid parsing errors
     db_url = _quote_url_userinfo(db_url)
+    multi_host: tuple[list[str], list[int | None]] | None = None
+    scheme, sep, rest = db_url.partition("://")
+    if sep and scheme.lower() in _MULTI_HOST_BACKENDS:
+        # urlparse cannot read several hosts (IPv6 brackets raise), so cut them out first
+        netloc, tail = re.match(r"([^/?#]*)(.*)", rest, re.DOTALL).groups()  # type: ignore[union-attr]
+        userinfo, at, hostinfo = netloc.rpartition("@")
+        if "," in hostinfo:
+            multi_host = _split_multi_host(hostinfo)
+            db_url = f"{scheme}://{userinfo}{at}multi-host{tail}"
     url = urlparse.urlparse(db_url)
     if url.scheme not in DB_LOOKUP:
         raise ConfigurationError(f"Unknown DB scheme: {url.scheme}")
@@ -199,17 +238,28 @@ def expand_db_url(db_url: str, testing: bool = False) -> dict:
     vmap: dict = {}
     vmap.update(db["vmap"])
     params[vmap["path"]] = path
-    if host_key := vmap.get("hostname"):
-        if url.hostname:
-            params[host_key] = url.hostname
-        elif host_key not in params:
-            # Keep a host given in the query string (e.g. a unix socket directory)
-            params[host_key] = None
-    try:
-        if vmap.get("port") and url.port:
-            params[vmap["port"]] = int(url.port)
-    except ValueError as e:
-        raise ConfigurationError("Port is not an integer") from e
+    if multi_host:
+        # libpq style failover list: several hosts, each with its own port,
+        # a host without one takes the port set in the query string or the default
+        hosts, ports = multi_host
+        try:
+            default_port = int(params[vmap["port"]])
+        except ValueError as e:
+            raise ConfigurationError("Port is not an integer") from e
+        params[vmap["hostname"]] = hosts
+        params[vmap["port"]] = [default_port if p is None else p for p in ports]
+    else:
+        if host_key := vmap.get("hostname"):
+            if url.hostname:
+                params[host_key] = url.hostname
+            elif host_key not in params:
+                # Keep a host given in the query string (e.g. a unix socket directory)
+                params[host_key] = None
+        try:
+            if vmap.get("port") and url.port:
+                params[vmap["port"]] = int(url.port)
+        except ValueError as e:
+            raise ConfigurationError("Port is not an integer") from e
     if vmap.get("username") and (url.username or vmap["username"] not in params):
         # Pass username as None, instead of empty string,
         # to let asyncpg retrieve username from environment variable or OS user

@@ -489,3 +489,77 @@ def test_username_is_percent_decoded_once(scheme, encoded, expected):
 def test_query_string_username_is_not_decoded_twice():
     config = expand_db_url("asyncpg://localhost/db?user=%252F")
     assert config["credentials"]["user"] == "%2F"
+
+
+def test_postgres_multi_host_shared_port():
+    for scheme, engine in _postgres_scheme_engines.items():
+        res = expand_db_url(f"{scheme}://postgres:moo@host1,host2:5433/test")
+        assert res == {
+            "engine": engine,
+            "credentials": {
+                "database": "test",
+                "host": ["host1", "host2"],
+                "password": "moo",
+                "port": [5432, 5433],
+                "user": "postgres",
+            },
+        }
+
+
+def test_postgres_multi_host_no_port():
+    for scheme in _postgres_scheme_engines:
+        res = expand_db_url(f"{scheme}://postgres@host1,host2/test")
+        assert res["credentials"]["host"] == ["host1", "host2"]
+        assert res["credentials"]["port"] == [5432, 5432]
+
+
+def test_postgres_multi_host_ports_and_params():
+    for scheme in _postgres_scheme_engines:
+        res = expand_db_url(
+            f"{scheme}://postgres@host1:5433,host2:5434/test?target_session_attrs=read-write"
+        )
+        assert res["credentials"]["host"] == ["host1", "host2"]
+        assert res["credentials"]["port"] == [5433, 5434]
+        assert res["credentials"]["target_session_attrs"] == "read-write"
+
+
+def test_postgres_multi_host_ipv6():
+    res = expand_db_url("postgres://postgres@[::1]:5433,[fe80::2]/test")
+    assert res["credentials"]["host"] == ["::1", "fe80::2"]
+    assert res["credentials"]["port"] == [5433, 5432]
+
+
+def test_postgres_multi_host_ipv6_brackets_without_ports():
+    res = expand_db_url("postgres://postgres:moo@[::1],[::2]:5433/test")
+    assert res["credentials"]["host"] == ["::1", "::2"]
+    assert res["credentials"]["port"] == [5432, 5433]
+    assert res["credentials"]["password"] == "moo"
+
+
+def test_postgres_multi_host_normalised_like_single_host():
+    res = expand_db_url("postgres://postgres@H1 ,Host2:5433/test")
+    assert res["credentials"]["host"] == ["h1", "host2"]
+
+
+def test_postgres_multi_host_query_port_is_default():
+    res = expand_db_url("postgres://postgres@host1,host2:5434/test?port=5430")
+    assert res["credentials"]["port"] == [5430, 5434]
+
+
+@pytest.mark.parametrize(
+    "db_url, message",
+    [
+        ("postgres://postgres@host1,host2:abc/test", "Port is not an integer"),
+        ("postgres://postgres@host1,/test", "Empty host"),
+        ("postgres://postgres@,host2/test", "Empty host"),
+        ("postgres://postgres@host1,host2:99999/test", "Port is not an integer"),
+    ],
+)
+def test_postgres_multi_host_invalid(db_url, message):
+    with pytest.raises(ConfigurationError, match=message):
+        expand_db_url(db_url)
+
+
+def test_multi_host_only_for_postgres():
+    res = expand_db_url("mysql://root@host1,host2:3307/test")
+    assert res["credentials"]["host"] == "host1,host2"
