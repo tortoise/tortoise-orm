@@ -650,7 +650,11 @@ class TimeField(Field[T_TIME], datetime.time):
                 value = datetime.time.fromisoformat(value)
             if isinstance(value, datetime.timedelta):
                 return value
-            if get_use_tz() and timezone.is_naive(value):
+            if (
+                isinstance(value, datetime.datetime | datetime.time)
+                and get_use_tz()
+                and timezone.is_naive(value)
+            ):
                 warnings.warn(
                     f"TimeField {self.model_field_name} received a naive time ({value})"
                     " while time zone support is active.",
