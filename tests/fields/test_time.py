@@ -536,6 +536,19 @@ async def test_time_get(db):
     assert obj.time == now
 
 
+def _get_error_type(db) -> type[Exception]:
+    try:
+        import psycopg
+
+    except ImportError:
+        ...
+    else:
+        conn = db.connections.get(db.default_connection)
+        if isinstance(conn._connection, psycopg.AsyncConnection):
+            return psycopg.errors.UndefinedFunction
+    return OperationalError
+
+
 @pytest.mark.asyncio
 @test.requireCapability(dialect=In("sqlite", "postgres"))
 async def test_time_filter(db):
@@ -545,13 +558,7 @@ async def test_time_filter(db):
     now = dt.timetz()
     obj = await model.create(time=now)
     hour_str = f"{dt:%H}"
-    # Does not support filter with __hour/__minute/__second
-    with (
-        pytest.raises(OperationalError),
-        pytest.warns(RuntimeWarning, match="TimeField time received a naive time"),
-    ):
-        await model.filter(time__hour=hour_str)
-    # But you can use startswith/contains/endswith
+    # You can use startswith/contains/endswith
     assert await model.filter(time__startswith=hour_str + ":").get() == obj
     minute_str = f"{dt:%M}"
     assert await model.filter(time__contains=":" + minute_str + ":").get() == obj
@@ -565,6 +572,13 @@ async def test_time_filter(db):
         ).get()
         == obj
     )
+    # Does not support filter with __hour/__minute/__second
+    ErrorType = _get_error_type(db)
+    with (
+        pytest.raises(ErrorType),
+        pytest.warns(RuntimeWarning, match="TimeField time received a naive time"),
+    ):
+        await model.filter(time__hour=hour_str)
 
 
 # ============================================================================
