@@ -853,6 +853,8 @@ class QuerySet(AwaitableQuery[MODEL]):
             custom_filters=self._custom_filters,
             force_indexes=self._force_indexes,
             use_indexes=self._use_indexes,
+            limit=self._limit,
+            offset=self._offset,
         )
 
     def contains(self, obj: MODEL) -> ContainsQuery:
@@ -1501,6 +1503,8 @@ class DeleteQuery(AwaitableQuery):
 class ExistsQuery(AwaitableQuery):
     __slots__ = (
         "_force_indexes",
+        "_limit",
+        "_offset",
         "_use_indexes",
     )
 
@@ -1513,6 +1517,8 @@ class ExistsQuery(AwaitableQuery):
         custom_filters: dict[str, FilterInfoDict],
         force_indexes: set[str],
         use_indexes: set[str],
+        limit: int | None = None,
+        offset: int | None = None,
     ) -> None:
         super().__init__(model)
         self._q_objects = q_objects
@@ -1521,11 +1527,15 @@ class ExistsQuery(AwaitableQuery):
         self._custom_filters = custom_filters
         self._force_indexes = force_indexes
         self._use_indexes = use_indexes
+        self._limit = limit
+        self._offset = offset
 
     def _make_query(self) -> None:
         self.query = copy(self.model._meta.basequery)
         self.resolve_filters()
         self.query._limit = self.query._wrapper_cls(1)
+        if self._offset:
+            self.query._offset = self.query._wrapper_cls(self._offset)
         self.query._select_other(ValueWrapper(1, allow_parametrize=False))  # type:ignore[arg-type]
 
         if self._force_indexes:
@@ -1543,6 +1553,8 @@ class ExistsQuery(AwaitableQuery):
     async def _execute(
         self,
     ) -> bool:
+        if self._limit == 0:
+            return False
         result, _ = await self._db.execute_query(*self.query.get_parameterized_sql())
         return bool(result)
 
