@@ -98,6 +98,8 @@ def test_datetimefield_auto_value_stays_naive_without_use_tz(monkeypatch, flag: 
     naive_now = datetime.datetime(2026, 10, 18, 20, 23, 13)
     monkeypatch.setenv("USE_TZ", "False")
     monkeypatch.setenv("TIMEZONE", "Asia/Tokyo")
+    timezone._reset_timezone_cache()
+    monkeypatch.setattr("tortoise.fields.data.get_use_tz", lambda: False)
     monkeypatch.setattr(timezone, "get_use_tz", lambda: False)
     monkeypatch.setattr(timezone, "now", lambda: naive_now)
 
