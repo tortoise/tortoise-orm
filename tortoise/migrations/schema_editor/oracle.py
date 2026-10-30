@@ -110,7 +110,7 @@ class OracleSchemaEditor(BaseSchemaEditor):
     def _get_m2m_table_definition(
         self, model: type[Model], field: ManyToManyFieldInstance
     ) -> str | None:
-        if field._generated:
+        if field._generated or self._through_is_explicit(model, field):
             return None
         related_model = field.related_model
         if not related_model:
