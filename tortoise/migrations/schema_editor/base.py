@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from hashlib import sha256
-from typing import cast
+from typing import TYPE_CHECKING, cast
 
 from tortoise.backends.base.client import BaseDBAsyncClient
 from tortoise.fields.base import Field
@@ -11,6 +11,9 @@ from tortoise.migrations.constraints import CheckConstraint, UniqueConstraint
 from tortoise.migrations.schema_editor.data import ModelSqlData
 from tortoise.models import Model
 from tortoise.schema_quoting import SchemaQuotingMixin
+
+if TYPE_CHECKING:
+    from tortoise.apps import Apps
 
 
 class BaseSchemaEditor(SchemaQuotingMixin):
@@ -68,6 +71,33 @@ class BaseSchemaEditor(SchemaQuotingMixin):
         self.atomic_migration = connection.capabilities.can_rollback_ddl and atomic
         self.collect_sql = collect_sql
         self.collected_sql: list[str] = []
+        # Apps used to decide whether an M2M through table is owned by an explicit model.
+        self.migration_apps: tuple[Apps, ...] = ()
+        self.explicit_through_apps: tuple[Apps, ...] = ()
+
+    def use_explicit_through_apps(self, *apps: Apps, migration: str | None = None) -> None:
+        """Set the apps used for through-table ownership checks.
+
+        ``migration`` may be ``"start"`` or ``"end"`` to also consult the state at the
+        start/end of the running migration (``migration_apps`` is ``(start, end)``).
+        """
+        extra: tuple[Apps, ...] = ()
+        if migration and self.migration_apps:
+            extra = (self.migration_apps[0 if migration == "start" else 1],)
+        self.explicit_through_apps = (*apps, *extra)
+
+    def _through_is_explicit(self, model: type[Model], field: ManyToManyFieldInstance) -> bool:
+        """Whether an explicit model owns the M2M through table, so it must not be
+        created or dropped as an implicit M2M table."""
+        for apps in self.explicit_through_apps:
+            for other in apps.get_models_iterable():
+                if (
+                    other._meta.db_table == field.through
+                    and other._meta.schema == model._meta.schema
+                    and other._meta.full_name != model._meta.full_name
+                ):
+                    return True
+        return False
 
     async def _run_sql(self, sql: str) -> None:
         """Execute DDL SQL. Subclasses may override for backend-specific handling.
@@ -238,7 +268,7 @@ class BaseSchemaEditor(SchemaQuotingMixin):
     def _get_m2m_table_definition(
         self, model: type[Model], field: ManyToManyFieldInstance
     ) -> str | None:
-        if field._generated:
+        if field._generated or self._through_is_explicit(model, field):
             return None
         related_model = field.related_model
         if not related_model:
@@ -499,6 +529,8 @@ class BaseSchemaEditor(SchemaQuotingMixin):
         schema = model._meta.schema
         for field_name in model._meta.m2m_fields:
             field = cast(ManyToManyFieldInstance, model._meta.fields_map[field_name])
+            if self._through_is_explicit(model, field):
+                continue
             await self._run_sql(
                 self.DELETE_TABLE_TEMPLATE.format(
                     table=self._qualify_table_name(field.through, schema)
@@ -726,6 +758,8 @@ class BaseSchemaEditor(SchemaQuotingMixin):
 
     async def remove_field(self, model: type[Model], field: Field) -> None:
         if isinstance(field, ManyToManyFieldInstance):
+            if self._through_is_explicit(model, field):
+                return
             await self._run_sql(
                 self.DELETE_TABLE_TEMPLATE.format(
                     table=self._qualify_table_name(field.through, model._meta.schema)

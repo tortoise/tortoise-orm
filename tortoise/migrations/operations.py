@@ -205,6 +205,7 @@ class CreateModel(TortoiseOperation):
         if not state_editor:
             return
         model = new_state.apps.get_model(f"{app_label}.{self.name}")
+        state_editor.use_explicit_through_apps(new_state.apps, migration="end")
         await state_editor.create_model(model)
 
     async def database_backward(
@@ -217,6 +218,7 @@ class CreateModel(TortoiseOperation):
         if not state_editor:
             return
         model = old_state.apps.get_model(f"{app_label}.{self.name}")
+        state_editor.use_explicit_through_apps(old_state.apps, migration="end")
         await state_editor.delete_model(model)
 
     async def run_sql(self, db_connection: BaseDBAsyncClient | None = None) -> None:
@@ -347,6 +349,7 @@ class DeleteModel(TortoiseOperation):
         if not state_editor:
             return
         model = old_state.apps.get_model(f"{app_label}.{self.name}")
+        state_editor.use_explicit_through_apps(old_state.apps, migration="start")
         await state_editor.delete_model(model)
 
     async def database_backward(
@@ -359,6 +362,7 @@ class DeleteModel(TortoiseOperation):
         if not state_editor:
             return
         model = new_state.apps.get_model(f"{app_label}.{self.name}")
+        state_editor.use_explicit_through_apps(new_state.apps, migration="start")
         await state_editor.create_model(model)
 
 
@@ -437,6 +441,7 @@ class AddField(TortoiseOperation):
         if not state_editor:
             return
         model = new_state.apps.get_model(f"{app_label}.{self.model_name}")
+        state_editor.use_explicit_through_apps(new_state.apps, migration="end")
         await state_editor.add_field(model, self.name)
 
     async def database_backward(
@@ -450,6 +455,7 @@ class AddField(TortoiseOperation):
             return
         model = old_state.apps.get_model(f"{app_label}.{self.model_name}")
         field = model._meta.fields_map[self.name]
+        state_editor.use_explicit_through_apps(old_state.apps, migration="end")
         await state_editor.remove_field(model, field)
 
 
@@ -487,6 +493,7 @@ class RemoveField(TortoiseOperation):
             return
         model = old_state.apps.get_model(f"{app_label}.{self.model_name}")
         field = model._meta.fields_map[self.name]
+        state_editor.use_explicit_through_apps(old_state.apps)
         await state_editor.remove_field(model, field)
 
     async def database_backward(
@@ -499,6 +506,7 @@ class RemoveField(TortoiseOperation):
         if not state_editor:
             return
         model = new_state.apps.get_model(f"{app_label}.{self.model_name}")
+        state_editor.use_explicit_through_apps(new_state.apps, migration="start")
         await state_editor.add_field(model, self.name)
 
 

@@ -4,10 +4,12 @@ from collections.abc import Iterable, Sequence
 
 from tortoise.fields.relational import ForeignKeyFieldInstance, ManyToManyFieldInstance
 from tortoise.migrations.operations import (
+    AddField,
     CreateModel,
     CreateSchema,
     DeleteModel,
     DropSchema,
+    RemoveField,
     RenameModel,
     TortoiseOperation,
 )
@@ -117,6 +119,17 @@ class OperationGenerator:
                 schemas.add(schema)
         return schemas
 
+    @staticmethod
+    def _through_owned_by_other(
+        state: State, keys: Iterable[ModelKey], owner: ModelKey, schema: str | None, table: str
+    ) -> bool:
+        return any(
+            k != owner
+            and state.models[k].options.get("schema") == schema
+            and (state.models[k].options.get("table") or k[1].lower()) == table
+            for k in keys
+        )
+
     def generate(self, app_labels: Sequence[str] | None = None) -> list[TortoiseOperation]:
         old_keys = self._filter_keys(self.old_state.models.keys(), app_labels)
         new_keys = self._filter_keys(self.new_state.models.keys(), app_labels)
@@ -135,6 +148,62 @@ class OperationGenerator:
             operations.append(RenameModel(old_name=old_key[1], new_name=new_key[1]))
 
         added_keys = [k for k in new_keys if k not in old_keys and k not in renamed_models]
+
+        # An explicit model that owned a table which a new model now declares as an
+        # implicit M2M ``through`` table has to be dropped before that table is created.
+        removed_keys = [k for k in old_keys if k not in new_keys and k not in renamed_old_keys]
+
+        def through_tables(
+            state: State, keys: Iterable[tuple[str, str]]
+        ) -> set[tuple[str | None, str]]:
+            return {
+                (state.models[k].options.get("schema"), field.through)
+                for k in keys
+                for field in state.models[k].fields.values()
+                if isinstance(field, ManyToManyFieldInstance) and field.through
+            }
+
+        new_through_tables = through_tables(self.new_state, new_keys) - through_tables(
+            self.old_state, old_keys
+        )
+        hoisted_keys = [
+            k
+            for k in removed_keys
+            if (
+                self.old_state.models[k].options.get("schema"),
+                self.old_state.models[k].options.get("table") or k[1].lower(),
+            )
+            in new_through_tables
+        ]
+        # An M2M field that stays unchanged can still change ownership of its through
+        # table (implicit <-> explicit model). Drop the field before the table changes
+        # hands and add it back afterwards, so the implicit table is dropped/created once.
+        readd_operations: list[TortoiseOperation] = []
+        for key in new_keys:
+            if key not in old_keys or key in renamed_models:
+                continue
+            old_fields = self.old_state.models[key].fields
+            for name, field in self.new_state.models[key].fields.items():
+                old_field = old_fields.get(name)
+                if (
+                    not isinstance(field, ManyToManyFieldInstance)
+                    or not isinstance(old_field, ManyToManyFieldInstance)
+                    or not field.through
+                    or field.through != old_field.through
+                ):
+                    continue
+                through_schema = self.new_state.models[key].options.get("schema")
+                if self._through_owned_by_other(
+                    self.old_state, old_keys, key, through_schema, field.through
+                ) != self._through_owned_by_other(
+                    self.new_state, new_keys, key, through_schema, field.through
+                ):
+                    operations.append(RemoveField(model_name=key[1], name=name))
+                    readd_operations.append(AddField(model_name=key[1], name=name, field=field))
+
+        for old_key in hoisted_keys:
+            operations.append(DeleteModel(name=old_key[1]))
+
         for new_key in self._sort_by_dependencies(added_keys, self.new_state):
             operations.append(self._create_model_operation(self.new_state.models[new_key]))
 
@@ -148,9 +217,11 @@ class OperationGenerator:
             operations.extend(model_diff.generate_operations())
 
         for old_key in old_keys:
-            if old_key in new_keys or old_key in renamed_old_keys:
+            if old_key in new_keys or old_key in renamed_old_keys or old_key in hoisted_keys:
                 continue
             operations.append(DeleteModel(name=old_key[1]))
+
+        operations.extend(readd_operations)
 
         # Detect schemas no longer used (after all DeleteModel)
         for schema in sorted(old_schemas - new_schemas):

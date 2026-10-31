@@ -208,6 +208,8 @@ class SqliteSchemaEditor(SqliteQuotingMixin, BaseSchemaEditor):
 
     async def remove_field(self, model, field) -> None:
         if isinstance(field, ManyToManyFieldInstance):
+            if self._through_is_explicit(model, field):
+                return
             await self._run_sql(
                 self.DELETE_TABLE_TEMPLATE.format(
                     table=self._qualify_table_name(field.through, model._meta.schema)
