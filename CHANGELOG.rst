@@ -37,6 +37,7 @@ Fixed
 - Percent-decode database URL usernames once, preserving plus signs and query-string overrides. (#2379)
 - Allow hashing model instances with zero or empty-string primary keys. (#2381)
 - Parse false boolean values in database URL options correctly. (#2377)
+- Reject domain names with trailing newlines in ``DomainNameValidator``. (#2386)
 
 1.1.9
 -----
