@@ -106,14 +106,14 @@ class _ChooseDBMixin(Generic[MODEL]):
 
 class AwaitableQuery(_ChooseDBMixin[MODEL], Generic[MODEL]):
     __slots__ = (
-        "query",
-        "model",
-        "_joined_tables",
-        "_db",
-        "_capabilities",
         "_annotations",
+        "_capabilities",
         "_custom_filters",
+        "_db",
+        "_joined_tables",
         "_q_objects",
+        "model",
+        "query",
     )
 
     def __init__(self, model: type[MODEL]) -> None:
@@ -348,29 +348,29 @@ class AwaitableQuery(_ChooseDBMixin[MODEL], Generic[MODEL]):
 
 class QuerySet(AwaitableQuery[MODEL]):
     __slots__ = (
-        "fields",
-        "_prefetch_map",
-        "_prefetch_queries",
-        "_single",
-        "_raise_does_not_exist",
         "_db",
-        "_limit",
-        "_offset",
+        "_distinct",
         "_fields_for_select",
         "_filter_kwargs",
-        "_orderings",
-        "_distinct",
-        "_having",
+        "_force_indexes",
         "_group_bys",
+        "_having",
+        "_limit",
+        "_offset",
+        "_orderings",
+        "_prefetch_map",
+        "_prefetch_queries",
+        "_raise_does_not_exist",
         "_select_for_update",
-        "_select_for_update_nowait",
-        "_select_for_update_skip_locked",
-        "_select_for_update_of",
         "_select_for_update_no_key",
+        "_select_for_update_nowait",
+        "_select_for_update_of",
+        "_select_for_update_skip_locked",
         "_select_related",
         "_select_related_idx",
+        "_single",
         "_use_indexes",
-        "_force_indexes",
+        "fields",
     )
 
     def __init__(self, model: type[MODEL]) -> None:
@@ -1355,9 +1355,9 @@ class QuerySet(AwaitableQuery[MODEL]):
 
 class UpdateQuery(AwaitableQuery):
     __slots__ = (
-        "update_kwargs",
-        "_orderings",
         "_limit",
+        "_orderings",
+        "update_kwargs",
         "values",
     )
 
@@ -1450,8 +1450,8 @@ class DeleteQuery(AwaitableQuery):
     __slots__ = (
         "_annotations",
         "_custom_filters",
-        "_orderings",
         "_limit",
+        "_orderings",
     )
 
     def __init__(
@@ -1489,7 +1489,6 @@ class DeleteQuery(AwaitableQuery):
                 self._pk_in_subquery(table)
             )
         self.query._delete_from = True
-        return
 
     def __await__(self) -> Generator[Any, None, int]:
         self._choose_db_if_not_chosen(True)
@@ -1577,11 +1576,11 @@ class ContainsQuery(ExistsQuery):
 
 class CountQuery(AwaitableQuery):
     __slots__ = (
+        "_distinct",
+        "_force_indexes",
         "_limit",
         "_offset",
-        "_force_indexes",
         "_use_indexes",
-        "_distinct",
     )
 
     def __init__(
@@ -1646,7 +1645,7 @@ class CountQuery(AwaitableQuery):
         # COUNT(*) ignores LIMIT/OFFSET, so the offset is applied here. Clamp at
         # 0: when the offset is past the total, SQL would return 0 rows, not a
         # negative count.
-        count = max(0, list(dict(result[0]).values())[0] - self._offset)
+        count = max(0, next(iter(dict(result[0]).values())) - self._offset)
         # Use ``is not None`` so an explicit ``limit(0)`` clamps to 0 instead of
         # being treated as "no limit" by a truthiness check.
         if self._limit is not None and count > self._limit:
@@ -1768,19 +1767,19 @@ class FieldSelectQuery(AwaitableQuery):
 
 class ValuesListQuery(FieldSelectQuery, Generic[SINGLE]):
     __slots__ = (
-        "fields",
+        "_distinct",
+        "_fields_for_select_list",
+        "_fields_to_select_sql",
+        "_flat",
+        "_force_indexes",
+        "_group_bys",
         "_limit",
         "_offset",
-        "_distinct",
         "_orderings",
-        "_single",
         "_raise_does_not_exist",
-        "_fields_for_select_list",
-        "_flat",
-        "_group_bys",
-        "_force_indexes",
+        "_single",
         "_use_indexes",
-        "_fields_to_select_sql",
+        "fields",
     )
 
     def __init__(
@@ -1904,15 +1903,15 @@ class ValuesListQuery(FieldSelectQuery, Generic[SINGLE]):
 
 class ValuesQuery(FieldSelectQuery, Generic[SINGLE]):
     __slots__ = (
+        "_distinct",
         "_fields_for_select",
+        "_force_indexes",
+        "_group_bys",
         "_limit",
         "_offset",
-        "_distinct",
         "_orderings",
-        "_single",
         "_raise_does_not_exist",
-        "_group_bys",
-        "_force_indexes",
+        "_single",
         "_use_indexes",
     )
 
@@ -2035,7 +2034,7 @@ class ValuesQuery(FieldSelectQuery, Generic[SINGLE]):
 
 
 class RawSQLQuery(AwaitableQuery):
-    __slots__ = ("_sql", "_db")
+    __slots__ = ("_db", "_sql")
 
     def __init__(self, model: type[MODEL], db: BaseDBAsyncClient, sql: str) -> None:
         super().__init__(model)
@@ -2055,7 +2054,7 @@ class RawSQLQuery(AwaitableQuery):
 
 
 class BulkUpdateQuery(UpdateQuery, Generic[MODEL]):
-    __slots__ = ("fields", "_objects", "_batch_size", "_queries")
+    __slots__ = ("_batch_size", "_objects", "_queries", "fields")
 
     def __init__(
         self,
@@ -2150,13 +2149,13 @@ class BulkUpdateQuery(UpdateQuery, Generic[MODEL]):
 
 class BulkCreateQuery(AwaitableQuery, Generic[MODEL]):
     __slots__ = (
-        "_objects",
-        "_ignore_conflicts",
         "_batch_size",
         "_db",
         "_executor",
-        "_update_fields",
+        "_ignore_conflicts",
+        "_objects",
         "_on_conflict",
+        "_update_fields",
     )
 
     def __init__(
@@ -2367,7 +2366,7 @@ class BulkCreateQuery(AwaitableQuery, Generic[MODEL]):
 
 
 class UnionCountQuery(AwaitableQuery):
-    __slots__ = ("_union_query", "_db")
+    __slots__ = ("_db", "_union_query")
 
     def __init__(
         self,
@@ -2394,22 +2393,22 @@ class UnionCountQuery(AwaitableQuery):
         _, result = await self._db.execute_query(self.query.get_sql())
         if not result:
             return 0
-        return list(dict(result[0]).values())[0]
+        return next(iter(dict(result[0]).values()))
 
 
 class UnionQuery(_ChooseDBMixin[MODEL], Generic[MODEL]):
     __slots__ = (
+        "_all",
+        "_db",
+        "_limit",
+        "_models",
+        "_offset",
+        "_orderings",
+        "_qs",
+        "_selects",
+        "_union_query",
         "model",
         "query",
-        "_models",
-        "_union_query",
-        "_selects",
-        "_db",
-        "_qs",
-        "_all",
-        "_orderings",
-        "_limit",
-        "_offset",
     )
 
     TORTOISE_APP_FIELD = "tortoise_app"
