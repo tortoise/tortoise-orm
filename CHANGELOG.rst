@@ -14,10 +14,10 @@ Unreleased
 Added
 ^^^^^
 - Support forward relation ``in`` and ``not_in`` filters with model instances. (#2323)
+- Accept libpq style multi-host PostgreSQL URLs such as ``postgres://user:pass@host1:5432,host2:5433/db`` for ``asyncpg`` and ``psycopg``; ``asyncpg`` used to fail resolving ``host1,host2`` as one name, and ``psycopg`` now also reads ``target_session_attrs``. (#1924)
 
 Fixed
 ^^^^^
-- Accept libpq style multi-host PostgreSQL URLs such as ``postgres://user:pass@host1:5432,host2:5433/db`` for ``asyncpg`` and ``psycopg``; ``asyncpg`` used to fail resolving ``host1,host2`` as one name, and ``psycopg`` now also reads ``target_session_attrs``. (#1924)
 - ``DecimalField`` no longer raises ``decimal.InvalidOperation`` for values with more than 28 significant digits. (#2349)
 - fix(expressions): inline subquery parameters when ``params_inline`` is enabled (#2340)
 - Use database column names in reverse foreign-key and one-to-one filters with renamed columns or one-to-one primary keys. (#2338)

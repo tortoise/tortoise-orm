@@ -552,7 +552,8 @@ def test_postgres_multi_host_query_port_is_default():
         ("postgres://postgres@host1,host2:abc/test", "Port is not an integer"),
         ("postgres://postgres@host1,/test", "Empty host"),
         ("postgres://postgres@,host2/test", "Empty host"),
-        ("postgres://postgres@host1,host2:99999/test", "Port is not an integer"),
+        ("postgres://postgres@host1,host2:99999/test", "Port must be between 1 and 65535"),
+        ("postgres://postgres@host1,host2:0/test", "Port must be between 1 and 65535"),
     ],
 )
 def test_postgres_multi_host_invalid(db_url, message):
