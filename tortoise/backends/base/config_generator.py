@@ -188,8 +188,8 @@ def _split_multi_host(hostinfo: str) -> tuple[list[str], list[int | None]]:
             number = int(port) if port.strip() else None
         except ValueError as e:
             raise ConfigurationError("Port is not an integer") from e
-        if number is not None and not 0 <= number <= 65535:
-            raise ConfigurationError("Port is not an integer")
+        if number is not None and not 1 <= number <= 65535:
+            raise ConfigurationError("Port must be between 1 and 65535")
         hosts.append(host)
         ports.append(number)
     return hosts, ports
