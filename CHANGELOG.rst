@@ -34,6 +34,7 @@ Fixed
 - Preserve object and field iterators across validation and batching in ``bulk_update()``. (#2320)
 - Avoid accumulating duplicate query statements when previewing SQL or executing repeatedly. (#2321)
 - Percent-decode database URL usernames once, preserving plus signs and query-string overrides. (#2379)
+- ``MigrationGraph.leaf_nodes()``/``root_nodes()`` with an app label no longer treat an edge from another app as making that app leafless or rootless. ``migrate``/``plan`` for ``app.__latest__``/``app.__first__`` planned nothing (or rolled nothing back) when the app's newest migration was depended on from another app, or its first migration depended on another app. (#2307)
 - Allow hashing model instances with zero or empty-string primary keys. (#2381)
 - Parse false boolean values in database URL options correctly. (#2377)
 - Reject domain names with trailing newlines in ``DomainNameValidator``. (#2386)
