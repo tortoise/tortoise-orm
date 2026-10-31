@@ -23,7 +23,6 @@ Fixed
 - Use database column names in reverse foreign-key and one-to-one filters with renamed columns or one-to-one primary keys. (#2338)
 - Migrations now honor ``db_constraint=False`` on ``ForeignKeyField``/``ManyToManyField`` and emit the column (and through table) without a ``FOREIGN KEY`` constraint, matching the runtime schema generator. (#2226)
 - Fix ``field__not=None`` filter returning NULL rows instead of non-NULL rows. (#2353)
-- ``QuerySet.exists()`` now respects ``limit()`` and ``offset()``, so ``limit(0)`` or an offset past the last row returns ``False``. (#2389)
 - ``Case``/``When`` and aggregate ``_filter`` expressions now keep the joins for related fields they reference, so e.g. ``When(tournament__name="a", then=1)`` no longer fails with a missing table. (#2354)
 - Refresh renamed model fields and foreign-key IDs using their model attribute names. (#2335)
 - Include renamed fields in model dictionaries and default ``values_list()`` projections. (#2339)
@@ -38,6 +37,7 @@ Fixed
 - Allow hashing model instances with zero or empty-string primary keys. (#2381)
 - Parse false boolean values in database URL options correctly. (#2377)
 - Reject domain names with trailing newlines in ``DomainNameValidator``. (#2386)
+- ``QuerySet.exists()`` now respects ``limit()`` and ``offset()``, so ``limit(0)`` or an offset past the last row returns ``False``. (#2389)
 
 1.1.9
 -----
