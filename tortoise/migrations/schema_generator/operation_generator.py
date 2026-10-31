@@ -192,11 +192,11 @@ class OperationGenerator:
                     or field.through != old_field.through
                 ):
                     continue
-                schema = self.new_state.models[key].options.get("schema")
+                through_schema = self.new_state.models[key].options.get("schema")
                 if self._through_owned_by_other(
-                    self.old_state, old_keys, key, schema, field.through
+                    self.old_state, old_keys, key, through_schema, field.through
                 ) != self._through_owned_by_other(
-                    self.new_state, new_keys, key, schema, field.through
+                    self.new_state, new_keys, key, through_schema, field.through
                 ):
                     operations.append(RemoveField(model_name=key[1], name=name))
                     readd_operations.append(AddField(model_name=key[1], name=name, field=field))

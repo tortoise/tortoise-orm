@@ -50,7 +50,7 @@ def _editor() -> SqliteSchemaEditor:
 @pytest.mark.asyncio
 async def test_m2m_through_table_owned_by_explicit_model_created_once() -> None:
     migration = Migration("0001_initial", "models")
-    migration.operations = _create_ops()
+    migration.operations = list(_create_ops())
     editor = _editor()
     await migration.apply(
         State(models={}, apps=StateApps()), schema_editor=editor, collect_sql=True
@@ -64,7 +64,7 @@ async def test_m2m_through_table_owned_by_explicit_model_created_once() -> None:
 @pytest.mark.asyncio
 async def test_m2m_through_table_dropped_once_on_rollback() -> None:
     migration = Migration("0001_initial", "models")
-    migration.operations = _create_ops()
+    migration.operations = list(_create_ops())
     state = await migration.apply(State(models={}, apps=StateApps()))
 
     editor = _editor()
@@ -75,7 +75,7 @@ async def test_m2m_through_table_dropped_once_on_rollback() -> None:
 @pytest.mark.asyncio
 async def test_m2m_through_table_dropped_once_when_field_and_model_removed() -> None:
     initial = Migration("0001_initial", "models")
-    initial.operations = _create_ops()
+    initial.operations = list(_create_ops())
     removal = Migration("0002_remove", "models")
     removal.operations = [RemoveField("Role", "permissions"), DeleteModel("RolePermission")]
     state = await initial.apply(State(models={}, apps=StateApps()))
@@ -89,7 +89,7 @@ async def test_m2m_through_table_dropped_once_when_field_and_model_removed() -> 
 async def test_converting_implicit_through_to_explicit_model_drops_then_creates() -> None:
     ops = _create_ops()
     initial = Migration("0001_initial", "models")
-    initial.operations = ops[:2]
+    initial.operations = list(ops[:2])
     convert = Migration("0002_convert", "models")
     convert.operations = [RemoveField("Role", "permissions"), ops[2]]
     state = await initial.apply(State(models={}, apps=StateApps()))
@@ -152,7 +152,7 @@ async def test_generated_explicit_to_implicit_through_conversion() -> None:
     new_state = await new_migration.apply(State(models={}, apps=StateApps()))
 
     migration = Migration("0002_convert", "models")
-    migration.operations = OperationGenerator(old_state, new_state).generate()
+    migration.operations = list(OperationGenerator(old_state, new_state).generate())
     editor = _editor()
     await migration.apply(old_state, schema_editor=editor, collect_sql=True)
     sql = "\n".join(editor.collected_sql)
@@ -202,14 +202,14 @@ async def _convert_sql(from_explicit: bool) -> str:
     from tortoise.migrations.schema_generator.operation_generator import OperationGenerator
 
     old_m = Migration("0001_old", "models")
-    old_m.operations = _role_ops(from_explicit)
+    old_m.operations = list(_role_ops(from_explicit))
     old_state = await old_m.apply(State(models={}, apps=StateApps()))
     new_m = Migration("0001_new", "models")
-    new_m.operations = _role_ops(not from_explicit)
+    new_m.operations = list(_role_ops(not from_explicit))
     new_state = await new_m.apply(State(models={}, apps=StateApps()))
 
     migration = Migration("0002_convert", "models")
-    migration.operations = OperationGenerator(old_state, new_state).generate()
+    migration.operations = list(OperationGenerator(old_state, new_state).generate())
     editor = _editor()
     await migration.apply(old_state, schema_editor=editor, collect_sql=True)
     return "\n".join(editor.collected_sql)
