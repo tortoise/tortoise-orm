@@ -14,6 +14,7 @@ Unreleased
 Added
 ^^^^^
 - Support forward relation ``in`` and ``not_in`` filters with model instances. (#2323)
+- SQLite now persists ``TimeField`` values as ISO-8601 times. (#2297)
 
 Fixed
 ^^^^^
@@ -35,6 +36,7 @@ Fixed
 - Percent-decode database URL usernames once, preserving plus signs and query-string overrides. (#2379)
 - Reject domain names with trailing newlines in ``DomainNameValidator``. (#2362)
 - Allow hashing model instances with zero or empty-string primary keys. (#2381)
+- Parse false boolean values in database URL options correctly. (#2377)
 
 1.1.9
 -----
