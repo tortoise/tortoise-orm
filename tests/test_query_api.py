@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TypedDict, Union, cast
+from typing import TypedDict, Union, assert_type, cast
 
 import pytest
 import pytest_asyncio
@@ -9,7 +9,6 @@ from pypika_tortoise import Query, Table
 from pypika_tortoise.context import SqlContext
 from pypika_tortoise.queries import QueryBuilder
 from pypika_tortoise.terms import Parameterizer
-from typing_extensions import assert_type
 
 from tests.testmodels import Tournament
 from tortoise import fields

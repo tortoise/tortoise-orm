@@ -5,11 +5,16 @@ Changelog
 =========
 
 
-1.1
+1.2
 ===
 
-Unreleased
-----------
+1.2.0 *Unreleased*
+-----
+
+Changed
+^^^^^^^
+
+- Drop support for Python3.10 (#2322)
 
 Added
 ^^^^^
@@ -37,6 +42,10 @@ Fixed
 - Allow hashing model instances with zero or empty-string primary keys. (#2381)
 - Parse false boolean values in database URL options correctly. (#2377)
 - Reject domain names with trailing newlines in ``DomainNameValidator``. (#2386)
+
+
+1.1
+===
 
 1.1.9
 -----

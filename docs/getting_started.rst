@@ -9,7 +9,7 @@ Installation
 
 .. note::
 
-    Tortoise ORM requires **Python 3.10** or later.
+    Tortoise ORM requires **Python 3.11** or later.
 
 The following table shows the available installation options for different databases (note that there are multiple options of clients for some databases):
 

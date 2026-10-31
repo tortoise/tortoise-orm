@@ -2,7 +2,6 @@ import contextlib
 import os
 from collections.abc import Callable
 from datetime import date, datetime, time, timedelta
-from datetime import timezone as dt_timezone
 from unittest.mock import patch
 from zoneinfo import ZoneInfoNotFoundError
 
@@ -169,7 +168,7 @@ async def test_datetime_get_utcnow(db, enable_tz):
     model = testmodels.DatetimeFields
     enable_tz()
 
-    now = datetime.now(dt_timezone.utc).replace(tzinfo=get_default_timezone())
+    now = datetime.now(UTC).replace(tzinfo=get_default_timezone())
     await model.create(datetime=now)
     obj = await model.get(datetime=now)
     assert obj.datetime == now

@@ -14,7 +14,7 @@ Each test:
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import pytest
 
@@ -200,12 +200,12 @@ async def test_add_field_with_now_default(db_isolated):
         )
         await add_op.run("models", state, dry_run=False, state_editor=editor)
 
-        before = datetime.now(timezone.utc)
+        before = datetime.now(UTC)
 
         tbl = q("test_event", dialect)
         await conn.execute_script(f"INSERT INTO {tbl} ({q('title', dialect)}) VALUES ('launch')")
 
-        after = datetime.now(timezone.utc)
+        after = datetime.now(UTC)
 
         rows = await conn.execute_query_dict(f"SELECT * FROM {tbl}")
         assert len(rows) == 1
@@ -220,9 +220,9 @@ async def test_add_field_with_now_default(db_isolated):
                 else datetime.strptime(raw_value, "%Y-%m-%d %H:%M:%S")
             )
             if ts.tzinfo is None:
-                ts = ts.replace(tzinfo=timezone.utc)
+                ts = ts.replace(tzinfo=UTC)
         elif isinstance(raw_value, datetime):
-            ts = raw_value if raw_value.tzinfo else raw_value.replace(tzinfo=timezone.utc)
+            ts = raw_value if raw_value.tzinfo else raw_value.replace(tzinfo=UTC)
         else:
             pytest.fail(f"Unexpected timestamp type: {type(raw_value)}")
 

@@ -2,17 +2,9 @@ from __future__ import annotations
 
 import functools
 import os
-import sys
-from datetime import datetime, time, tzinfo
+from datetime import UTC, datetime, time, tzinfo
 from zoneinfo import ZoneInfo as _ZoneInfo
 from zoneinfo import ZoneInfoNotFoundError
-
-if sys.version_info >= (3, 11):
-    from datetime import UTC
-else:
-    from datetime import timezone
-
-    UTC = timezone.utc
 
 
 class ZoneInfo(_ZoneInfo):
@@ -28,7 +20,7 @@ def parse_timezone(zone: str) -> tzinfo:
         return ZoneInfo("UTC")
     try:
         return ZoneInfo(zone)
-    except ZoneInfoNotFoundError as e:
+    except ZoneInfoNotFoundError:
         words = zone.split("/")
         # Compatible with `pytz.timezone`:
         #   US/central -> US/Central
@@ -37,7 +29,7 @@ def parse_timezone(zone: str) -> tzinfo:
         styled = "/".join([i if i.isupper() else i.title() for i in words])
         if styled != zone:
             return ZoneInfo(styled)
-        raise e
+        raise
 
 
 @functools.cache
@@ -153,7 +145,7 @@ def make_aware(
     """
     tz = _get_or_parse_timezone(timezone)
     if hasattr(tz, "localize"):
-        return tz.localize(value, is_dst=is_dst)
+        return tz.localize(value, is_dst=is_dst)  # ty:ignore
     if is_aware(value):
         raise ValueError(f"make_aware expects a naive datetime, got {value}")
     # This may be wrong around DST changes!

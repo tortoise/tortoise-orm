@@ -3,7 +3,7 @@ from __future__ import annotations
 import operator
 from collections.abc import Callable, Iterable, Sequence
 from functools import partial
-from typing import TYPE_CHECKING, Any, TypedDict
+from typing import TYPE_CHECKING, Any, NotRequired, TypedDict
 
 from pypika_tortoise import SqlContext, Table
 from pypika_tortoise.enums import DatePart, Matching, SqlTypes
@@ -15,13 +15,6 @@ from tortoise.fields import Field, JSONField
 from tortoise.fields.relational import BackwardFKRelation, ManyToManyFieldInstance
 
 if TYPE_CHECKING:  # pragma: nocoverage
-    import sys
-
-    if sys.version_info >= (3, 11):
-        from typing import NotRequired
-    else:
-        from typing_extensions import NotRequired
-
     from pypika_tortoise.terms import Criterion, Term
 
     from tortoise.models import Model

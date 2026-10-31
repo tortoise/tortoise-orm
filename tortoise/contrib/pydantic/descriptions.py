@@ -9,12 +9,7 @@ from pydantic import ConfigDict
 from tortoise.fields import Field
 
 if TYPE_CHECKING:  # pragma: nocoverage
-    import sys
-
-    if sys.version_info >= (3, 11):
-        from typing import Self
-    else:
-        from typing_extensions import Self
+    from typing import Self
 
     from tortoise.models import Model
 

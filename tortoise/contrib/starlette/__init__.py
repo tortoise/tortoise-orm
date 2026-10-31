@@ -10,9 +10,10 @@ from tortoise.connection import get_connections
 from tortoise.log import logger
 
 if TYPE_CHECKING:
+    from typing import Self
+
     from starlette.applications import Starlette  # pylint: disable=E0401
     from starlette.types import Lifespan
-    from typing_extensions import Self
 
     from tortoise.config import TortoiseConfig
     from tortoise.context import TortoiseContext
