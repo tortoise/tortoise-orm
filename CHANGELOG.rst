@@ -37,6 +37,7 @@ Fixed
 - Allow hashing model instances with zero or empty-string primary keys. (#2381)
 - Parse false boolean values in database URL options correctly. (#2377)
 - Reject domain names with trailing newlines in ``DomainNameValidator``. (#2386)
+- ``QuerySet.exists()`` now respects ``limit()`` and ``offset()``, so ``limit(0)`` or an offset past the last row returns ``False``. (#2389)
 
 1.1.9
 -----
