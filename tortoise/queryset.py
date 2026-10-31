@@ -1549,9 +1549,7 @@ class ExistsQuery(AwaitableQuery):
         self._make_query()
         return self._execute().__await__()
 
-    async def _execute(
-        self,
-    ) -> bool:
+    async def _execute(self) -> bool:
         if self._limit == 0:
             return False
         result, _ = await self._db.execute_query(*self.query.get_parameterized_sql())
