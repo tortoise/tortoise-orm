@@ -61,6 +61,21 @@ async def test_exists(db, intfields_data):
 
 
 @pytest.mark.asyncio
+async def test_exists_with_limit_and_offset(db, intfields_data):
+    qs = IntFields.all().order_by("id")
+    assert await qs.limit(1).exists()
+    assert await qs.limit(0).exists() is False
+    assert await qs.offset(29).exists()
+    assert await qs.offset(30).exists() is False
+    assert await qs.filter(intnum__gt=90).offset(2).exists()
+    assert await qs.filter(intnum__gt=90).offset(3).exists() is False
+    assert await qs.offset(29).limit(1).exists()
+    assert await qs.offset(29).limit(0).exists() is False
+    assert await qs.offset(30).limit(0).exists() is False
+    assert await qs.offset(30).limit(1).exists() is False
+
+
+@pytest.mark.asyncio
 async def test_contains(db, intfields_data):
     obj = await IntFields.filter(intnum=10).first()
     assert await IntFields.all().contains(obj)
