@@ -501,7 +501,7 @@ class DatetimeField(Field[T_DATETIME], datetime.datetime):
             self.auto_now
             or (self.auto_now_add and getattr(instance, self.model_field_name) is None)
         ):
-            now = timezone.localtime()
+            now = timezone.localtime() if get_use_tz() else timezone.now()
             # Convert to match what would be read from DB (apply timezone conversion)
             now_python = self.to_python_value(now)
             setattr(instance, self.model_field_name, now_python)
@@ -583,6 +583,12 @@ class TimeField(Field[T_TIME], datetime.time):
     class _db_oracle:
         SQL_TYPE = "NVARCHAR2(8)"
 
+    class _db_mysql:
+        SQL_TYPE = "TIME(6)"
+
+    class _db_postgres:
+        SQL_TYPE = "TIMETZ"
+
     @overload
     def __init__(
         self: TimeField[datetime.time],
@@ -640,9 +646,15 @@ class TimeField(Field[T_TIME], datetime.time):
             setattr(instance, self.model_field_name, now_python)
             return now
         if value is not None:
+            if isinstance(value, str):
+                value = datetime.time.fromisoformat(value)
             if isinstance(value, datetime.timedelta):
                 return value
-            if get_use_tz() and timezone.is_naive(value):
+            if (
+                isinstance(value, datetime.datetime | datetime.time)
+                and get_use_tz()
+                and timezone.is_naive(value)
+            ):
                 warnings.warn(
                     f"TimeField {self.model_field_name} received a naive time ({value})"
                     " while time zone support is active.",
@@ -652,12 +664,6 @@ class TimeField(Field[T_TIME], datetime.time):
                 value = value.replace(tzinfo=get_default_timezone())
         self.validate(value)
         return value
-
-    class _db_mysql:
-        SQL_TYPE = "TIME(6)"
-
-    class _db_postgres:
-        SQL_TYPE = "TIMETZ"
 
 
 class TimeDeltaField(Field[T_TIMEDELTA]):

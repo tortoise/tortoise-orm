@@ -20,7 +20,7 @@ def parse_timezone(zone: str) -> tzinfo:
         return ZoneInfo("UTC")
     try:
         return ZoneInfo(zone)
-    except ZoneInfoNotFoundError as e:
+    except ZoneInfoNotFoundError:
         words = zone.split("/")
         # Compatible with `pytz.timezone`:
         #   US/central -> US/Central
@@ -29,7 +29,7 @@ def parse_timezone(zone: str) -> tzinfo:
         styled = "/".join([i if i.isupper() else i.title() for i in words])
         if styled != zone:
             return ZoneInfo(styled)
-        raise e
+        raise
 
 
 @functools.cache

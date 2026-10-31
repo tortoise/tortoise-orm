@@ -15,13 +15,6 @@ from tortoise.fields import Field, JSONField
 from tortoise.fields.relational import BackwardFKRelation, ManyToManyFieldInstance
 
 if TYPE_CHECKING:  # pragma: nocoverage
-    import sys
-
-    if sys.version_info >= (3, 11):
-        from typing import NotRequired
-    else:
-        from typing_extensions import NotRequired
-
     from pypika_tortoise.terms import Criterion, Term
 
     from tortoise.models import Model

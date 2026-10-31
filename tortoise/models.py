@@ -871,7 +871,7 @@ class Model(metaclass=ModelMeta):
         return f"<{self.__class__.__name__}>"
 
     def __hash__(self) -> int:
-        if not self.pk:
+        if self.pk is None:
             raise TypeError("Model instances without id are unhashable")
         return hash(self.pk)
 

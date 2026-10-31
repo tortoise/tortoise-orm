@@ -19,6 +19,7 @@ Changed
 Added
 ^^^^^
 - Support forward relation ``in`` and ``not_in`` filters with model instances. (#2323)
+- SQLite now persists ``TimeField`` values as ISO-8601 times. (#2297)
 
 Fixed
 ^^^^^
@@ -32,6 +33,14 @@ Fixed
 - Include renamed fields in model dictionaries and default ``values_list()`` projections. (#2339)
 - Fix ``get_or_create`` function raises "Object does not exist". (#2116)
 - Preserve field iterators when refreshing model instances from the database. (#2342)
+- ``bulk_update()`` now filters on the primary key list once per batch instead of once per field, avoiding duplicate ``IN`` conditions that made PostgreSQL fall back to a sequential scan. (#2358)
+- ``auto_now`` / ``auto_now_add`` values are no longer shifted to ``TIMEZONE`` when ``use_tz=False``. (#2350)
+- ``pydantic_model_creator`` no longer returns a cached class that ignores the ``model_config``, ``validators`` or ``module`` of the current call. (#2312)
+- Preserve object and field iterators across validation and batching in ``bulk_update()``. (#2320)
+- Avoid accumulating duplicate query statements when previewing SQL or executing repeatedly. (#2321)
+- Percent-decode database URL usernames once, preserving plus signs and query-string overrides. (#2379)
+- Allow hashing model instances with zero or empty-string primary keys. (#2381)
+- Parse false boolean values in database URL options correctly. (#2377)
 
 
 1.1

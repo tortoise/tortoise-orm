@@ -12,9 +12,9 @@ from iso8601 import ParseError
 from tests import testmodels
 from tortoise import fields, timezone
 from tortoise.contrib import test
-from tortoise.contrib.test.condition import NotIn
-from tortoise.exceptions import ConfigurationError, IntegrityError
-from tortoise.expressions import F
+from tortoise.contrib.test.condition import In, NotIn
+from tortoise.exceptions import ConfigurationError, IntegrityError, OperationalError
+from tortoise.expressions import F, Q
 from tortoise.timezone import UTC, ZoneInfo, get_default_timezone, parse_timezone
 
 # ============================================================================
@@ -462,33 +462,51 @@ async def test_datetime_filter_by_year_month_day(db):
 
 
 @pytest.mark.asyncio
-@test.requireCapability(dialect=NotIn("sqlite"))  # 'datetime.time' is not supported by sqlite3
-@test.requireCapability(dialect="postgres")
+@test.requireCapability(dialect=In("sqlite", "postgres"))
 async def test_time_create(db):
-    """Test creating time fields (postgres)."""
+    """Test creating time fields (sqlite/postgres)."""
     model = testmodels.TimeFields
     now = timezone.now().timetz()
     obj0 = await model.create(time=now)
     obj1 = await model.get(id=obj0.id)
     assert obj1.time == now
+    assert await model.filter(time=now).first() == obj0
 
 
 @pytest.mark.asyncio
-@test.requireCapability(dialect=NotIn("sqlite"))  # 'datetime.time' is not supported by sqlite3
-@test.requireCapability(dialect="postgres")
-async def test_time_cast(db):
-    """Test time field accepts ISO format string (postgres)."""
+@test.requireCapability(dialect=In("sqlite", "postgres"))
+@pytest.mark.parametrize("value", ["21:00+00:00", "23:59:59+08:00", "01:23:45.123456+03:30"])
+async def test_time_cast(db, value: str):
+    """Test time field accepts ISO format string (sqlite/postgres)."""
     model = testmodels.TimeFields
-    obj0 = await model.create(time="21:00+00:00")
+    obj0 = await model.create(time=value)
     obj1 = await model.get(id=obj0.id)
-    assert obj1.time == time.fromisoformat("21:00+00:00")
+    assert obj1.time == time.fromisoformat(value)
+    await model.create(time=obj1.time.replace(second=(obj1.time.second + 1) % 60))
+    obj2 = await model.filter(time=value).get()
+    assert obj2 == obj1
 
 
 @pytest.mark.asyncio
-@test.requireCapability(dialect=NotIn("sqlite"))  # 'datetime.time' is not supported by sqlite3
-@test.requireCapability(dialect="postgres")
+@test.requireCapability(dialect=In("sqlite", "postgres"))
+@pytest.mark.parametrize("value", ["00:00:00", "23:59:59.999999"])
+async def test_time_create_native_str(db, enable_tz, value: str):
+    """Test filtering time fields (sqlite/postgres)."""
+    enable_tz()
+    model = testmodels.TimeFields
+    obj0 = await model.create(time=value)
+    obj1 = await model.get(id=obj0.id)
+    assert obj1.time == time.fromisoformat(value + "+00:00")
+    await model.create(time=obj1.time.replace(second=(obj1.time.second + 1) % 60))
+    with pytest.warns(RuntimeWarning, match="TimeField time received a naive time"):
+        obj2 = await model.filter(time=value).first()
+    assert obj2 == obj1
+
+
+@pytest.mark.asyncio
+@test.requireCapability(dialect=In("sqlite", "postgres"))
 async def test_time_values(db):
-    """Test time field in values() query (postgres)."""
+    """Test time field in values() query (sqlite/postgres)."""
     model = testmodels.TimeFields
     now = timezone.now().timetz()
     obj0 = await model.create(time=now)
@@ -497,10 +515,9 @@ async def test_time_values(db):
 
 
 @pytest.mark.asyncio
-@test.requireCapability(dialect=NotIn("sqlite"))  # 'datetime.time' is not supported by sqlite3
-@test.requireCapability(dialect="postgres")
+@test.requireCapability(dialect=In("sqlite", "postgres"))
 async def test_time_values_list(db):
-    """Test time field in values_list() query (postgres)."""
+    """Test time field in values_list() query (sqlite/postgres)."""
     model = testmodels.TimeFields
     now = timezone.now().timetz()
     obj0 = await model.create(time=now)
@@ -509,15 +526,70 @@ async def test_time_values_list(db):
 
 
 @pytest.mark.asyncio
-@test.requireCapability(dialect=NotIn("sqlite"))  # 'datetime.time' is not supported by sqlite3
-@test.requireCapability(dialect="postgres")
+@test.requireCapability(dialect=In("sqlite", "postgres"))
 async def test_time_get(db):
-    """Test getting by time field (postgres)."""
+    """Test getting by time field (sqlite/postgres)."""
     model = testmodels.TimeFields
     now = timezone.now().timetz()
     await model.create(time=now)
     obj = await model.get(time=now)
     assert obj.time == now
+
+
+@pytest.mark.asyncio
+@test.requireCapability(dialect=In("sqlite", "postgres"))
+async def test_time_filter(db):
+    """Test filtering by time field (sqlite/postgres)."""
+    model = testmodels.TimeFields
+    dt = timezone.now()
+    now = dt.timetz()
+    obj = await model.create(time=now)
+    # You can use startswith/contains/endswith
+    hour_str = f"{dt:%H}"
+    assert await model.filter(time__startswith=hour_str + ":").get() == obj
+    minute_str = f"{dt:%M}"
+    assert await model.filter(time__contains=":" + minute_str + ":").get() == obj
+    second_str = f"{dt:%S}"
+    assert (
+        await model.filter(
+            (Q(time__endswith=":" + second_str) & ~Q(time__contains="+") & ~Q(time__contains="-"))
+            | Q(time__contains=":" + second_str + ".")
+            | Q(time__contains=":" + second_str + "+")
+            | Q(time__contains=":" + second_str + "-")
+        ).get()
+        == obj
+    )
+
+
+@pytest.mark.asyncio
+@test.requireCapability(dialect="postgres")
+async def test_time_filter_pg(db):
+    """Test filtering by time field (postgres)."""
+    # Support filter with __hour/__minute/__second
+    model = testmodels.TimeFields
+    dt = timezone.now().replace(microsecond=0)
+    now = dt.timetz()
+    obj = await model.create(time=now)
+    assert await model.filter(time__hour=dt.hour).first() == obj
+    assert await model.filter(time__minute=dt.minute).first() == obj
+    assert await model.filter(time__second=dt.second).first() == obj
+
+
+@pytest.mark.asyncio
+@test.requireCapability(dialect="sqlite")
+async def test_time_filter_sqlite(db):
+    """Test filtering by time field (sqlite)."""
+    # SQLite does not support filter with __hour/__minute/__second
+    # The error comes from SQLite rejecting the generated SQL, so no
+    # rows need to exist for this to fail.
+    model = testmodels.TimeFields
+    dt = timezone.now()
+    with pytest.raises(OperationalError):
+        await model.filter(time__hour=dt.hour)
+    with pytest.raises(OperationalError):
+        await model.filter(time__minute=dt.minute)
+    with pytest.raises(OperationalError):
+        await model.filter(time__second=dt.second)
 
 
 # ============================================================================

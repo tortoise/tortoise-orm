@@ -999,6 +999,7 @@ class QuerySet(AwaitableQuery[MODEL]):
 
         :raises ValueError: If objects have no primary key set
         """
+        objects = tuple(objects)
         if any(obj.pk is None for obj in objects):
             raise ValueError("All bulk_update() objects must have a primary key set.")
         return BulkUpdateQuery(
@@ -1010,7 +1011,7 @@ class QuerySet(AwaitableQuery[MODEL]):
             limit=self._limit,
             orderings=self._orderings,
             objects=objects,
-            fields=fields,
+            fields=tuple(fields),
             batch_size=batch_size,
         )
 
@@ -2073,6 +2074,9 @@ class BulkUpdateQuery(UpdateQuery, Generic[MODEL]):
         self._queries: list[QueryBuilder] = []
 
     def _make_queries(self) -> list[tuple[str, list[Any]]]:
+        if not self._objects or not self.fields:
+            return []
+        self._queries = []
         table = self.model._meta.basetable
         self.query = self._db.query_class.update(table)
         if self.capabilities.support_update_limit_order_by and self._limit:
@@ -2086,15 +2090,15 @@ class BulkUpdateQuery(UpdateQuery, Generic[MODEL]):
 
         self.resolve_filters()
         pk_attr = self.model._meta.pk_attr
-        source_pk_attr = self.model._meta.fields_map[pk_attr].source_field or pk_attr
+        model_pk_field = self.model._meta.fields_map[pk_attr]
+        source_pk_attr = model_pk_field.source_field or pk_attr
         pk = Field(source_pk_attr)
         for objects_item in chunk(self._objects, self._batch_size):
             query = copy(self.query)
+            pk_list = [model_pk_field.to_db_value(obj.pk, None) for obj in objects_item]
             for field in self.fields:
                 case = Case()
-                pk_list = []
-                for obj in objects_item:
-                    pk_value = self.model._meta.fields_map[pk_attr].to_db_value(obj.pk, None)
+                for obj, pk_value in zip(objects_item, pk_list, strict=False):
                     field_obj = obj._meta.fields_map[field]
                     field_value = field_obj.to_db_value(getattr(obj, field), obj)
                     case.when(
@@ -2110,9 +2114,8 @@ class BulkUpdateQuery(UpdateQuery, Generic[MODEL]):
                             else self.query._wrapper_cls(field_value)
                         ),
                     )
-                    pk_list.append(pk_value)
                 query = query.set(field, case)
-                query = query.where(pk.isin(pk_list))
+            query = query.where(pk.isin(pk_list))
             self._queries.append(query)
         return [query.get_parameterized_sql() for query in self._queries]
 
@@ -2130,7 +2133,7 @@ class BulkUpdateQuery(UpdateQuery, Generic[MODEL]):
     def sql(self, params_inline=False) -> str:
         self._choose_db_if_not_chosen()
         queries = self._make_queries()
-        return ";".join([sql for sql, _ in queries])
+        return ";".join(sql for sql, _ in queries)
 
 
 class BulkCreateQuery(AwaitableQuery, Generic[MODEL]):
@@ -2348,7 +2351,7 @@ class BulkCreateQuery(AwaitableQuery, Generic[MODEL]):
         if all(not o._custom_generated_pk for o in self._objects):
             return insert_sql
 
-        return ";".join([insert_sql, insert_sql_all])
+        return insert_sql + ";" + insert_sql_all
 
 
 class UnionCountQuery(AwaitableQuery):
