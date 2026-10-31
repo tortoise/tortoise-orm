@@ -114,7 +114,7 @@ async def test_save(db):
 
 @pytest.mark.asyncio
 async def test_save_with_update_fields(db):
-    record = await ValidatorModel.create(min_value_decimal=Decimal("2"))
+    record = await ValidatorModel.create(min_value_decimal=Decimal(2))
 
     record.min_value_decimal = Decimal("0.9")
     with pytest.raises(ValidationError):
@@ -123,7 +123,7 @@ async def test_save_with_update_fields(db):
 
 @pytest.mark.asyncio
 async def test_update(db):
-    record = await ValidatorModel.create(min_value_decimal=Decimal("2"))
+    record = await ValidatorModel.create(min_value_decimal=Decimal(2))
 
     record.min_value_decimal = Decimal("0.9")
     with pytest.raises(ValidationError):
@@ -164,10 +164,7 @@ def test_domain_name_validator_invalid(value) -> None:
         validate_domain_name(value)
 
 
-@pytest.mark.parametrize(
-    "accept_idna",
-    [True, False],
-)
+@pytest.mark.parametrize("accept_idna", [True, False])
 def test_domain_name_validator_trailing_newline(accept_idna: bool) -> None:
     validator = DomainNameValidator(accept_idna=accept_idna)
     with pytest.raises(InvalidDomainName):
