@@ -16,6 +16,10 @@ Added
 - Support forward relation ``in`` and ``not_in`` filters with model instances. (#2323)
 - SQLite now persists ``TimeField`` values as ISO-8601 times. (#2297)
 
+Changed
+^^^^^
+- ``MigrationRecorder.applied_migrations()`` now checks for the migrations table before querying history, allowing catalog lookup errors to propagate while retaining the empty-list fallback for history query errors. (#2382)
+
 Fixed
 ^^^^^
 - ``DecimalField`` no longer raises ``decimal.InvalidOperation`` for values with more than 28 significant digits. (#2349)
@@ -38,7 +42,6 @@ Fixed
 - Parse false boolean values in database URL options correctly. (#2377)
 - Reject domain names with trailing newlines in ``DomainNameValidator``. (#2386)
 - ``QuerySet.exists()`` now respects ``limit()`` and ``offset()``, so ``limit(0)`` or an offset past the last row returns ``False``. (#2389)
-- ``MigrationRecorder.applied_migrations()`` now checks for the migrations table before querying history, allowing catalog lookup errors to propagate while retaining the empty-list fallback for history query errors. (#2382)
 
 1.1.9
 -----
