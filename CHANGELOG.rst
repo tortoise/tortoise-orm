@@ -1,6 +1,7 @@
 .. _changelog:
 
-==Changelog
+=========
+Changelog
 =========
 
 
@@ -14,8 +15,7 @@ Added
 ^^^^^
 - Support forward relation ``in`` and ``not_in`` filters with model instances. (#2323)
 - SQLite now persists ``TimeField`` values as ISO-8601 times. (#2297)
-=======
-- Accept libpq style multi-host PostgreSQL URLs such as ``postgres://user:pass@host1:5432,host2:5433/db`` for ``asyncpg`` and ``psycopg``; ``asyncpg`` used to fail resolving ``host1,host2`` as one name, and ``psycopg`` now also reads ``target_session_attrs``. (#1924)
+- Accept libpq style multi-host PostgreSQL URLs such as ``postgres://user:pass@host1:5432,host2:5433/db`` for ``asyncpg`` and ``psycopg``; ``asyncpg`` used to fail resolving ``host1,host2`` as one name, and ``psycopg`` now also reads ``target_session_attrs``. (#2387)
 
 Fixed
 ^^^^^
