@@ -17,7 +17,12 @@ from decimal import Decimal
 import pydantic
 import pytest
 
-from tests.testmodels import DefaultModel, NoFetchDefaultModel, SqlDefaultModel
+from tests.testmodels import (
+    DefaultModel,
+    NoFetchDefaultModel,
+    QuotedDefaultModel,
+    SqlDefaultModel,
+)
 from tortoise import fields
 from tortoise.contrib.pydantic import pydantic_model_creator
 from tortoise.exceptions import OperationalError
@@ -134,6 +139,17 @@ class TestCreateWithDbDefault:
         assert instance.float_default == 2.5
         assert instance.char_default == "all_set"
         assert instance.bool_default is False
+
+    @pytest.mark.asyncio
+    async def test_create_string_defaults_with_quote_and_backslash(self, db):
+        """String db_default values are quoted correctly in the generated schema."""
+        instance = await QuotedDefaultModel.create()
+        assert instance.quote_default == "it's"
+        assert instance.backslash_default == "C:\\tortoise"
+
+        refreshed = await QuotedDefaultModel.get(pk=instance.pk)
+        assert refreshed.quote_default == "it's"
+        assert refreshed.backslash_default == "C:\\tortoise"
 
 
 class TestBulkCreateWithDbDefault:
