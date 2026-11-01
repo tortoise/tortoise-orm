@@ -1,0 +1,24 @@
+erDiagram
+    tournament {
+        INTEGER id PK
+        TEXT name
+        TIMESTAMP created
+    }
+    event {
+        INTEGER id PK
+        TEXT name
+        TIMESTAMP modified
+        VARCHAR(40) prize
+        INT tournament_id FK
+    }
+    event_team {
+        INT event_id FK
+        INT team_id FK
+    }
+    team {
+        INTEGER id PK
+        TEXT name
+    }
+    tournament ||--o{ event : tournament_id
+    event ||--o{ event_team : event_id
+    team ||--o{ event_team : team_id

@@ -47,6 +47,31 @@ With that start describing the models
         def __str__(self):
             return self.name
 
+The example produces these tables when schemas are generated with the SQLite
+backend. ``PK`` marks a primary key and ``FK`` marks a foreign key. Each event
+belongs to one tournament; an event and a team can each have zero or more rows
+in the ``event_team`` junction table.
+
+.. figure:: _static/model-relations-schema.png
+    :alt: SQLite tables tournament, event, team and event_team. Every event has one required tournament_id foreign key; a tournament can have zero or more events. The event_team junction has event_id and team_id foreign keys, allowing events and teams to relate many-to-many. Main id columns are primary keys; junction pairs are unique without a declared primary key.
+    :width: 600px
+
+    SQLite schema for the models above.
+    :download:`Editable SVG <_static/model-relations-schema.svg>` and
+    :download:`Mermaid source <_static/model-relations-schema.mmd>`.
+    The Mermaid source records the same schema for editing with standard
+    tooling; its regenerated layout differs from this SVG.
+    `Edit diagram <https://svgdiagram.ai/diagram-sources/tortoise-orm-model-relations-schema?version=1>`__.
+
+``Event.tournament`` is a Python relation backed by the ``tournament_id``
+column. ``Tournament.events`` is a reverse accessor, not another column.
+Likewise, ``Event.participants`` and ``Team.events`` use the two foreign keys
+in ``event_team`` instead of extra columns on ``event`` or ``team``. The
+generated junction enforces uniqueness of each ``(event_id, team_id)`` pair;
+it has no declared primary key. SQL storage types vary by backend: for
+example, SQLite stores the nullable ``prize`` field as ``VARCHAR(40)``, while
+the Python field remains a ``DecimalField``.
+
 Let's look at the details of what we accomplished here:
 
 .. code-block:: python3
