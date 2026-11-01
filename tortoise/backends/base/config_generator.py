@@ -190,7 +190,11 @@ def expand_db_url(db_url: str, testing: bool = False) -> dict:
         params[key] = val
     for key, val in urlparse.parse_qs(url.query).items():
         cast = db["cast"].get(key, str)
-        params[key] = cast(val[-1])
+        last_value = val[-1]
+        if cast is bool:
+            params[key] = last_value.lower() in ("true", "1", "yes", "on")
+        else:
+            params[key] = cast(last_value)
 
     if testing and path:
         path = path.replace("\\{", "{").replace("\\}", "}")
@@ -208,12 +212,12 @@ def expand_db_url(db_url: str, testing: bool = False) -> dict:
     try:
         if vmap.get("port") and url.port:
             params[vmap["port"]] = int(url.port)
-    except ValueError:
-        raise ConfigurationError("Port is not an integer")
+    except ValueError as e:
+        raise ConfigurationError("Port is not an integer") from e
     if vmap.get("username") and (url.username or vmap["username"] not in params):
         # Pass username as None, instead of empty string,
         # to let asyncpg retrieve username from environment variable or OS user
-        params[vmap["username"]] = url.username or None
+        params[vmap["username"]] = urlparse.unquote(url.username) if url.username else None
     if vmap.get("password") and (url.password or vmap["password"] not in params):
         # asyncpg accepts None for password, but aiomysql not
         params[vmap["password"]] = (
