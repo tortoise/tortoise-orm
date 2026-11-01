@@ -5,7 +5,7 @@ import urllib.parse as urlparse
 import uuid
 from collections.abc import Iterable
 from types import ModuleType
-from typing import Any
+from typing import Any, Final
 
 from tortoise.exceptions import ConfigurationError
 
@@ -17,7 +17,7 @@ urlparse.uses_netloc.append("sqlite")
 urlparse.uses_netloc.append("mysql")
 urlparse.uses_netloc.append("oracle")
 urlparse.uses_netloc.append("mssql")
-DB_LOOKUP: dict[str, dict[str, Any]] = {
+DB_LOOKUP: Final[dict[str, dict[str, Any]]] = {
     "psycopg": {
         "engine": "tortoise.backends.psycopg",
         "vmap": {
@@ -127,10 +127,9 @@ DB_LOOKUP: dict[str, dict[str, Any]] = {
         },
     },
 }
-# Create an alias for backwards compatibility
-DB_LOOKUP["postgres"] = DB_LOOKUP["asyncpg"]
+# Create an alias "postgres" for backwards compatibility
 # "postgresql" is the scheme accepted by libpq and pydantic's PostgresDsn
-DB_LOOKUP["postgresql"] = DB_LOOKUP["asyncpg"]
+DB_LOOKUP["postgres"] = DB_LOOKUP["postgresql"] = DB_LOOKUP["asyncpg"]
 
 
 def _quote_url_userinfo(db_url: str) -> str:
@@ -202,17 +201,20 @@ def expand_db_url(db_url: str, testing: bool = False) -> dict:
     scheme, sep, rest = db_url.partition("://")
     if sep and scheme.lower() in _MULTI_HOST_BACKENDS:
         # urlparse cannot read several hosts (IPv6 brackets raise), so cut them out first
-        netloc, tail = re.match(r"([^/?#]*)(.*)", rest, re.DOTALL).groups()  # type: ignore[union-attr]
+        m = re.match(r"([^/?#]*)(.*)", rest, re.DOTALL)
+        if m is None:  # pragma: no cover - pattern always matches
+            raise ConfigurationError(f"Failed to parse multi-host URL: {db_url!r}")
+        netloc, tail = m.groups()
         userinfo, at, hostinfo = netloc.rpartition("@")
         if "," in hostinfo:
             multi_host = _split_multi_host(hostinfo)
             db_url = f"{scheme}://{userinfo}{at}multi-host{tail}"
     url = urlparse.urlparse(db_url)
-    if url.scheme not in DB_LOOKUP:
-        raise ConfigurationError(f"Unknown DB scheme: {url.scheme}")
-
     db_backend = url.scheme
-    db = DB_LOOKUP[db_backend]
+    try:
+        db = DB_LOOKUP[db_backend]
+    except KeyError:
+        raise ConfigurationError(f"Unknown DB scheme: {db_backend}") from None
     if db.get("skip_first_char", True):
         path: str | None = url.path[1:]
     else:
@@ -224,9 +226,7 @@ def expand_db_url(db_url: str, testing: bool = False) -> dict:
         # Other database backend accepts database name being None (but not empty string).
         path = None
 
-    params: dict = {}
-    for key, val in db["defaults"].items():
-        params[key] = val
+    params = dict(db["defaults"])
     for key, val in urlparse.parse_qs(url.query).items():
         cast = db["cast"].get(key, str)
         last_value = val[-1]
