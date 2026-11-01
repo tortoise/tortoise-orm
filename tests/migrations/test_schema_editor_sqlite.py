@@ -35,6 +35,26 @@ async def test_sqlite_add_field_unique_uses_index() -> None:
 
 
 @pytest.mark.asyncio
+async def test_sqlite_add_field_db_index_creates_index() -> None:
+    class Article(Model):
+        id = fields.IntField(primary_key=True)
+        title = fields.CharField(max_length=50, db_index=True)
+
+        class Meta:
+            table = "article"
+            app = "models"
+
+    client = FakeClient("sqlite")
+    editor = SqliteSchemaEditor(client)
+
+    await editor.add_field(Article, "title")
+
+    assert len(client.executed) == 2
+    assert 'ALTER TABLE "article" ADD COLUMN "title"' in client.executed[0]
+    assert client.executed[1] == editor._get_index_sql(Article, ["title"])
+
+
+@pytest.mark.asyncio
 async def test_sqlite_constraint_name_used_for_drop() -> None:
     client = FakeClient("sqlite")
     editor = SqliteSchemaEditor(client)

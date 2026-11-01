@@ -69,6 +69,41 @@ async def test_add_field_generates_add_column_sql() -> None:
 
 
 @pytest.mark.asyncio
+async def test_add_field_with_db_index_creates_index() -> None:
+    class Author(Model):
+        id = fields.IntField(primary_key=True)
+
+        class Meta:
+            table = "author"
+            app = "models"
+
+    class Book(Model):
+        id = fields.IntField(primary_key=True)
+        isbn = fields.CharField(max_length=20, db_index=True)
+        author: fields.ForeignKeyRelation[Author] = fields.ForeignKeyField(
+            "models.Author", related_name="books", source_field="writer_id", db_index=True
+        )
+
+        class Meta:
+            table = "book"
+            app = "models"
+
+    init_apps(Author, Book)
+
+    client = FakeClient("sql")
+    editor = TestSchemaEditor(client)
+
+    await editor.add_field(Book, "isbn")
+    await editor.add_field(Book, "author")
+
+    assert len(client.executed) == 4
+    assert 'ALTER TABLE "book" ADD COLUMN "isbn"' in client.executed[0]
+    assert client.executed[1] == editor._get_index_sql(Book, ["isbn"])
+    assert 'ALTER TABLE "book" ADD COLUMN "writer_id"' in client.executed[2]
+    assert client.executed[3] == editor._get_index_sql(Book, ["writer_id"])
+
+
+@pytest.mark.asyncio
 async def test_remove_field_generates_drop_column_sql() -> None:
     client = FakeClient("sql")
     editor = TestSchemaEditor(client)

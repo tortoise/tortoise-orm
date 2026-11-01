@@ -160,6 +160,33 @@ async def test_remove_index_operation_runs_sql() -> None:
 
 
 @pytest.mark.asyncio
+async def test_index_operations_skip_index_of_db_index_field() -> None:
+    client = FakeClient("sql")
+    editor = TestSchemaEditor(client)
+    state = State(models={}, apps=StateApps())
+    CreateModel(name="Widget", fields=[("id", fields.IntField(pk=True))]).state_forward(
+        "models", state
+    )
+    operations = [
+        AddField(
+            model_name="Widget", name="name", field=fields.CharField(max_length=50, db_index=True)
+        ),
+        AddIndex(model_name="Widget", index=Index(fields=("name",))),
+        RemoveIndex(model_name="Widget", fields=["name"]),
+        AddIndex(model_name="Widget", index=Index(fields=("name",), name="widget_name")),
+    ]
+
+    for op in operations:
+        await op.run("models", state, dry_run=False, state_editor=editor)
+
+    assert client.executed == [
+        'ALTER TABLE "widget" ADD COLUMN "name" VARCHAR(50) NOT NULL',
+        'CREATE INDEX "idx_widget_name_3fdd43" ON "widget" ("name");',
+        'CREATE INDEX "widget_name" ON "widget" ("name");',
+    ]
+
+
+@pytest.mark.asyncio
 async def test_rename_index_operation_runs_sql() -> None:
     client = FakeClient("sql")
     editor = TestSchemaEditor(client)
