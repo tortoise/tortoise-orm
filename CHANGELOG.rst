@@ -38,7 +38,7 @@ Fixed
 - Parse false boolean values in database URL options correctly. (#2377)
 - Reject domain names with trailing newlines in ``DomainNameValidator``. (#2386)
 - ``QuerySet.exists()`` now respects ``limit()`` and ``offset()``, so ``limit(0)`` or an offset past the last row returns ``False``. (#2389)
-- ``select_related()`` no longer drops related fields on PostgreSQL when ``"<table>.<column>"`` is longer than 63 bytes, which left the related instance partial so ``save()`` raised ``IncompleteInstanceError``. (#2018)
+- ``select_related()`` no longer drops related fields on PostgreSQL when ``"<table>.<column>"`` is longer than 63 bytes, which left the related instance partial so ``save()`` raised ``IncompleteInstanceError``. (#2395)
 
 1.1.9
 -----
