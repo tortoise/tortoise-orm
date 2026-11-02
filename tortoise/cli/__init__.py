@@ -1,6 +1,5 @@
 """Tortoise CLI entry points."""
 
-import utils.session
 __all__ = ["main"]
 
 
