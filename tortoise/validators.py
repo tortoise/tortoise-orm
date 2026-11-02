@@ -248,7 +248,9 @@ class URLValidator(Validator):
         return re.compile(self.URL_REGEX, re.IGNORECASE)
 
     def __init__(self, allowed_schemes: list[str] | None = None) -> None:
-        self.allowed_schemes = allowed_schemes or ["http", "https", "ftp", "ftps"]
+        self.allowed_schemes = (
+            allowed_schemes if allowed_schemes is not None else ["http", "https", "ftp", "ftps"]
+        )
 
     def __call__(self, value: str) -> None:
         if len(value) > self.MAX_URL_LENGTH:
