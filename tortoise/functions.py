@@ -1,6 +1,7 @@
 from pypika_tortoise import SqlContext, functions
 
-from tortoise.expressions import Aggregate, Function
+from tortoise.expressions import Aggregate, Function, ResolveContext, ResolveResult
+from tortoise.fields import IntField
 
 ##############################################################################
 # Standard functions
@@ -136,3 +137,11 @@ class Avg(Aggregate):
 
     database_func = functions.Avg
     populate_field_object = True
+
+    def resolve(self, resolve_context: ResolveContext) -> ResolveResult:
+        result = super().resolve(resolve_context)
+        # Integer conversion would silently truncate a fractional average.
+        # BigIntField, SmallIntField and IntEnumField also derive from IntField.
+        if isinstance(self.field_object, IntField):
+            self.field_object = None
+        return result

@@ -51,7 +51,6 @@ nosetests.xml
 coverage.xml
 *,cover
 .hypothesis/
-.vscode/
 examples/*.sqlite3
 examples/*/*.sqlite3*
 
@@ -86,7 +85,6 @@ target/
 celerybeat-schedule
 
 # dotenv
-.env
 .env3
 
 # virtualenv
@@ -114,3 +112,5 @@ ENV/
 # pdm
 .pdm-python
 knowledge
+config.bat
+node_modules
