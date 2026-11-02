@@ -1152,6 +1152,12 @@ class QuerySet(AwaitableQuery[MODEL]):
         queryset._db = _db if _db else queryset._db
         return queryset
 
+    def _related_column_alias(self, table: Table, field: str) -> str:
+        # The executor only reads the part after the first ".", so the prefix just has to be
+        # unique per joined table. "<table name>." could exceed identifier limits (63 bytes in
+        # PostgreSQL), and a truncated alias lost the field.
+        return f"{self._joined_tables.index(table)}.{field}"
+
     def _join_select_related(self, lookup_expression: str) -> tuple[type[Model], Table]:
         fields = expand_lookup_expression(self.model, lookup_expression)
         model = self.model
@@ -1179,7 +1185,7 @@ class QuerySet(AwaitableQuery[MODEL]):
                 self._select_related_idx.append(append_item)
             self.query = self.query.select(
                 *[
-                    table[related_field].as_(f"{table.get_table_name()}.{related_field}")
+                    table[related_field].as_(self._related_column_alias(table, related_field))
                     for related_field in related_fields
                 ]
             )
@@ -1267,7 +1273,10 @@ class QuerySet(AwaitableQuery[MODEL]):
                 )
                 added_paths.add(path)
             self.query = self.query.select(
-                *[table[field].as_(f"{table.get_table_name()}.{field}") for field in data_fields]
+                *[
+                    table[field].as_(self._related_column_alias(table, field))
+                    for field in data_fields
+                ]
             )
 
     def _make_query(self) -> None:

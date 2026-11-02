@@ -14,6 +14,7 @@ from tests.testmodels import (
     Event,
     Extra,
     M2mWithO2oPk,
+    ModelWithATableNameLongEnoughToHitIdentifierLimits,
     Node,
     O2oPkModelWithM2m,
     Pair,
@@ -401,6 +402,23 @@ async def test_select_related_sets_valid_nulls(db) -> None:
     assert retrieved_root.left is not None
     assert retrieved_root.left == left_1st_lvl
     assert retrieved_root.left.left == left_2nd_lvl
+
+
+@pytest.mark.asyncio
+async def test_select_related_with_long_table_name(db) -> None:
+    model = ModelWithATableNameLongEnoughToHitIdentifierLimits
+    parent = await model.create(title="parent")
+    child = await model.create(title="child", parent=parent)
+
+    fetched = await model.filter(pk=child.pk).select_related("parent").get()
+    assert fetched.parent is not None
+    assert fetched.parent.pk == parent.pk
+    assert fetched.parent.title == "parent"
+    assert fetched.parent.parent_id is None
+
+    fetched.parent.title = "renamed"
+    await fetched.parent.save()
+    assert (await model.get(pk=parent.pk)).title == "renamed"
 
 
 @pytest.mark.asyncio

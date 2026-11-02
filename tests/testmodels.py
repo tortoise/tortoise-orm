@@ -873,6 +873,20 @@ class DoubleFK(Model):
     )
 
 
+class ModelWithATableNameLongEnoughToHitIdentifierLimits(Model):
+    # "<table>__parent.title" is longer than PostgreSQL's 63-byte identifier limit
+    title = fields.CharField(max_length=50)
+    parent: fields.ForeignKeyNullableRelation[
+        "ModelWithATableNameLongEnoughToHitIdentifierLimits"
+    ] = fields.ForeignKeyField(
+        "models.ModelWithATableNameLongEnoughToHitIdentifierLimits",
+        null=True,
+        related_name="children",
+        on_delete=NO_ACTION,
+    )
+    parent_id: int | None
+
+
 class DefaultOrdered(Model):
     one = fields.TextField()
     second = fields.IntField()
