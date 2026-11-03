@@ -277,6 +277,7 @@ _DIM = "\033[2m" if _COLOR else ""
 _GREEN = "\033[32m" if _COLOR else ""
 _YELLOW = "\033[33m" if _COLOR else ""
 _CYAN = "\033[36m" if _COLOR else ""
+_RED = "\033[31m" if _COLOR else ""
 _RESET = "\033[0m" if _COLOR else ""
 
 
