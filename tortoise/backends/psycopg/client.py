@@ -147,7 +147,7 @@ class PsycopgClient(postgres_client.BasePostgresClient):
             pass
 
     async def execute_insert(self, query: str, values: list) -> Any | None:
-        inserted, rows = await self.execute_query(query, values)
+        _, rows = await self.execute_query(query, values)
         if rows:
             return rows[0]
         else:
@@ -185,7 +185,7 @@ class PsycopgClient(postgres_client.BasePostgresClient):
                 return rowcount, cast(list[dict], rows)
 
     async def execute_query_dict(self, query: str, values: list | None = None) -> list[dict]:
-        rowcount, rows = await self.execute_query(query, values, row_factory=psycopg.rows.dict_row)
+        _, rows = await self.execute_query(query, values, row_factory=psycopg.rows.dict_row)
         return rows
 
     async def _expire_connections(self) -> None:
