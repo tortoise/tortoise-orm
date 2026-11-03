@@ -113,6 +113,20 @@ async def test_root_meta_override_limits_pydantic_recursion(db):
     event_model = get_args(tournament_model.model_fields["events"].annotation)[0]
 
     assert "events" not in flat_model.model_fields
+    assert "name" in event_model.model_fields
+    assert "participants" not in event_model.model_fields
+
+
+@pytest.mark.asyncio
+async def test_nested_pydantic_recursion_limit_is_preserved(db, monkeypatch):
+    class PydanticMeta:
+        max_recursion = 1
+
+    monkeypatch.setattr(Event, "PydanticMeta", PydanticMeta, raising=False)
+    tournament_model = pydantic_model_creator(Tournament)
+    event_model = get_args(tournament_model.model_fields["events"].annotation)[0]
+
+    assert "name" in event_model.model_fields
     assert "participants" not in event_model.model_fields
 
 
