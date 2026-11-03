@@ -1,5 +1,5 @@
 import copy
-from typing import Annotated, Any, Literal
+from typing import Annotated, Any, Literal, get_args
 
 import pytest
 import pytest_asyncio
@@ -98,6 +98,22 @@ async def test_backward_relations_with_meta_override(db, pydantic_setup):
     assert "address" not in event_non_backward_schema_by_override["properties"]
     del event_schema["properties"]["address"]
     assert event_schema["properties"] == event_non_backward_schema_by_override["properties"]
+
+
+@pytest.mark.asyncio
+async def test_root_meta_override_limits_pydantic_recursion(db):
+    class PydanticMetaOverrideNoRelations:
+        max_recursion = 0
+
+    class PydanticMetaOverride:
+        max_recursion = 1
+
+    flat_model = pydantic_model_creator(Tournament, meta_override=PydanticMetaOverrideNoRelations)
+    tournament_model = pydantic_model_creator(Tournament, meta_override=PydanticMetaOverride)
+    event_model = get_args(tournament_model.model_fields["events"].annotation)[0]
+
+    assert "events" not in flat_model.model_fields
+    assert "participants" not in event_model.model_fields
 
 
 @pytest.mark.asyncio

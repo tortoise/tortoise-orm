@@ -557,12 +557,11 @@ class PydanticModelCreator:
         if not allow_cycles and model_cls in (c[0] for c in stack[:-1]):
             return None
 
-        level = 1
-        for _, _, parent_max_recursion in stack[1:]:
-            if level >= parent_max_recursion:
+        recursion_levels = len(stack)
+        for index, (_, _, parent_max_recursion) in enumerate(stack):
+            level = recursion_levels - index
+            if level > parent_max_recursion:
                 return None
-
-            level += 1
         pmc = PydanticModelCreator(
             model_cls,
             exclude=exclude,
