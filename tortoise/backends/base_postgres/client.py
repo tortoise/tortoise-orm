@@ -36,10 +36,6 @@ def translate_exceptions(func: FuncType) -> FuncType:
     return _translate_exceptions
 
 
-class BasePostgresPool:
-    pass
-
-
 class BasePostgresClient(BaseDBAsyncClient, abc.ABC):
     DSN_TEMPLATE = "postgres://{user}:{password}@{host}:{port}/{database}"
     query_class: type[PostgreSQLQuery] = PostgreSQLQuery

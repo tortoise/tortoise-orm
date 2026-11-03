@@ -313,7 +313,7 @@ class DeleteModel(TortoiseOperation):
         model_ref = f"{app_label}.{self.name}"
 
         for model_state in state.models.values():
-            for field_name, field in model_state.fields.items():
+            for field in model_state.fields.values():
                 if not isinstance(field, DIRECT_RELATION_FIELDS):
                     continue
 
