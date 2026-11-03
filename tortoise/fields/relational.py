@@ -7,14 +7,7 @@ from typing import TYPE_CHECKING, Any, Generic, Literal, TypeVar, overload
 from pypika_tortoise.queries import Table
 
 from tortoise.exceptions import ConfigurationError, NoValuesFetched, OperationalError
-from tortoise.fields.base import (
-    CASCADE,
-    SET_NULL,
-    Field,
-    ManyToManyFieldKwargs,
-    OnDelete,
-    RelationalFieldKwargs,
-)
+from tortoise.fields.base import CASCADE, SET_NULL, Field, OnDelete
 
 if TYPE_CHECKING:  # pragma: nocoverage
     import sys
@@ -22,6 +15,7 @@ if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.backends.base.client import BaseDBAsyncClient
     from tortoise.models import Model
     from tortoise.queryset import Q, QuerySet
+    from tortoise.fields.base import ManyToManyFieldKwargs, RelationalFieldKwargs
 
     if sys.version_info >= (3, 11):
         from typing import Unpack
@@ -212,10 +206,7 @@ class ManyToManyRelation(ReverseRelation[MODEL]):
             pks_f.append(pk_f)
         through_table = Table(self.field.through, schema=self.field.through_schema)
         backward_key, forward_key = self.field.backward_key, self.field.forward_key
-        backward_field, forward_field = (
-            through_table[backward_key],
-            through_table[forward_key],
-        )
+        backward_field, forward_field = through_table[backward_key], through_table[forward_key]
         select_query = (
             db.query_class.from_(through_table).where(backward_field == pk_b).select(forward_key)
         )

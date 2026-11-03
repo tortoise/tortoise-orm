@@ -36,9 +36,7 @@ except ImportError:  # pragma: nocoverage
 
 try:
     from pydantic import BaseModel as _PydanticBaseModel
-    from pydantic._internal._model_construction import (
-        ModelMetaclass as _PydanticModelMetaclass,
-    )
+    from pydantic._internal._model_construction import ModelMetaclass as _PydanticModelMetaclass
 except ImportError:
     _PydanticBaseModel = None  # type: ignore[assignment,misc]
     _PydanticModelMetaclass = None  # type: ignore[assignment,misc]
