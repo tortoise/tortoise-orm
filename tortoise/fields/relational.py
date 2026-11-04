@@ -13,9 +13,9 @@ if TYPE_CHECKING:  # pragma: nocoverage
     import sys
 
     from tortoise.backends.base.client import BaseDBAsyncClient
+    from tortoise.fields.base import ManyToManyFieldKwargs, RelationalFieldKwargs
     from tortoise.models import Model
     from tortoise.queryset import Q, QuerySet
-    from tortoise.fields.base import ManyToManyFieldKwargs, RelationalFieldKwargs
 
     if sys.version_info >= (3, 11):
         from typing import Unpack
