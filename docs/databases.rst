@@ -169,6 +169,48 @@ PostgreSQL optional parameters are pass-though parameters to the driver, see `he
 
 In case any of ``user``, ``password``, ``host``, ``port`` parameters is missing, we are letting ``asyncpg``/``psycopg`` retrieve it from default sources (standard PostgreSQL environment variables or default values).
 
+.. _db_password_callable:
+
+Rotating credentials
+--------------------
+
+``password`` also accepts a callable, which is invoked every time a new connection is
+opened. The callable may be synchronous or asynchronous, and must return a string.
+
+This makes Tortoise usable with short-lived credentials such as AWS RDS/Aurora IAM
+authentication tokens, Azure Entra ID tokens or Vault leases, where the password expires
+long before the pool does:
+
+.. code-block:: python3
+
+    async def get_token() -> str:
+        return await mint_short_lived_token()
+
+    await Tortoise.init(
+        config={
+            "connections": {
+                "default": {
+                    "engine": "tortoise.backends.asyncpg",
+                    "credentials": {
+                        "host": "db.host",
+                        "port": 5432,
+                        "user": "someuser",
+                        "password": get_token,
+                        "database": "somedb",
+                    },
+                }
+            },
+            "apps": {...},
+        }
+    )
+
+The callable is responsible for caching: it is awaited for every new connection the pool
+creates, so an expensive token request should be memoized until shortly before expiry.
+
+.. note::
+   Callable passwords cannot be expressed in a DB URL, so this requires dictionary
+   configuration. They are supported on the ``asyncpg`` and ``psycopg`` backends only.
+
 
 MySQL/MariaDB
 =============

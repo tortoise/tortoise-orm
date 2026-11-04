@@ -35,7 +35,7 @@ class MigrationRecorder:
 
     def _make_model(self, table_name: str) -> type[Model]:
         class MigrationRecord(Model):
-            id = fields.IntField(pk=True)
+            id = fields.IntField(primary_key=True)
             app = fields.CharField(max_length=255)
             name = fields.CharField(max_length=255)
             applied_at = fields.DatetimeField()

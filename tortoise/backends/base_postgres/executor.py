@@ -6,10 +6,8 @@ from functools import partial
 from typing import TYPE_CHECKING, Any, cast
 
 from pypika_tortoise.dialects import PostgreSQLQueryBuilder
-from pypika_tortoise.queries import QueryBuilder
 from pypika_tortoise.terms import Term, ValueWrapper
 
-from tortoise import Model
 from tortoise.backends.base.executor import BaseExecutor
 from tortoise.contrib.postgres.array_functions import (
     postgres_array_contained_by,
@@ -43,7 +41,10 @@ from tortoise.filters import (
 )
 
 if TYPE_CHECKING:  # pragma: nocoverage
+    from pypika_tortoise.queries import QueryBuilder
+
     from tortoise.filters import FilterInfoDict
+    from tortoise.models import Model
 
 
 def postgres_search(

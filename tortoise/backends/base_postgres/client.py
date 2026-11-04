@@ -13,6 +13,7 @@ from tortoise.backends.base.client import (
     BaseDBAsyncClient,
     Capabilities,
     ConnectionWrapper,
+    PasswordType,
     PoolConnectionWrapper,
     TransactionContext,
 )
@@ -61,7 +62,7 @@ class BasePostgresClient(BaseDBAsyncClient, abc.ABC):
     def __init__(
         self,
         user: str | None = None,
-        password: str | None = None,
+        password: PasswordType = None,
         database: str | None = None,
         host: str | None = None,
         port: SupportsInt = 5432,

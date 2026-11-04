@@ -1,12 +1,12 @@
 import asyncio
-import sys
 
 import pytest
 
-from tests.testmodels import Tournament, UniqueName
+from tests.testmodels import Tournament, UniqueName, UniqueNameRequired
 from tortoise import connections
 from tortoise.contrib.test import requireCapability
 from tortoise.contrib.test.condition import NotEQ
+from tortoise.exceptions import OperationalError
 from tortoise.transactions import in_transaction
 
 # =============================================================================
@@ -15,7 +15,7 @@ from tortoise.transactions import in_transaction
 
 
 @pytest.mark.asyncio
-async def test_concurrency_read_isolated(db_isolated):
+async def test_concurrency_read_isolated(db_isolated) -> None:
     """Test concurrent reads."""
     await Tournament.create(name="Test")
     tour1 = await Tournament.first()
@@ -24,7 +24,7 @@ async def test_concurrency_read_isolated(db_isolated):
 
 
 @pytest.mark.asyncio
-async def test_concurrency_create_isolated(db_isolated):
+async def test_concurrency_create_isolated(db_isolated) -> None:
     """Test concurrent creates."""
     all_write = await asyncio.gather(*[Tournament.create(name="Test") for _ in range(100)])
     all_read = await Tournament.all()
@@ -32,7 +32,7 @@ async def test_concurrency_create_isolated(db_isolated):
 
 
 @pytest.mark.asyncio
-async def test_nonconcurrent_get_or_create_isolated(db_isolated):
+async def test_nonconcurrent_get_or_create_isolated(db_isolated) -> None:
     """Test non-concurrent get_or_create."""
     unas = [await UniqueName.get_or_create(name="c") for _ in range(10)]
     una_created = [una[1] for una in unas if una[1] is True]
@@ -41,12 +41,204 @@ async def test_nonconcurrent_get_or_create_isolated(db_isolated):
         assert una[0] == unas[0][0]
 
 
-@pytest.mark.skipif(
-    sys.version_info < (3, 7), reason="aiocontextvars backport not handling this well"
+@pytest.mark.parametrize("method_name", ["update_or_create", "get_or_create"])
+@pytest.mark.parametrize(
+    "defaults_pair",
+    [
+        ({"optional": "writer-a"}, {"optional": "writer-b"}),
+        ({"optional": "writer-a"}, {"other_optional": "writer-b"}),
+    ],
 )
+@pytest.mark.asyncio
+async def test_concurrent_create_applies_defaults(
+    db_isolated, monkeypatch, method_name, defaults_pair
+) -> None:
+    """Both callers read a missing row before either attempts the real INSERT."""
+    original_create_or_get = UniqueNameRequired._create_or_get
+    both_missing = asyncio.Event()
+    create_attempts = 0
+
+    async def synchronized_create_or_get(
+        cls, db, defaults, **kwargs
+    ) -> tuple[UniqueNameRequired, bool]:
+        nonlocal create_attempts
+        create_attempts += 1
+        if create_attempts == 2:
+            both_missing.set()
+        await both_missing.wait()
+        return await original_create_or_get(db, defaults, **kwargs)
+
+    monkeypatch.setattr(
+        UniqueNameRequired, "_create_or_get", classmethod(synchronized_create_or_get)
+    )
+    method = getattr(UniqueNameRequired, method_name)
+    tasks = [
+        asyncio.create_task(method(name="race", defaults=defaults)) for defaults in defaults_pair
+    ]
+    try:
+        results = await asyncio.wait_for(asyncio.gather(*tasks), timeout=30)
+    finally:
+        for task in tasks:
+            if not task.done():
+                task.cancel()
+        await asyncio.gather(*tasks, return_exceptions=True)
+
+    assert sum(created for _, created in results) == 1
+    assert await UniqueNameRequired.filter(name="race").count() == 1
+    stored = await UniqueNameRequired.get(name="race")
+    if method_name == "update_or_create":
+        for defaults, (instance, _) in zip(defaults_pair, results, strict=False):
+            for field, value in defaults.items():
+                assert getattr(instance, field) == value
+        for defaults, (_, created) in zip(defaults_pair, results, strict=False):
+            if not created:
+                for field, value in defaults.items():
+                    assert getattr(stored, field) == value
+        if "other_optional" in defaults_pair[1]:
+            assert stored.optional == "writer-a"
+            assert stored.other_optional == "writer-b"
+    else:
+        winner = next(instance for instance, created in results if created)
+        for instance, _ in results:
+            assert instance.optional == stored.optional == winner.optional
+            assert instance.other_optional == stored.other_optional == winner.other_optional
+
+
+@pytest.mark.asyncio
+async def test_update_or_create_refreshes_after_create_race(db_isolated, monkeypatch) -> None:
+    """The unlocked conflict lookup must not overwrite another writer's later changes."""
+    original_create_or_get = UniqueNameRequired._create_or_get
+
+    async def racing_create_or_get(cls, db, defaults, **kwargs) -> tuple[UniqueNameRequired, bool]:
+        await cls.create(name=kwargs["name"], optional="winner", other_optional="old")
+        instance, created = await original_create_or_get(db, defaults, **kwargs)
+        assert created is False
+        await cls.filter(pk=instance.pk).update(other_optional="concurrent")
+        return instance, created
+
+    monkeypatch.setattr(UniqueNameRequired, "_create_or_get", classmethod(racing_create_or_get))
+    instance, created = await UniqueNameRequired.update_or_create(
+        name="race", defaults={"optional": "loser"}
+    )
+    assert created is False
+    assert instance.optional == "loser"
+    assert instance.other_optional == "concurrent"
+    stored = await UniqueNameRequired.get(pk=instance.pk)
+    assert stored.optional == "loser"
+    assert stored.other_optional == "concurrent"
+
+
+@pytest.mark.asyncio
+async def test_update_or_create_retries_deleted_race_winner(db_isolated, monkeypatch) -> None:
+    """A row deleted after the conflict lookup can be created by the retry."""
+    original_create_or_get = UniqueNameRequired._create_or_get
+    create_attempts = 0
+
+    async def racing_create_or_get(cls, db, defaults, **kwargs) -> tuple[UniqueNameRequired, bool]:
+        nonlocal create_attempts
+        create_attempts += 1
+        if create_attempts == 1:
+            await cls.create(name=kwargs["name"], optional="winner")
+        instance, created = await original_create_or_get(db, defaults, **kwargs)
+        if create_attempts == 1:
+            assert created is False
+            await instance.delete()
+        return instance, created
+
+    monkeypatch.setattr(UniqueNameRequired, "_create_or_get", classmethod(racing_create_or_get))
+    instance, created = await UniqueNameRequired.update_or_create(
+        name="race", defaults={"optional": "retry"}
+    )
+    assert created is True
+    assert instance.optional == "retry"
+    assert await UniqueNameRequired.filter(name="race").count() == 1
+    assert (await UniqueNameRequired.get(pk=instance.pk)).optional == "retry"
+
+
+@pytest.mark.asyncio
+async def test_update_or_create_updates_recreated_race_winner(db_isolated, monkeypatch) -> None:
+    """A second insert conflict still gets a fresh locked read before updating."""
+    original_create_or_get = UniqueNameRequired._create_or_get
+    deleted_winner = False
+
+    async def racing_create_or_get(cls, db, defaults, **kwargs) -> tuple[UniqueNameRequired, bool]:
+        nonlocal deleted_winner
+        await cls.create(using_db=db, name=kwargs["name"], optional="winner", other_optional="old")
+        instance, created = await original_create_or_get(db, defaults, **kwargs)
+        if not deleted_winner:
+            await instance.delete(using_db=db)
+            deleted_winner = True
+        else:
+            await cls.filter(pk=instance.pk).using_db(db).update(other_optional="concurrent")
+        return instance, created
+
+    monkeypatch.setattr(UniqueNameRequired, "_create_or_get", classmethod(racing_create_or_get))
+    instance, created = await UniqueNameRequired.update_or_create(
+        name="race", defaults={"optional": "loser"}
+    )
+    assert created is False
+    assert instance.optional == "loser"
+    assert instance.other_optional == "concurrent"
+    assert await UniqueNameRequired.filter(name="race").count() == 1
+    stored = await UniqueNameRequired.get(pk=instance.pk)
+    assert stored.optional == "loser"
+    assert stored.other_optional == "concurrent"
+
+
+@requireCapability(supports_transactions=True)
+@pytest.mark.asyncio
+async def test_update_or_create_repeated_deletions_terminate(db_isolated, monkeypatch) -> None:
+    """Sustained churn fails promptly and rolls back the caller's transaction."""
+    original_create_or_get = UniqueNameRequired._create_or_get
+
+    async def racing_create_or_get(cls, db, defaults, **kwargs) -> tuple[UniqueNameRequired, bool]:
+        await cls.create(using_db=db, name=kwargs["name"], optional="winner")
+        instance, created = await original_create_or_get(db, defaults, **kwargs)
+        await instance.delete(using_db=db)
+        return instance, created
+
+    async def update_during_churn() -> None:
+        async with in_transaction("models") as connection:
+            await UniqueNameRequired.create(using_db=connection, name="caller")
+            await UniqueNameRequired.update_or_create(
+                name="race", defaults={"optional": "loser"}, using_db=connection
+            )
+
+    monkeypatch.setattr(UniqueNameRequired, "_create_or_get", classmethod(racing_create_or_get))
+    with pytest.raises(OperationalError) as exc:
+        await asyncio.wait_for(update_during_churn(), timeout=30)
+    # An INSERT IntegrityError is not the deliberate exhaustion error.
+    assert type(exc.value) is OperationalError
+    assert await UniqueNameRequired.filter(name="caller").count() == 0
+    assert await UniqueNameRequired.filter(name="race").count() == 0
+
+
+@requireCapability(supports_transactions=True)
+@pytest.mark.asyncio
+async def test_update_or_create_race_in_existing_transaction(db_isolated, monkeypatch) -> None:
+    """Conflict recovery and its UPDATE must remain inside the caller's transaction."""
+    original_create_or_get = UniqueNameRequired._create_or_get
+
+    async def racing_create_or_get(cls, db, defaults, **kwargs) -> tuple[UniqueNameRequired, bool]:
+        await cls.create(using_db=db, name=kwargs["name"], optional="winner")
+        return await original_create_or_get(db, defaults, **kwargs)
+
+    monkeypatch.setattr(UniqueNameRequired, "_create_or_get", classmethod(racing_create_or_get))
+    with pytest.raises(RuntimeError, match="rollback caller transaction"):
+        async with in_transaction("models") as connection:
+            instance, created = await UniqueNameRequired.update_or_create(
+                name="race", defaults={"optional": "loser"}, using_db=connection
+            )
+            assert created is False
+            assert instance.optional == "loser"
+            assert (await UniqueNameRequired.get(name="race")).optional == "loser"
+            raise RuntimeError("rollback caller transaction")
+    assert await UniqueNameRequired.filter(name="race").count() == 0
+
+
 @requireCapability(dialect=NotEQ("mssql"))
 @pytest.mark.asyncio
-async def test_concurrent_get_or_create_isolated(db_isolated):
+async def test_concurrent_get_or_create_isolated(db_isolated) -> None:
     """Test concurrent get_or_create."""
     unas = await asyncio.gather(*[UniqueName.get_or_create(name="d") for _ in range(10)])
     una_created = [una[1] for una in unas if una[1] is True]
@@ -55,15 +247,12 @@ async def test_concurrent_get_or_create_isolated(db_isolated):
         assert una[0] == unas[0][0]
 
 
-@pytest.mark.skipif(
-    sys.version_info < (3, 7), reason="aiocontextvars backport not handling this well"
-)
 @requireCapability(supports_transactions=True)
 @pytest.mark.asyncio
-async def test_concurrent_transactions_with_multiple_ops(db_isolated):
+async def test_concurrent_transactions_with_multiple_ops(db_isolated) -> None:
     """Test concurrent transactions with multiple operations."""
 
-    async def create_in_transaction():
+    async def create_in_transaction() -> None:
         async with in_transaction():
             await asyncio.gather(*[Tournament.create(name="Test") for _ in range(100)])
 
@@ -72,15 +261,12 @@ async def test_concurrent_transactions_with_multiple_ops(db_isolated):
     assert count == 1000
 
 
-@pytest.mark.skipif(
-    sys.version_info < (3, 7), reason="aiocontextvars backport not handling this well"
-)
 @requireCapability(supports_transactions=True)
 @pytest.mark.asyncio
-async def test_concurrent_transactions_with_single_op(db_isolated):
+async def test_concurrent_transactions_with_single_op(db_isolated) -> None:
     """Test concurrent transactions with single operation."""
 
-    async def create():
+    async def create() -> None:
         async with in_transaction():
             await Tournament.create(name="Test")
 
@@ -89,18 +275,14 @@ async def test_concurrent_transactions_with_single_op(db_isolated):
     assert count == 100
 
 
-@pytest.mark.skipif(
-    sys.version_info < (3, 7), reason="aiocontextvars backport not handling this well"
-)
 @requireCapability(supports_transactions=True)
 @pytest.mark.asyncio
-async def test_nested_concurrent_transactions_with_multiple_ops(db_isolated):
+async def test_nested_concurrent_transactions_with_multiple_ops(db_isolated) -> None:
     """Test nested concurrent transactions with multiple operations."""
 
-    async def create_in_transaction():
-        async with in_transaction():
-            async with in_transaction():
-                await asyncio.gather(*[Tournament.create(name="Test") for _ in range(100)])
+    async def create_in_transaction() -> None:
+        async with in_transaction(), in_transaction():
+            await asyncio.gather(*[Tournament.create(name="Test") for _ in range(100)])
 
     await asyncio.gather(*[create_in_transaction() for _ in range(10)])
     count = await Tournament.all().count()
@@ -114,7 +296,7 @@ async def test_nested_concurrent_transactions_with_multiple_ops(db_isolated):
 
 @requireCapability(supports_transactions=True)
 @pytest.mark.asyncio
-async def test_concurrency_read_transactioned(db):
+async def test_concurrency_read_transactioned(db) -> None:
     """Test concurrent reads within transaction."""
     await Tournament.create(name="Test")
     tour1 = await Tournament.first()
@@ -124,7 +306,7 @@ async def test_concurrency_read_transactioned(db):
 
 @requireCapability(supports_transactions=True)
 @pytest.mark.asyncio
-async def test_concurrency_create_transactioned(db):
+async def test_concurrency_create_transactioned(db) -> None:
     """Test concurrent creates within transaction."""
     all_write = await asyncio.gather(*[Tournament.create(name="Test") for _ in range(100)])
     all_read = await Tournament.all()
@@ -133,7 +315,7 @@ async def test_concurrency_create_transactioned(db):
 
 @requireCapability(supports_transactions=True)
 @pytest.mark.asyncio
-async def test_nonconcurrent_get_or_create_transactioned(db):
+async def test_nonconcurrent_get_or_create_transactioned(db) -> None:
     """Test non-concurrent get_or_create within transaction."""
     unas = [await UniqueName.get_or_create(name="a") for _ in range(10)]
     una_created = [una[1] for una in unas if una[1] is True]
@@ -149,7 +331,7 @@ async def test_nonconcurrent_get_or_create_transactioned(db):
 
 
 @pytest.mark.asyncio
-async def test_concurrent_queries_lazy_init(db_isolated):
+async def test_concurrent_queries_lazy_init(db_isolated) -> None:
     """Test concurrent queries with lazy connection initialization.
 
     Tortoise.init is lazy and does not initialize the database connection
@@ -162,7 +344,7 @@ async def test_concurrent_queries_lazy_init(db_isolated):
 
 
 @pytest.mark.asyncio
-async def test_concurrent_transactions_lazy_init(db_isolated):
+async def test_concurrent_transactions_lazy_init(db_isolated) -> None:
     """Test concurrent transactions with lazy connection initialization."""
 
     async def transaction() -> None:
