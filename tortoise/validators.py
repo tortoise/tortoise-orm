@@ -358,7 +358,7 @@ class EmailValidator(Validator):
             raise InvalidEmailAddress()
 
         if self.allowed_domains:
-            if domain_part not in self.allowed_domains:
+            if domain_part.lower() not in (domain.lower() for domain in self.allowed_domains):
                 raise InvalidEmailAddress()
         elif not self._validate_domain_part(domain_part):
             raise InvalidEmailAddress()
