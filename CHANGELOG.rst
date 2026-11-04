@@ -38,6 +38,7 @@ Fixed
 - Parse false boolean values in database URL options correctly. (#2377)
 - Reject domain names with trailing newlines in ``DomainNameValidator``. (#2386)
 - ``QuerySet.exists()`` now respects ``limit()`` and ``offset()``, so ``limit(0)`` or an offset past the last row returns ``False``. (#2389)
+- Match email domain allowlists without regard to case. (#2403)
 
 1.1.9
 -----

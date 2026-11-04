@@ -261,6 +261,20 @@ class TestEmailValidator:
         validator("user@example.com")
         validator("user@test.com")
 
+    @pytest.mark.parametrize(
+        "allowed_domain,email",
+        [
+            ("example.com", "User@EXAMPLE.COM"),
+            ("EXAMPLE.COM", "User@example.com"),
+            ("LocalHost", "User@LOCALHOST"),
+        ],
+    )
+    def test_email_validator_allowed_domains_ignore_case(self, allowed_domain, email) -> None:
+        validator = EmailValidator(allowed_domains=[allowed_domain])
+        validator(email)
+        with pytest.raises(InvalidEmailAddress):
+            validator("User@other.example.com")
+
     def test_email_validator_invalid_allowed_domains(self) -> None:
         validator = EmailValidator(allowed_domains=["example.com"])
         validator("user@example.com")
