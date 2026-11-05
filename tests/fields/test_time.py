@@ -14,7 +14,12 @@ from tests import testmodels
 from tortoise import fields, timezone
 from tortoise.contrib import test
 from tortoise.contrib.test.condition import In, NotIn
-from tortoise.exceptions import ConfigurationError, IntegrityError, OperationalError
+from tortoise.exceptions import (
+    ConfigurationError,
+    IntegrityError,
+    OperationalError,
+    ValidationError,
+)
 from tortoise.expressions import F, Q
 from tortoise.timezone import UTC, ZoneInfo, get_default_timezone, parse_timezone
 
@@ -460,6 +465,18 @@ async def test_datetime_filter_by_year_month_day(db):
 # ============================================================================
 # TestTimeFields (postgres) -> test_time_*
 # ============================================================================
+
+
+def test_time_timedelta_validation():
+    def reject_negative(value):
+        if value < timedelta():
+            raise ValidationError("negative time")
+
+    field = fields.TimeField(validators=[reject_negative])
+    value = timedelta(hours=1)
+    assert field.to_db_value(value, testmodels.TimeFields) is value
+    with pytest.raises(ValidationError, match="negative time"):
+        field.to_db_value(-value, testmodels.TimeFields)
 
 
 @pytest.mark.asyncio

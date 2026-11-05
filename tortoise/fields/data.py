@@ -648,8 +648,6 @@ class TimeField(Field[T_TIME], datetime.time):
         if value is not None:
             if isinstance(value, str):
                 value = datetime.time.fromisoformat(value)
-            if isinstance(value, datetime.timedelta):
-                return value
             if (
                 isinstance(value, datetime.datetime | datetime.time)
                 and get_use_tz()
