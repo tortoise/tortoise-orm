@@ -1929,6 +1929,34 @@ CREATE INDEX IF NOT EXISTS "idx_index_(TO_TSV_50a2c7" ON "index" USING GIN ((TO_
 
 
 @pytest.mark.asyncio
+async def test_asyncpg_unique_index_nulls_not_distinct():
+    await _reset_tortoise()
+    try:
+        await _init_for_asyncpg("tests.schema.models_postgres_unique_index")
+        sql = get_schema_sql(connections.get("default"), safe=False)
+        assert (
+            'CREATE UNIQUE INDEX "uidx_customer_shop_id_c9ba87" ON "customer"'
+            ' ("shop_id", "phone_number", "deleted_at") NULLS NOT DISTINCT;' in sql
+        )
+    finally:
+        await _teardown_tortoise()
+
+
+@pytest.mark.asyncio
+async def test_psycopg_unique_index_nulls_not_distinct():
+    await _reset_tortoise()
+    try:
+        await _init_for_psycopg("tests.schema.models_postgres_unique_index")
+        sql = get_schema_sql(connections.get("default"), safe=False)
+        assert (
+            'CREATE UNIQUE INDEX "uidx_customer_shop_id_c9ba87" ON "customer"'
+            ' ("shop_id", "phone_number", "deleted_at") NULLS NOT DISTINCT;' in sql
+        )
+    finally:
+        await _teardown_tortoise()
+
+
+@pytest.mark.asyncio
 async def test_psycopg_m2m_no_auto_create():
     await _reset_tortoise()
     try:
