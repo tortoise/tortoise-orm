@@ -1,6 +1,9 @@
 import warnings
+from datetime import datetime
 
 import pytest
+from pypika_tortoise import MySQLQuery, OracleQuery, PostgreSQLQuery, SQLLiteQuery
+from pypika_tortoise.dialects import MSSQLQuery
 
 from tortoise.backends.base.client import Capabilities
 from tortoise.backends.mysql import MySQLClient
@@ -8,7 +11,14 @@ from tortoise.exceptions import DBConnectionError, OperationalError
 from tortoise.migrations.executor import MigrationExecutor
 from tortoise.migrations.recorder import MigrationRecorder
 
-RECORDER_DIALECTS = ["sqlite", "postgres", "mysql", "mssql", "oracle"]
+QUERY_CLASSES = {
+    "sqlite": SQLLiteQuery,
+    "postgres": PostgreSQLQuery,
+    "mysql": MySQLQuery,
+    "mssql": MSSQLQuery,
+    "oracle": OracleQuery,
+}
+RECORDER_DIALECTS = list(QUERY_CLASSES)
 
 
 class FakeConnection:
@@ -16,18 +26,16 @@ class FakeConnection:
         self,
         dialect: str,
         *,
+        query_class: type | None = None,
         table_exists: bool = True,
         error: Exception | None = None,
     ) -> None:
         self.capabilities = Capabilities(dialect)
+        self.query_class = query_class or QUERY_CLASSES[dialect]
         self.table_exists = table_exists
         self.error = error
-        self.executed_scripts: list[str] = []
         self.inserts: list[tuple[str, list]] = []
         self.queries: list[tuple[str, list | None]] = []
-
-    async def execute_script(self, query: str) -> None:
-        self.executed_scripts.append(query)
 
     async def execute_insert(self, query: str, values: list) -> int:
         self.inserts.append((query, values))
@@ -53,14 +61,14 @@ async def test_recorder_quotes_mysql_identifiers() -> None:
     assert connection.inserts
     insert_query, insert_values = connection.inserts[0]
     assert "INSERT INTO `tortoise_migrations`" in insert_query
-    assert "(`app`, `name`, `applied_at`)" in insert_query
+    assert "(`app`,`name`,`applied_at`)" in insert_query
     assert "%s" in insert_query
     assert insert_values[0] == "app"
     assert insert_values[1] == "0001_initial"
 
     assert connection.queries
     select_query = connection.queries[-1][0]
-    assert "SELECT `app`, `name`" in select_query
+    assert "SELECT `app`,`name`" in select_query
 
 
 @pytest.mark.asyncio
@@ -72,9 +80,8 @@ async def test_recorder_quotes_mssql_identifiers() -> None:
 
     assert connection.queries
     delete_query, delete_values = connection.queries[0]
-    assert "DELETE FROM [tortoise_migrations]" in delete_query
-    assert "[app] = ?" in delete_query
-    assert "[name] = ?" in delete_query
+    assert 'DELETE FROM "tortoise_migrations"' in delete_query
+    assert '"app"=? AND "name"=?' in delete_query
     assert delete_values == ["app", "0001_initial"]
 
 
@@ -82,12 +89,10 @@ async def test_recorder_quotes_mssql_identifiers() -> None:
 async def test_recorder_uses_parameterized_insert() -> None:
     """Ensure record_applied uses parameterized queries instead of string interpolation.
 
-    This is critical for MariaDB compatibility \u2014 MariaDB rejects ISO 8601
+    This is critical for MariaDB compatibility — MariaDB rejects ISO 8601
     datetime strings with timezone info (e.g. '2026-03-04T18:06:51+00:00').
     See https://github.com/tortoise/tortoise-orm/issues/2132
     """
-    from datetime import datetime
-
     connection = FakeConnection("mysql")
     recorder = MigrationRecorder(connection)
 
@@ -96,7 +101,7 @@ async def test_recorder_uses_parameterized_insert() -> None:
     assert len(connection.inserts) == 1
     query, values = connection.inserts[0]
     # Query must use placeholders, not inline values
-    assert "VALUES (%s, %s, %s)" in query
+    assert "VALUES (%s,%s,%s)" in query
     assert values[0] == "models"
     assert values[1] == "0001_init"
     assert isinstance(values[2], datetime)
@@ -112,8 +117,7 @@ async def test_recorder_uses_parameterized_delete() -> None:
 
     assert len(connection.queries) == 1
     query, values = connection.queries[0]
-    assert "WHERE `app` = %s" in query
-    assert "`name` = %s" in query
+    assert "WHERE `app`=%s AND `name`=%s" in query
     assert values == ["models", "0001_init"]
 
 
@@ -126,7 +130,20 @@ async def test_recorder_postgres_placeholders() -> None:
 
     assert len(connection.inserts) == 1
     query, values = connection.inserts[0]
-    assert "VALUES ($1, $2, $3)" in query
+    assert "VALUES ($1,$2,$3)" in query
+
+
+@pytest.mark.asyncio
+async def test_recorder_psycopg_placeholders() -> None:
+    psycopg_client = pytest.importorskip("tortoise.backends.psycopg.client")
+    connection = FakeConnection("postgres", query_class=psycopg_client.PsycopgSQLQuery)
+    recorder = MigrationRecorder(connection)
+
+    await recorder.record_applied("app", "0001_initial")
+    await recorder.record_unapplied("app", "0001_initial")
+
+    assert "VALUES (%s,%s,%s)" in connection.inserts[0][0]
+    assert '"app"=%s AND "name"=%s' in connection.queries[0][0]
 
 
 @pytest.mark.asyncio
@@ -138,11 +155,10 @@ async def test_recorder_sqlite_placeholders() -> None:
     await recorder.record_unapplied("app", "0001_initial")
 
     insert_query = connection.inserts[0][0]
-    assert "VALUES (?, ?, ?)" in insert_query
+    assert "VALUES (?,?,?)" in insert_query
 
     delete_query = connection.queries[0][0]
-    assert '"app" = ?' in delete_query
-    assert '"name" = ?' in delete_query
+    assert '"app"=? AND "name"=?' in delete_query
 
 
 def test_recorder_model_emits_no_field_deprecation_warnings() -> None:
@@ -171,11 +187,10 @@ async def test_recorder_oracle_placeholders() -> None:
 
     insert_query = connection.inserts[0][0]
     assert 'INSERT INTO "tortoise_migrations"' in insert_query
-    assert "VALUES (?, ?, ?)" in insert_query
+    assert "VALUES (?,?,?)" in insert_query
 
     delete_query = connection.queries[0][0]
-    assert '"app" = ?' in delete_query
-    assert '"name" = ?' in delete_query
+    assert '"app"=? AND "name"=?' in delete_query
 
 
 @pytest.mark.asyncio
