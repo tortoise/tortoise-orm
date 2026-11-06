@@ -2,7 +2,7 @@ from uuid import UUID, uuid4
 
 import pytest
 
-from tests.testmodels import UniqueName, UUIDPkModel
+from tests.testmodels import OnlyGeneratedPk, UniqueName, UUIDPkModel
 from tortoise.contrib.test import requireCapability
 from tortoise.contrib.test.condition import NotEQ
 from tortoise.exceptions import IntegrityError
@@ -207,3 +207,36 @@ async def test_bulk_create_ignore_conflicts(db_truncate):
     await UniqueName.bulk_create([name1, name2], ignore_conflicts=True)
     with pytest.raises(IntegrityError):
         await UniqueName.bulk_create([name1, name2])
+
+
+@pytest.mark.asyncio
+async def test_create_model_with_only_generated_pk(db_truncate):
+    """Test create inserts a row when the generated pk is the only column."""
+    first = await OnlyGeneratedPk.create()
+    second = await OnlyGeneratedPk.create()
+    assert first.pk != second.pk
+    assert sorted(await OnlyGeneratedPk.all().values_list("id", flat=True)) == sorted(
+        [first.pk, second.pk]
+    )
+
+
+@pytest.mark.asyncio
+async def test_bulk_create_model_with_only_generated_pk(db_truncate):
+    """Test bulk create inserts one row per instance when the generated pk is the only column."""
+    await OnlyGeneratedPk.bulk_create([OnlyGeneratedPk() for _ in range(3)])
+    ids = await OnlyGeneratedPk.all().values_list("id", flat=True)
+    assert len(set(ids)) == 3
+
+
+@pytest.mark.asyncio
+@requireCapability(dialect=NotEQ("mssql"))
+async def test_bulk_create_model_with_only_generated_pk_explicit_pk(db_truncate):
+    """Test bulk create with explicit and default pks when the generated pk is the only column."""
+    await OnlyGeneratedPk.bulk_create([OnlyGeneratedPk(id=10), OnlyGeneratedPk()])
+    await OnlyGeneratedPk.bulk_create(
+        [OnlyGeneratedPk(id=20), OnlyGeneratedPk(id=20), OnlyGeneratedPk()],
+        ignore_conflicts=True,
+    )
+    ids = await OnlyGeneratedPk.all().values_list("id", flat=True)
+    assert len(ids) == 4
+    assert {10, 20} <= set(ids)
