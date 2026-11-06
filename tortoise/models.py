@@ -937,14 +937,20 @@ class Model(metaclass=ModelMeta):
         :raises ParamsError: If pk is required but not provided.
         """
         obj = copy(self)
+        obj._await_when_save = copy(self._await_when_save)
+        pk_field: Field = self._meta.pk
         if pk is EMPTY:
-            pk_field: Field = self._meta.pk
-            if pk_field.generated is False and pk_field.default is None:
+            default = pk_field.default
+            if not pk_field.generated and default is None:
                 raise ParamsError(
                     f"{self._meta.full_name} requires explicit primary key. Please use .clone(pk=<value>)"
                 )
-            else:
-                obj.pk = None
+            obj.pk = None
+            if not pk_field.generated:
+                if inspect.iscoroutinefunction(default):
+                    obj._await_when_save[obj._meta.pk_attr] = default
+                else:
+                    obj.pk = default() if callable(default) else deepcopy(default)
         else:
             obj.pk = pk
         obj._saved_in_db = False
