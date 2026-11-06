@@ -44,6 +44,7 @@ Fixed
 - Reject domain names with trailing newlines in ``DomainNameValidator``. (#2386)
 - ``QuerySet.exists()`` now respects ``limit()`` and ``offset()``, so ``limit(0)`` or an offset past the last row returns ``False``. (#2389)
 - Respect an explicitly empty ``allowed_schemes`` list in ``URLValidator``. (#2394)
+- Run configured ``UUIDField`` validators before writing values. (#2408)
 
 1.1.9
 -----
