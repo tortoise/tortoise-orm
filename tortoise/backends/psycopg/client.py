@@ -17,8 +17,8 @@ from pypika_tortoise.terms import Parameterizer
 
 import tortoise.backends.base.client as base_client
 import tortoise.backends.base_postgres.client as postgres_client
-import tortoise.backends.psycopg.executor as executor
-import tortoise.exceptions as exceptions
+from tortoise import exceptions
+from tortoise.backends.psycopg import executor
 from tortoise.backends.psycopg.schema_generator import PsycopgSchemaGenerator
 
 FuncType = Callable[..., Any]
@@ -139,10 +139,10 @@ class PsycopgClient(postgres_client.BasePostgresClient):
             await self._pool.open(wait=True, timeout=extra["timeout"])
             await self._post_connect()
             self.log.debug("Created connection pool %s with params: %s", self._pool, self._template)
-        except (psycopg.errors.InvalidCatalogName, psycopg_pool.PoolTimeout):
+        except (psycopg.errors.InvalidCatalogName, psycopg_pool.PoolTimeout) as e:
             raise exceptions.DBConnectionError(
                 f"Can't establish connection to database {self.database}"
-            )
+            ) from e
 
     async def create_pool(self, **kwargs) -> AsyncConnectionPool:
         pool = AsyncConnectionPool(open=False, **kwargs)
@@ -165,10 +165,9 @@ class PsycopgClient(postgres_client.BasePostgresClient):
     @postgres_client.translate_exceptions
     async def execute_many(self, query: str, values: list) -> None:
         connection: psycopg.AsyncConnection
-        async with self.acquire_connection() as connection:
-            async with connection.cursor() as cursor:
-                self.log.debug("%s: %s", query, values)
-                await cursor.executemany(query, values)
+        async with self.acquire_connection() as connection, connection.cursor() as cursor:
+            self.log.debug("%s: %s", query, values)
+            await cursor.executemany(query, values)
 
     @postgres_client.translate_exceptions
     async def execute_query(
@@ -217,14 +216,14 @@ class PsycopgClient(postgres_client.BasePostgresClient):
             psycopg.errors.DataException,
             psycopg.errors.UndefinedTable,
         ) as exc:
-            raise exceptions.OperationalError(exc)
+            raise exceptions.OperationalError(exc) from exc
         except psycopg.errors.IntegrityError as exc:
-            raise exceptions.IntegrityError(exc)
+            raise exceptions.IntegrityError(exc) from exc
         except (
             psycopg.errors.InvalidTransactionState,
             psycopg.errors.InFailedSqlTransaction,
         ) as exc:
-            raise exceptions.TransactionManagementError(exc)
+            raise exceptions.TransactionManagementError(exc) from exc
 
     def _in_transaction(self) -> base_client.TransactionContext:
         return base_client.TransactionContextPooled(TransactionWrapper(self), self._pool_init_lock)
