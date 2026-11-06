@@ -785,13 +785,10 @@ class RenameIndex(TortoiseOperation):
         model_state = self.get_model_state(state, app_label, self.model_name)
         indexes = _get_option_list(model_state, "indexes")
         if self.old_fields:
+            old_fields = list(self.old_fields)
             for index in list(indexes):
-                if (
-                    isinstance(index, Index)
-                    and list(index.field_names) == list(self.old_fields)
-                    or not isinstance(index, Index)
-                    and list(index) == list(self.old_fields)
-                ):
+                fields = index.field_names if isinstance(index, Index) else index
+                if list(fields) == old_fields:
                     indexes.remove(index)
             indexes.append(Index(fields=tuple(self.old_fields), name=self.new_name))
             _set_option_list(model_state, "indexes", indexes)
