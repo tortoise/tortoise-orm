@@ -671,6 +671,8 @@ class BaseExecutor:
                     values.append(value)
             else:
                 setattr(instance, field, None)
+                if to_attr:
+                    setattr(instance, to_attr, None)
 
         if related_objects_for_fetch:
             conditions: dict[str, Any] = {}
