@@ -17,6 +17,10 @@ Added
 - SQLite now persists ``TimeField`` values as ISO-8601 times. (#2297)
 - Accept libpq style multi-host PostgreSQL URLs such as ``postgres://user:pass@host1:5432,host2:5433/db`` for ``asyncpg`` and ``psycopg``; ``asyncpg`` used to fail resolving ``host1,host2`` as one name, and ``psycopg`` now also reads ``target_session_attrs``. (#2387)
 
+Changed
+^^^^^
+- ``MigrationRecorder.applied_migrations()`` now checks for the migrations table before querying history, allowing catalog lookup errors to propagate while retaining the empty-list fallback for history query errors. (#2382)
+
 Fixed
 ^^^^^
 - ``DecimalField`` no longer raises ``decimal.InvalidOperation`` for values with more than 28 significant digits. (#2349)
