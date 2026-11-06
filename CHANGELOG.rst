@@ -35,6 +35,7 @@ Fixed
 - Preserve field iterators when refreshing model instances from the database. (#2342)
 - ``bulk_update()`` now filters on the primary key list once per batch instead of once per field, avoiding duplicate ``IN`` conditions that made PostgreSQL fall back to a sequential scan. (#2358)
 - ``auto_now`` / ``auto_now_add`` values are no longer shifted to ``TIMEZONE`` when ``use_tz=False``. (#2350)
+- A transaction cancelled while it is being entered, or one whose ``BEGIN`` fails, returns its connection to the pool instead of leaking it. Repeated cancellations could exhaust the pool and make every later query wait for a connection. (#2391)
 - ``pydantic_model_creator`` no longer returns a cached class that ignores the ``model_config``, ``validators`` or ``module`` of the current call. (#2312)
 - Preserve object and field iterators across validation and batching in ``bulk_update()``. (#2320)
 - Avoid accumulating duplicate query statements when previewing SQL or executing repeatedly. (#2321)
