@@ -504,6 +504,7 @@ class DatetimeField(Field[T_DATETIME], datetime.datetime):
             now = timezone.localtime() if get_use_tz() else timezone.now()
             # Convert to match what would be read from DB (apply timezone conversion)
             now_python = self.to_python_value(now)
+            self.validate(now_python)
             setattr(instance, self.model_field_name, now_python)
             return now  # type: ignore
         if (

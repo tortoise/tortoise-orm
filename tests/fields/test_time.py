@@ -3,7 +3,7 @@ import os
 from collections.abc import Callable
 from datetime import date, datetime, time, timedelta
 from datetime import timezone as dt_timezone
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 from zoneinfo import ZoneInfoNotFoundError
 
 import pytest
@@ -14,7 +14,12 @@ from tests import testmodels
 from tortoise import fields, timezone
 from tortoise.contrib import test
 from tortoise.contrib.test.condition import In, NotIn
-from tortoise.exceptions import ConfigurationError, IntegrityError, OperationalError
+from tortoise.exceptions import (
+    ConfigurationError,
+    IntegrityError,
+    OperationalError,
+    ValidationError,
+)
 from tortoise.expressions import F, Q
 from tortoise.timezone import UTC, ZoneInfo, get_default_timezone, parse_timezone
 
@@ -106,6 +111,34 @@ async def test_datetime_create(db):
     assert obj2.datetime_auto - now > timedelta(microseconds=10000)
     assert obj2.datetime_auto - now < timedelta(seconds=1)
     assert obj2.datetime_add == obj.datetime_add
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("field_name", ["datetime_auto", "datetime_add"])
+async def test_datetime_auto_rejects_invalid_timestamp(db, field_name):
+    obj = testmodels.DatetimeFields(datetime=timezone.now())
+    field = obj._meta.fields_map[field_name]
+    validator = Mock(side_effect=ValidationError("timestamp rejected"))
+
+    with patch.object(field, "validators", [validator]):
+        with pytest.raises(ValidationError, match="timestamp rejected"):
+            await obj.save()
+
+    validator.assert_called_once()
+    assert getattr(obj, field_name) is None
+    assert not await testmodels.DatetimeFields.exists()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("field_name", ["datetime_auto", "datetime_add"])
+async def test_datetime_auto_validates_generated_value(db, field_name):
+    field = testmodels.DatetimeFields._meta.fields_map[field_name]
+    validator = Mock()
+
+    with patch.object(field, "validators", [validator]):
+        obj = await testmodels.DatetimeFields.create(datetime=timezone.now())
+
+    validator.assert_called_once_with(getattr(obj, field_name))
 
 
 @pytest.mark.asyncio
