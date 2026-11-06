@@ -5,6 +5,7 @@ import ipaddress
 import re
 from decimal import Decimal
 from functools import cached_property
+from math import isnan
 from typing import Any
 from urllib.parse import urlsplit
 
@@ -71,6 +72,10 @@ class NumericValidator(Validator):
     def _validate_type(self, value: Any) -> None:
         if not isinstance(value, self.types):
             raise ValidationError("Value must be a numeric value and is required")
+        if (isinstance(value, float) and isnan(value)) or (
+            isinstance(value, Decimal) and value.is_nan()
+        ):
+            raise ValidationError("Value must not be NaN")
 
 
 class MinValueValidator(NumericValidator):
