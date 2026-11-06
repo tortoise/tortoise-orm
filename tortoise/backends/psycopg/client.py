@@ -17,9 +17,14 @@ from pypika_tortoise.terms import Parameterizer
 
 import tortoise.backends.base.client as base_client
 import tortoise.backends.base_postgres.client as postgres_client
-from tortoise import exceptions
 from tortoise.backends.psycopg import executor
 from tortoise.backends.psycopg.schema_generator import PsycopgSchemaGenerator
+from tortoise.exceptions import (
+    DBConnectionError,
+    IntegrityError,
+    OperationalError,
+    TransactionManagementError,
+)
 
 FuncType = Callable[..., Any]
 F = TypeVar("F", bound=FuncType)
@@ -140,7 +145,7 @@ class PsycopgClient(postgres_client.BasePostgresClient):
             await self._post_connect()
             self.log.debug("Created connection pool %s with params: %s", self._pool, self._template)
         except (psycopg.errors.InvalidCatalogName, psycopg_pool.PoolTimeout) as e:
-            raise exceptions.DBConnectionError(
+            raise DBConnectionError(
                 f"Can't establish connection to database {self.database}"
             ) from e
 
@@ -216,14 +221,14 @@ class PsycopgClient(postgres_client.BasePostgresClient):
             psycopg.errors.DataException,
             psycopg.errors.UndefinedTable,
         ) as exc:
-            raise exceptions.OperationalError(exc) from exc
+            raise OperationalError(exc) from exc
         except psycopg.errors.IntegrityError as exc:
-            raise exceptions.IntegrityError(exc) from exc
+            raise IntegrityError(exc) from exc
         except (
             psycopg.errors.InvalidTransactionState,
             psycopg.errors.InFailedSqlTransaction,
         ) as exc:
-            raise exceptions.TransactionManagementError(exc) from exc
+            raise TransactionManagementError(exc) from exc
 
     def _in_transaction(self) -> base_client.TransactionContext:
         return base_client.TransactionContextPooled(TransactionWrapper(self), self._pool_init_lock)
@@ -264,9 +269,9 @@ class TransactionWrapper(PsycopgClient, base_client.TransactionalDBClient):
 
     async def commit(self) -> None:
         if not self._transaction:
-            raise exceptions.TransactionManagementError("Transaction is in invalid state")
+            raise TransactionManagementError("Transaction is in invalid state")
         if self._finalized:
-            raise exceptions.TransactionManagementError("Transaction already finalised")
+            raise TransactionManagementError("Transaction already finalised")
 
         await self._transaction.__aexit__(None, None, None)
         self._finalized = True
@@ -276,9 +281,9 @@ class TransactionWrapper(PsycopgClient, base_client.TransactionalDBClient):
 
     async def rollback(self) -> None:
         if not self._transaction:
-            raise exceptions.TransactionManagementError("Transaction is in invalid state")
+            raise TransactionManagementError("Transaction is in invalid state")
         if self._finalized:
-            raise exceptions.TransactionManagementError("Transaction already finalised")
+            raise TransactionManagementError("Transaction already finalised")
 
         await self._transaction.__aexit__(psycopg.Rollback, psycopg.Rollback(), None)
         self._finalized = True
