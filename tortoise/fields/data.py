@@ -852,7 +852,9 @@ class UUIDField(Field[T_UUID], UUID):
         super().__init__(**kwargs)
 
     def to_db_value(self, value: Any, instance: type[Model] | Model) -> str | None:
-        return value and str(value)
+        value = self.to_python_value(value)
+        self.validate(value)
+        return str(value) if value is not None else None
 
     def to_python_value(self, value: Any) -> UUID | None:
         if value is None or isinstance(value, UUID):

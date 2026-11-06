@@ -3,7 +3,8 @@ import uuid
 import pytest
 
 from tests import testmodels
-from tortoise.exceptions import IntegrityError
+from tortoise import fields
+from tortoise.exceptions import IntegrityError, ValidationError
 
 
 @pytest.mark.asyncio
@@ -51,3 +52,53 @@ async def test_create_not_null(db):
     obj = await testmodels.UUIDFields.get(id=obj0.id)
     assert obj.data == data
     assert obj.data_null == data
+
+
+@pytest.mark.parametrize("as_string", [False, True])
+def test_uuid_field_validators(as_string):
+    def validate_version(value):
+        if value.version != 4:
+            raise ValidationError("UUID must be version 4")
+
+    field = fields.UUIDField(validators=[validate_version])
+    valid = uuid.uuid4()
+    invalid = uuid.uuid1()
+    assert field.to_db_value(str(valid) if as_string else valid, testmodels.UUIDFields) == str(
+        valid
+    )
+    with pytest.raises(ValidationError, match="UUID must be version 4"):
+        field.to_db_value(str(invalid) if as_string else invalid, testmodels.UUIDFields)
+
+    nullable = fields.UUIDField(null=True, validators=[validate_version])
+    assert nullable.to_db_value(None, testmodels.UUIDFields) is None
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("as_string", [False, True])
+async def test_uuid_validator_on_writes(db, monkeypatch, as_string):
+    def reject_nil_uuid(value):
+        if value.int == 0:
+            raise ValidationError("Nil UUID is not allowed")
+
+    field = testmodels.UUIDFields._meta.fields_map["data"]
+    monkeypatch.setattr(field, "validators", [reject_nil_uuid])
+    nil = uuid.UUID(int=0)
+    invalid = str(nil) if as_string else nil
+    with pytest.raises(ValidationError, match="Nil UUID is not allowed"):
+        await testmodels.UUIDFields.create(data=invalid)
+
+    valid = uuid.uuid4()
+    obj = await testmodels.UUIDFields.create(data=str(valid) if as_string else valid)
+    with pytest.raises(ValidationError, match="Nil UUID is not allowed"):
+        await testmodels.UUIDFields.filter(pk=obj.pk).update(data=invalid)
+
+    replacement = uuid.uuid4()
+    await testmodels.UUIDFields.filter(pk=obj.pk).update(
+        data=str(replacement) if as_string else replacement
+    )
+    await obj.refresh_from_db()
+    assert obj.data == replacement
+
+    obj.data = invalid
+    with pytest.raises(ValidationError, match="Nil UUID is not allowed"):
+        await obj.save(update_fields=["data"])
