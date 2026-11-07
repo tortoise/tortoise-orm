@@ -4,7 +4,7 @@ from collections.abc import Sequence
 from typing import TYPE_CHECKING, Any
 
 from tortoise.backends.base.schema_generator import BaseSchemaGenerator
-from tortoise.converters import encoders
+from tortoise.converters import encoders, escape_standard_str
 from tortoise.fields import CASCADE, SET_NULL
 
 if TYPE_CHECKING:  # pragma: nocoverage
@@ -76,6 +76,8 @@ class OracleSchemaGenerator(BaseSchemaGenerator):
         return f" DEFAULT {default}"
 
     def _escape_default_value(self, default: Any):
+        if isinstance(default, str):
+            return escape_standard_str(default)
         return encoders.get(type(default))(default)  # type: ignore
 
     def _get_index_sql(
