@@ -313,7 +313,7 @@ class DeleteModel(TortoiseOperation):
         model_ref = f"{app_label}.{self.name}"
 
         for model_state in state.models.values():
-            for field_name, field in model_state.fields.items():
+            for field in model_state.fields.values():
                 if not isinstance(field, DIRECT_RELATION_FIELDS):
                     continue
 
@@ -363,6 +363,9 @@ class DeleteModel(TortoiseOperation):
 
 
 class AlterModelOptions(TortoiseOperation):
+    # Options carried by other operations; the rest belong to this one.
+    UNMANAGED_OPTION_KEYS = frozenset({"table", "app", "indexes", "unique_together", "constraints"})
+
     def __init__(self, name: str, options: dict[str, Any]):
         self.name = name
         self.options = options
@@ -374,6 +377,10 @@ class AlterModelOptions(TortoiseOperation):
         model_state = self.get_model_state(state, app_label, self.name)
 
         model_state.options.update(self.options)
+        # update() only adds or changes keys, so an option removed from the model would
+        # otherwise survive here and be re-detected on every later makemigrations run.
+        for key in model_state.options.keys() - self.UNMANAGED_OPTION_KEYS - self.options.keys():
+            del model_state.options[key]
         state.reload_model(app_label, self.name)
 
     async def database_forward(
@@ -778,10 +785,10 @@ class RenameIndex(TortoiseOperation):
         model_state = self.get_model_state(state, app_label, self.model_name)
         indexes = _get_option_list(model_state, "indexes")
         if self.old_fields:
+            old_fields = list(self.old_fields)
             for index in list(indexes):
-                if isinstance(index, Index) and list(index.field_names) == list(self.old_fields):
-                    indexes.remove(index)
-                elif not isinstance(index, Index) and list(index) == list(self.old_fields):
+                fields = index.field_names if isinstance(index, Index) else index
+                if list(fields) == old_fields:
                     indexes.remove(index)
             indexes.append(Index(fields=tuple(self.old_fields), name=self.new_name))
             _set_option_list(model_state, "indexes", indexes)
@@ -853,11 +860,7 @@ class AddConstraint(TortoiseOperation):
 
     def state_forward(self, app_label: str, state: State) -> None:
         model_state = self.get_model_state(state, app_label, self.model_name)
-        if isinstance(self.constraint, CheckConstraint):
-            constraints = _get_option_list(model_state, "constraints")
-            constraints.append(self.constraint)
-            _set_option_list(model_state, "constraints", constraints)
-        elif self.constraint.name:
+        if isinstance(self.constraint, CheckConstraint) or self.constraint.name:
             constraints = _get_option_list(model_state, "constraints")
             constraints.append(self.constraint)
             _set_option_list(model_state, "constraints", constraints)

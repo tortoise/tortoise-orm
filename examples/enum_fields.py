@@ -1,6 +1,7 @@
 from enum import Enum, IntEnum
 
 from tortoise import Tortoise, fields, run_async
+from tortoise.fields import Field
 from tortoise.models import Model
 
 
@@ -17,8 +18,8 @@ class Currency(str, Enum):
 
 
 class EnumFields(Model):
-    service: Service = fields.IntEnumField(Service)
-    currency: Currency = fields.CharEnumField(Currency, default=Currency.HUF)
+    service: Field[Service] = fields.IntEnumField(Service)
+    currency: Field[Currency] = fields.CharEnumField(Currency, default=Currency.HUF)
 
 
 async def run():

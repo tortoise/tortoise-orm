@@ -35,6 +35,13 @@ def test_q_to_bool():
     assert bool(q_children_empty_join_type_or) is False
 
 
+def test_q_double_negation():
+    q = Q(moo="cow")
+    assert (~~q)._is_negated is False
+    assert (~~~q)._is_negated is True
+    assert q._is_negated is False
+
+
 def test_q_compound():
     q1 = Q(moo="cow")
     q2 = Q(moo="bull")

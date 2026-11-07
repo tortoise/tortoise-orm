@@ -24,6 +24,8 @@ from tortoise.fields.relational import (
     ManyToManyRelation,
 )
 from tortoise.filters import get_m2m_filters
+from tortoise.indexes import Index
+from tortoise.migrations.constraints import UniqueConstraint
 from tortoise.migrations.operations import (
     CreateModel,
     CreateSchema,
@@ -286,6 +288,121 @@ async def test_sqlite_ignores_schema() -> None:
     sql = client.executed[0]
     assert 'CREATE TABLE "category"' in sql
     assert '"custom"' not in sql
+
+
+def _make_indexed_schema_model() -> type[Model]:
+    class SchemaIndexed(Model):
+        id = fields.IntField(pk=True)
+        value = fields.IntField()
+
+        class Meta:
+            app = "models"
+            table = "indexed"
+            schema = "custom"
+            indexes = [Index(fields=("value",), name="idx_schema_value")]
+
+    init_apps(SchemaIndexed)
+    return SchemaIndexed
+
+
+@pytest.mark.asyncio
+async def test_postgres_remove_index_is_schema_qualified() -> None:
+    model = _make_indexed_schema_model()
+    client = FakeClient("postgres", inline_comment=False)
+    editor = BasePostgresSchemaEditor(client)
+
+    await editor.remove_index(model, cast(Index, model._meta.indexes[0]))
+
+    assert client.executed == ['DROP INDEX "custom"."idx_schema_value"']
+
+
+@pytest.mark.asyncio
+async def test_oracle_remove_index_is_schema_qualified() -> None:
+    model = _make_indexed_schema_model()
+    client = FakeClient("oracle", inline_comment=False)
+    editor = OracleSchemaEditor(client)
+
+    await editor.remove_index(model, cast(Index, model._meta.indexes[0]))
+
+    assert client.executed == ['DROP INDEX "custom"."idx_schema_value"']
+
+
+@pytest.mark.asyncio
+async def test_sqlite_remove_index_ignores_schema() -> None:
+    model = _make_indexed_schema_model()
+    client = FakeClient("sqlite", inline_comment=True)
+    editor = SqliteSchemaEditor(client)
+
+    await editor.remove_index(model, cast(Index, model._meta.indexes[0]))
+
+    assert client.executed == ['DROP INDEX "idx_schema_value"']
+
+
+@pytest.mark.asyncio
+async def test_mysql_remove_index_stays_table_scoped() -> None:
+    model = _make_indexed_schema_model()
+    client = FakeClient("mysql", inline_comment=True, charset="utf8mb4")
+    editor = MySQLSchemaEditor(client)
+
+    await editor.remove_index(model, cast(Index, model._meta.indexes[0]))
+
+    assert client.executed == ["DROP INDEX `idx_schema_value` ON `custom`.`indexed`"]
+
+
+@pytest.mark.asyncio
+async def test_mssql_remove_index_stays_table_scoped() -> None:
+    model = _make_indexed_schema_model()
+    client = FakeClient("mssql", inline_comment=False)
+    editor = MSSQLSchemaEditor(client)
+
+    await editor.remove_index(model, cast(Index, model._meta.indexes[0]))
+
+    assert client.executed == ["DROP INDEX [idx_schema_value] ON [custom].[indexed]"]
+
+
+@pytest.mark.asyncio
+async def test_postgres_remove_partial_unique_constraint_is_schema_qualified() -> None:
+    class SchemaPartialUnique(Model):
+        id = fields.IntField(pk=True)
+        email = fields.CharField(max_length=100)
+
+        class Meta:
+            app = "models"
+            table = "account"
+            schema = "custom"
+
+    init_apps(SchemaPartialUnique)
+    client = FakeClient("postgres", inline_comment=False)
+    editor = BasePostgresSchemaEditor(client)
+    constraint = UniqueConstraint(
+        fields=("email",),
+        name="uq_schema_email_active",
+        condition="is_active = TRUE",
+    )
+
+    await editor.remove_constraint(SchemaPartialUnique, constraint)
+
+    assert client.executed == ['DROP INDEX "custom"."uq_schema_email_active"']
+
+
+@pytest.mark.asyncio
+async def test_postgres_remove_index_without_schema_stays_unqualified() -> None:
+    class PlainIndexed(Model):
+        id = fields.IntField(pk=True)
+        value = fields.IntField()
+
+        class Meta:
+            app = "models"
+            table = "indexed"
+            indexes = [Index(fields=("value",), name="idx_plain_value")]
+
+    init_apps(PlainIndexed)
+    client = FakeClient("postgres", inline_comment=False)
+    editor = BasePostgresSchemaEditor(client)
+
+    await editor.remove_index(PlainIndexed, cast(Index, PlainIndexed._meta.indexes[0]))
+
+    assert client.executed == ['DROP INDEX "idx_plain_value"']
 
 
 # ---------------------------------------------------------------------------

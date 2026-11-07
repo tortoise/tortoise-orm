@@ -61,6 +61,21 @@ async def test_exists(db, intfields_data):
 
 
 @pytest.mark.asyncio
+async def test_exists_with_limit_and_offset(db, intfields_data):
+    qs = IntFields.all().order_by("id")
+    assert await qs.limit(1).exists()
+    assert await qs.limit(0).exists() is False
+    assert await qs.offset(29).exists()
+    assert await qs.offset(30).exists() is False
+    assert await qs.filter(intnum__gt=90).offset(2).exists()
+    assert await qs.filter(intnum__gt=90).offset(3).exists() is False
+    assert await qs.offset(29).limit(1).exists()
+    assert await qs.offset(29).limit(0).exists() is False
+    assert await qs.offset(30).limit(0).exists() is False
+    assert await qs.offset(30).limit(1).exists() is False
+
+
+@pytest.mark.asyncio
 async def test_contains(db, intfields_data):
     obj = await IntFields.filter(intnum=10).first()
     assert await IntFields.all().contains(obj)
@@ -156,7 +171,7 @@ async def test_slicing_count(db, intfields_data):
     assert await queryset.count() == 4
 
 
-def test_slicing_negative_values(db):
+def test_slicing_negative_values(db) -> None:
     with pytest.raises(
         ParamsError,
         match="Slice start should be non-negative number or None.",
@@ -170,7 +185,21 @@ def test_slicing_negative_values(db):
         _ = IntFields.all()[:-1]
 
 
-def test_slicing_stop_before_start(db):
+def test_integer_indexing_not_supported(db) -> None:
+    with pytest.raises(
+        ParamsError,
+        match=(
+            r"QuerySet indices must be slices, not integers\. "
+            r"QuerySets are lazy and do not support random access\. "
+            r"Use await queryset\.first\(\), await queryset\.offset\(n\)\.first\(\), "
+            r"or await queryset\.all\(\) and index the returned list\."
+        ),
+    ):
+        # Use an index way outside reasonable bounds for the dataset, so we don't accidentally support it.
+        _ = IntFields.all()[1000]  # type:ignore
+
+
+def test_slicing_stop_before_start(db) -> None:
     with pytest.raises(
         ParamsError,
         match="Slice stop should be non-negative number greater that slice start, or None.",
@@ -843,6 +872,23 @@ async def test_subquery_filter(db):
 
 
 @pytest.mark.asyncio
+async def test_subquery_params_inline(db):
+    t1 = await Tournament.create(name="Tourney")
+    query = Tournament.filter(
+        id__in=Subquery(Tournament.filter(name="Tourney").values_list("id", flat=True))
+    )
+    sql_inline = query.sql(params_inline=True)
+    assert "'Tourney'" in sql_inline
+    assert "?" not in sql_inline
+    assert "%s" not in sql_inline
+    assert "$1" not in sql_inline
+
+    sql_param = query.sql(params_inline=False)
+    assert "'Tourney'" not in sql_param
+    assert (await query.first()) == t1
+
+
+@pytest.mark.asyncio
 async def test_raw_sql_count(db):
     t1 = await Tournament.create(name="1")
     ret = await Tournament.filter(pk=t1.pk).annotate(count=RawSQL("count(*)")).values("count")
@@ -948,13 +994,13 @@ async def test_annotations_in_flat_values_list(db):
 
 
 # Tests for exception classes (no database needed, pure Python tests)
-def test_does_not_exist():
+def test_does_not_exist() -> None:
     exp_cls: type[NotExistOrMultiple] = DoesNotExist
     assert str(exp_cls("old format")) == "old format"
     assert str(exp_cls(Tournament)) == exp_cls.TEMPLATE.format(Tournament.__name__)
 
 
-def test_multiple_objects_returned():
+def test_multiple_objects_returned() -> None:
     exp_cls: type[NotExistOrMultiple] = MultipleObjectsReturned
     assert str(exp_cls("old format")) == "old format"
     assert str(exp_cls(Tournament)) == exp_cls.TEMPLATE.format(Tournament.__name__)

@@ -69,12 +69,51 @@ class MigrationRecorder:
                 return
             raise
 
+    async def _table_exists(self) -> bool:
+        """Report whether the migrations table exists, using the dialect's catalog.
+
+        A missing table means no migrations have been applied yet. Errors from this
+        catalog lookup propagate instead of being mistaken for an empty migration history.
+        """
+        if self._dialect == "sqlite":
+            query = "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?"
+            values: list | None = [self.table_name]
+        elif self._dialect == "postgres":
+            # to_regclass resolves the name through search_path, like the unqualified SELECT.
+            # The name is inlined because asyncpg and psycopg use different placeholders.
+            regclass = self._quote(self.table_name).replace("'", "''")
+            query = f"SELECT 1 WHERE to_regclass('{regclass}') IS NOT NULL"  # nosec B608
+            values = None
+        elif self._dialect == "mysql":
+            query = (
+                "SELECT 1 FROM information_schema.tables "
+                "WHERE table_schema = DATABASE() AND table_name = %s"
+            )
+            values = [self.table_name]
+        elif self._dialect == "mssql":
+            # OBJECT_ID resolves the name like the unqualified SELECT (default schema, then dbo).
+            query = "SELECT 1 WHERE OBJECT_ID(?, 'U') IS NOT NULL"
+            values = [self._quote(self.table_name)]
+        elif self._dialect == "oracle":
+            query = (
+                "SELECT 1 FROM all_tables "
+                "WHERE owner = SYS_CONTEXT('USERENV', 'CURRENT_SCHEMA') AND table_name = ?"
+            )
+            values = [self.table_name]
+        else:
+            # Unknown dialect: fall back to querying the migrations table.
+            return True
+        _, rows = await self.connection.execute_query(query, values)
+        return bool(rows)
+
     async def applied_migrations(self) -> list[MigrationKey]:
         query = (
             f"SELECT {self._quote('app')}, {self._quote('name')} "  # nosec B608
             f"FROM {self._quote(self.table_name)} "
             f"ORDER BY {self._quote('applied_at')}, {self._quote('app')}, {self._quote('name')}"
         )
+        if not await self._table_exists():
+            return []
         try:
             _, rows = await self.connection.execute_query(query)
         except Exception:

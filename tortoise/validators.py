@@ -11,7 +11,7 @@ from urllib.parse import urlsplit
 from tortoise.exceptions import ValidationError
 
 
-class Validator(metaclass=abc.ABCMeta):
+class Validator(abc.ABC):
     @abc.abstractmethod
     def __call__(self, value: Any) -> None:
         """
@@ -78,11 +78,11 @@ class MinValueValidator(NumericValidator):
     Min value validator for FloatField, IntField, SmallIntField, BigIntField
     """
 
-    def __init__(self, min_value: int | float | Decimal) -> None:
+    def __init__(self, min_value: float | Decimal) -> None:
         self._validate_type(min_value)
         self.min_value = min_value
 
-    def __call__(self, value: int | float | Decimal) -> None:
+    def __call__(self, value: float | Decimal) -> None:
         self._validate_type(value)
         if value < self.min_value:
             raise ValidationError(f"Value should be greater or equal to {self.min_value}")
@@ -93,11 +93,11 @@ class MaxValueValidator(NumericValidator):
     Max value validator for FloatField, IntField, SmallIntField, BigIntField
     """
 
-    def __init__(self, max_value: int | float | Decimal) -> None:
+    def __init__(self, max_value: float | Decimal) -> None:
         self._validate_type(max_value)
         self.max_value = max_value
 
-    def __call__(self, value: int | float | Decimal) -> None:
+    def __call__(self, value: float | Decimal) -> None:
         self._validate_type(value)
         if value > self.max_value:
             raise ValidationError(f"Value should be less or equal to {self.max_value}")
@@ -113,7 +113,7 @@ class CommaSeparatedIntegerListValidator(Validator):
             neg="(-)?" if allow_negative else "",
             sep=re.escape(","),
         )
-        self.regex = RegexValidator(pattern, re.I)
+        self.regex = RegexValidator(pattern, re.IGNORECASE)
 
     def __call__(self, value: str) -> None:
         self.regex(value)
@@ -165,7 +165,7 @@ class DomainNameValidator(Validator):
 
     @cached_property
     def _accept_idna_regex(self) -> re.Pattern[str]:
-        return re.compile(r"^" + HOSTNAME_REGEX + DOMAIN_REGEX + TLD_REGEX + r"$", re.IGNORECASE)
+        return re.compile(r"^" + HOSTNAME_REGEX + DOMAIN_REGEX + TLD_REGEX + r"\Z", re.IGNORECASE)
 
     @cached_property
     def _do_not_accept_idna_regex(self) -> re.Pattern[str]:
@@ -174,7 +174,7 @@ class DomainNameValidator(Validator):
             + self.ASCII_ONLY_HOSTNAME_REGEX
             + self.ASCII_ONLY_DOMAIN_REGEX
             + self.ASCII_ONLY_TLD_REGEX
-            + r"$",
+            + r"\Z",
             re.IGNORECASE,
         )
 
@@ -214,7 +214,8 @@ class URLValidator(Validator):
     Validates URLs according to RFC 3986. Checks scheme, host, port, and path
     components. Supports HTTP, HTTPS, FTP, and FTPS schemes by default.
 
-    :param allowed_schemes: List of allowed URL schemes. Defaults to ["http", "https", "ftp", "ftps"].
+    :param allowed_schemes: List of allowed URL schemes. Defaults to ["http", "https",
+        "ftp", "ftps"] when omitted or None. An empty list blocks all schemes.
     :raises InvalidURL: if the value is not a valid URL.
     :raises InvalidScheme: if the URL scheme is not in the allowed list.
     """
@@ -248,7 +249,9 @@ class URLValidator(Validator):
         return re.compile(self.URL_REGEX, re.IGNORECASE)
 
     def __init__(self, allowed_schemes: list[str] | None = None) -> None:
-        self.allowed_schemes = allowed_schemes or ["http", "https", "ftp", "ftps"]
+        self.allowed_schemes = (
+            allowed_schemes if allowed_schemes is not None else ["http", "https", "ftp", "ftps"]
+        )
 
     def __call__(self, value: str) -> None:
         if len(value) > self.MAX_URL_LENGTH:
@@ -259,8 +262,8 @@ class URLValidator(Validator):
 
         try:
             split_url = urlsplit(value)
-        except ValueError:
-            raise InvalidURL()
+        except ValueError as e:
+            raise InvalidURL() from e
 
         if split_url.scheme.lower() not in self.allowed_schemes:
             raise InvalidScheme(split_url.scheme.lower())
@@ -277,8 +280,8 @@ class URLValidator(Validator):
             potential_ip = host_match[1]
             try:
                 validate_ipv6_address(potential_ip)
-            except ValidationError:
-                raise InvalidURL()
+            except ValidationError as e:
+                raise InvalidURL() from e
 
 
 validate_url = URLValidator()
@@ -324,7 +327,6 @@ class EmailValidator(Validator):
 
     @cached_property
     def _domain_regex(self) -> re.Pattern[str]:
-        print("evaluating domain regex!!!")
         return re.compile(
             r"^" + HOSTNAME_REGEX + DOMAIN_REGEX + TLD_NO_FQDN_REGEX + r"\Z", re.IGNORECASE
         )
@@ -358,7 +360,10 @@ class EmailValidator(Validator):
         if not self._user_regex.match(user_part):
             raise InvalidEmailAddress()
 
-        if domain_part not in self.allowed_domains and not self._validate_domain_part(domain_part):
+        if self.allowed_domains:
+            if domain_part not in self.allowed_domains:
+                raise InvalidEmailAddress()
+        elif not self._validate_domain_part(domain_part):
             raise InvalidEmailAddress()
 
 
@@ -375,8 +380,8 @@ def validate_ipv4_address(value: Any) -> None:
 
     try:
         ipaddress.IPv4Address(value)
-    except ValueError:
-        raise ValidationError(f"'{value}' is not a valid IPv4 address.")
+    except ValueError as e:
+        raise ValidationError(f"'{value}' is not a valid IPv4 address.") from e
 
 
 def validate_ipv6_address(value: Any) -> None:
@@ -387,8 +392,8 @@ def validate_ipv6_address(value: Any) -> None:
     """
     try:
         ipaddress.IPv6Address(value)
-    except ValueError:
-        raise ValidationError(f"'{value}' is not a valid IPv6 address.")
+    except ValueError as e:
+        raise ValidationError(f"'{value}' is not a valid IPv6 address.") from e
 
 
 def validate_ipv46_address(value: Any) -> None:
@@ -402,5 +407,5 @@ def validate_ipv46_address(value: Any) -> None:
     except ValidationError:
         try:
             validate_ipv6_address(value)
-        except ValidationError:
-            raise ValidationError(f"'{value}' is not a valid IPv4 or IPv6 address.")
+        except ValidationError as e:
+            raise ValidationError(f"'{value}' is not a valid IPv4 or IPv6 address.") from e
