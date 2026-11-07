@@ -13,6 +13,13 @@ class Event(Model):
     datetime = fields.DatetimeField(
         null=True, description="Datetime of when the event was generated"
     )
+    # Note: No field class accepts the `verbose_name` argument, which triggers
+    # the following error when running mypy:
+    # Unexpected keyword argument "verbose_name" for "TextField"
+    desc = fields.TextField(
+        verbose_name="Use 'description' instead of 'verbose_name'",  # type:ignore[call-arg]
+        null=True,
+    )
 
     class Meta:
         table = "event"
