@@ -17,13 +17,7 @@ from pypika_tortoise.terms import Term
 
 from tortoise import timezone
 from tortoise.exceptions import ConfigurationError, FieldError
-from tortoise.fields.base import (
-    Field,
-    FieldKwargs,
-    JSONFieldKwargs,
-    TextFieldKwargs,
-    _FieldKwargsNoPk,
-)
+from tortoise.fields.base import Field
 from tortoise.timezone import get_default_timezone, get_use_tz
 from tortoise.validators import MaxLengthValidator
 
@@ -44,12 +38,13 @@ except ImportError:
 if TYPE_CHECKING:  # pragma: nocoverage
     import sys
 
-    from tortoise.models import Model
-
     if sys.version_info >= (3, 11):
         from typing import Unpack
-    else:  # pragma: no cover
+    else:
         from typing_extensions import Unpack
+
+    from ..models import Model
+    from .base import FieldKwargs, JSONFieldKwargs, TextFieldKwargs, _FieldKwargsNoPk
 
 __all__ = (
     "BigIntField",

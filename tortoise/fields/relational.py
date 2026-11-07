@@ -12,15 +12,15 @@ from tortoise.fields.base import CASCADE, SET_NULL, Field, OnDelete
 if TYPE_CHECKING:  # pragma: nocoverage
     import sys
 
+    if sys.version_info >= (3, 11):
+        from typing import Unpack
+    else:
+        from typing_extensions import Unpack
+
     from tortoise.backends.base.client import BaseDBAsyncClient
     from tortoise.fields.base import ManyToManyFieldKwargs, RelationalFieldKwargs
     from tortoise.models import Model
     from tortoise.queryset import Q, QuerySet
-
-    if sys.version_info >= (3, 11):
-        from typing import Unpack
-    else:  # pragma: no cover
-        from typing_extensions import Unpack
 
 MODEL = TypeVar("MODEL", bound="Model")
 
