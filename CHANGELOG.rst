@@ -57,6 +57,7 @@ Added
 Changed
 ^^^^^^^
 - `tortoise.contrib.starlette` now only supports Starlette 1.0+ (This does not affect FastAPI users; you can continue using FastAPI with any version of Starlette). (#2282)
+- Typed ``**kwargs`` on field constructors via PEP 692 (``Unpack[TypedDict]``), so IDEs and type checkers can autocomplete and validate common field arguments (``default``, ``null``, ``unique``, ``db_index``, ``description``, etc.). (#2256)
 
 Fixed
 ^^^^^
@@ -93,7 +94,6 @@ Added
 - ``QuerySet.contains()`` method to check if an object exists in a queryset. (#2163)
 - Added comprehensive EXPLAIN support for MySQL and PostgreSQL. (#2165)
 - Built-in ``DomainNameValidator``, ``URLValidator``, and ``EmailValidator`` classes for common validation patterns. (#2167)
-- Typed ``**kwargs`` on field constructors via PEP 692 (``Unpack[TypedDict]``), so IDEs and type checkers can autocomplete and validate common field arguments (``default``, ``null``, ``unique``, ``db_index``, ``description``, etc.). (#2168)
 
 Fixed
 ^^^^^
