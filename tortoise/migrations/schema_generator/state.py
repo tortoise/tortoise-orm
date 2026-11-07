@@ -128,10 +128,6 @@ def _require_app_label(model: type[Model]) -> str:
     return app_label
 
 
-def get_related_model_tuples(model: type[Model]) -> set[tuple[str, str]]:
-    return {(_require_app_label(m), m.__name__) for m in get_related_models(model)}
-
-
 def get_related_models_recursive(model: type[Model]) -> set[tuple[str, str]]:
     seen: set[tuple[str, str]] = set()
     rel_models = get_related_models(model)

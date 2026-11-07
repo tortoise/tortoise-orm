@@ -128,14 +128,6 @@ def escape_struct_time(obj: time.struct_time, mapping=None) -> str:
     return escape_datetime(datetime.datetime(*obj[:6]))
 
 
-def _convert_second_fraction(s) -> int:
-    if not s:
-        return 0
-    # Pad zeros to ensure the fraction length in microseconds
-    s = s.ljust(6, "0")
-    return int(s[:6])
-
-
 encoders = {
     bool: escape_bool,
     int: escape_int,
