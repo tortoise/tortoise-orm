@@ -23,15 +23,19 @@ async def test_relation_with_unique(db):
         .first()
     )
     school_without_filtered = await School.first().prefetch_related("students")
+    assert school_with_filtered is not None
+    assert school_without_filtered is not None
     assert len(school_with_filtered.students) == 1
     assert len(school_without_filtered.students) == 2
 
     student_direct_prefetch = await Student.first().prefetch_related("school")
+    assert student_direct_prefetch is not None
     assert student_direct_prefetch.school.id == school1.id
 
     school2 = await School.create(id=2048, name="School2")
     await Student.all().update(school=school2)
     student = await Student.first()
+    assert student is not None
     assert student.school_id == school2.id
 
     await Student.filter(id=student1.id).update(school=school1)
@@ -43,4 +47,35 @@ async def test_relation_with_unique(db):
     fetched_principal = await Principal.create(name="Sang-Heon Jeon3", school=school1)
     assert fetched_principal.name == "Sang-Heon Jeon3"
     fetched_school = await School.filter(name="School1").prefetch_related("principal").first()
+    assert fetched_school is not None
     assert fetched_school.name == "School1"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("model", [Student, Principal])
+async def test_filter_by_fk_o2o_instance_uses_to_field(db, model: type[Student | Principal]):
+    # https://github.com/tortoise/tortoise-orm/issues/2225
+    # School's primary key is `uuid`, but Student.school/Principal.school points to to_field="id"
+    # (a non-PK unique field). Filtering by a School instance must use the
+    # `to_field` value (school.id), not the primary key (school.uuid).
+    school = await School.create(id=42, name="School1")
+    school1 = await School.create(id=1, name=school.name)
+    related_obj1 = await model.create(name="", school=school1)
+    related_obj = await model.create(name="Sang-Heon Jeon1", school=school)
+
+    assert school.pk != school.id
+
+    found = await model.filter(school=school).get()
+    assert found.name == related_obj.name
+
+    found2 = await model.filter(school=school.id).first()
+    found3 = await model.filter(school_id=school.id).first()
+    found4 = await model.filter(school__pk=school.pk).first()
+    found5 = await model.filter(school__name=school.name).order_by("-school_id").first()
+    assert found == found2 == found3 == found4 == found5 == related_obj
+
+    found6 = await model.filter(school__id=school1.id).get()
+    assert found6 == related_obj1
+
+    with pytest.raises(TypeError):
+        await model.filter(school=model(id=school.id))

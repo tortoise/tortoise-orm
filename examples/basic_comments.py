@@ -9,12 +9,17 @@ from tortoise.models import Model
 
 class Event(Model):
     id = fields.IntField(primary_key=True)
+    # Field parameter differences from Django:
+    #   verbose_name  ->  description
     name = fields.TextField(description="Name of the event that corresponds to an action")
     datetime = fields.DatetimeField(
         null=True, description="Datetime of when the event was generated"
     )
 
     class Meta:
+        # Meta attribute differences from Django:
+        #   db_table      ->  table
+        #   verbose_name  ->  table_description
         table = "event"
         table_description = "This table contains a list of all the example events"
 

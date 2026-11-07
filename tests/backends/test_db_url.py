@@ -64,7 +64,7 @@ def test_sqlite_testing():
     file_path = res["credentials"]["file_path"]
     assert "/some/test-" in file_path
     assert ".sqlite" in file_path
-    assert "sqlite:///some/test-{}.sqlite" != file_path
+    assert file_path != "sqlite:///some/test-{}.sqlite"
     assert res == {
         "engine": "tortoise.backends.sqlite",
         "credentials": {
@@ -154,6 +154,40 @@ def test_postgres_no_port():
         }
 
 
+def test_postgres_unix_socket_query_params():
+    for scheme, engine in _postgres_scheme_engines.items():
+        res = expand_db_url(
+            f"{scheme}:///test?host=/cloudsql/x:y:z/.s.PGSQL.5432&user=postgres&password=pass"
+        )
+        assert res == {
+            "engine": engine,
+            "credentials": {
+                "database": "test",
+                "host": "/cloudsql/x:y:z/.s.PGSQL.5432",
+                "password": "pass",
+                "port": 5432,
+                "user": "postgres",
+            },
+        }
+
+
+def test_postgres_url_authority_wins_over_query_params():
+    for scheme, engine in _postgres_scheme_engines.items():
+        res = expand_db_url(
+            f"{scheme}://pguser:pgpass@mydomain.com:5433/test?port=5430&user=ignore-me"
+        )
+        assert res == {
+            "engine": engine,
+            "credentials": {
+                "database": "test",
+                "host": "mydomain.com",
+                "password": "pgpass",
+                "port": 5433,
+                "user": "pguser",
+            },
+        }
+
+
 def test_postgres_nonint_port():
     for scheme in _postgres_scheme_engines:
         with pytest.raises(ConfigurationError):
@@ -167,7 +201,7 @@ def test_postgres_testing():
         )
         database = res["credentials"]["database"]
         assert "test_" in database
-        assert "test_{}" != database
+        assert database != "test_{}"
         assert res == {
             "engine": engine,
             "credentials": {
@@ -247,7 +281,7 @@ def test_mysql_pre_encoded_percent_in_password():
 
 
 def test_postgres_plus_sign_in_password():
-    for scheme, engine in _postgres_scheme_engines.items():
+    for scheme in _postgres_scheme_engines:
         res = expand_db_url(f"{scheme}://postgres:p%2Bss+word@127.0.0.1:54321/test")
         assert res["credentials"]["password"] == "p+ss+word"
 
@@ -324,7 +358,7 @@ def test_mysql_nonint_port():
 def test_mysql_testing():
     res = expand_db_url(r"mysql://root:@127.0.0.1:3306/test_\{\}", testing=True)
     assert "test_" in res["credentials"]["database"]
-    assert "test_{}" != res["credentials"]["database"]
+    assert res["credentials"]["database"] != "test_{}"
     assert res == {
         "engine": "tortoise.backends.mysql",
         "credentials": {
@@ -441,3 +475,116 @@ def test_generate_config_many_apps():
             "peanuts": {"models": ["peanut.models"], "default_connection": "default"},
         },
     }
+
+
+@pytest.mark.parametrize("scheme", ["asyncpg", "mysql"])
+@pytest.mark.parametrize(
+    "encoded, expected", [("first%40last", "first@last"), ("a+b", "a+b"), ("%252F", "%2F")]
+)
+def test_username_is_percent_decoded_once(scheme, encoded, expected):
+    config = expand_db_url(f"{scheme}://{encoded}:example@localhost/db")
+    assert config["credentials"]["user"] == expected
+
+
+def test_query_string_username_is_not_decoded_twice():
+    config = expand_db_url("asyncpg://localhost/db?user=%252F")
+    assert config["credentials"]["user"] == "%2F"
+
+
+@pytest.mark.parametrize(
+    "url, key",
+    [
+        ("asyncpg://example:example@localhost/db", "ssl"),
+        ("mysql://example:example@localhost/db", "use_unicode"),
+        ("sqlite://:memory:", "install_regexp_functions"),
+    ],
+)
+@pytest.mark.parametrize(
+    "value, expected",
+    [
+        ("FALSE", False),
+        ("0", False),
+        ("True", True),
+        ("yes", True),
+        ("ON", True),
+        ("invalid", False),
+    ],
+)
+def test_boolean_url_option(url, key, value, expected):
+    config = expand_db_url(f"{url}?{key}={value}")
+    assert config["credentials"][key] is expected
+
+
+def test_postgres_multi_host_shared_port():
+    for scheme, engine in _postgres_scheme_engines.items():
+        res = expand_db_url(f"{scheme}://postgres:moo@host1,host2:5433/test")
+        assert res == {
+            "engine": engine,
+            "credentials": {
+                "database": "test",
+                "host": ["host1", "host2"],
+                "password": "moo",
+                "port": [5432, 5433],
+                "user": "postgres",
+            },
+        }
+
+
+def test_postgres_multi_host_no_port():
+    for scheme in _postgres_scheme_engines:
+        res = expand_db_url(f"{scheme}://postgres@host1,host2/test")
+        assert res["credentials"]["host"] == ["host1", "host2"]
+        assert res["credentials"]["port"] == [5432, 5432]
+
+
+def test_postgres_multi_host_ports_and_params():
+    for scheme in _postgres_scheme_engines:
+        res = expand_db_url(
+            f"{scheme}://postgres@host1:5433,host2:5434/test?target_session_attrs=read-write"
+        )
+        assert res["credentials"]["host"] == ["host1", "host2"]
+        assert res["credentials"]["port"] == [5433, 5434]
+        assert res["credentials"]["target_session_attrs"] == "read-write"
+
+
+def test_postgres_multi_host_ipv6():
+    res = expand_db_url("postgres://postgres@[::1]:5433,[fe80::2]/test")
+    assert res["credentials"]["host"] == ["::1", "fe80::2"]
+    assert res["credentials"]["port"] == [5433, 5432]
+
+
+def test_postgres_multi_host_ipv6_brackets_without_ports():
+    res = expand_db_url("postgres://postgres:moo@[::1],[::2]:5433/test")
+    assert res["credentials"]["host"] == ["::1", "::2"]
+    assert res["credentials"]["port"] == [5432, 5433]
+    assert res["credentials"]["password"] == "moo"
+
+
+def test_postgres_multi_host_normalised_like_single_host():
+    res = expand_db_url("postgres://postgres@H1 ,Host2:5433/test")
+    assert res["credentials"]["host"] == ["h1", "host2"]
+
+
+def test_postgres_multi_host_query_port_is_default():
+    res = expand_db_url("postgres://postgres@host1,host2:5434/test?port=5430")
+    assert res["credentials"]["port"] == [5430, 5434]
+
+
+@pytest.mark.parametrize(
+    "db_url, message",
+    [
+        ("postgres://postgres@host1,host2:abc/test", "Port is not an integer"),
+        ("postgres://postgres@host1,/test", "Empty host"),
+        ("postgres://postgres@,host2/test", "Empty host"),
+        ("postgres://postgres@host1,host2:99999/test", "Port must be between 1 and 65535"),
+        ("postgres://postgres@host1,host2:0/test", "Port must be between 1 and 65535"),
+    ],
+)
+def test_postgres_multi_host_invalid(db_url, message):
+    with pytest.raises(ConfigurationError, match=message):
+        expand_db_url(db_url)
+
+
+def test_multi_host_only_for_postgres():
+    res = expand_db_url("mysql://root@host1,host2:3307/test")
+    assert res["credentials"]["host"] == "host1,host2"

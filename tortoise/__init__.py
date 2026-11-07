@@ -8,8 +8,6 @@ from collections.abc import Callable, Coroutine, Iterable
 from types import ModuleType
 from typing import TYPE_CHECKING, Any
 
-from anyio import from_thread
-
 from tortoise.apps import Apps
 from tortoise.backends.base.client import BaseDBAsyncClient
 from tortoise.backends.base.config_generator import expand_db_url
@@ -427,13 +425,15 @@ class Tortoise(metaclass=_TortoiseMeta):
         return ctx
 
     @staticmethod
-    def star_password(connections_config) -> str:
+    def star_password(connections_config: dict) -> str:
         # Mask passwords to hide sensitive information in logs output
         passwords = []
-        for name, info in connections_config.items():
+        for _name, info in connections_config.items():
             if isinstance(info, str):
                 info = expand_db_url(info)
-            if password := info.get("credentials", {}).get("password"):
+            if (password := info.get("credentials", {}).get("password")) and isinstance(
+                password, str
+            ):
                 passwords.append(password)
 
         str_connection_config = str(connections_config)
@@ -456,8 +456,8 @@ class Tortoise(metaclass=_TortoiseMeta):
                 try:
                     module_name, class_name = r.rsplit(".", 1)
                     router_cls.append(getattr(importlib.import_module(module_name), class_name))
-                except Exception:
-                    raise ConfigurationError(f"Can't import router from `{r}`")
+                except Exception as e:
+                    raise ConfigurationError(f"Can't import router from `{r}`") from e
             elif isinstance(r, type):
                 router_cls.append(r)
             else:
@@ -534,10 +534,16 @@ class Tortoise(metaclass=_TortoiseMeta):
         _reset_timezone_cache()
 
 
-def run_async(coro: Coroutine) -> None:
+def run_async(coro: Coroutine, *, verbose: bool = False) -> None:
     """
     Simple async runner that cleans up DB connections on exit.
     This is meant for simple scripts.
+
+    :param coro: The coroutine to run.
+    :param verbose: If ``True``, set the ``tortoise`` logger to ``DEBUG``
+        so that generated SQL and runtime details are printed. If no
+        logging handler is configured, a basic one is added to the root
+        logger. Other loggers are left untouched.
 
     Usage::
 
@@ -553,7 +559,18 @@ def run_async(coro: Coroutine) -> None:
 
         run_async(do_stuff())
     """
+    # Imports `anyio` inside function to improve the tortoise module startup performance
+    # (it's only used by this convenience helper).
+    from anyio import from_thread
+
     from tortoise.context import get_current_context
+
+    if verbose:
+        logging.basicConfig(
+            format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+            datefmt="%Y-%m-%d %H:%M:%S",
+        )
+        logger.setLevel(logging.DEBUG)
 
     async def main() -> None:
         try:
@@ -567,7 +584,7 @@ def run_async(coro: Coroutine) -> None:
         portal.call(main)
 
 
-__version__ = "1.1.7"
+__version__ = "1.1.9"
 
 __all__ = [
     "BackwardFKRelation",
