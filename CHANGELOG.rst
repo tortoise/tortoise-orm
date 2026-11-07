@@ -45,6 +45,7 @@ Fixed
 - ``QuerySet.exists()`` now respects ``limit()`` and ``offset()``, so ``limit(0)`` or an offset past the last row returns ``False``. (#2389)
 - Respect an explicitly empty ``allowed_schemes`` list in ``URLValidator``. (#2394)
 - Respect the root ``max_recursion`` limit when generating nested Pydantic models. (#2400)
+- Validate generated ``DatetimeField`` values before assigning ``auto_now`` or ``auto_now_add`` timestamps. (#2410)
 
 1.1.9
 -----
