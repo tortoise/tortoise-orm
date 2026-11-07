@@ -37,10 +37,17 @@ class MigrationTarget:
 
 
 class MigrationExecutor:
-    def __init__(self, connection: BaseDBAsyncClient, apps_config: dict[str, dict]) -> None:
+    def __init__(
+        self,
+        connection: BaseDBAsyncClient,
+        apps_config: dict[str, dict],
+        all_apps_config: dict[str, dict] | None = None,
+    ) -> None:
         self.connection = connection
         self.recorder = MigrationRecorder(connection)
-        self.loader = MigrationLoader(apps_config, self.recorder, load=False)
+        self.loader = MigrationLoader(
+            apps_config, self.recorder, load=False, all_apps_config=all_apps_config
+        )
         self._full_plan_cache: list[MigrationKey] | None = None
         self._logger = logging.getLogger(__name__)
 
