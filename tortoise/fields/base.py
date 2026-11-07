@@ -53,7 +53,7 @@ if TYPE_CHECKING:  # pragma: nocoverage
         pk: bool  # deprecated alias for primary_key
         index: bool  # deprecated alias for db_index
 
-    class _FieldKwargsNoPk(_FieldKwargsCommon[VALUE], total=False):
+    class FieldKwargsNoPk(_FieldKwargsCommon[VALUE], total=False):
         """Common arguments excluding ``primary_key`` and ``null``.
 
         For constructors that declare ``primary_key`` and ``null`` as explicit parameters
@@ -63,7 +63,7 @@ if TYPE_CHECKING:  # pragma: nocoverage
         unique: bool
         db_index: bool | None
 
-    class FieldKwargs(_FieldKwargsNoPk[VALUE], total=False):
+    class FieldKwargs(FieldKwargsNoPk[VALUE], total=False):
         """Common arguments excluding ``null``.
 
         For constructors that declare only ``null`` as an explicit parameter (the majority).

@@ -44,7 +44,7 @@ if TYPE_CHECKING:  # pragma: nocoverage
         from typing_extensions import Unpack
 
     from ..models import Model
-    from .base import FieldKwargs, JSONFieldKwargs, TextFieldKwargs, _FieldKwargsNoPk
+    from .base import FieldKwargs, FieldKwargsNoPk, JSONFieldKwargs, TextFieldKwargs
 
 __all__ = (
     "BigIntField",
@@ -115,7 +115,7 @@ class IntField(Field[T_INT], int):
         primary_key: bool | None = None,
         *,
         null: Literal[False] = False,
-        **kwargs: Unpack[_FieldKwargsNoPk[int]],
+        **kwargs: Unpack[FieldKwargsNoPk[int]],
     ) -> None: ...
 
     @overload
@@ -124,7 +124,7 @@ class IntField(Field[T_INT], int):
         primary_key: bool | None = None,
         *,
         null: Literal[True],
-        **kwargs: Unpack[_FieldKwargsNoPk[int]],
+        **kwargs: Unpack[FieldKwargsNoPk[int]],
     ) -> None: ...
 
     def __init__(self, primary_key: bool | None = None, **kwargs: Any) -> None:
