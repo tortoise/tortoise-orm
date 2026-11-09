@@ -441,29 +441,29 @@ Async fetch:
 
 .. code-block:: python3
 
-    participants = await tournament.participants.all()
+    participants = await event.participants.all()
 
 You can async iterate over it like this:
 
 .. code-block:: python3
 
-    async for participant in tournament.participants:
+    async for participant in event.participants:
         ...
 
 Sync usage requires that you call `fetch_related` before the time, and then you can use common functions such as:
 
 .. code-block:: python3
 
-    await tournament.fetch_related('participants')
-    participants = list(tournament.participants)
-    participantlen = len(tournament.participants)
-    if SomeParticipant in tournament.participants:
+    await event.fetch_related('participants')
+    participants = list(event.participants)
+    participantlen = len(event.participants)
+    if SomeParticipant in event.participants:
         ...
-    if tournament.participants:
+    if event.participants:
         ...
-    firstparticipant = tournament.participants[0]
+    firstparticipant = event.participants[0]
 
-The reverse lookup of ``team.event_team`` works exactly the same way.
+The reverse lookup of ``team.events`` works exactly the same way.
 
 Improving relational type hinting
 =================================
