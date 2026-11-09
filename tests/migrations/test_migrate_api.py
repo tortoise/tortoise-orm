@@ -19,8 +19,8 @@ def _cleanup_modules(*app_names: str) -> None:
 def _create_app_package(app_dir: Path, models_code: str, migration_code: str) -> None:
     migrations_dir = app_dir / "migrations"
     migrations_dir.mkdir(parents=True, exist_ok=True)
-    (app_dir / "__init__.py").write_text("", encoding="ascii")
-    (migrations_dir / "__init__.py").write_text("", encoding="ascii")
+    (app_dir / "__init__.py").touch()
+    (migrations_dir / "__init__.py").touch()
     (app_dir / "models.py").write_text(models_code, encoding="ascii")
     (migrations_dir / "0001_initial.py").write_text(migration_code, encoding="ascii")
 
