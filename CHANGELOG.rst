@@ -15,6 +15,12 @@ Added
 ^^^^^
 - Support forward relation ``in`` and ``not_in`` filters with model instances. (#2323)
 - SQLite now persists ``TimeField`` values as ISO-8601 times. (#2297)
+- Accept libpq style multi-host PostgreSQL URLs such as ``postgres://user:pass@host1:5432,host2:5433/db`` for ``asyncpg`` and ``psycopg``; ``asyncpg`` used to fail resolving ``host1,host2`` as one name, and ``psycopg`` now also reads ``target_session_attrs``. (#2387)
+- Typed ``**kwargs`` on field constructors via PEP 692 (``Unpack[TypedDict]``), so IDEs and type checkers can autocomplete and validate common field arguments (This only affects type-hint checking results without affecting runtime behavior). (#2256)
+
+Changed
+^^^^^
+- ``MigrationRecorder.applied_migrations()`` now checks for the migrations table before querying history, allowing catalog lookup errors to propagate while retaining the empty-list fallback for history query errors. (#2382)
 
 Fixed
 ^^^^^
@@ -38,6 +44,9 @@ Fixed
 - Parse false boolean values in database URL options correctly. (#2377)
 - Reject domain names with trailing newlines in ``DomainNameValidator``. (#2386)
 - ``QuerySet.exists()`` now respects ``limit()`` and ``offset()``, so ``limit(0)`` or an offset past the last row returns ``False``. (#2389)
+- Respect an explicitly empty ``allowed_schemes`` list in ``URLValidator``. (#2394)
+- Respect the root ``max_recursion`` limit when generating nested Pydantic models. (#2400)
+- ``TextField(null=True)`` now narrows to ``TextField[str | None]`` instead of staying ``TextField[str]``. (#2218)
 
 1.1.9
 -----

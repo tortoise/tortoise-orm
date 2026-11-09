@@ -208,6 +208,12 @@ def test_url_validator_valid_custom_schemes(value) -> None:
     validator(value)
 
 
+def test_url_validator_rejects_all_schemes_when_allowlist_is_empty() -> None:
+    validator = URLValidator(allowed_schemes=[])
+    with pytest.raises(InvalidScheme):
+        validator("https://example.com")
+
+
 def test_url_validator_invalid_scheme() -> None:
     validator = URLValidator(allowed_schemes=["http", "https"])
     with pytest.raises(InvalidScheme):
