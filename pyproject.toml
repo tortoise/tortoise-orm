@@ -216,7 +216,7 @@ line-length = 100
 exclude = ["docs/type_globals.py"]
 [tool.ruff.lint]
 ignore = [
-    "BLE001",  # BLE001 Do not catch blind exception: `Exception`
+    "BLE001",  # https://docs.astral.sh/ruff/rules/blind-except/
 ]
 extend-select = [
     "I", # https://docs.astral.sh/ruff/rules/#isort-i
