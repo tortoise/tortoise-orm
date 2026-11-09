@@ -44,13 +44,7 @@ if TYPE_CHECKING:  # pragma: nocoverage
         from typing_extensions import Unpack
 
     from ..models import Model
-    from .base import (
-        FieldKwargs,
-        FieldKwargsCommon,
-        FieldKwargsNoPk,
-        JSONFieldKwargs,
-        TextFieldKwargs,
-    )
+    from .base import FieldKwargs, FieldKwargsCommon, FieldKwargsNoPk, JSONFieldKwargs
 
 __all__ = (
     "BigIntField",
@@ -313,7 +307,7 @@ class TextField(Field[T_STR], str):  # type:ignore[misc]
         primary_key: bool | None = None,
         unique: bool = False,
         db_index: bool = False,
-        **kwargs: Unpack[TextFieldKwargs],
+        **kwargs: Any,
     ) -> None:
         if primary_key or kwargs.get("pk"):
             warnings.warn(

@@ -71,14 +71,6 @@ if TYPE_CHECKING:  # pragma: nocoverage
 
         primary_key: bool | None
 
-    class TextFieldKwargs(FieldKwargsCommon[VALUE], total=False):
-        """Constructor arguments for :class:`TextField`.
-
-        ``TextField`` doesn't declare ``null`` explicitly, so it includes it here.
-        """
-
-        null: bool
-
     class JSONFieldKwargs(FieldKwargs[VALUE], total=False):
         """Constructor arguments for :class:`JSONField`.
 
