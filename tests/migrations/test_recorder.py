@@ -1,12 +1,27 @@
+import warnings
+
 import pytest
 
 from tortoise.backends.base.client import Capabilities
+from tortoise.backends.mysql import MySQLClient
+from tortoise.exceptions import DBConnectionError, OperationalError
+from tortoise.migrations.executor import MigrationExecutor
 from tortoise.migrations.recorder import MigrationRecorder
+
+RECORDER_DIALECTS = ["sqlite", "postgres", "mysql", "mssql", "oracle"]
 
 
 class FakeConnection:
-    def __init__(self, dialect: str) -> None:
+    def __init__(
+        self,
+        dialect: str,
+        *,
+        table_exists: bool = True,
+        error: Exception | None = None,
+    ) -> None:
         self.capabilities = Capabilities(dialect)
+        self.table_exists = table_exists
+        self.error = error
         self.executed_scripts: list[str] = []
         self.inserts: list[tuple[str, list]] = []
         self.queries: list[tuple[str, list | None]] = []
@@ -20,6 +35,10 @@ class FakeConnection:
 
     async def execute_query(self, query: str, values: list | None = None):
         self.queries.append((query, values))
+        if self.error is not None:
+            raise self.error
+        if query.startswith("SELECT 1 "):  # catalog lookup for the migrations table
+            return None, [{"1": 1}] if self.table_exists else []
         return None, []
 
 
@@ -40,7 +59,7 @@ async def test_recorder_quotes_mysql_identifiers() -> None:
     assert insert_values[1] == "0001_initial"
 
     assert connection.queries
-    select_query = connection.queries[0][0]
+    select_query = connection.queries[-1][0]
     assert "SELECT `app`, `name`" in select_query
 
 
@@ -126,6 +145,22 @@ async def test_recorder_sqlite_placeholders() -> None:
     assert '"name" = ?' in delete_query
 
 
+def test_recorder_model_emits_no_field_deprecation_warnings() -> None:
+    """Regression: the migration recorder must not trip tortoise's own
+    ``pk``/``index`` field deprecation warnings. It builds its bookkeeping
+    model internally, so downstream projects can't silence them.
+    """
+    with warnings.catch_warnings(record=True) as caught:
+        # Reset filters so the repo-wide ``ignore:`pk` deprecation`` filter in
+        # pyproject.toml doesn't mask a regression here.
+        warnings.simplefilter("always")
+        MigrationRecorder(FakeConnection("sqlite"))
+
+    messages = [str(w.message) for w in caught if issubclass(w.category, DeprecationWarning)]
+    assert not any("`pk` is deprecated" in m for m in messages), messages
+    assert not any("`index` is deprecated" in m for m in messages), messages
+
+
 @pytest.mark.asyncio
 async def test_recorder_oracle_placeholders() -> None:
     connection = FakeConnection("oracle")
@@ -141,3 +176,59 @@ async def test_recorder_oracle_placeholders() -> None:
     delete_query = connection.queries[0][0]
     assert '"app" = ?' in delete_query
     assert '"name" = ?' in delete_query
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("dialect", RECORDER_DIALECTS)
+async def test_recorder_missing_table_means_no_migrations(dialect: str) -> None:
+    connection = FakeConnection(dialect, table_exists=False)
+    recorder = MigrationRecorder(connection)
+
+    assert await recorder.applied_migrations() == []
+    # Only the catalog lookup ran; the migrations table itself was never queried.
+    assert len(connection.queries) == 1
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("dialect", RECORDER_DIALECTS)
+async def test_recorder_propagates_connection_errors(dialect: str) -> None:
+    error = DBConnectionError("sorry, too many clients already")
+    recorder = MigrationRecorder(FakeConnection(dialect, error=error))
+
+    with pytest.raises(DBConnectionError):
+        await recorder.applied_migrations()
+
+
+@pytest.mark.asyncio
+async def test_recorder_query_errors_mean_no_migrations_when_table_exists() -> None:
+    class DeniedSelectConnection(FakeConnection):
+        async def execute_query(self, query: str, values: list | None = None):
+            if not query.startswith("SELECT 1 "):
+                raise OperationalError("permission denied for table tortoise_migrations")
+            return await super().execute_query(query, values)
+
+    recorder = MigrationRecorder(DeniedSelectConnection("postgres"))
+
+    assert await recorder.applied_migrations() == []
+
+
+@pytest.mark.asyncio
+async def test_recorder_detects_migrations_table_on_real_database(db_isolated) -> None:
+    connection = db_isolated.db()
+    if (
+        isinstance(connection, MySQLClient)
+        and connection.storage_engine
+        and connection.storage_engine.lower() != "innodb"
+    ):
+        pytest.skip(
+            "The migrations table's unique key exceeds MyISAM's 1000-byte key limit, "
+            "a pre-existing limitation unrelated to this test"
+        )
+    executor = MigrationExecutor(connection, {})
+    recorder = executor.recorder
+
+    assert await recorder.applied_migrations() == []
+
+    # migrate() reads the history before and after creating the migrations table.
+    await executor.migrate()
+    assert await recorder.applied_migrations() == []

@@ -7,26 +7,20 @@ from typing import TYPE_CHECKING, Any, Generic, Literal, TypeVar, overload
 from pypika_tortoise.queries import Table
 
 from tortoise.exceptions import ConfigurationError, NoValuesFetched, OperationalError
-from tortoise.fields.base import (
-    CASCADE,
-    SET_NULL,
-    Field,
-    ManyToManyFieldKwargs,
-    OnDelete,
-    RelationalFieldKwargs,
-)
+from tortoise.fields.base import CASCADE, SET_NULL, Field, OnDelete
 
 if TYPE_CHECKING:  # pragma: nocoverage
     import sys
 
-    from tortoise.backends.base.client import BaseDBAsyncClient
-    from tortoise.models import Model
-    from tortoise.queryset import Q, QuerySet
-
     if sys.version_info >= (3, 11):
         from typing import Unpack
-    else:  # pragma: no cover
+    else:
         from typing_extensions import Unpack
+
+    from tortoise.backends.base.client import BaseDBAsyncClient
+    from tortoise.fields.base import ManyToManyFieldKwargs, RelationalFieldKwargs
+    from tortoise.models import Model
+    from tortoise.queryset import Q, QuerySet
 
 MODEL = TypeVar("MODEL", bound="Model")
 
@@ -212,10 +206,7 @@ class ManyToManyRelation(ReverseRelation[MODEL]):
             pks_f.append(pk_f)
         through_table = Table(self.field.through, schema=self.field.through_schema)
         backward_key, forward_key = self.field.backward_key, self.field.forward_key
-        backward_field, forward_field = (
-            through_table[backward_key],
-            through_table[forward_key],
-        )
+        backward_field, forward_field = through_table[backward_key], through_table[forward_key]
         select_query = (
             db.query_class.from_(through_table).where(backward_field == pk_b).select(forward_key)
         )
@@ -355,6 +346,20 @@ class ForeignKeyFieldInstance(RelationalField[MODEL]):
         desc["on_delete"] = str(self.on_delete)
         return desc
 
+    def deconstruct(self) -> tuple[str, list[Any], dict[str, Any]]:
+        path, args, kwargs = super().deconstruct()
+        # After Apps._init_relations(), source_field no longer holds the column name: it
+        # holds the name of the generated `<field>_id` backing field. The column name the
+        # user asked for was moved onto that backing field, so read it back from there.
+        # Without this, makemigrations writes the backing field name as the column name
+        # and a migrated schema disagrees with generate_schemas().
+        model = getattr(self, "model", None)
+        if model is not None and self.source_field:
+            backing_field = model._meta.fields_map.get(self.source_field)
+            if backing_field is not None and backing_field.source_field:
+                kwargs["source_field"] = backing_field.source_field
+        return path, args, kwargs
+
 
 class BackwardFKRelation(RelationalField[MODEL]):
     def __init__(
@@ -422,10 +427,12 @@ class ManyToManyFieldInstance(RelationalField[MODEL]):
         self.model_name = model_name
         self.related_name: str = related_name
         if not forward_key:
-            if not isinstance(model_name, str):
-                forward_key = f"{model_name.__name__.lower()}_id"
-            else:
-                forward_key = f"{model_name.split('.')[1].lower()}_id"
+            model_class_name = (
+                model_name.split(".")[1]  # e.g.: 'models.Users' -> 'Users'
+                if isinstance(model_name, str)
+                else model_name.__name__
+            )
+            forward_key = f"{model_class_name.lower()}_id"
         self.forward_key: str = forward_key
         self.backward_key: str = backward_key
         self.through: str = through  # type: ignore

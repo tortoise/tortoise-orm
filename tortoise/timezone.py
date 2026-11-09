@@ -7,7 +7,7 @@ from datetime import datetime, time, tzinfo
 from zoneinfo import ZoneInfo as _ZoneInfo
 from zoneinfo import ZoneInfoNotFoundError
 
-if sys.version_info >= (3, 12):
+if sys.version_info >= (3, 11):
     from datetime import UTC
 else:
     from datetime import timezone
