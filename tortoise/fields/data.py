@@ -44,7 +44,7 @@ if TYPE_CHECKING:  # pragma: nocoverage
         from typing_extensions import Unpack
 
     from ..models import Model
-    from .base import FieldKwargs, FieldKwargsNoPk, JSONFieldKwargs, TextFieldKwargs
+    from .base import FieldKwargs, FieldKwargsCommon, FieldKwargsNoPk, JSONFieldKwargs
 
 __all__ = (
     "BigIntField",
@@ -272,7 +272,7 @@ class CharField(Field[T_STR]):
             return f"NVARCHAR2({self.field.max_length})"
 
 
-class TextField(Field[str], str):  # type: ignore[misc]
+class TextField(Field[T_STR], str):  # type:ignore[misc]
     """
     Large Text field.
     """
@@ -280,12 +280,34 @@ class TextField(Field[str], str):  # type: ignore[misc]
     indexable = False
     SQL_TYPE = "TEXT"
 
+    @overload
+    def __init__(
+        self: TextField[str],
+        *,
+        primary_key: bool | None = None,
+        unique: bool = False,
+        db_index: bool = False,
+        null: Literal[False] = False,
+        **kwargs: Unpack[FieldKwargsCommon[str]],
+    ) -> None: ...
+
+    @overload
+    def __init__(
+        self: TextField[str | None],
+        *,
+        primary_key: bool | None = None,
+        unique: bool = False,
+        db_index: bool = False,
+        null: Literal[True],
+        **kwargs: Unpack[FieldKwargsCommon[str]],
+    ) -> None: ...
+
     def __init__(
         self,
         primary_key: bool | None = None,
         unique: bool = False,
         db_index: bool = False,
-        **kwargs: Unpack[TextFieldKwargs],
+        **kwargs: Any,
     ) -> None:
         if primary_key or kwargs.get("pk"):
             warnings.warn(

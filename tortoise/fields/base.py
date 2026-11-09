@@ -35,7 +35,7 @@ if TYPE_CHECKING:  # pragma: nocoverage
         # So for Generic, used typing-extensions for TypedDict
         from typing_extensions import Self, TypedDict
 
-    class _FieldKwargsCommon(TypedDict, Generic[VALUE], total=False):
+    class FieldKwargsCommon(TypedDict, Generic[VALUE], total=False):
         """:class:`Field` constructor arguments that are never declared as explicit parameters.
 
         Used with :data:`typing.Unpack` to give ``**kwargs`` explicit type hints. This is the
@@ -53,7 +53,7 @@ if TYPE_CHECKING:  # pragma: nocoverage
         pk: bool  # deprecated alias for primary_key
         index: bool  # deprecated alias for db_index
 
-    class FieldKwargsNoPk(_FieldKwargsCommon[VALUE], total=False):
+    class FieldKwargsNoPk(FieldKwargsCommon[VALUE], total=False):
         """Common arguments excluding ``primary_key`` and ``null``.
 
         For constructors that declare ``primary_key`` and ``null`` as explicit parameters
@@ -70,14 +70,6 @@ if TYPE_CHECKING:  # pragma: nocoverage
         """
 
         primary_key: bool | None
-
-    class TextFieldKwargs(_FieldKwargsCommon[VALUE], total=False):
-        """Constructor arguments for :class:`TextField`.
-
-        ``TextField`` doesn't declare ``null`` explicitly, so it includes it here.
-        """
-
-        null: bool
 
     class JSONFieldKwargs(FieldKwargs[VALUE], total=False):
         """Constructor arguments for :class:`JSONField`.
@@ -98,7 +90,7 @@ if TYPE_CHECKING:  # pragma: nocoverage
 
         to_field: str | None
 
-    class ManyToManyFieldKwargs(_FieldKwargsCommon[VALUE], total=False):
+    class ManyToManyFieldKwargs(FieldKwargsCommon[VALUE], total=False):
         """Constructor arguments for :func:`ManyToManyField`.
 
         ``unique`` is declared as an explicit parameter, so it is omitted here; the deprecated
