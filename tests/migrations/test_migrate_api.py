@@ -1,5 +1,6 @@
 import sys
 from pathlib import Path
+from textwrap import dedent
 from typing import Any
 
 import pytest
@@ -25,6 +26,10 @@ def _create_app_package(app_dir: Path, models_code: str, migration_code: str) ->
     (migrations_dir / "0001_initial.py").write_text(migration_code, encoding="ascii")
 
 
+def _multiline_code(s: str) -> str:
+    return dedent(s).removeprefix("\n")
+
+
 def _setup_multi_connection_projects(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> TortoiseConfig:
@@ -34,33 +39,28 @@ def _setup_multi_connection_projects(
 
     _create_app_package(
         tmp_path / "app_c",
-        models_code="\n".join(
-            [
-                "from tortoise import fields",
-                "from tortoise.models import Model",
-                "",
-                "class Item(Model):",
-                "    id = fields.IntField(pk=True)",
-                "",
-            ]
+        models_code=_multiline_code(
+            """
+            from tortoise import Model, fields
+
+            class Item(Model):
+                id = fields.IntField(primary_key=True)
+            """
         ),
-        migration_code="\n".join(
-            [
-                "from tortoise import fields, migrations",
-                "from tortoise.migrations import operations as ops",
-                "",
-                "class Migration(migrations.Migration):",
-                "    dependencies = []",
-                "    operations = [",
-                "        ops.CreateModel(",
-                "            name='Item',",
-                "            fields=[",
-                "                ('id', fields.IntField(pk=True)),",
-                "            ],",
-                "        ),",
-                "    ]",
-                "",
-            ]
+        migration_code=_multiline_code(
+            """
+            from tortoise import fields, migrations
+            from tortoise.migrations import operations as ops
+
+            class Migration(migrations.Migration):
+                dependencies = []
+                operations = [
+                    ops.CreateModel(
+                        name='Item',
+                        fields=[('id', fields.IntField(primary_key=True))],
+                    ),
+                ]
+            """
         ),
     )
 
@@ -178,82 +178,76 @@ def _setup_cross_app_projects(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -
 
     _create_app_package(
         tmp_path / "app_a",
-        models_code="\n".join(
-            [
-                "from tortoise import fields",
-                "from tortoise.models import Model",
-                "",
-                "class User(Model):",
-                "    id = fields.IntField(pk=True)",
-                "    username = fields.CharField(max_length=50)",
-                "",
-            ]
+        models_code=_multiline_code(
+            """
+            from tortoise import Model, fields
+
+            class User(Model):
+                id = fields.IntField(primary_key=True)
+                username = fields.CharField(max_length=50)
+            """
         ),
-        migration_code="\n".join(
-            [
-                "from tortoise import fields, migrations",
-                "from tortoise.migrations import operations as ops",
-                "",
-                "class Migration(migrations.Migration):",
-                "    dependencies = []",
-                "    operations = [",
-                "        ops.CreateModel(",
-                "            name='User',",
-                "            fields=[",
-                "                ('id', fields.IntField(pk=True)),",
-                "                ('username', fields.CharField(max_length=50)),",
-                "            ],",
-                "        ),",
-                "    ]",
-                "",
-            ]
+        migration_code=_multiline_code(
+            """
+            from tortoise import fields, migrations
+            from tortoise.migrations import operations as ops
+
+            class Migration(migrations.Migration):
+                dependencies = []
+                operations = [
+                    ops.CreateModel(
+                        name='User',
+                        fields=[
+                            ('id', fields.IntField(primary_key=True)),
+                            ('username', fields.CharField(max_length=50)),
+                        ],
+                    ),
+                ]
+            """
         ),
     )
 
     _create_app_package(
         tmp_path / "app_b",
-        models_code="\n".join(
-            [
-                "from tortoise import fields",
-                "from tortoise.models import Model",
-                "",
-                "class GenericModel(Model):",
-                "    user = fields.ForeignKeyField('app_a.User')",
-                "",
-                "    class Meta:",
-                "        abstract = True",
-                "",
-                "class ModelA(GenericModel):",
-                "    class Meta:",
-                "        abstract = True",
-                "",
-                "class ModelB(ModelA):",
-                "    class Meta:",
-                "        abstract = True",
-                "",
-                "class ConcreteModel(ModelB):",
-                "    id = fields.IntField(pk=True)",
-                "",
-            ]
+        models_code=_multiline_code(
+            """
+            from tortoise import Model, fields
+
+            class GenericModel(Model):
+                user = fields.ForeignKeyField('app_a.User')
+
+                class Meta:
+                    abstract = True
+
+            class ModelA(GenericModel):
+                class Meta:
+                    abstract = True
+
+            class ModelB(ModelA):
+                class Meta:
+                    abstract = True
+
+            class ConcreteModel(ModelB):
+                id = fields.IntField(primary_key=True)
+            """
         ),
-        migration_code="\n".join(
-            [
-                "from tortoise import fields, migrations",
-                "from tortoise.migrations import operations as ops",
-                "",
-                "class Migration(migrations.Migration):",
-                "    dependencies = [('app_a', '0001_initial')]",
-                "    operations = [",
-                "        ops.CreateModel(",
-                "            name='ConcreteModel',",
-                "            fields=[",
-                "                ('id', fields.IntField(pk=True)),",
-                "                ('user', fields.ForeignKeyField('app_a.User')),",
-                "            ],",
-                "        ),",
-                "    ]",
-                "",
-            ]
+        migration_code=_multiline_code(
+            """
+            from tortoise import fields, migrations
+            from tortoise.migrations import operations as ops
+
+            class Migration(migrations.Migration):
+                dependencies = [('app_a', '0001_initial')]
+                operations = [
+                    ops.CreateModel(
+                        name='ConcreteModel',
+                        fields=[
+                            ('id', fields.IntField(primary_key=True)),
+                            ('user', fields.ForeignKeyField('app_a.User')),
+                        ],
+                    ),
+                ]
+            """
         ),
     )
 
