@@ -21,10 +21,10 @@ Added
 Changed
 ^^^^^
 - ``MigrationRecorder.applied_migrations()`` now checks for the migrations table before querying history, allowing catalog lookup errors to propagate while retaining the empty-list fallback for history query errors. (#2382)
+- perf: use datetime.fromisoformat before falling back to iso8601. (#2363)
 
 Fixed
 ^^^^^
-- Reject trailing newlines when validating domain names.
 - ``DecimalField`` no longer raises ``decimal.InvalidOperation`` for values with more than 28 significant digits. (#2349)
 - fix(expressions): inline subquery parameters when ``params_inline`` is enabled (#2340)
 - Use database column names in reverse foreign-key and one-to-one filters with renamed columns or one-to-one primary keys. (#2338)
