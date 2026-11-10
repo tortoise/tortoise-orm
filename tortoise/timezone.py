@@ -32,8 +32,8 @@ except ImportError:  # pragma: nocoverage
                 from iso8601 import parse_date as _fallback_parse
 
                 return _fallback_parse(datetime_string, default_timezone=None)
-            except ImportError:
-                raise e from None
+            except ImportError as err:
+                raise e from err
 
 
 class ZoneInfo(_ZoneInfo):
