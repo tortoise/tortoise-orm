@@ -30,6 +30,13 @@ def _multiline_code(s: str) -> str:
     return dedent(s).removeprefix("\n")
 
 
+def _memory_sqlite() -> ConnectionConfig:
+    return ConnectionConfig(
+        engine="tortoise.backends.sqlite",
+        credentials={"file_path": ":memory:"},
+    )
+
+
 def _setup_multi_connection_projects(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> TortoiseConfig:
@@ -66,14 +73,8 @@ def _setup_multi_connection_projects(
 
     return TortoiseConfig(
         connections={
-            "default": ConnectionConfig(
-                engine="tortoise.backends.sqlite",
-                credentials={"file_path": ":memory:"},
-            ),
-            "secondary": ConnectionConfig(
-                engine="tortoise.backends.sqlite",
-                credentials={"file_path": ":memory:"},
-            ),
+            "default": _memory_sqlite(),
+            "secondary": _memory_sqlite(),
         },
         apps={
             "app_a": AppConfig(
@@ -159,12 +160,7 @@ async def test_plan_multi_connection_empty_targets(
 @pytest.mark.asyncio
 async def test_migrate_accepts_dataclass_config() -> None:
     config = TortoiseConfig(
-        connections={
-            "default": ConnectionConfig(
-                engine="tortoise.backends.sqlite",
-                credentials={"file_path": ":memory:"},
-            )
-        },
+        connections={"default": _memory_sqlite()},
         apps={"models": AppConfig(models=["tests.testmodels"], default_connection="default")},
     )
     try:
@@ -254,12 +250,7 @@ def _setup_cross_app_projects(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -
     monkeypatch.syspath_prepend(str(tmp_path))
 
     return TortoiseConfig(
-        connections={
-            "default": ConnectionConfig(
-                engine="tortoise.backends.sqlite",
-                credentials={"file_path": ":memory:"},
-            )
-        },
+        connections={"default": _memory_sqlite()},
         apps={
             "app_a": AppConfig(
                 models=["app_a.models"],
