@@ -34,6 +34,32 @@ avoid having nested transaction blocks in the concurrent tasks. Transactions are
 blocks are expected to run sequentially, not concurrently.
 
 
+Running Code After Commit
+=========================
+
+``on_commit()`` defers a callback until the current transaction commits. Use it for side
+effects that must only happen once the data is visible to other connections.
+
+  .. code-block:: python3
+
+    async with in_transaction():
+        order = await Order.create(status="paid")
+
+        async def send_receipt() -> None:
+            await mailer.send_receipt(order.id)
+
+        # runs after the outermost block commits, and never if it rolls back
+        await on_commit(send_receipt)
+
+The callback takes no arguments and may be sync or async. Callbacks registered in a nested
+block are dropped if that block rolls back to its savepoint, and otherwise wait for the
+outermost block. They run in registration order, once the connection is released, so they
+can query the database. Outside a transaction, the callback runs immediately.
+
+Every callback runs, even if an earlier one raises. The exceptions are then raised together
+in an ``ExceptionGroup``, which you can handle with ``except*``.
+
+
 .. automodule:: tortoise.transactions
     :members:
     :undoc-members:

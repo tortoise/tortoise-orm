@@ -198,6 +198,7 @@ class ODBCTransactionWrapper(TransactionalDBClient):
             raise TransactionManagementError("Transaction already finalised")
         await self._connection.commit()
         self._finalized = True
+        self._committed = True
         self._connection._conn.autocommit = True
 
     async def rollback(self) -> None:

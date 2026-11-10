@@ -266,6 +266,7 @@ class TransactionWrapper(MySQLClient, TransactionalDBClient):
             raise TransactionManagementError("Transaction already finalised")
         await self._connection.commit()
         self._finalized = True
+        self._committed = True
 
     @translate_exceptions
     async def savepoint(self) -> None:
