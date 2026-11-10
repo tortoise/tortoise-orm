@@ -216,6 +216,13 @@ async def test_hash(tournament_model, tournament_model_unsaved):
         hash(tournament_model_unsaved)
 
 
+@pytest.mark.parametrize(
+    "model", [IntFields(id=0, intnum=1), RequiredPKModel(id="", name="example")]
+)
+def test_model_with_falsey_primary_key_is_hashable(model):
+    assert hash(model) == hash(model.pk)
+
+
 @pytest.mark.asyncio
 async def test_eq(tournament_model):
     mdl = tournament_model
