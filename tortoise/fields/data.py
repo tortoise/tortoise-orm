@@ -618,6 +618,11 @@ class DateField(Field[T_DATE], datetime.date):
 class TimeField(Field[T_TIME], datetime.time):
     """
     Time field.
+
+    Custom validators must handle both ``datetime.time`` and ``datetime.timedelta``.
+    MySQL ``TIME`` values can be returned as ``timedelta`` and are validated unchanged
+    before writes. Negative timedeltas and durations of 24 hours or more are not
+    wrapped into a time of day. See :ref:`validators` for a type-aware example.
     """
 
     skip_to_python_if_native = True
@@ -691,8 +696,6 @@ class TimeField(Field[T_TIME], datetime.time):
         if value is not None:
             if isinstance(value, str):
                 value = datetime.time.fromisoformat(value)
-            if isinstance(value, datetime.timedelta):
-                return value
             if (
                 isinstance(value, datetime.datetime | datetime.time)
                 and get_use_tz()

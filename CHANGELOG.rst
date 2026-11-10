@@ -49,6 +49,9 @@ Fixed
 - Respect the root ``max_recursion`` limit when generating nested Pydantic models. (#2400)
 - ``TextField(null=True)`` now narrows to ``TextField[str | None]`` instead of staying ``TextField[str]``. (#2218)
 - docs: fix relation accessors in model and query examples. (#2411)
+- Run ``TimeField`` validators for ``timedelta`` values, including MySQL ``TIME`` writes.
+  Custom validators must now handle both ``datetime.time`` and unchanged
+  ``datetime.timedelta`` inputs. (#2405)
 
 1.1.9
 -----
