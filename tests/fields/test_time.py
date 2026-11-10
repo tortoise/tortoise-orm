@@ -467,16 +467,36 @@ async def test_datetime_filter_by_year_month_day(db):
 # ============================================================================
 
 
-def test_time_timedelta_validation():
-    def reject_negative(value):
-        if value < timedelta():
-            raise ValidationError("negative time")
+@pytest.mark.parametrize(
+    "value, valid",
+    [
+        (time(1, tzinfo=UTC), True),
+        (time(0, 30, tzinfo=UTC), False),
+        (timedelta(hours=1), True),
+        (timedelta(hours=25), True),
+        (timedelta(hours=-1), False),
+    ],
+)
+def test_time_validator_input_types(value, valid):
+    received = []
 
-    field = fields.TimeField(validators=[reject_negative])
-    value = timedelta(hours=1)
-    assert field.to_db_value(value, testmodels.TimeFields) is value
-    with pytest.raises(ValidationError, match="negative time"):
-        field.to_db_value(-value, testmodels.TimeFields)
+    def at_least_one_hour(value):
+        received.append(value)
+        if isinstance(value, timedelta):
+            before_minimum = value < timedelta(hours=1)
+        else:
+            before_minimum = value.hour < 1
+        if before_minimum:
+            raise ValidationError("Value must be at least one hour")
+
+    field = fields.TimeField(validators=[at_least_one_hour])
+    if valid:
+        assert field.to_db_value(value, testmodels.TimeFields) is value
+    else:
+        with pytest.raises(ValidationError, match="Value must be at least one hour"):
+            field.to_db_value(value, testmodels.TimeFields)
+    assert len(received) == 1
+    assert received[0] is value
 
 
 @pytest.mark.asyncio
