@@ -169,6 +169,8 @@ def test_domain_name_validator_trailing_newline(accept_idna: bool) -> None:
     validator = DomainNameValidator(accept_idna=accept_idna)
     with pytest.raises(InvalidDomainName):
         validator("example.com\n")
+    validator("example.com")
+    validator("example.com.")
 
 
 def test_domain_name_validator_invalid_idn_disabled() -> None:

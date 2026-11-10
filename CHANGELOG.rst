@@ -21,6 +21,7 @@ Added
 Changed
 ^^^^^
 - ``MigrationRecorder.applied_migrations()`` now checks for the migrations table before querying history, allowing catalog lookup errors to propagate while retaining the empty-list fallback for history query errors. (#2382)
+- ``parse_datetime`` now prefers the C-accelerated ``datetime.fromisoformat``, only falling back to ``iso8601`` for formats it can't parse. (#2363)
 
 Fixed
 ^^^^^
@@ -47,6 +48,7 @@ Fixed
 - Respect an explicitly empty ``allowed_schemes`` list in ``URLValidator``. (#2394)
 - Respect the root ``max_recursion`` limit when generating nested Pydantic models. (#2400)
 - ``TextField(null=True)`` now narrows to ``TextField[str | None]`` instead of staying ``TextField[str]``. (#2218)
+- docs: fix relation accessors in model and query examples. (#2411)
 
 1.1.9
 -----
