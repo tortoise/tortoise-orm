@@ -47,6 +47,7 @@ Fixed
 - Respect an explicitly empty ``allowed_schemes`` list in ``URLValidator``. (#2394)
 - Respect the root ``max_recursion`` limit when generating nested Pydantic models. (#2400)
 - ``TextField(null=True)`` now narrows to ``TextField[str | None]`` instead of staying ``TextField[str]``. (#2218)
+- docs: fix relation accessors in model and query examples. (#2411)
 
 1.1.9
 -----
