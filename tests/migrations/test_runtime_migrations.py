@@ -3,7 +3,7 @@ from __future__ import annotations
 import importlib
 import sys
 from pathlib import Path
-from typing import cast
+from typing import Final, cast
 
 import pytest
 
@@ -41,10 +41,19 @@ class FakeConnection:
         self.executed_scripts.append(query)
 
 
+def _purge_app_modules(app_label: str) -> None:
+    """Drop cached modules for app_label so a re-created package is re-imported.
+
+    Each call writes the app under a fresh tmp_path, but the label is stable;
+    without this, sys.modules would serve stale code from a previous test.
+    """
+    for name in list(sys.modules):
+        if name == app_label or name.startswith(f"{app_label}."):
+            del sys.modules[name]
+
+
 def _write_migrations(tmp_path: Path, app_label: str, migrations: list[tuple]) -> str:
-    for mod in list(sys.modules):
-        if mod == app_label or mod.startswith(f"{app_label}."):
-            sys.modules.pop(mod, None)
+    _purge_app_modules(app_label)
     package_dir = tmp_path / app_label
     migrations_dir = package_dir / "migrations"
     migrations_dir.mkdir(parents=True, exist_ok=True)
@@ -369,7 +378,8 @@ async def test_migration_apply_and_unapply_flags() -> None:
             self.calls.append("database_backward")
 
     class TestMigration(Migration):
-        operations = [MarkerOperation()]
+        __test__ = False
+        operations: Final = [MarkerOperation()]
 
     migration = TestMigration("0001_initial", "models")
     state = State(models={}, apps=StateApps())
@@ -389,7 +399,8 @@ async def test_migration_unapply_requires_reversible() -> None:
         reversible = False
 
     class TestMigration(Migration):
-        operations = [IrreversibleOperation()]
+        __test__ = False
+        operations: Final = [IrreversibleOperation()]
 
     migration = TestMigration("0001_initial", "models")
     state = State(models={}, apps=StateApps())
