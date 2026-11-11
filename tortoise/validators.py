@@ -214,7 +214,8 @@ class URLValidator(Validator):
     Validates URLs according to RFC 3986. Checks scheme, host, port, and path
     components. Supports HTTP, HTTPS, FTP, and FTPS schemes by default.
 
-    :param allowed_schemes: List of allowed URL schemes. Defaults to ["http", "https", "ftp", "ftps"].
+    :param allowed_schemes: List of allowed URL schemes. Defaults to ["http", "https",
+        "ftp", "ftps"] when omitted or None. An empty list blocks all schemes.
     :raises InvalidURL: if the value is not a valid URL.
     :raises InvalidScheme: if the URL scheme is not in the allowed list.
     """
@@ -248,7 +249,9 @@ class URLValidator(Validator):
         return re.compile(self.URL_REGEX, re.IGNORECASE)
 
     def __init__(self, allowed_schemes: list[str] | None = None) -> None:
-        self.allowed_schemes = allowed_schemes or ["http", "https", "ftp", "ftps"]
+        self.allowed_schemes = (
+            allowed_schemes if allowed_schemes is not None else ["http", "https", "ftp", "ftps"]
+        )
 
     def __call__(self, value: str) -> None:
         if len(value) > self.MAX_URL_LENGTH:

@@ -215,7 +215,9 @@ show_missing = true
 line-length = 100
 exclude = ["docs/type_globals.py"]
 [tool.ruff.lint]
-ignore = ["E501"]
+ignore = [
+    "BLE001",  # https://docs.astral.sh/ruff/rules/blind-except/
+]
 extend-select = [
     "I", # https://docs.astral.sh/ruff/rules/#isort-i
     "FA", # https://docs.astral.sh/ruff/rules/#flake8-future-annotations-fa
