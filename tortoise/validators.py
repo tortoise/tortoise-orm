@@ -349,7 +349,7 @@ class EmailValidator(Validator):
         return False
 
     def __init__(self, allowed_domains: list[str] | None = None) -> None:
-        self.allowed_domains: list[str] = allowed_domains or []
+        self.allowed_domains: list[str] = [i.lower() for i in allowed_domains or ()]
 
     def __call__(self, value: str) -> None:
         if "@" not in value or len(value) > self.MAX_EMAIL_LENGTH:
@@ -361,7 +361,7 @@ class EmailValidator(Validator):
             raise InvalidEmailAddress()
 
         if self.allowed_domains:
-            if domain_part.lower() not in (domain.lower() for domain in self.allowed_domains):
+            if domain_part.lower() not in self.allowed_domains:
                 raise InvalidEmailAddress()
         elif not self._validate_domain_part(domain_part):
             raise InvalidEmailAddress()
