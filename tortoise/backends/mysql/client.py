@@ -122,7 +122,9 @@ class MySQLClient(BaseDBAsyncClient):
             "maxsize": self.pool_maxsize,
             **self.extra,
         }
-        # Both drivers interpolate sql_mode directly into a SET statement.
+        # Both drivers interpolate sql_mode directly into a SET statement,
+        # so an empty value must be the SQL literal '' (clear all modes),
+        # not an empty string (which would produce SET sql_mode= and fail).
         if self._template.get("sql_mode") == "":
             self._template["sql_mode"] = "''"
         try:

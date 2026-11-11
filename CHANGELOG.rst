@@ -14,6 +14,14 @@ Unreleased
 Added
 ^^^^^
 - Support forward relation ``in`` and ``not_in`` filters with model instances. (#2323)
+- SQLite now persists ``TimeField`` values as ISO-8601 times. (#2297)
+- Accept libpq style multi-host PostgreSQL URLs such as ``postgres://user:pass@host1:5432,host2:5433/db`` for ``asyncpg`` and ``psycopg``; ``asyncpg`` used to fail resolving ``host1,host2`` as one name, and ``psycopg`` now also reads ``target_session_attrs``. (#2387)
+- Typed ``**kwargs`` on field constructors via PEP 692 (``Unpack[TypedDict]``), so IDEs and type checkers can autocomplete and validate common field arguments (This only affects type-hint checking results without affecting runtime behavior). (#2256)
+
+Changed
+^^^^^
+- ``MigrationRecorder.applied_migrations()`` now checks for the migrations table before querying history, allowing catalog lookup errors to propagate while retaining the empty-list fallback for history query errors. (#2382)
+- ``parse_datetime`` now prefers the C-accelerated ``datetime.fromisoformat``, only falling back to ``iso8601`` for formats it can't parse. (#2363)
 
 Fixed
 ^^^^^
@@ -25,8 +33,24 @@ Fixed
 - ``Case``/``When`` and aggregate ``_filter`` expressions now keep the joins for related fields they reference, so e.g. ``When(tournament__name="a", then=1)`` no longer fails with a missing table. (#2354)
 - Refresh renamed model fields and foreign-key IDs using their model attribute names. (#2335)
 - Include renamed fields in model dictionaries and default ``values_list()`` projections. (#2339)
-- Allow ``sql_mode=`` in MySQL database URLs to clear the default SQL mode,
-  including connection setup with aiomysql and asyncmy. (#2326)
+- Fix ``get_or_create`` function raises "Object does not exist". (#2116)
+- Preserve field iterators when refreshing model instances from the database. (#2342)
+- ``bulk_update()`` now filters on the primary key list once per batch instead of once per field, avoiding duplicate ``IN`` conditions that made PostgreSQL fall back to a sequential scan. (#2358)
+- ``auto_now`` / ``auto_now_add`` values are no longer shifted to ``TIMEZONE`` when ``use_tz=False``. (#2350)
+- ``pydantic_model_creator`` no longer returns a cached class that ignores the ``model_config``, ``validators`` or ``module`` of the current call. (#2312)
+- Preserve object and field iterators across validation and batching in ``bulk_update()``. (#2320)
+- Avoid accumulating duplicate query statements when previewing SQL or executing repeatedly. (#2321)
+- Percent-decode database URL usernames once, preserving plus signs and query-string overrides. (#2379)
+- Allow hashing model instances with zero or empty-string primary keys. (#2381)
+- Parse false boolean values in database URL options correctly. (#2377)
+- Reject domain names with trailing newlines in ``DomainNameValidator``. (#2386)
+- ``QuerySet.exists()`` now respects ``limit()`` and ``offset()``, so ``limit(0)`` or an offset past the last row returns ``False``. (#2389)
+- Respect an explicitly empty ``allowed_schemes`` list in ``URLValidator``. (#2394)
+- Respect the root ``max_recursion`` limit when generating nested Pydantic models. (#2400)
+- ``TextField(null=True)`` now narrows to ``TextField[str | None]`` instead of staying ``TextField[str]``. (#2218)
+- docs: fix relation accessors in model and query examples. (#2411)
+- Match email domain allowlists without regard to case. (#2403)
+- Allow ``sql_mode=`` in MySQL database URLs to clear the default SQL mode, including connection setup with aiomysql and asyncmy. (#2326)
 
 1.1.9
 -----

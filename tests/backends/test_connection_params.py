@@ -10,6 +10,7 @@ except ImportError:
     import aiomysql as mysql
 
 from tortoise import timezone
+from tortoise.backends.base.config_generator import expand_db_url
 from tortoise.context import TortoiseContext
 
 
@@ -204,6 +205,7 @@ async def test_psycopg_pool_checks_connection_health_on_checkout():
                 await ctx.connections.get("models").create_connection(with_db=True)
 
                 patched_create_pool.assert_awaited_once()
+                assert patched_create_pool.await_args is not None
                 assert (
                     patched_create_pool.await_args.kwargs["check"]
                     is AsyncConnectionPool.check_connection
@@ -280,3 +282,71 @@ async def test_mysql_session_timezone_uses_configured_tz():
         else:
             os.environ.pop("TIMEZONE", None)
         timezone._reset_timezone_cache()
+
+
+@pytest.mark.asyncio
+async def test_asyncpg_multi_host_db_url():
+    db_url = "postgres://u:p@h1:5433,h2/test?target_session_attrs=read-write"
+    with patch(
+        "tortoise.backends.asyncpg.client.asyncpg.create_pool", new=AsyncMock()
+    ) as asyncpg_connect:
+        ctx = TortoiseContext()
+        async with ctx:
+            await ctx.connections._init({"models": expand_db_url(db_url)}, False)
+            await ctx.connections.get("models").create_connection(with_db=True)
+
+            assert asyncpg_connect.await_args is not None
+            kwargs = asyncpg_connect.await_args.kwargs
+            assert kwargs["host"] == ["h1", "h2"]
+            assert kwargs["port"] == [5433, 5432]
+            assert kwargs["target_session_attrs"] == "read-write"
+
+
+@pytest.mark.asyncio
+async def test_psycopg_multi_host_db_url():
+    from tortoise.backends.psycopg.client import PsycopgClient
+
+    db_url = "psycopg://u:p@h1:5433,h2/test?target_session_attrs=read-write"
+    credentials = expand_db_url(db_url)["credentials"]
+    client = PsycopgClient(connection_name="models", **credentials)
+    with (
+        patch.object(PsycopgClient, "create_pool", new=AsyncMock()) as create_pool,
+        patch.object(PsycopgClient, "_post_connect", new=AsyncMock()),
+    ):
+        await client.create_connection(with_db=True)
+
+    assert create_pool.await_args is not None
+    conninfo = create_pool.await_args.kwargs["conninfo"]
+    assert "host=h1,h2" in conninfo
+    assert "port=5433,5432" in conninfo
+    assert "target_session_attrs=read-write" in conninfo
+    assert create_pool.await_args is not None
+    assert "target_session_attrs" not in create_pool.await_args.kwargs
+
+
+@pytest.mark.asyncio
+async def test_psycopg_target_session_attrs_in_server_settings():
+    from tortoise.backends.psycopg.client import PsycopgClient
+
+    client = PsycopgClient(
+        connection_name="models",
+        host="h1",
+        server_settings={"target_session_attrs": "primary"},
+    )
+    with (
+        patch.object(PsycopgClient, "create_pool", new=AsyncMock()) as create_pool,
+        patch.object(PsycopgClient, "_post_connect", new=AsyncMock()),
+    ):
+        await client.create_connection(with_db=True)
+
+    assert create_pool.await_args is not None
+    assert "target_session_attrs=primary" in create_pool.await_args.kwargs["conninfo"]
+
+
+def test_postgres_client_keeps_single_host_types() -> None:
+    from tortoise.backends.asyncpg.client import AsyncpgDBClient
+
+    client = AsyncpgDBClient(connection_name="models", host="h1", port="5433")  # type:ignore
+    assert (client.host, client.port) == ("h1", 5433)
+    client = AsyncpgDBClient(connection_name="models", host=("h1", "h2"), port=(5433, "5434"))  # type:ignore
+    assert (client.host, client.port) == (["h1", "h2"], [5433, 5434])

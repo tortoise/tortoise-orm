@@ -114,7 +114,7 @@ async def test_save(db):
 
 @pytest.mark.asyncio
 async def test_save_with_update_fields(db):
-    record = await ValidatorModel.create(min_value_decimal=Decimal("2"))
+    record = await ValidatorModel.create(min_value_decimal=Decimal(2))
 
     record.min_value_decimal = Decimal("0.9")
     with pytest.raises(ValidationError):
@@ -123,7 +123,7 @@ async def test_save_with_update_fields(db):
 
 @pytest.mark.asyncio
 async def test_update(db):
-    record = await ValidatorModel.create(min_value_decimal=Decimal("2"))
+    record = await ValidatorModel.create(min_value_decimal=Decimal(2))
 
     record.min_value_decimal = Decimal("0.9")
     with pytest.raises(ValidationError):
@@ -156,11 +156,21 @@ def test_domain_name_validator_valid(value) -> None:
         "example-.com",
         "under_line.com",
         "💻.tech",
+        "example.com\n",
     ],
 )
 def test_domain_name_validator_invalid(value) -> None:
     with pytest.raises(InvalidDomainName):
         validate_domain_name(value)
+
+
+@pytest.mark.parametrize("accept_idna", [True, False])
+def test_domain_name_validator_trailing_newline(accept_idna: bool) -> None:
+    validator = DomainNameValidator(accept_idna=accept_idna)
+    with pytest.raises(InvalidDomainName):
+        validator("example.com\n")
+    validator("example.com")
+    validator("example.com.")
 
 
 def test_domain_name_validator_invalid_idn_disabled() -> None:
@@ -198,6 +208,12 @@ def test_url_validator_valid(value) -> None:
 def test_url_validator_valid_custom_schemes(value) -> None:
     validator = URLValidator(allowed_schemes=["http", "https"])
     validator(value)
+
+
+def test_url_validator_rejects_all_schemes_when_allowlist_is_empty() -> None:
+    validator = URLValidator(allowed_schemes=[])
+    with pytest.raises(InvalidScheme):
+        validator("https://example.com")
 
 
 def test_url_validator_invalid_scheme() -> None:
@@ -252,6 +268,20 @@ class TestEmailValidator:
         validator = EmailValidator(allowed_domains=["example.com", "test.com"])
         validator("user@example.com")
         validator("user@test.com")
+
+    @pytest.mark.parametrize(
+        "allowed_domain,email",
+        [
+            ("example.com", "User@EXAMPLE.COM"),
+            ("EXAMPLE.COM", "User@example.com"),
+            ("LocalHost", "User@LOCALHOST"),
+        ],
+    )
+    def test_email_validator_allowed_domains_ignore_case(self, allowed_domain, email) -> None:
+        validator = EmailValidator(allowed_domains=[allowed_domain])
+        validator(email)
+        with pytest.raises(InvalidEmailAddress):
+            validator("User@other.example.com")
 
     def test_email_validator_invalid_allowed_domains(self) -> None:
         validator = EmailValidator(allowed_domains=["example.com"])
