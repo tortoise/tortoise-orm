@@ -1,4 +1,6 @@
 import os
+from collections.abc import AsyncGenerator
+from contextlib import asynccontextmanager
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import asyncpg
@@ -14,45 +16,52 @@ from tortoise.backends.base.config_generator import expand_db_url
 from tortoise.context import TortoiseContext
 
 
+@asynccontextmanager
+async def _mock_mysql_context() -> AsyncGenerator[tuple[AsyncMock, TortoiseContext], None]:
+    pool = MagicMock()
+    pool.wait_closed = AsyncMock()
+    with patch(
+        "tortoise.backends.mysql.client.mysql.create_pool", new=AsyncMock(return_value=pool)
+    ) as mysql_connect:
+        async with TortoiseContext() as ctx:
+            yield mysql_connect, ctx
+
+
 @pytest.mark.asyncio
 async def test_mysql_connection_params():
-    with patch(
-        "tortoise.backends.mysql.client.mysql.create_pool", new=AsyncMock()
-    ) as mysql_connect:
-        ctx = TortoiseContext()
-        async with ctx:
-            await ctx.connections._init(
-                {
-                    "models": {
-                        "engine": "tortoise.backends.mysql",
-                        "credentials": {
-                            "database": "test",
-                            "host": "127.0.0.1",
-                            "password": "foomip",
-                            "port": 3306,
-                            "user": "root",
-                            "connect_timeout": 1.5,
-                            "charset": "utf8mb4",
-                        },
-                    }
-                },
-                False,
-            )
-            await ctx.connections.get("models").create_connection(with_db=True)
+    async with _mock_mysql_context() as (mysql_connect, ctx):
+        await ctx.connections._init(
+            {
+                "models": {
+                    "engine": "tortoise.backends.mysql",
+                    "credentials": {
+                        "database": "test",
+                        "host": "127.0.0.1",
+                        "password": "foomip",
+                        "port": 3306,
+                        "user": "root",
+                        "connect_timeout": 1.5,
+                        "charset": "utf8mb4",
+                    },
+                }
+            },
+            False,
+        )
+        await ctx.connections.get("models").create_connection(with_db=True)
 
-            mysql_connect.assert_awaited_once_with(  # nosec
-                autocommit=True,
-                charset="utf8mb4",
-                connect_timeout=1.5,
-                db="test",
-                host="127.0.0.1",
-                password="foomip",
-                port=3306,
-                user="root",
-                maxsize=5,
-                minsize=1,
-                sql_mode="STRICT_TRANS_TABLES",
-            )
+        mysql_connect.assert_awaited_once_with(  # nosec
+            autocommit=True,
+            charset="utf8mb4",
+            connect_timeout=1.5,
+            db="test",
+            host="127.0.0.1",
+            password="foomip",
+            port=3306,
+            user="root",
+            maxsize=5,
+            minsize=1,
+            sql_mode="STRICT_TRANS_TABLES",
+        )
 
 
 @pytest.mark.asyncio
@@ -60,19 +69,15 @@ async def test_mysql_connection_params():
     "query,expected", [("sql_mode=", "''"), ("sql_mode=%27%27", "''"), ("sql_mode=ANSI", "ANSI")]
 )
 async def test_mysql_url_sql_mode(query, expected):
-    pool = MagicMock()
-    pool.wait_closed = AsyncMock()
-    with patch(
-        "tortoise.backends.mysql.client.mysql.create_pool", new=AsyncMock(return_value=pool)
-    ) as mysql_connect:
-        async with TortoiseContext() as ctx:
-            await ctx.connections._init(
-                {"models": f"mysql://root:foomip@127.0.0.1:3306/test?{query}"}, False
-            )
-            await ctx.connections.get("models").create_connection(with_db=True)
+    async with _mock_mysql_context() as (mysql_connect, ctx):
+        await ctx.connections._init(
+            {"models": f"mysql://root:foomip@127.0.0.1:3306/test?{query}"}, False
+        )
+        await ctx.connections.get("models").create_connection(with_db=True)
 
-            mysql_connect.assert_awaited_once()
-            assert mysql_connect.await_args.kwargs["sql_mode"] == expected
+        mysql_connect.assert_awaited_once()
+        assert mysql_connect.await_args is not None
+        assert mysql_connect.await_args.kwargs["sql_mode"] == expected
 
 
 @pytest.mark.asyncio
