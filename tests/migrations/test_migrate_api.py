@@ -1,4 +1,6 @@
 import sys
+from collections.abc import AsyncGenerator
+from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any
 
@@ -92,19 +94,26 @@ def _setup_multi_connection_projects(
     )
 
 
+@asynccontextmanager
+async def _teardown_tortoise(*app_names: str) -> AsyncGenerator[None]:
+    try:
+        yield
+    finally:
+        await Tortoise.close_connections()
+        await Tortoise._reset_apps()
+        if app_names:
+            _cleanup_modules(*app_names)
+
+
 @pytest.mark.asyncio
 async def test_plan_cross_app_dependency(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     config = _setup_cross_app_projects(tmp_path, monkeypatch)
 
-    try:
+    async with _teardown_tortoise("app_a", "app_b"):
         output = await plan(config=config, app_labels=["app_b"])
         app_a_idx = next(i for i, line in enumerate(output) if "app_a.0001_initial" in line)
         app_b_idx = next(i for i, line in enumerate(output) if "app_b.0001_initial" in line)
         assert app_a_idx < app_b_idx
-    finally:
-        await Tortoise.close_connections()
-        await Tortoise._reset_apps()
-        _cleanup_modules("app_a", "app_b")
 
 
 @pytest.mark.asyncio
@@ -113,7 +122,7 @@ async def test_migrate_multi_connection_empty_targets(
 ) -> None:
     config = _setup_multi_connection_projects(tmp_path, monkeypatch)
 
-    try:
+    async with _teardown_tortoise("app_a", "app_b", "app_c"):
         await migrate(config=config, app_labels=["app_b"])
         conn = Tortoise.get_connection("default")
         _, table_info = await conn.execute_query("PRAGMA table_info('concretemodel')")
@@ -128,10 +137,6 @@ async def test_migrate_multi_connection_empty_targets(
             "SELECT name FROM sqlite_master WHERE type='table' AND name='item'"
         )
         assert len(sec_tables) == 0
-    finally:
-        await Tortoise.close_connections()
-        await Tortoise._reset_apps()
-        _cleanup_modules("app_a", "app_b", "app_c")
 
 
 @pytest.mark.asyncio
@@ -140,17 +145,13 @@ async def test_plan_multi_connection_empty_targets(
 ) -> None:
     config = _setup_multi_connection_projects(tmp_path, monkeypatch)
 
-    try:
+    async with _teardown_tortoise("app_a", "app_b", "app_c"):
         output = await plan(config=config, app_labels=["app_b"])
         app_a_idx = next(i for i, line in enumerate(output) if "app_a.0001_initial" in line)
         app_b_idx = next(i for i, line in enumerate(output) if "app_b.0001_initial" in line)
         assert app_a_idx < app_b_idx
         assert not any("app_c" in line for line in output)
         assert not any("secondary" in line for line in output)
-    finally:
-        await Tortoise.close_connections()
-        await Tortoise._reset_apps()
-        _cleanup_modules("app_a", "app_b", "app_c")
 
 
 @pytest.mark.asyncio
@@ -159,10 +160,8 @@ async def test_migrate_accepts_dataclass_config() -> None:
         connections={"default": _memory_sqlite()},
         apps={"models": AppConfig(models=["tests.testmodels"], default_connection="default")},
     )
-    try:
+    async with _teardown_tortoise():
         await migrate(config=config)
-    finally:
-        await Tortoise.close_connections()
 
 
 def _setup_cross_app_projects(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> TortoiseConfig:
@@ -268,7 +267,7 @@ async def test_sqlmigrate_cross_app_foreign_key_in_table_sql(
 ) -> None:
     config = _setup_cross_app_projects(tmp_path, monkeypatch)
 
-    try:
+    async with _teardown_tortoise("app_a", "app_b"):
         sql_statements = await sqlmigrate(
             config=config,
             app_label="app_b",
@@ -277,10 +276,6 @@ async def test_sqlmigrate_cross_app_foreign_key_in_table_sql(
         combined_sql = "\n".join(sql_statements)
         assert '"user_id"' in combined_sql
         assert 'REFERENCES "user"' in combined_sql
-    finally:
-        await Tortoise.close_connections()
-        await Tortoise._reset_apps()
-        _cleanup_modules("app_a", "app_b")
 
 
 @pytest.mark.asyncio
@@ -289,7 +284,7 @@ async def test_migrate_cross_app_foreign_key(
 ) -> None:
     config = _setup_cross_app_projects(tmp_path, monkeypatch)
 
-    try:
+    async with _teardown_tortoise("app_a", "app_b"):
         await migrate(config=config, app_labels=["app_b"])
         conn = Tortoise.get_connection("default")
         _, table_info = await conn.execute_query("PRAGMA table_info('concretemodel')")
@@ -298,10 +293,6 @@ async def test_migrate_cross_app_foreign_key(
 
         _, fk_info = await conn.execute_query("PRAGMA foreign_key_list('concretemodel')")
         assert any(row["table"] == "user" and row["from"] == "user_id" for row in fk_info)
-    finally:
-        await Tortoise.close_connections()
-        await Tortoise._reset_apps()
-        _cleanup_modules("app_a", "app_b")
 
 
 @pytest.mark.asyncio
@@ -322,7 +313,7 @@ async def test_migrate_multi_connection_target_exclusion(
         return await orig_migrate(self, targets, **kwargs)
 
     monkeypatch.setattr(MigrationExecutor, "migrate", mock_migrate)
-    try:
+    async with _teardown_tortoise("app_a", "app_b", "app_c"):
         await migrate(config=config, app_labels=["app_b", "app_c"])
         assert "app_c" not in recorded_targets["default"]
         assert "app_b" in recorded_targets["default"]
@@ -330,7 +321,3 @@ async def test_migrate_multi_connection_target_exclusion(
         assert "app_b" not in recorded_targets["secondary"]
         assert "app_a" not in recorded_targets["secondary"]
         assert "app_c" in recorded_targets["secondary"]
-    finally:
-        await Tortoise.close_connections()
-        await Tortoise._reset_apps()
-        _cleanup_modules("app_a", "app_b", "app_c")
