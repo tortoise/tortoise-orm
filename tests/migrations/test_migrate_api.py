@@ -1,10 +1,10 @@
 import sys
 from pathlib import Path
-from textwrap import dedent
 from typing import Any
 
 import pytest
 
+from tests.utils.multiline import multiline_code
 from tortoise import Tortoise
 from tortoise.config import AppConfig, ConnectionConfig, TortoiseConfig
 from tortoise.migrations.api import migrate, plan, sqlmigrate
@@ -26,10 +26,6 @@ def _create_app_package(app_dir: Path, models_code: str, migration_code: str) ->
     (migrations_dir / "0001_initial.py").write_text(migration_code, encoding="ascii")
 
 
-def _multiline_code(s: str) -> str:
-    return dedent(s).removeprefix("\n")
-
-
 def _memory_sqlite() -> ConnectionConfig:
     return ConnectionConfig(
         engine="tortoise.backends.sqlite",
@@ -46,7 +42,7 @@ def _setup_multi_connection_projects(
 
     _create_app_package(
         tmp_path / "app_c",
-        models_code=_multiline_code(
+        models_code=multiline_code(
             """
             from tortoise import Model, fields
 
@@ -54,7 +50,7 @@ def _setup_multi_connection_projects(
                 id = fields.IntField(primary_key=True)
             """
         ),
-        migration_code=_multiline_code(
+        migration_code=multiline_code(
             """
             from tortoise import fields, migrations
             from tortoise.migrations import operations as ops
@@ -174,7 +170,7 @@ def _setup_cross_app_projects(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -
 
     _create_app_package(
         tmp_path / "app_a",
-        models_code=_multiline_code(
+        models_code=multiline_code(
             """
             from tortoise import Model, fields
 
@@ -183,7 +179,7 @@ def _setup_cross_app_projects(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -
                 username = fields.CharField(max_length=50)
             """
         ),
-        migration_code=_multiline_code(
+        migration_code=multiline_code(
             """
             from tortoise import fields, migrations
             from tortoise.migrations import operations as ops
@@ -205,7 +201,7 @@ def _setup_cross_app_projects(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -
 
     _create_app_package(
         tmp_path / "app_b",
-        models_code=_multiline_code(
+        models_code=multiline_code(
             """
             from tortoise import Model, fields
 
@@ -227,7 +223,7 @@ def _setup_cross_app_projects(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -
                 id = fields.IntField(primary_key=True)
             """
         ),
-        migration_code=_multiline_code(
+        migration_code=multiline_code(
             """
             from tortoise import fields, migrations
             from tortoise.migrations import operations as ops

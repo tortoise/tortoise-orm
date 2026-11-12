@@ -3,7 +3,7 @@ from __future__ import annotations
 import importlib
 import sys
 from pathlib import Path
-from typing import Final, cast
+from typing import cast
 
 import pytest
 
@@ -379,7 +379,7 @@ async def test_migration_apply_and_unapply_flags() -> None:
 
     class TestMigration(Migration):
         __test__ = False
-        operations: Final = [MarkerOperation()]
+        operations = [MarkerOperation()]
 
     migration = TestMigration("0001_initial", "models")
     state = State(models={}, apps=StateApps())
@@ -400,7 +400,7 @@ async def test_migration_unapply_requires_reversible() -> None:
 
     class TestMigration(Migration):
         __test__ = False
-        operations: Final = [IrreversibleOperation()]
+        operations = [IrreversibleOperation()]
 
     migration = TestMigration("0001_initial", "models")
     state = State(models={}, apps=StateApps())
