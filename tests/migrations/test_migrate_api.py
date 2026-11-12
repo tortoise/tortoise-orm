@@ -275,8 +275,8 @@ async def test_sqlmigrate_cross_app_foreign_key_in_table_sql(
             migration_name="0001_initial",
         )
         combined_sql = "\n".join(sql_statements)
-        assert '"user_id"' in combined_sql or "user_id" in combined_sql
-        assert 'REFERENCES "user"' in combined_sql or "REFERENCES user" in combined_sql
+        assert '"user_id"' in combined_sql
+        assert 'REFERENCES "user"' in combined_sql
     finally:
         await Tortoise.close_connections()
         await Tortoise._reset_apps()
