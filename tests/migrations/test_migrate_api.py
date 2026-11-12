@@ -35,13 +35,86 @@ def _memory_sqlite() -> ConnectionConfig:
     )
 
 
-def _setup_multi_connection_projects(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> TortoiseConfig:
-    _cleanup_modules("app_c")
+def _create_cross_app_a(tmp_path: Path) -> None:
+    _create_app_package(
+        tmp_path / "app_a",
+        models_code=multiline_code(
+            """
+            from tortoise import Model, fields
 
-    _setup_cross_app_projects(tmp_path, monkeypatch)
+            class User(Model):
+                id = fields.IntField(primary_key=True)
+                username = fields.CharField(max_length=50)
+            """
+        ),
+        migration_code=multiline_code(
+            """
+            from tortoise import fields, migrations
+            from tortoise.migrations import operations as ops
 
+            class Migration(migrations.Migration):
+                dependencies = []
+                operations = [
+                    ops.CreateModel(
+                        name='User',
+                        fields=[
+                            ('id', fields.IntField(primary_key=True)),
+                            ('username', fields.CharField(max_length=50)),
+                        ],
+                    ),
+                ]
+            """
+        ),
+    )
+
+
+def _create_cross_app_b(tmp_path: Path) -> None:
+    _create_app_package(
+        tmp_path / "app_b",
+        models_code=multiline_code(
+            """
+            from tortoise import Model, fields
+
+            class GenericModel(Model):
+                user = fields.ForeignKeyField('app_a.User')
+
+                class Meta:
+                    abstract = True
+
+            class ModelA(GenericModel):
+                class Meta:
+                    abstract = True
+
+            class ModelB(ModelA):
+                class Meta:
+                    abstract = True
+
+            class ConcreteModel(ModelB):
+                id = fields.IntField(primary_key=True)
+            """
+        ),
+        migration_code=multiline_code(
+            """
+            from tortoise import fields, migrations
+            from tortoise.migrations import operations as ops
+
+            class Migration(migrations.Migration):
+                dependencies = [('app_a', '0001_initial')]
+                operations = [
+                    ops.CreateModel(
+                        name='ConcreteModel',
+                        fields=[
+                            ('id', fields.IntField(primary_key=True)),
+                            ('user', fields.ForeignKeyField('app_a.User')),
+                        ],
+                    ),
+                ]
+            """
+        ),
+    )
+
+
+def _create_cross_app_c(tmp_path: Path) -> None:
     _create_app_package(
         tmp_path / "app_c",
         models_code=multiline_code(
@@ -68,6 +141,39 @@ def _setup_multi_connection_projects(
             """
         ),
     )
+
+
+def _setup_cross_app_projects(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> TortoiseConfig:
+    _cleanup_modules("app_a", "app_b")
+    _create_cross_app_a(tmp_path)
+    _create_cross_app_b(tmp_path)
+    monkeypatch.syspath_prepend(str(tmp_path))
+
+    return TortoiseConfig(
+        connections={"default": _memory_sqlite()},
+        apps={
+            "app_a": AppConfig(
+                models=["app_a.models"],
+                default_connection="default",
+                migrations="app_a.migrations",
+            ),
+            "app_b": AppConfig(
+                models=["app_b.models"],
+                default_connection="default",
+                migrations="app_b.migrations",
+            ),
+        },
+    )
+
+
+def _setup_multi_connection_projects(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> TortoiseConfig:
+    _cleanup_modules("app_c")
+
+    _setup_cross_app_projects(tmp_path, monkeypatch)
+
+    _create_cross_app_c(tmp_path)
 
     return TortoiseConfig(
         connections={
@@ -162,103 +268,6 @@ async def test_migrate_accepts_dataclass_config() -> None:
     )
     async with _teardown_tortoise():
         await migrate(config=config)
-
-
-def _setup_cross_app_projects(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> TortoiseConfig:
-    _cleanup_modules("app_a", "app_b")
-
-    _create_app_package(
-        tmp_path / "app_a",
-        models_code=multiline_code(
-            """
-            from tortoise import Model, fields
-
-            class User(Model):
-                id = fields.IntField(primary_key=True)
-                username = fields.CharField(max_length=50)
-            """
-        ),
-        migration_code=multiline_code(
-            """
-            from tortoise import fields, migrations
-            from tortoise.migrations import operations as ops
-
-            class Migration(migrations.Migration):
-                dependencies = []
-                operations = [
-                    ops.CreateModel(
-                        name='User',
-                        fields=[
-                            ('id', fields.IntField(primary_key=True)),
-                            ('username', fields.CharField(max_length=50)),
-                        ],
-                    ),
-                ]
-            """
-        ),
-    )
-
-    _create_app_package(
-        tmp_path / "app_b",
-        models_code=multiline_code(
-            """
-            from tortoise import Model, fields
-
-            class GenericModel(Model):
-                user = fields.ForeignKeyField('app_a.User')
-
-                class Meta:
-                    abstract = True
-
-            class ModelA(GenericModel):
-                class Meta:
-                    abstract = True
-
-            class ModelB(ModelA):
-                class Meta:
-                    abstract = True
-
-            class ConcreteModel(ModelB):
-                id = fields.IntField(primary_key=True)
-            """
-        ),
-        migration_code=multiline_code(
-            """
-            from tortoise import fields, migrations
-            from tortoise.migrations import operations as ops
-
-            class Migration(migrations.Migration):
-                dependencies = [('app_a', '0001_initial')]
-                operations = [
-                    ops.CreateModel(
-                        name='ConcreteModel',
-                        fields=[
-                            ('id', fields.IntField(primary_key=True)),
-                            ('user', fields.ForeignKeyField('app_a.User')),
-                        ],
-                    ),
-                ]
-            """
-        ),
-    )
-
-    monkeypatch.syspath_prepend(str(tmp_path))
-
-    return TortoiseConfig(
-        connections={"default": _memory_sqlite()},
-        apps={
-            "app_a": AppConfig(
-                models=["app_a.models"],
-                default_connection="default",
-                migrations="app_a.migrations",
-            ),
-            "app_b": AppConfig(
-                models=["app_b.models"],
-                default_connection="default",
-                migrations="app_b.migrations",
-            ),
-        },
-    )
 
 
 @pytest.mark.asyncio
