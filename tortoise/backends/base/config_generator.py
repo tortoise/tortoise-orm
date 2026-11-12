@@ -195,6 +195,14 @@ def _split_multi_host(hostinfo: str) -> tuple[list[str], list[int | None]]:
     return hosts, ports
 
 
+def _parse_query_value(db: dict, key: str, val: list[str]) -> Any:
+    last_value = val[-1]
+    db_cast = db["cast"].get(key, str)
+    if db_cast is bool:
+        return last_value.lower() in ("true", "1", "yes", "on")
+    return db_cast(last_value)
+
+
 def expand_db_url(db_url: str, testing: bool = False) -> dict:
     # Quote special characters in userinfo to avoid parsing errors
     db_url = _quote_url_userinfo(db_url)
@@ -228,18 +236,17 @@ def expand_db_url(db_url: str, testing: bool = False) -> dict:
         path = None
 
     params = dict(db["defaults"])
-    for key, val in urlparse.parse_qs(url.query, keep_blank_values=True).items():
-        # Only keep blank values that are explicitly supported by the backend.
-        if key not in db.get("allow_blank", ()):
-            val = [value for value in val if value]
-            if not val:
-                continue
-        last_value = val[-1]
-        db_cast = db["cast"].get(key, str)
-        if db_cast is bool:
-            params[key] = last_value.lower() in ("true", "1", "yes", "on")
-        else:
-            params[key] = db_cast(last_value)
+    if allow_blank := db.get("allow_blank", ()):
+        for key, val in urlparse.parse_qs(url.query, keep_blank_values=True).items():
+            # Only keep blank values that are explicitly supported by the backend.
+            if key not in allow_blank:
+                val = [value for value in val if value]
+                if not val:
+                    continue
+            params[key] = _parse_query_value(db, key, val)
+    else:
+        for key, val in urlparse.parse_qs(url.query).items():
+            params[key] = _parse_query_value(db, key, val)
 
     if testing and path:
         path = path.replace("\\{", "{").replace("\\}", "}")
