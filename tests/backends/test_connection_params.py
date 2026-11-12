@@ -3,7 +3,6 @@ from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from unittest.mock import AsyncMock, MagicMock, patch
 
-import asyncpg
 import pytest
 
 try:
@@ -92,47 +91,49 @@ async def test_sqlite_blank_string_option_keeps_default(tmp_path, pragma, expect
 @pytest.mark.asyncio
 async def test_asyncpg_connection_params():
     try:
-        with patch(
-            "tortoise.backends.asyncpg.client.asyncpg.create_pool", new=AsyncMock()
-        ) as asyncpg_connect:
-            ctx = TortoiseContext()
-            async with ctx:
-                await ctx.connections._init(
-                    {
-                        "models": {
-                            "engine": "tortoise.backends.asyncpg",
-                            "credentials": {
-                                "database": "test",
-                                "host": "127.0.0.1",
-                                "password": "foomip",
-                                "port": 5432,
-                                "user": "root",
-                                "timeout": 30,
-                                "ssl": True,
-                            },
-                        }
-                    },
-                    False,
-                )
-                await ctx.connections.get("models").create_connection(with_db=True)
-
-                asyncpg_connect.assert_awaited_once_with(  # nosec
-                    None,
-                    database="test",
-                    host="127.0.0.1",
-                    password="foomip",
-                    port=5432,
-                    ssl=True,
-                    timeout=30,
-                    user="root",
-                    max_size=5,
-                    min_size=1,
-                    connection_class=asyncpg.connection.Connection,
-                    loop=None,
-                    server_settings={},
-                )
+        import asyncpg
     except ImportError:
         pytest.skip("asyncpg not installed")
+
+    with patch(
+        "tortoise.backends.asyncpg.client.asyncpg.create_pool", new=AsyncMock()
+    ) as asyncpg_connect:
+        ctx = TortoiseContext()
+        async with ctx:
+            await ctx.connections._init(
+                {
+                    "models": {
+                        "engine": "tortoise.backends.asyncpg",
+                        "credentials": {
+                            "database": "test",
+                            "host": "127.0.0.1",
+                            "password": "foomip",
+                            "port": 5432,
+                            "user": "root",
+                            "timeout": 30,
+                            "ssl": True,
+                        },
+                    }
+                },
+                False,
+            )
+            await ctx.connections.get("models").create_connection(with_db=True)
+
+            asyncpg_connect.assert_awaited_once_with(  # nosec
+                None,
+                database="test",
+                host="127.0.0.1",
+                password="foomip",
+                port=5432,
+                ssl=True,
+                timeout=30,
+                user="root",
+                max_size=5,
+                min_size=1,
+                connection_class=asyncpg.connection.Connection,
+                loop=None,
+                server_settings={},
+            )
 
 
 @pytest.mark.asyncio
@@ -309,7 +310,10 @@ async def test_asyncpg_multi_host_db_url():
 
 @pytest.mark.asyncio
 async def test_psycopg_multi_host_db_url():
-    from tortoise.backends.psycopg.client import PsycopgClient
+    try:
+        from tortoise.backends.psycopg.client import PsycopgClient
+    except ImportError:
+        pytest.skip("psycopg not installed")
 
     db_url = "psycopg://u:p@h1:5433,h2/test?target_session_attrs=read-write"
     credentials = expand_db_url(db_url)["credentials"]
@@ -331,7 +335,10 @@ async def test_psycopg_multi_host_db_url():
 
 @pytest.mark.asyncio
 async def test_psycopg_target_session_attrs_in_server_settings():
-    from tortoise.backends.psycopg.client import PsycopgClient
+    try:
+        from tortoise.backends.psycopg.client import PsycopgClient
+    except ImportError:
+        pytest.skip("psycopg not installed")
 
     client = PsycopgClient(
         connection_name="models",
@@ -349,7 +356,10 @@ async def test_psycopg_target_session_attrs_in_server_settings():
 
 
 def test_postgres_client_keeps_single_host_types() -> None:
-    from tortoise.backends.asyncpg.client import AsyncpgDBClient
+    try:
+        from tortoise.backends.asyncpg.client import AsyncpgDBClient
+    except ImportError:
+        pytest.skip("asyncpg not installed")
 
     client = AsyncpgDBClient(connection_name="models", host="h1", port="5433")  # type:ignore
     assert (client.host, client.port) == ("h1", 5433)
