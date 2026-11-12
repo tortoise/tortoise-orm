@@ -50,6 +50,7 @@ Fixed
 - ``TextField(null=True)`` now narrows to ``TextField[str | None]`` instead of staying ``TextField[str]``. (#2218)
 - docs: fix relation accessors in model and query examples. (#2411)
 - Match email domain allowlists without regard to case. (#2403)
+- Allow ``sql_mode=`` in MySQL database URLs to clear the default SQL mode, including connection setup with aiomysql and asyncmy. (#2326)
 
 1.1.9
 -----

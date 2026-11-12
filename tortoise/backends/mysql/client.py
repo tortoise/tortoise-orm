@@ -55,9 +55,9 @@ def translate_exceptions(func: FuncType) -> FuncType:
             errors.InternalError,
             errors.NotSupportedError,
         ) as exc:
-            raise OperationalError(exc)
+            raise OperationalError(exc) from exc
         except errors.IntegrityError as exc:
-            raise IntegrityError(exc)
+            raise IntegrityError(exc) from exc
 
     return translate_exceptions_
 
@@ -122,37 +122,44 @@ class MySQLClient(BaseDBAsyncClient):
             "maxsize": self.pool_maxsize,
             **self.extra,
         }
+        # Both drivers interpolate sql_mode directly into a SET statement,
+        # so an empty value must be the SQL literal '' (clear all modes),
+        # not an empty string (which would produce SET sql_mode= and fail).
+        if self._template.get("sql_mode") == "":
+            self._template["sql_mode"] = "''"
         try:
             self._pool = await mysql.create_pool(password=self.password, **self._template)
 
             if isinstance(self._pool, mysql.Pool):
-                async with self.acquire_connection() as connection:
-                    async with connection.cursor() as cursor:
-                        if self.storage_engine:
-                            await cursor.execute(
-                                f"SET default_storage_engine='{self.storage_engine}';"
-                            )
-                            if self.storage_engine.lower() != "innodb":  # pragma: nobranch
-                                self.capabilities.__dict__["supports_transactions"] = False
-                        # Only set session timezone when use_tz=True
-                        if get_use_tz():
-                            from datetime import datetime as _datetime
+                async with self.acquire_connection() as connection, connection.cursor() as cursor:
+                    if self.storage_engine:
+                        await cursor.execute(f"SET default_storage_engine='{self.storage_engine}';")
+                        if self.storage_engine.lower() != "innodb":  # pragma: nobranch
+                            self.capabilities.__dict__["supports_transactions"] = False
+                    # Only set session timezone when use_tz=True
+                    if get_use_tz():
+                        from datetime import datetime as _datetime
 
-                            offset = _datetime.now(tz=get_default_timezone()).utcoffset()
-                            total_seconds = int(offset.total_seconds())  # type: ignore
-                            hours = total_seconds // 3600
-                            minutes = abs(total_seconds) % 3600 // 60
-                            tz = f"{hours:+d}:{minutes:02d}"
-                            await cursor.execute(f"SET time_zone='{tz}';")
+                        offset = _datetime.now(tz=get_default_timezone()).utcoffset()
+                        total_seconds = int(offset.total_seconds())  # type: ignore
+                        hours = total_seconds // 3600
+                        minutes = abs(total_seconds) % 3600 // 60
+                        tz = f"{hours:+d}:{minutes:02d}"
+                        await cursor.execute(f"SET time_zone='{tz}';")
             await self._post_connect()
             self.log.debug("Created connection %s pool with params: %s", self._pool, self._template)
-        except errors.OperationalError:
-            raise DBConnectionError(f"Can't connect to MySQL server: {self._template}")
+        except errors.OperationalError as e:
+            raise DBConnectionError(f"Can't connect to MySQL server: {self._template}") from e
 
     async def _expire_connections(self) -> None:
         if self._pool:  # pragma: nobranch
             for conn in self._pool._free:
-                conn._reader.set_exception(EOFError("EOF"))
+                if hasattr(conn, "_reader"):
+                    conn._reader.set_exception(EOFError("EOF"))
+                else:
+                    # asyncmy >= 0.2.14 replaced StreamReader with BufferedProtocol
+                    # and removed `_reader`; use the public `ensure_closed()`.
+                    await conn.ensure_closed()
 
     async def _close(self) -> None:
         if self._pool:  # pragma: nobranch
