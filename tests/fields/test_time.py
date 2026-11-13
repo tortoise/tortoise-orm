@@ -923,9 +923,11 @@ async def test_datetime_naive_input_with_custom_timezone_update(db, enable_tz):
     )
 
     started_at = timezone.localtime()
+    await sleep(0.01)
     obj.datetime = started_at.replace(tzinfo=None)
     with pytest.warns(RuntimeWarning, match="received a naive datetime"):
         await obj.save()
+    await sleep(0.01)
     now = timezone.localtime()
     obj = await model.get(id=obj.id)
     assert obj.datetime == started_at, f"Expected {started_at}, got {obj.datetime}"
@@ -933,3 +935,24 @@ async def test_datetime_naive_input_with_custom_timezone_update(db, enable_tz):
     assert now > obj.datetime_auto > started_at, (
         f"Expected: {now} > {obj.datetime_auto} > {started_at}"
     )
+
+
+@pytest.mark.asyncio
+async def test_datetime_auto_now_with_custom_timezone_sqlite_filters(db, enable_tz):
+    """Test auto_now/auto_now_add with custom timezone allows correct SQLite time filters (#2412)."""
+    model = testmodels.DatetimeFields
+    for tz_name in ("UTC", "Asia/Kolkata", "America/New_York", "Asia/Shanghai"):
+        enable_tz(tz_name)
+        obj = await model.create(datetime=datetime(2021, 1, 1, tzinfo=get_default_timezone()))
+        now = timezone.now()
+
+        # The row was just created, so created <= now and created > now - 1h
+        count_lte = await model.filter(id=obj.id, datetime_add__lte=now).count()
+        count_gt = await model.filter(id=obj.id, datetime_add__gt=now - timedelta(hours=1)).count()
+        assert count_lte == 1, f"Expected datetime_add__lte=now for {tz_name}, got {count_lte}"
+        assert count_gt == 1, f"Expected datetime_add__gt=now-1h for {tz_name}, got {count_gt}"
+
+        # Fetch from DB and check instance matches
+        obj_db = await model.get(id=obj.id)
+        assert obj.datetime_add == obj_db.datetime_add
+        assert obj.datetime_add.tzinfo.key == tz_name or str(obj.datetime_add.tzinfo) == tz_name
