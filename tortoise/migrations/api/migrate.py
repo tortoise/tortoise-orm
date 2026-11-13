@@ -45,9 +45,7 @@ async def migrate(
 
     targets = _parse_targets(target, selected_apps)
     for connection_name, connection_apps in apps_by_connection.items():
-        executor_targets = [
-            t for t in targets if t.app_label in connection_apps and t.app_label in selected_apps
-        ]
+        executor_targets = [t for t in targets if t.app_label in connection_apps]
         if not executor_targets:
             continue
         connection = get_connection(connection_name)
