@@ -28,6 +28,7 @@ from tortoise.migrations.operations import (
 from tortoise.migrations.schema_editor.base import BaseSchemaEditor
 from tortoise.migrations.schema_editor.base_postgres import BasePostgresSchemaEditor
 from tortoise.migrations.schema_editor.mysql import MySQLSchemaEditor
+from tortoise.migrations.schema_editor.sqlite import SqliteSchemaEditor
 from tortoise.migrations.schema_generator.state import ModelState, State
 from tortoise.migrations.schema_generator.state_apps import StateApps
 from tortoise.models import Model
@@ -99,6 +100,61 @@ async def test_add_field_operation_runs_sql() -> None:
 
     assert len(client.executed) == 1
     assert client.executed[0] == 'ALTER TABLE "widget" ADD COLUMN "name" TEXT NOT NULL'
+
+
+@pytest.mark.asyncio
+async def test_add_field_operation_if_not_exists_postgres() -> None:
+    client = FakeClient("sql")
+    editor = TestSchemaEditor(client)
+    state = State(models={}, apps=StateApps())
+    CreateModel(name="Widget", fields=[("id", fields.IntField(pk=True))]).state_forward(
+        "models", state
+    )
+
+    op = AddField(model_name="Widget", name="name", field=fields.TextField(), if_not_exists=True)
+
+    await op.run("models", state, dry_run=False, state_editor=editor)
+
+    assert len(client.executed) == 1
+    assert client.executed[0] == (
+        'ALTER TABLE "widget" ADD COLUMN IF NOT EXISTS "name" TEXT NOT NULL'
+    )
+
+
+@pytest.mark.asyncio
+async def test_add_field_if_not_exists_sqlite() -> None:
+    client = FakeClient("sqlite")
+    editor = SqliteSchemaEditor(client)
+    state = State(models={}, apps=StateApps())
+
+    CreateModel(name="Widget", fields=[("id", fields.IntField(pk=True))]).state_forward(
+        "models", state
+    )
+
+    op = AddField(model_name="Widget", name="name", field=fields.TextField(), if_not_exists=True)
+
+    with pytest.raises(NotImplementedError, match="SQLite"):
+        await op.run("models", state, dry_run=False, state_editor=editor)
+
+    assert client.executed == []
+
+
+@pytest.mark.asyncio
+async def test_add_field_if_not_exists_mysql() -> None:
+    client = FakeClient("mysql")
+    editor = SqliteSchemaEditor(client)
+    state = State(models={}, apps=StateApps())
+
+    CreateModel(name="Widget", fields=[("id", fields.IntField(pk=True))]).state_forward(
+        "models", state
+    )
+
+    op = AddField(model_name="Widget", name="name", field=fields.TextField(), if_not_exists=True)
+
+    with pytest.raises(NotImplementedError, match="SQLite"):
+        await op.run("models", state, dry_run=False, state_editor=editor)
+
+    assert client.executed == []
 
 
 @pytest.mark.asyncio

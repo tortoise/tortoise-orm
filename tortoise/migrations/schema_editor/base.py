@@ -39,7 +39,7 @@ class BaseSchemaEditor(SchemaQuotingMixin):
     )
     RENAME_TABLE_TEMPLATE = "ALTER TABLE {old_table} RENAME TO {new_table}"
     DELETE_TABLE_TEMPLATE = "DROP TABLE {table} CASCADE"
-    ADD_FIELD_TEMPLATE = "ALTER TABLE {table} ADD COLUMN {definition}"
+    ADD_FIELD_TEMPLATE = "ALTER TABLE {table} ADD COLUMN {conditional}{definition}"
 
     ALTER_FIELD_TEMPLATE = "ALTER TABLE {table} {changes}"
     RENAME_FIELD_TEMPLATE = 'ALTER TABLE {table} RENAME COLUMN "{old_column}" TO "{new_column}"'
@@ -511,7 +511,9 @@ class BaseSchemaEditor(SchemaQuotingMixin):
             )
         )
 
-    async def add_field(self, model: type[Model], field_name: str) -> None:
+    async def add_field(
+        self, model: type[Model], field_name: str, if_not_exists: bool = False
+    ) -> None:
         field = model._meta.fields_map[field_name]
         if isinstance(field, ManyToManyFieldInstance):
             table_string = self._get_m2m_table_definition(model, field)
@@ -560,9 +562,12 @@ class BaseSchemaEditor(SchemaQuotingMixin):
                 escaped = self._escape_default_value(db_val)
                 field_definition += f" DEFAULT {escaped}"
 
+        conditional = "IF NOT EXISTS " if if_not_exists else ""
+
         await self._run_sql(
             self.ADD_FIELD_TEMPLATE.format(
                 table=self._qualify_table_name(model._meta.db_table, model._meta.schema),
+                conditional=conditional,
                 definition=field_definition,
             )
         )
