@@ -25,6 +25,7 @@ Changed
 
 Fixed
 ^^^^^
+- Store ``auto_now`` and ``auto_now_add`` datetime values as UTC when ``use_tz=True``, fixing SQLite time filtering and ordering with custom timezones. (#2412)
 - ``DecimalField`` no longer raises ``decimal.InvalidOperation`` for values with more than 28 significant digits. (#2349)
 - fix(expressions): inline subquery parameters when ``params_inline`` is enabled (#2340)
 - Use database column names in reverse foreign-key and one-to-one filters with renamed columns or one-to-one primary keys. (#2338)
