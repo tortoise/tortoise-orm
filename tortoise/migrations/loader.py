@@ -19,11 +19,12 @@ class MigrationLoader:
         load: bool = False,
         all_apps_config: dict[str, dict] | None = None,
     ) -> None:
-        # Issue #2119: Support all_apps_config for transitive dependency closure resolution
+        # all_apps_config is the full app config; apps_config is the subset being
+        # executed. Dependencies may point into all_apps_config, so keep both.
+        # all_apps_config must be a superset of apps_config — migrations_module()
+        # falls back to it when an app isn't in apps_config.
         self.apps_config = dict(apps_config)
-        self.all_apps_config = (
-            dict(all_apps_config) if all_apps_config is not None else dict(apps_config)
-        )
+        self.all_apps_config = dict(all_apps_config if all_apps_config is not None else apps_config)
         self.recorder = recorder
         self.disk_migrations: dict[MigrationKey, Migration] = {}
         self.applied_migrations: set[MigrationKey] = set()
@@ -34,9 +35,11 @@ class MigrationLoader:
             raise RuntimeError("MigrationLoader.build_graph is async; call it explicitly.")
 
     def migrations_module(self, app_label: str) -> str | None:
-        if app_label in self.apps_config:
-            return self.apps_config[app_label].get("migrations")
-        return self.all_apps_config.get(app_label, {}).get("migrations")
+        try:
+            app_config = self.apps_config[app_label]
+        except KeyError:
+            app_config = self.all_apps_config.get(app_label, {})
+        return app_config.get("migrations")
 
     def _load_app_disk(self, app_label: str) -> list[Migration]:
         module_name = self.migrations_module(app_label)
@@ -46,9 +49,8 @@ class MigrationLoader:
 
         was_loaded = module_name in sys.modules
         try:
-            module = import_module(  # nosemgrep: python.lang.security.audit.non-literal-import.non-literal-import
-                module_name
-            )
+            # nosemgrep: python.lang.security.audit.non-literal-import.non-literal-import
+            module = import_module(module_name)
         except ModuleNotFoundError:
             raise
         else:
@@ -67,9 +69,8 @@ class MigrationLoader:
         app_migrations: list[Migration] = []
         for migration_name in migration_names:
             migration_path = f"{module_name}.{migration_name}"
-            migration_module = import_module(  # nosemgrep: python.lang.security.audit.non-literal-import.non-literal-import
-                migration_path
-            )
+            # nosemgrep: python.lang.security.audit.non-literal-import.non-literal-import
+            migration_module = import_module(migration_path)
             if not hasattr(migration_module, "Migration"):
                 raise ValueError(
                     f"Migration {migration_name} in app {app_label} has no Migration class"
@@ -82,7 +83,9 @@ class MigrationLoader:
         return app_migrations
 
     def load_disk(self) -> None:
-        # Issue #2119: Iteratively compute transitive dependency closure from all_apps_config
+        # Selected apps are the entry points, but their dependencies may live in apps
+        # that weren't selected. Walk dependencies/run_before iteratively and pull in
+        # any app present in all_apps_config, so StateApps can resolve cross-app FKs.
         self.disk_migrations = {}
         self.unmigrated_apps = set()
         self.migrated_apps = set()
@@ -93,16 +96,20 @@ class MigrationLoader:
             if app_label in loaded_apps:
                 continue
             loaded_apps.add(app_label)
-            if app_label in self.all_apps_config and app_label not in self.apps_config:
-                self.apps_config[app_label] = self.all_apps_config[app_label]
-            app_migrations = self._load_app_disk(app_label)
-            for migration in app_migrations:
-                for parent in migration.dependencies:
-                    if parent[0] not in loaded_apps and parent[0] in self.all_apps_config:
-                        apps_to_load.append(parent[0])
-                for child in migration.run_before:
-                    if child[0] not in loaded_apps and child[0] in self.all_apps_config:
-                        apps_to_load.append(child[0])
+            if app_migrations := self._load_app_disk(app_label):
+                self._enqueue_dependencies(app_migrations, loaded_apps, apps_to_load)
+
+    def _enqueue_dependencies(
+        self, app_migrations: list[Migration], loaded_apps: set[str], apps_to_load: deque[str]
+    ) -> None:
+        unloaded_apps = self.all_apps_config.keys() - loaded_apps
+        for migration in app_migrations:
+            for parent in migration.dependencies:
+                if parent[0] in unloaded_apps:
+                    apps_to_load.append(parent[0])
+            for child in migration.run_before:
+                if child[0] in unloaded_apps:
+                    apps_to_load.append(child[0])
 
     async def build_graph(self) -> None:
         self.load_disk()
