@@ -3,6 +3,18 @@ import os
 import pytest
 
 from tests.contrib.postgres.models_tsvector import TSVectorEntry
+from tortoise.contrib.postgres.fields import TSVectorField
+from tortoise.exceptions import ConfigurationError
+
+
+def test_tsvector_rejects_empty_weights():
+    with pytest.raises(ConfigurationError, match="weights must match source_fields length"):
+        TSVectorField(source_fields=["title"], config="english", weights=[])
+
+
+@pytest.mark.parametrize("weights", [None, ["A"]])
+def test_tsvector_accepts_valid_weights(weights):
+    TSVectorField(source_fields=["title"], config="english", weights=weights)
 
 
 def skip_if_not_postgres():
