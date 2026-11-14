@@ -518,9 +518,17 @@ class DatetimeField(Field[T_DATETIME], datetime.datetime):
                     else parse_datetime(value)
                 )
             if get_use_tz():
-                # When use_tz=True, ensure all datetimes are timezone-aware
+                # When use_tz=True, ensure all datetimes are timezone-aware.
+                # auto_now/auto_now_add values are written in UTC. Backends with
+                # timezone-naive timestamp columns return those values as naive
+                # datetimes, so interpret them as UTC before converting to the
+                # configured timezone. User-supplied naive datetimes retain the
+                # existing behavior of being interpreted in the configured zone.
                 if timezone.is_naive(value):
-                    value = timezone.make_aware(value)
+                    if self.auto_now or self.auto_now_add:
+                        value = timezone.make_aware(value, "UTC").astimezone(get_default_timezone())
+                    else:
+                        value = timezone.make_aware(value)
                 else:
                     value = value.astimezone(get_default_timezone())
             else:
