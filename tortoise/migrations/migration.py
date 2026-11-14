@@ -22,6 +22,18 @@ class Migration:
         self.run_before = list(self.__class__.run_before)
         self.replaces = list(self.__class__.replaces)
 
+    def _set_migration_apps(
+        self, schema_editor: BaseSchemaEditor | None, start: State, end: State | None = None
+    ) -> None:
+        """Tell the schema editor which models exist at the start/end of this migration."""
+        if schema_editor is None:
+            return
+        if end is None:
+            end = start.clone()
+            for operation in self.operations:
+                operation.state_forward(self.app_label, end)
+        schema_editor.migration_apps = (start.apps, end.apps)
+
     async def run_operations(
         self,
         app_label: str,
@@ -30,6 +42,8 @@ class Migration:
         dry_run: bool = False,
         schema_editor: BaseSchemaEditor | None = None,
     ) -> None:
+        if schema_editor is not None and not dry_run:
+            self._set_migration_apps(schema_editor, state.clone())
         for operation in self.operations:
             await operation.run(app_label, state, dry_run, schema_editor)
 
@@ -47,6 +61,8 @@ class Migration:
         need_old_state = (collect_sql and schema_editor) or (
             not dry_run and schema_editor is not None
         )
+        if need_old_state:
+            self._set_migration_apps(schema_editor, state.clone())
         for operation in self.operations:
             old_state = state.clone() if need_old_state else None
             operation.state_forward(self.app_label, state)
@@ -98,6 +114,7 @@ class Migration:
         )
         to_run: list[tuple[Operation, State, State]] = []
         new_state = state
+        start_state = state.clone() if need_old_state else None
         if not need_old_state and self.operations:
             # Single working copy so state_forward doesn't mutate the original
             new_state = state.clone()
@@ -112,6 +129,8 @@ class Migration:
             else:
                 operation.state_forward(self.app_label, new_state)
 
+        if start_state is not None:
+            self._set_migration_apps(schema_editor, start_state, new_state)
         for operation, to_state, from_state in to_run:
             if collect_sql and schema_editor:
                 schema_editor.collected_sql.append("--")
