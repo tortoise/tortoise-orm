@@ -35,8 +35,10 @@ async def migrate(
         if label not in configured_apps:
             raise ValueError(f"Unknown app label {label}")
 
-    # Issue #2119: Partition only selected apps by connection for execution routing,
-    # and supply configured_apps as all_apps_config for transitive dependency closure.
+    # Execution is scoped to selected_apps per connection, but the executor needs
+    # the full configured_apps so StateApps can resolve cross-app FK references
+    # during replay. Filtering all_apps_config down to selected_apps would make
+    # dependency-only apps invisible and drop their FK columns from the DDL.
     apps_by_connection: dict[str, dict[str, dict[str, Any]]] = {}
     for label in selected_apps:
         app_config = configured_apps[label]

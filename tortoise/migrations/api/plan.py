@@ -31,8 +31,10 @@ async def plan(
         if label not in configured_apps:
             raise ValueError(f"Unknown app label {label}")
 
-    # Issue #2119: Partition only selected apps by connection for plan routing,
-    # and supply configured_apps as all_apps_config for transitive dependency closure.
+    # The plan is scoped to selected_apps per connection, but the executor needs
+    # the full configured_apps so StateApps can resolve cross-app FK references.
+    # Filtering all_apps_config down to selected_apps would make dependency-only
+    # apps invisible and produce an incomplete plan.
     apps_by_connection: dict[str, dict[str, dict[str, Any]]] = {}
     for label in selected_apps:
         app_config = configured_apps[label]
@@ -42,9 +44,7 @@ async def plan(
     targets = _parse_targets(target, selected_apps)
     output: list[str] = []
     for connection_name, connection_apps in apps_by_connection.items():
-        executor_targets = [
-            t for t in targets if t.app_label in connection_apps and t.app_label in selected_apps
-        ]
+        executor_targets = [t for t in targets if t.app_label in connection_apps]
         if not executor_targets:
             continue
         connection = get_connection(connection_name)

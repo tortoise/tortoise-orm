@@ -57,8 +57,10 @@ async def sqlmigrate(
     connection_name = app_config.get("default_connection", "default")
     connection = get_connection(connection_name)
 
-    # Issue #2119: Pass target app config and all_apps_config to MigrationExecutor
-    # so transitive dependencies are discovered and loaded into StateApps.
+    # Only this app is executed, but the executor needs the full configured_apps
+    # so StateApps can resolve cross-app FK references when collecting the SQL.
+    # Passing just {app_label: app_config} would make dependency-only apps
+    # invisible and drop their FK columns from the generated statements.
     apps_config = {app_label: app_config}
     executor = MigrationExecutor(connection, apps_config, all_apps_config=configured_apps)
     # Replace the recorder with a noop so build_graph() does not query the DB.
