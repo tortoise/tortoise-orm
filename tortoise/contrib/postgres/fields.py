@@ -37,7 +37,7 @@ class TSVectorField(Field[str]):
 
         if self.weights and not self.source_fields:
             raise ConfigurationError("TSVectorField weights require source_fields.")
-        if self.weights and len(self.weights) != len(self.source_fields):
+        if self.weights is not None and len(self.weights) != len(self.source_fields):
             raise ConfigurationError("TSVectorField weights must match source_fields length.")
 
     def _quote_sql_literal(self, value: str) -> str:
