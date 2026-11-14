@@ -31,19 +31,25 @@ async def plan(
         if label not in configured_apps:
             raise ValueError(f"Unknown app label {label}")
 
-    apps_config = {label: configured_apps[label] for label in selected_apps}
+    # The plan is scoped to selected_apps per connection, but the executor needs
+    # the full configured_apps so StateApps can resolve cross-app FK references.
+    # Filtering all_apps_config down to selected_apps would make dependency-only
+    # apps invisible and produce an incomplete plan.
     apps_by_connection: dict[str, dict[str, dict[str, Any]]] = {}
-    for label, app_config in apps_config.items():
+    for label in selected_apps:
+        app_config = configured_apps[label]
         connection_name = app_config.get("default_connection", "default")
         apps_by_connection.setdefault(connection_name, {})[label] = app_config
 
     targets = _parse_targets(target, selected_apps)
     output: list[str] = []
-    for connection_name, subset in apps_by_connection.items():
+    for connection_name, connection_apps in apps_by_connection.items():
+        executor_targets = [t for t in targets if t.app_label in connection_apps]
+        if not executor_targets:
+            continue
         connection = get_connection(connection_name)
-        executor = MigrationExecutor(connection, subset)
-        executor_targets = [t for t in targets if t.app_label in subset]
-        steps = await executor.plan(executor_targets if executor_targets else None)
+        executor = MigrationExecutor(connection, connection_apps, all_apps_config=configured_apps)
+        steps = await executor.plan(executor_targets)
         output.extend(_format_steps(steps, connection_name))
 
     for line in output:
