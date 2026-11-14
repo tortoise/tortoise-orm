@@ -1,4 +1,3 @@
-import sys
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -7,16 +6,11 @@ from typing import Any
 import pytest
 
 from tests.utils.multiline import multiline_code
+from tests.utils.purge import purge_app_modules
 from tortoise import Tortoise
 from tortoise.config import AppConfig, ConnectionConfig, TortoiseConfig
 from tortoise.migrations.api import migrate, plan, sqlmigrate
 from tortoise.migrations.executor import MigrationExecutor, MigrationTarget
-
-
-def _cleanup_modules(*app_names: str) -> None:
-    for mod in list(sys.modules):
-        if any(mod == app or mod.startswith(f"{app}.") for app in app_names):
-            sys.modules.pop(mod, None)
 
 
 def _create_app_package(app_dir: Path, models_code: str, migration_code: str) -> None:
@@ -144,7 +138,7 @@ def _create_cross_app_c(tmp_path: Path) -> None:
 
 
 def _setup_cross_app_projects(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> TortoiseConfig:
-    _cleanup_modules("app_a", "app_b")
+    purge_app_modules("app_a", "app_b")
     _create_cross_app_a(tmp_path)
     _create_cross_app_b(tmp_path)
     monkeypatch.syspath_prepend(str(tmp_path))
@@ -169,28 +163,19 @@ def _setup_cross_app_projects(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -
 def _setup_multi_connection_projects(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> TortoiseConfig:
-    _cleanup_modules("app_c")
+    purge_app_modules("app_c")
 
-    _setup_cross_app_projects(tmp_path, monkeypatch)
+    base = _setup_cross_app_projects(tmp_path, monkeypatch)
 
     _create_cross_app_c(tmp_path)
 
     return TortoiseConfig(
         connections={
-            "default": _memory_sqlite(),
+            **base.connections,
             "secondary": _memory_sqlite(),
         },
         apps={
-            "app_a": AppConfig(
-                models=["app_a.models"],
-                default_connection="default",
-                migrations="app_a.migrations",
-            ),
-            "app_b": AppConfig(
-                models=["app_b.models"],
-                default_connection="default",
-                migrations="app_b.migrations",
-            ),
+            **base.apps,
             "app_c": AppConfig(
                 models=["app_c.models"],
                 default_connection="secondary",
@@ -208,7 +193,7 @@ async def _teardown_tortoise(*app_names: str) -> AsyncGenerator[None]:
         await Tortoise.close_connections()
         await Tortoise._reset_apps()
         if app_names:
-            _cleanup_modules(*app_names)
+            purge_app_modules(*app_names)
 
 
 @pytest.mark.asyncio

@@ -1,12 +1,12 @@
 from __future__ import annotations
 
 import importlib
-import sys
 from pathlib import Path
 from typing import cast
 
 import pytest
 
+from tests.utils.purge import purge_app_modules
 from tortoise.backends.base.client import BaseDBAsyncClient, Capabilities
 from tortoise.context import TortoiseContext
 from tortoise.migrations.executor import MigrationExecutor, MigrationTarget
@@ -41,19 +41,13 @@ class FakeConnection:
         self.executed_scripts.append(query)
 
 
-def _purge_app_modules(app_label: str) -> None:
-    """Drop cached modules for app_label so a re-created package is re-imported.
-
-    Each call writes the app under a fresh tmp_path, but the label is stable;
-    without this, sys.modules would serve stale code from a previous test.
-    """
-    for name in list(sys.modules):
-        if name == app_label or name.startswith(f"{app_label}."):
-            del sys.modules[name]
+MigrationSpec = (
+    tuple[str, list[tuple[str, str]]] | tuple[str, list[tuple[str, str]], list[tuple[str, str]]]
+)
 
 
-def _write_migrations(tmp_path: Path, app_label: str, migrations: list[tuple]) -> str:
-    _purge_app_modules(app_label)
+def _write_migrations(tmp_path: Path, app_label: str, migrations: list[MigrationSpec]) -> str:
+    purge_app_modules(app_label)
     package_dir = tmp_path / app_label
     migrations_dir = package_dir / "migrations"
     migrations_dir.mkdir(parents=True, exist_ok=True)
