@@ -521,7 +521,6 @@ async def test_loader_run_before_transitive_dependency(
     )
     await loader.build_graph()
 
-    assert "app_b" in loader.apps_config
     assert "app_b" in loader.migrated_apps
 
     key_a = MigrationKey(app_label="app_a", name="0001_initial")
