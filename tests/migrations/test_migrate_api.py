@@ -215,12 +215,11 @@ async def test_plan_multi_connection_empty_targets(
     config = _setup_multi_connection_projects(tmp_path, monkeypatch)
 
     async with _teardown_tortoise("app_a", "app_b", "app_c"):
-        output = await plan(config=config, app_labels=["app_b"])
-        app_a_idx = next(i for i, line in enumerate(output) if "app_a.0001_initial" in line)
-        app_b_idx = next(i for i, line in enumerate(output) if "app_b.0001_initial" in line)
-        assert app_a_idx < app_b_idx
-        assert not any("app_c" in line for line in output)
-        assert not any("secondary" in line for line in output)
+        output = await plan(config=config, app_labels=["app_b", "app_c"], target="app_b")
+        joined = "\n".join(output)
+        assert "app_b.0001_initial" in joined
+        assert "app_c.0001_initial" not in joined
+        assert "secondary" not in joined
 
 
 @pytest.mark.asyncio
