@@ -115,14 +115,16 @@ class MigrationLoader:
                     apps_to_load.append(child[0])
 
     @classmethod
-    def compute_closure(cls, apps_config: dict[str, dict], app_labels: Sequence[str]) -> set[str]:
+    def compute_closure(
+        cls, all_apps_config: dict[str, dict], app_labels: Sequence[str]
+    ) -> set[str]:
         """Apps whose migrations would be loaded to resolve relations from app_labels."""
-        if unknown := set(app_labels) - apps_config.keys():
+        if unknown := set(app_labels) - all_apps_config.keys():
             raise ValueError(f"Unknown app label(s): {sorted(unknown)}")
         loader = cls(
-            {label: apps_config[label] for label in app_labels},
+            {label: all_apps_config[label] for label in app_labels},
             MigrationRecorder(None),  # No need to use Recorder in this function
-            all_apps_config=apps_config,
+            all_apps_config=all_apps_config,
         )
         loader.load_disk()
         return loader.migrated_apps

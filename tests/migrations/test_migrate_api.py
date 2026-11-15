@@ -268,7 +268,9 @@ async def test_migrate_cross_app_foreign_key(
 
 
 @pytest.mark.asyncio
-async def test_migrate_empty_targets_skips_connection(tmp_path, monkeypatch):
+async def test_migrate_empty_targets_skips_connection(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     config = _setup_multi_connection_projects(tmp_path, monkeypatch)
     async with _teardown_tortoise("app_a", "app_b", "app_c"):
         await migrate(config=config, app_labels=["app_b", "app_c"], target="app_b")
