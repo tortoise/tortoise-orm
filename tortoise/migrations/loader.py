@@ -3,6 +3,7 @@ from __future__ import annotations
 import pkgutil
 import sys
 from collections import deque
+from collections.abc import Sequence
 from importlib import import_module, reload
 
 from tortoise.migrations.graph import MigrationGraph, MigrationKey
@@ -85,7 +86,9 @@ class MigrationLoader:
     def load_disk(self) -> None:
         # Selected apps are the entry points, but their dependencies may live in apps
         # that weren't selected. Walk dependencies/run_before iteratively and pull in
-        # any app present in all_apps_config, so StateApps can resolve cross-app FKs.
+        # any app present in all_apps_config, otherwise the projected migration state
+        # is missing the related model, and the generated table SQL silently loses the
+        # FK column and its constraint.
         self.disk_migrations = {}
         self.unmigrated_apps = set()
         self.migrated_apps = set()
@@ -110,6 +113,19 @@ class MigrationLoader:
             for child in migration.run_before:
                 if child[0] in unloaded_apps:
                     apps_to_load.append(child[0])
+
+    @classmethod
+    def compute_closure(cls, apps_config: dict[str, dict], app_labels: Sequence[str]) -> set[str]:
+        """Apps whose migrations would be loaded to resolve relations from app_labels."""
+        if unknown := set(app_labels) - apps_config.keys():
+            raise ValueError(f"Unknown app label(s): {sorted(unknown)}")
+        loader = cls(
+            {label: apps_config[label] for label in app_labels},
+            MigrationRecorder(None),  # No need to use Recorder in this function
+            all_apps_config=apps_config,
+        )
+        loader.load_disk()
+        return loader.migrated_apps
 
     async def build_graph(self) -> None:
         self.load_disk()

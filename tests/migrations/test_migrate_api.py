@@ -11,6 +11,7 @@ from tortoise import Tortoise
 from tortoise.config import AppConfig, ConnectionConfig, TortoiseConfig
 from tortoise.migrations.api import migrate, plan, sqlmigrate
 from tortoise.migrations.executor import MigrationExecutor, MigrationTarget
+from tortoise.migrations.loader import MigrationLoader
 
 
 def _create_app_package(app_dir: Path, models_code: str, migration_code: str) -> None:
@@ -308,6 +309,10 @@ async def test_migrate_multi_connection_target_exclusion(
 
     monkeypatch.setattr(MigrationExecutor, "migrate", mock_migrate)
     async with _teardown_tortoise("app_a", "app_b", "app_c"):
+        # app_a is in the closure (app_b's FK needs it) but must not be a target.
+        assert "app_a" in MigrationLoader.compute_closure(
+            config.to_dict()["apps"], ["app_b", "app_c"]
+        )
         await migrate(config=config, app_labels=["app_b", "app_c"])
         assert "app_c" not in recorded_targets["default"]
         assert "app_b" in recorded_targets["default"]
