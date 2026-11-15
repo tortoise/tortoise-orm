@@ -556,6 +556,7 @@ async def test_loader_cyclic_dependencies(tmp_path: Path, monkeypatch: pytest.Mo
         load=False,
         all_apps_config=all_apps_config,
     )
+    # Verify load_disk() alone before build_graph() runs it again internally.
     loader.load_disk()
 
     assert "app_a" in loader.migrated_apps

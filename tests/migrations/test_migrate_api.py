@@ -291,6 +291,18 @@ async def test_migrate_cross_app_foreign_key(
 
 
 @pytest.mark.asyncio
+async def test_migrate_empty_targets_skips_connection(tmp_path, monkeypatch):
+    config = _setup_multi_connection_projects(tmp_path, monkeypatch)
+    async with _teardown_tortoise("app_a", "app_b", "app_c"):
+        await migrate(config=config, app_labels=["app_b", "app_c"], target="app_b")
+        sec_conn = Tortoise.get_connection("secondary")
+        _, sec_tables = await sec_conn.execute_query(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name='item'"
+        )
+        assert len(sec_tables) == 0
+
+
+@pytest.mark.asyncio
 async def test_migrate_multi_connection_target_exclusion(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
