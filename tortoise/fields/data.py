@@ -972,7 +972,7 @@ class IntEnumFieldInstance(SmallIntField):
         self,
         enum_type: type[IntEnum],
         description: str | None = None,
-        generated: bool = False,
+        generated: bool | None = None,
         **kwargs: Any,
     ) -> None:
         # Validate values
@@ -991,6 +991,8 @@ class IntEnumFieldInstance(SmallIntField):
         if description is None:
             description = "\n".join(f"{e.name}: {int(e.value)}" for e in enum_type)[:2048]
 
+        if generated is not None:
+            kwargs["generated"] = generated
         super().__init__(description=description, **kwargs)
         self.enum_type = enum_type
 

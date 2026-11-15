@@ -5,6 +5,7 @@ import pytest
 from tests import testmodels
 from tortoise.exceptions import ConfigurationError, IntegrityError
 from tortoise.fields import CharEnumField, IntEnumField
+from tortoise.transactions import in_transaction
 
 
 class BadIntEnum1(IntEnum):
@@ -226,3 +227,28 @@ def test_char_enum_auto_description():
 def test_char_enum_manual_description():
     fld = CharEnumField(testmodels.Currency, description="baa")
     assert fld.description == "baa"
+
+
+@pytest.mark.parametrize("primary_key", [False, True])
+@pytest.mark.parametrize("generated", [False, True])
+def test_int_enum_generated_flag(primary_key, generated):
+    fld = IntEnumField(testmodels.Service, primary_key=primary_key, generated=generated)
+    assert fld.generated is generated
+    assert fld.describe(serializable=False)["generated"] is generated
+    _, args, kwargs = fld.deconstruct()
+    assert type(fld)(*args, **kwargs).generated is generated
+
+
+def test_int_enum_generated_defaults():
+    assert IntEnumField(testmodels.Service).generated is False
+    assert IntEnumField(testmodels.Service, primary_key=True).generated is True
+    assert IntEnumField(testmodels.Service, pk=True).generated is True
+
+
+@pytest.mark.asyncio
+async def test_int_enum_manual_primary_key(db):
+    with pytest.raises(IntegrityError):
+        async with in_transaction():
+            await testmodels.EnumManualPk.create()
+    obj = await testmodels.EnumManualPk.create(id=testmodels.Service.database_design)
+    assert (await testmodels.EnumManualPk.get(pk=obj.pk)).pk is testmodels.Service.database_design
