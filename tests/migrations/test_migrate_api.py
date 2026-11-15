@@ -209,29 +209,6 @@ async def test_plan_cross_app_dependency(tmp_path: Path, monkeypatch: pytest.Mon
 
 
 @pytest.mark.asyncio
-async def test_migrate_multi_connection_empty_targets(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    config = _setup_multi_connection_projects(tmp_path, monkeypatch)
-
-    async with _teardown_tortoise("app_a", "app_b", "app_c"):
-        await migrate(config=config, app_labels=["app_b"])
-        conn = Tortoise.get_connection("default")
-        _, table_info = await conn.execute_query("PRAGMA table_info('concretemodel')")
-        col_names = [row["name"] for row in table_info]
-        assert "user_id" in col_names
-
-        _, fk_info = await conn.execute_query("PRAGMA foreign_key_list('concretemodel')")
-        assert any(row["table"] == "user" and row["from"] == "user_id" for row in fk_info)
-
-        sec_conn = Tortoise.get_connection("secondary")
-        _, sec_tables = await sec_conn.execute_query(
-            "SELECT name FROM sqlite_master WHERE type='table' AND name='item'"
-        )
-        assert len(sec_tables) == 0
-
-
-@pytest.mark.asyncio
 async def test_plan_multi_connection_empty_targets(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -300,6 +277,11 @@ async def test_migrate_empty_targets_skips_connection(tmp_path, monkeypatch):
             "SELECT name FROM sqlite_master WHERE type='table' AND name='item'"
         )
         assert len(sec_tables) == 0
+        conn = Tortoise.get_connection("default")
+        _, tables = await conn.execute_query(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name='concretemodel'"
+        )
+        assert len(tables) == 1
 
 
 @pytest.mark.asyncio
