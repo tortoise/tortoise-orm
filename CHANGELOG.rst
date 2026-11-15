@@ -51,6 +51,7 @@ Fixed
 - docs: fix relation accessors in model and query examples. (#2411)
 - Match email domain allowlists without regard to case. (#2403)
 - Allow ``sql_mode=`` in MySQL database URLs to clear the default SQL mode, including connection setup with aiomysql and asyncmy. (#2326)
+- Honor an explicit ``generated=False`` on enum primary keys, preventing unintended auto-increment columns, and forward explicit ``generated=True`` for ``IntEnumField``. Existing schemas using the explicit false option may need a migration. Omitted options keep their previous defaults. (#2418)
 
 1.1.9
 -----

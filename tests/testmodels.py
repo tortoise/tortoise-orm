@@ -863,6 +863,10 @@ class EnumFields(Model):
     currency: Field[Currency] = fields.CharEnumField(Currency, default=Currency.HUF)
 
 
+class EnumManualPk(Model):
+    id: Field[Service] = fields.IntEnumField(Service, primary_key=True, generated=False)
+
+
 class DoubleFK(Model):
     name = fields.CharField(max_length=50)
     left: fields.ForeignKeyNullableRelation["DoubleFK"] = fields.ForeignKeyField(
