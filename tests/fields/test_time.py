@@ -1,5 +1,6 @@
 import contextlib
 import os
+import time as stdlib_time
 from collections.abc import Callable
 from datetime import date, datetime, time, timedelta
 from datetime import timezone as dt_timezone
@@ -309,6 +310,51 @@ async def test_datetime_two_fields_naive_no_comparison_error(db, tz_env):
     obj_get = await model.get(pk=obj.pk)
     assert timezone.is_naive(obj_get.datetime)
     assert obj_get.datetime == dt2
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("use_tz", ["True", "False"])
+@pytest.mark.parametrize("zone", ["UTC", "Asia/Tokyo"])
+@pytest.mark.parametrize("ts", [1_700_000_000, 1_700_000_000.5])
+async def test_datetime_from_timestamp(db, tz_env, use_tz, zone, ts):
+    """Test a numeric timestamp is read like timezone.now() in each use_tz mode.
+
+    With use_tz=True it is the aware UTC instant, shown in TIMEZONE; with
+    use_tz=False it is host local naive wall time, like timezone.now().
+    """
+    model = testmodels.DatetimeFields
+    os.environ["USE_TZ"] = use_tz
+    os.environ["TIMEZONE"] = zone
+    timezone._reset_timezone_cache()
+
+    if use_tz == "True":
+        expected = datetime.fromtimestamp(ts, tz=dt_timezone.utc).astimezone(get_default_timezone())
+    else:
+        expected = datetime.fromtimestamp(ts)
+
+    obj = await model.create(datetime=ts)
+    assert obj.datetime == expected
+    assert obj.datetime.tzinfo == expected.tzinfo
+
+    if use_tz == "True":
+        # A naive datetime only survives a round trip when the database
+        # session and the host share a zone, so the stored value is checked
+        # for the aware case alone.
+        obj_get = await model.get(pk=obj.pk)
+        assert obj_get.datetime == expected
+        assert obj_get.datetime.tzinfo == expected.tzinfo
+
+
+@pytest.mark.asyncio
+async def test_datetime_from_timestamp_matches_now_with_use_tz_false(db, tz_env):
+    """Test a current timestamp reads as timezone.now() and auto_now_add with use_tz=False."""
+    model = testmodels.DatetimeFields
+    os.environ["USE_TZ"] = "False"
+    timezone._reset_timezone_cache()
+
+    obj = await model.create(datetime=int(stdlib_time.time()))
+    assert abs(obj.datetime - timezone.now()) < timedelta(seconds=5)
+    assert abs(obj.datetime - obj.datetime_add) < timedelta(seconds=5)
 
 
 @pytest.mark.asyncio
