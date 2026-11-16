@@ -230,6 +230,37 @@ async def test_eq(tournament_model):
     assert mdl == fetched_mdl
 
 
+def test_unsaved_instances_are_not_equal():
+    first = IntFields(intnum=1)
+    second = IntFields(intnum=2)
+    assert first.pk is None and second.pk is None
+    assert first != second
+    assert first == first
+    assert second in [second]
+    assert second not in [first]
+    pending = [first, second]
+    pending.remove(second)
+    assert pending == [first]
+
+
+def test_saved_pk_instances_with_equal_pk_are_equal():
+    assert IntFields(id=1, intnum=1) == IntFields(id=1, intnum=2)
+    assert IntFields(id=1, intnum=1) != IntFields(id=2, intnum=1)
+
+
+def test_instances_with_default_pk_are_equal_only_by_pk():
+    first = UUIDFkRelatedNullModel(name="a")
+    second = UUIDFkRelatedNullModel(name="b")
+    assert first.pk is not None
+    assert first != second
+    assert first == UUIDFkRelatedNullModel(id=first.pk, name="c")
+
+
+def test_custom_pk_instances_are_equal_by_pk():
+    assert RequiredPKModel(id="x", name="a") == RequiredPKModel(id="x", name="b")
+    assert RequiredPKModel(id="x", name="a") != RequiredPKModel(id="y", name="a")
+
+
 @pytest.mark.asyncio
 async def test_get_or_create(tournament_model):
     # regression test for #1634: instance fields are silently dropped by the
