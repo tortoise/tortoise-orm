@@ -1,7 +1,7 @@
 import re
-import subprocess  # nosec
 import sys
 
+import anyio
 import pytest
 import pytest_asyncio
 
@@ -114,6 +114,7 @@ async def test_bool_for_relation_new_object(db):
 async def test_bool_for_relation_old_object(db):
     await Tournament.create(name="New Tournament")
     tournament = await Tournament.first()
+    assert tournament is not None
 
     with pytest.raises(NoValuesFetched):
         bool(tournament.events)
@@ -144,6 +145,7 @@ async def test_m2m_add(db):
     team_second = await Team.create(name="2")
     await event.participants.add(team, team_second)
     fetched_event = await Event.first().prefetch_related("participants")
+    assert fetched_event is not None
     assert len(fetched_event.participants) == 2
 
 
@@ -156,6 +158,7 @@ async def test_m2m_add_already_added(db):
     await event.participants.add(team, team_second)
     await event.participants.add(team, team_second)
     fetched_event = await Event.first().prefetch_related("participants")
+    assert fetched_event is not None
     assert len(fetched_event.participants) == 2
 
 
@@ -168,6 +171,7 @@ async def test_m2m_clear(db):
     await event.participants.add(team, team_second)
     await event.participants.clear()
     fetched_event = await Event.first().prefetch_related("participants")
+    assert fetched_event is not None
     assert len(fetched_event.participants) == 0
 
 
@@ -180,6 +184,7 @@ async def test_m2m_remove(db):
     await event.participants.add(team, team_second)
     await event.participants.remove(team)
     fetched_event = await Event.first().prefetch_related("participants")
+    assert fetched_event is not None
     assert len(fetched_event.participants) == 1
 
 
@@ -189,7 +194,8 @@ async def test_o2o_lazy(db):
     event = await Event.create(name="First", tournament=tournament)
     await Address.create(city="Santa Monica", street="Ocean", event=event)
 
-    fetched_address = await event.address
+    fetched_address = await event.address  # ty:ignore
+    assert fetched_address is not None
     assert fetched_address.city == "Santa Monica"
 
 
@@ -202,6 +208,7 @@ async def test_m2m_remove_two(db):
     await event.participants.add(team, team_second)
     await event.participants.remove(team, team_second)
     fetched_event = await Event.first().prefetch_related("participants")
+    assert fetched_event is not None
     assert len(fetched_event.participants) == 0
 
 
@@ -250,7 +257,7 @@ async def test_self_ref_filter_by_child(db):
     await Employee.create(name="2. Second H1", manager=root)
 
     root2 = await Employee.get(team_members__name="1. First H1")
-    assert root.id == root2.id
+    assert root.pk == root2.pk
 
 
 @pytest.mark.asyncio
@@ -260,7 +267,7 @@ async def test_self_ref_filter_both(db):
     await Employee.create(name="2. Second H1", manager=root)
 
     root2 = await Employee.get(name="Root", team_members__name="1. First H1")
-    assert root.id == root2.id
+    assert root.pk == root2.pk
 
 
 @pytest.mark.asyncio
@@ -271,9 +278,9 @@ async def test_self_ref_annotate(db):
     await Employee.create(name="2. Second H1", manager=root)
 
     root_ann = await Employee.get(name="Root").annotate(num_team_members=Count("team_members"))
-    assert root_ann.num_team_members == 2
+    assert root_ann.num_team_members == 2  # ty:ignore[unresolved-attribute]
     root_ann = await Employee.get(name="Loose").annotate(num_team_members=Count("team_members"))
-    assert root_ann.num_team_members == 0
+    assert root_ann.num_team_members == 0  # ty:ignore[unresolved-attribute]
 
 
 @pytest.mark.asyncio
@@ -362,6 +369,7 @@ async def test_select_related_with_annotation(db):
         .annotate(tournament_name=Trim("tournament__name"))
         .first()
     )
+    assert event is not None
     assert event.reporter == reporter
     assert hasattr(event, "tournament_name")
     assert event.tournament_name == tournament.name
@@ -411,12 +419,14 @@ async def test_no_ambiguous_fk_relations_set(db):
         await Pair.filter(id=1).select_related("left", "left__extra", "right", "right__extra").get()
     )
     assert pair.left is None
+    assert pair.right is not None
     assert pair.right.extra == extra
     single = await Single.create()
     await Pair.create(right=single)
     pair = (
         await Pair.filter(id=2).select_related("left", "left__extra", "right", "right__extra").get()
     )
+    assert pair.right is not None
     assert pair.right.extra is None  # should be None
 
 
@@ -430,6 +440,7 @@ async def test_0_value_fk(db):
     single = await Single.create(extra=extra)
 
     single_reload = await Single.get(id=single.id)
+    assert single_reload.extra is not None
     assert (await single_reload.extra).id == 0
 
     tournament_0 = await Tournament.create(name="tournament zero", id=0)
@@ -598,8 +609,8 @@ async def test_reverse_relation_create_fk_errors_for_unsaved_instance(db):
 @pytest.mark.asyncio
 async def test_recursive(db) -> None:
     file = "examples/relations_recursive.py"
-    r = subprocess.run([sys.executable, file], capture_output=True, text=True)  # nosec
-    assert r.returncode == 0, f"Script failed (rc={r.returncode}): {r.stderr}"
-    output = r.stdout
+    r = await anyio.run_process([sys.executable, file], check=False)  # nosec
+    assert r.returncode == 0, f"Script failed (rc={r.returncode}): {r.stderr.decode()}"
+    output = r.stdout.decode()
     s = "2.1. Second H2 (to: ) (from: 2.2. Third H2, Loose, 1.1. First H2)"
     assert s in output

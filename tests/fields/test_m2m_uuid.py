@@ -163,3 +163,15 @@ async def test__add_uninstantiated(db, m2m_uuid_models):
     two = await UUIDM2MRelatedModel.create()
     with pytest.raises(OperationalError, match=r"You should first call .save\(\) on"):
         await two.models.add(one)
+
+
+@pytest.mark.asyncio
+async def test_prefetch_related(db, m2m_uuid_models):
+    UUIDPkModel, UUIDM2MRelatedModel = m2m_uuid_models
+    one = await UUIDPkModel.create()
+    two = await UUIDM2MRelatedModel.create()
+    await one.peers.add(two)
+
+    fetched = await UUIDPkModel.get(pk=one.pk).prefetch_related("peers")
+
+    assert list(fetched.peers) == [two]

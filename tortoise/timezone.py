@@ -7,12 +7,33 @@ from datetime import datetime, time, tzinfo
 from zoneinfo import ZoneInfo as _ZoneInfo
 from zoneinfo import ZoneInfoNotFoundError
 
-if sys.version_info >= (3, 12):
+if sys.version_info >= (3, 11):
     from datetime import UTC
 else:
     from datetime import timezone
 
     UTC = timezone.utc
+
+try:
+    from ciso8601 import parse_datetime
+except ImportError:  # pragma: nocoverage
+
+    def parse_datetime(datetime_string: str) -> datetime:
+        try:
+            return datetime.fromisoformat(datetime_string)
+        except ValueError as e:
+            try:
+                # Fallback chain (fastest first):
+                #   1. ciso8601      (C, fastest)             — used above if available
+                #   2. fromisoformat (C-accelerated on 3.11+) — used here
+                #   3. iso8601       (pure Python, slow)      — last resort only
+                # iso8601 is optional: it is unnecessary when all datetime strings are
+                # already ISO-formatted, or when ciso8601 is installed.
+                from iso8601 import parse_date as _fallback_parse
+
+                return _fallback_parse(datetime_string, default_timezone=None)
+            except ImportError as err:
+                raise e from err
 
 
 class ZoneInfo(_ZoneInfo):
@@ -153,7 +174,7 @@ def make_aware(
     """
     tz = _get_or_parse_timezone(timezone)
     if hasattr(tz, "localize"):
-        return tz.localize(value, is_dst=is_dst)
+        return tz.localize(value, is_dst=is_dst)  # ty:ignore[call-non-callable]
     if is_aware(value):
         raise ValueError(f"make_aware expects a naive datetime, got {value}")
     # This may be wrong around DST changes!

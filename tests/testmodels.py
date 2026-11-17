@@ -113,6 +113,7 @@ class Event(Model):
     reporter: fields.ForeignKeyNullableRelation[Reporter] = fields.ForeignKeyField(
         to=Reporter, null=True
     )
+    reporter_id: int | None  # Put it here to improve type hints
     participants: fields.ManyToManyRelation["Team"] = fields.ManyToManyField(
         "models.Team",
         related_name="events",
@@ -923,6 +924,7 @@ class Student(Model):
     school: fields.ForeignKeyRelation[School] = fields.ForeignKeyField(
         "models.School", related_name="students", to_field="id"
     )
+    school_id: int  # Put it here to improve type hints
 
 
 class Principal(Model):

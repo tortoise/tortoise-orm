@@ -48,6 +48,7 @@ def build_models(
     with_m2m: bool,
     with_indexes: bool,
     with_index_objects: bool,
+    db_constraint: bool = True,
 ) -> tuple[type[Model], Iterable[type[Model]]]:
     class Category(Model):
         id = fields.IntField(pk=True)
@@ -70,11 +71,11 @@ def build_models(
         name = fields.TextField()
         if with_fk:
             category: ForeignKeyFieldInstance[Any] = fields.ForeignKeyField(
-                "models.Category", related_name="widgets"
+                "models.Category", related_name="widgets", db_constraint=db_constraint
             )
         if with_m2m:
             tags: ManyToManyRelation[Any] = fields.ManyToManyField(
-                "models.Tag", related_name="widgets"
+                "models.Tag", related_name="widgets", db_constraint=db_constraint
             )
         if with_indexes:
             age: fields.IntField = fields.IntField(index=True)
@@ -190,6 +191,13 @@ BACKEND_GENERATORS = [
         {"with_fk": True, "with_m2m": True, "with_indexes": True, "with_index_objects": False},
         {"with_fk": False, "with_m2m": False, "with_indexes": False, "with_index_objects": True},
         {"with_fk": True, "with_m2m": True, "with_indexes": False, "with_index_objects": True},
+        {
+            "with_fk": True,
+            "with_m2m": True,
+            "with_indexes": False,
+            "with_index_objects": False,
+            "db_constraint": False,
+        },
     ],
 )
 def test_schema_editor_matches_schema_generator(

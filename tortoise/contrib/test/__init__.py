@@ -25,13 +25,13 @@ For capability-based test skipping:
 from __future__ import annotations
 
 import inspect
-import typing
+import sys
 from collections.abc import Callable, Coroutine
 from functools import partial, wraps
-from typing import TYPE_CHECKING, ParamSpec, TypeVar, cast
+from typing import TYPE_CHECKING, Any, ParamSpec, TypeVar, cast, overload
 from unittest import SkipTest, expectedFailure, skip, skipIf, skipUnless
 
-from tortoise import Tortoise
+from tortoise import Tortoise, run_async
 from tortoise.connection import get_connection
 from tortoise.context import TortoiseContext, tortoise_test_context
 
@@ -157,12 +157,10 @@ def _topological_sort_models(models: list[type[Model]]) -> list[type[Model]]:
     return sorted_models
 
 
-_FT = TypeVar("_FT", bound=Callable[..., typing.Any])
+_FT = TypeVar("_FT", bound=Callable[..., Any])
 
 
-def requireCapability(
-    connection_name: str = "models", **conditions: typing.Any
-) -> Callable[[_FT], _FT]:
+def requireCapability(connection_name: str = "models", **conditions: Any) -> Callable[[_FT], _FT]:
     """
     Skip a test if the required capabilities are not matched.
 
@@ -204,14 +202,14 @@ def requireCapability(
             if inspect.iscoroutinefunction(test_item):
 
                 @wraps(test_item)
-                async def skip_wrapper(*args: typing.Any, **kwargs: typing.Any) -> typing.Any:
+                async def skip_wrapper(*args: Any, **kwargs: Any) -> Any:
                     check_capabilities()
                     return await test_item(*args, **kwargs)
 
             else:
 
                 @wraps(test_item)
-                def skip_wrapper(*args: typing.Any, **kwargs: typing.Any) -> typing.Any:
+                def skip_wrapper(*args: Any, **kwargs: Any) -> Any:
                     check_capabilities()
                     return test_item(*args, **kwargs)
 
@@ -235,11 +233,11 @@ def requireCapability(
     return decorator
 
 
-@typing.overload
+@overload
 def init_memory_sqlite(models: ModulesConfigType | None = None) -> AsyncFuncDeco: ...
 
 
-@typing.overload
+@overload
 def init_memory_sqlite(models: AsyncFunc) -> AsyncFunc: ...
 
 
@@ -300,3 +298,33 @@ def init_memory_sqlite(
     else:
         models = cast(list, models)
     return partial(wrapper, ms=models)
+
+
+def run_in_memory_sqlite(
+    func: AsyncFunc,
+    *,
+    models: ModulesConfigType | None = None,
+    verbose: bool | None = None,
+) -> None:
+    """
+    Run an async function using an in-memory SQLite database.
+
+    Equivalent to decorating ``func`` with :func:`init_memory_sqlite` and
+    passing the result to :func:`~tortoise.run_async`::
+
+        async def run():
+            ...
+
+        if __name__ == "__main__":
+            run_in_memory_sqlite(run)
+
+    :param func: The async function to run.
+    :param models: Modules to load models from. Defaults to ``["__main__"]``.
+    :param verbose: If ``None`` (default), enable debug logging when
+        ``--verbose`` is present in ``sys.argv``. Pass ``True`` or ``False``
+        to force it. See :func:`run_async` for details.
+    """
+    if verbose is None:
+        verbose = "--verbose" in sys.argv
+    wrapped = init_memory_sqlite(models)(func)
+    run_async(wrapped(), verbose=verbose)

@@ -29,7 +29,6 @@ from tortoise.fields.relational import (
     OneToOneFieldInstance,
     RelationalField,
 )
-from tortoise.filters import FilterInfoDict
 from tortoise.query_utils import (
     Prefetch,
     QueryModifier,
@@ -45,6 +44,7 @@ from tortoise.utils import chunk
 QUERY: QueryBuilder = QueryBuilder()
 
 if TYPE_CHECKING:  # pragma: nocoverage
+    from tortoise.filters import FilterInfoDict
     from tortoise.models import Model
 
 MODEL = TypeVar("MODEL", bound="Model")
@@ -106,14 +106,14 @@ class _ChooseDBMixin(Generic[MODEL]):
 
 class AwaitableQuery(_ChooseDBMixin[MODEL], Generic[MODEL]):
     __slots__ = (
-        "query",
-        "model",
-        "_joined_tables",
-        "_db",
-        "_capabilities",
         "_annotations",
+        "_capabilities",
         "_custom_filters",
+        "_db",
+        "_joined_tables",
         "_q_objects",
+        "model",
+        "query",
     )
 
     def __init__(self, model: type[MODEL]) -> None:
@@ -348,29 +348,29 @@ class AwaitableQuery(_ChooseDBMixin[MODEL], Generic[MODEL]):
 
 class QuerySet(AwaitableQuery[MODEL]):
     __slots__ = (
-        "fields",
-        "_prefetch_map",
-        "_prefetch_queries",
-        "_single",
-        "_raise_does_not_exist",
         "_db",
-        "_limit",
-        "_offset",
+        "_distinct",
         "_fields_for_select",
         "_filter_kwargs",
-        "_orderings",
-        "_distinct",
-        "_having",
+        "_force_indexes",
         "_group_bys",
+        "_having",
+        "_limit",
+        "_offset",
+        "_orderings",
+        "_prefetch_map",
+        "_prefetch_queries",
+        "_raise_does_not_exist",
         "_select_for_update",
-        "_select_for_update_nowait",
-        "_select_for_update_skip_locked",
-        "_select_for_update_of",
         "_select_for_update_no_key",
+        "_select_for_update_nowait",
+        "_select_for_update_of",
+        "_select_for_update_skip_locked",
         "_select_related",
         "_select_related_idx",
+        "_single",
         "_use_indexes",
-        "_force_indexes",
+        "fields",
     )
 
     def __init__(self, model: type[MODEL]) -> None:
@@ -709,7 +709,9 @@ class QuerySet(AwaitableQuery[MODEL]):
             raise ValueError(".values_list() cannot be used with .only()")
 
         fields_for_select_list = fields_ or [
-            field for field in self.model._meta.fields_map if field in self.model._meta.db_fields
+            field
+            for field in self.model._meta.fields_map
+            if field in self.model._meta.fields_db_projection
         ] + list(self._annotations.keys())
         return ValuesListQuery(
             db=self._db,
@@ -851,6 +853,8 @@ class QuerySet(AwaitableQuery[MODEL]):
             custom_filters=self._custom_filters,
             force_indexes=self._force_indexes,
             use_indexes=self._use_indexes,
+            limit=self._limit,
+            offset=self._offset,
         )
 
     def contains(self, obj: MODEL) -> ContainsQuery:
@@ -997,6 +1001,7 @@ class QuerySet(AwaitableQuery[MODEL]):
 
         :raises ValueError: If objects have no primary key set
         """
+        objects = tuple(objects)
         if any(obj.pk is None for obj in objects):
             raise ValueError("All bulk_update() objects must have a primary key set.")
         return BulkUpdateQuery(
@@ -1008,7 +1013,7 @@ class QuerySet(AwaitableQuery[MODEL]):
             limit=self._limit,
             orderings=self._orderings,
             objects=objects,
-            fields=fields,
+            fields=tuple(fields),
             batch_size=batch_size,
         )
 
@@ -1350,9 +1355,9 @@ class QuerySet(AwaitableQuery[MODEL]):
 
 class UpdateQuery(AwaitableQuery):
     __slots__ = (
-        "update_kwargs",
-        "_orderings",
         "_limit",
+        "_orderings",
+        "update_kwargs",
         "values",
     )
 
@@ -1445,8 +1450,8 @@ class DeleteQuery(AwaitableQuery):
     __slots__ = (
         "_annotations",
         "_custom_filters",
-        "_orderings",
         "_limit",
+        "_orderings",
     )
 
     def __init__(
@@ -1484,7 +1489,6 @@ class DeleteQuery(AwaitableQuery):
                 self._pk_in_subquery(table)
             )
         self.query._delete_from = True
-        return
 
     def __await__(self) -> Generator[Any, None, int]:
         self._choose_db_if_not_chosen(True)
@@ -1498,6 +1502,8 @@ class DeleteQuery(AwaitableQuery):
 class ExistsQuery(AwaitableQuery):
     __slots__ = (
         "_force_indexes",
+        "_limit",
+        "_offset",
         "_use_indexes",
     )
 
@@ -1510,6 +1516,8 @@ class ExistsQuery(AwaitableQuery):
         custom_filters: dict[str, FilterInfoDict],
         force_indexes: set[str],
         use_indexes: set[str],
+        limit: int | None = None,
+        offset: int | None = None,
     ) -> None:
         super().__init__(model)
         self._q_objects = q_objects
@@ -1518,11 +1526,15 @@ class ExistsQuery(AwaitableQuery):
         self._custom_filters = custom_filters
         self._force_indexes = force_indexes
         self._use_indexes = use_indexes
+        self._limit = limit
+        self._offset = offset
 
     def _make_query(self) -> None:
         self.query = copy(self.model._meta.basequery)
         self.resolve_filters()
         self.query._limit = self.query._wrapper_cls(1)
+        if self._offset:
+            self.query._offset = self.query._wrapper_cls(self._offset)
         self.query._select_other(ValueWrapper(1, allow_parametrize=False))  # type:ignore[arg-type]
 
         if self._force_indexes:
@@ -1537,9 +1549,9 @@ class ExistsQuery(AwaitableQuery):
         self._make_query()
         return self._execute().__await__()
 
-    async def _execute(
-        self,
-    ) -> bool:
+    async def _execute(self) -> bool:
+        if self._limit == 0:
+            return False
         result, _ = await self._db.execute_query(*self.query.get_parameterized_sql())
         return bool(result)
 
@@ -1562,11 +1574,11 @@ class ContainsQuery(ExistsQuery):
 
 class CountQuery(AwaitableQuery):
     __slots__ = (
+        "_distinct",
+        "_force_indexes",
         "_limit",
         "_offset",
-        "_force_indexes",
         "_use_indexes",
-        "_distinct",
     )
 
     def __init__(
@@ -1631,7 +1643,7 @@ class CountQuery(AwaitableQuery):
         # COUNT(*) ignores LIMIT/OFFSET, so the offset is applied here. Clamp at
         # 0: when the offset is past the total, SQL would return 0 rows, not a
         # negative count.
-        count = max(0, list(dict(result[0]).values())[0] - self._offset)
+        count = max(0, next(iter(dict(result[0]).values())) - self._offset)
         # Use ``is not None`` so an explicit ``limit(0)`` clamps to 0 instead of
         # being treated as "no limit" by a truthiness check.
         if self._limit is not None and count > self._limit:
@@ -1753,19 +1765,19 @@ class FieldSelectQuery(AwaitableQuery):
 
 class ValuesListQuery(FieldSelectQuery, Generic[SINGLE]):
     __slots__ = (
-        "fields",
+        "_distinct",
+        "_fields_for_select_list",
+        "_fields_to_select_sql",
+        "_flat",
+        "_force_indexes",
+        "_group_bys",
         "_limit",
         "_offset",
-        "_distinct",
         "_orderings",
-        "_single",
         "_raise_does_not_exist",
-        "_fields_for_select_list",
-        "_flat",
-        "_group_bys",
-        "_force_indexes",
+        "_single",
         "_use_indexes",
-        "_fields_to_select_sql",
+        "fields",
     )
 
     def __init__(
@@ -1889,15 +1901,15 @@ class ValuesListQuery(FieldSelectQuery, Generic[SINGLE]):
 
 class ValuesQuery(FieldSelectQuery, Generic[SINGLE]):
     __slots__ = (
+        "_distinct",
         "_fields_for_select",
+        "_force_indexes",
+        "_group_bys",
         "_limit",
         "_offset",
-        "_distinct",
         "_orderings",
-        "_single",
         "_raise_does_not_exist",
-        "_group_bys",
-        "_force_indexes",
+        "_single",
         "_use_indexes",
     )
 
@@ -2020,7 +2032,7 @@ class ValuesQuery(FieldSelectQuery, Generic[SINGLE]):
 
 
 class RawSQLQuery(AwaitableQuery):
-    __slots__ = ("_sql", "_db")
+    __slots__ = ("_db", "_sql")
 
     def __init__(self, model: type[MODEL], db: BaseDBAsyncClient, sql: str) -> None:
         super().__init__(model)
@@ -2040,7 +2052,7 @@ class RawSQLQuery(AwaitableQuery):
 
 
 class BulkUpdateQuery(UpdateQuery, Generic[MODEL]):
-    __slots__ = ("fields", "_objects", "_batch_size", "_queries")
+    __slots__ = ("_batch_size", "_objects", "_queries", "fields")
 
     def __init__(
         self,
@@ -2071,6 +2083,9 @@ class BulkUpdateQuery(UpdateQuery, Generic[MODEL]):
         self._queries: list[QueryBuilder] = []
 
     def _make_queries(self) -> list[tuple[str, list[Any]]]:
+        if not self._objects or not self.fields:
+            return []
+        self._queries = []
         table = self.model._meta.basetable
         self.query = self._db.query_class.update(table)
         if self.capabilities.support_update_limit_order_by and self._limit:
@@ -2084,15 +2099,15 @@ class BulkUpdateQuery(UpdateQuery, Generic[MODEL]):
 
         self.resolve_filters()
         pk_attr = self.model._meta.pk_attr
-        source_pk_attr = self.model._meta.fields_map[pk_attr].source_field or pk_attr
+        model_pk_field = self.model._meta.fields_map[pk_attr]
+        source_pk_attr = model_pk_field.source_field or pk_attr
         pk = Field(source_pk_attr)
         for objects_item in chunk(self._objects, self._batch_size):
             query = copy(self.query)
+            pk_list = [model_pk_field.to_db_value(obj.pk, None) for obj in objects_item]
             for field in self.fields:
                 case = Case()
-                pk_list = []
-                for obj in objects_item:
-                    pk_value = self.model._meta.fields_map[pk_attr].to_db_value(obj.pk, None)
+                for obj, pk_value in zip(objects_item, pk_list, strict=False):
                     field_obj = obj._meta.fields_map[field]
                     field_value = field_obj.to_db_value(getattr(obj, field), obj)
                     case.when(
@@ -2108,9 +2123,8 @@ class BulkUpdateQuery(UpdateQuery, Generic[MODEL]):
                             else self.query._wrapper_cls(field_value)
                         ),
                     )
-                    pk_list.append(pk_value)
                 query = query.set(field, case)
-                query = query.where(pk.isin(pk_list))
+            query = query.where(pk.isin(pk_list))
             self._queries.append(query)
         return [query.get_parameterized_sql() for query in self._queries]
 
@@ -2128,18 +2142,18 @@ class BulkUpdateQuery(UpdateQuery, Generic[MODEL]):
     def sql(self, params_inline=False) -> str:
         self._choose_db_if_not_chosen()
         queries = self._make_queries()
-        return ";".join([sql for sql, _ in queries])
+        return ";".join(sql for sql, _ in queries)
 
 
 class BulkCreateQuery(AwaitableQuery, Generic[MODEL]):
     __slots__ = (
-        "_objects",
-        "_ignore_conflicts",
         "_batch_size",
         "_db",
         "_executor",
-        "_update_fields",
+        "_ignore_conflicts",
+        "_objects",
         "_on_conflict",
+        "_update_fields",
     )
 
     def __init__(
@@ -2346,11 +2360,11 @@ class BulkCreateQuery(AwaitableQuery, Generic[MODEL]):
         if all(not o._custom_generated_pk for o in self._objects):
             return insert_sql
 
-        return ";".join([insert_sql, insert_sql_all])
+        return insert_sql + ";" + insert_sql_all
 
 
 class UnionCountQuery(AwaitableQuery):
-    __slots__ = ("_union_query", "_db")
+    __slots__ = ("_db", "_union_query")
 
     def __init__(
         self,
@@ -2377,22 +2391,22 @@ class UnionCountQuery(AwaitableQuery):
         _, result = await self._db.execute_query(self.query.get_sql())
         if not result:
             return 0
-        return list(dict(result[0]).values())[0]
+        return next(iter(dict(result[0]).values()))
 
 
 class UnionQuery(_ChooseDBMixin[MODEL], Generic[MODEL]):
     __slots__ = (
+        "_all",
+        "_db",
+        "_limit",
+        "_models",
+        "_offset",
+        "_orderings",
+        "_qs",
+        "_selects",
+        "_union_query",
         "model",
         "query",
-        "_models",
-        "_union_query",
-        "_selects",
-        "_db",
-        "_qs",
-        "_all",
-        "_orderings",
-        "_limit",
-        "_offset",
     )
 
     TORTOISE_APP_FIELD = "tortoise_app"

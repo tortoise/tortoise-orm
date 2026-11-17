@@ -19,6 +19,7 @@ from tortoise.filters import insensitive_posix_regex, posix_regex
 sqlite3.register_adapter(Decimal, str)
 sqlite3.register_adapter(datetime.date, lambda val: val.isoformat())
 sqlite3.register_adapter(datetime.datetime, lambda val: val.isoformat(" "))
+sqlite3.register_adapter(datetime.time, lambda val: val.isoformat())
 
 
 class SqliteExecutor(BaseExecutor):

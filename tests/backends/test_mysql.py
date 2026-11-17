@@ -8,6 +8,7 @@ import os
 import ssl
 
 import pytest
+from packaging.version import parse as parse_version
 
 from tests.testmodels import Tournament
 from tortoise.backends.base.config_generator import generate_config
@@ -57,8 +58,11 @@ async def test_ssl_true():
     db_config = copy.deepcopy(base_config)
     db_config["connections"]["models"]["credentials"]["ssl"] = True
     try:
-        import asyncmy  # noqa pylint: disable=unused-import
+        import asyncmy
 
+        # asyncmy >= 0.2.14 treats ssl=True as "allow SSL" without verification
+        if parse_version(asyncmy.version.__VERSION__) >= parse_version("0.2.14"):
+            db_config["connections"]["models"]["credentials"]["ssl"] = ssl.create_default_context()
         # setting read_timeout for asyncmy. Otherwise, it will hang forever.
         db_config["connections"]["models"]["credentials"]["read_timeout"] = 1
     except ImportError:
