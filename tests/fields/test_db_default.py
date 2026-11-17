@@ -326,6 +326,19 @@ def test_schema_db_default_float():
     assert sql == " DEFAULT 3.14"
 
 
+def test_schema_db_default_str_quote_and_backslash():
+    """SQLite doubles single quotes and does not treat backslashes as escapes."""
+    f = fields.CharField(max_length=100, db_default="it's C:\\x")
+    sql = _get_sqlite_default_sql(f)
+    assert sql == " DEFAULT 'it''s C:\\x'"
+
+
+def test_schema_db_default_json():
+    f = fields.JSONField(db_default={"a": "b"})
+    sql = _get_sqlite_default_sql(f)
+    assert sql == """ DEFAULT '{"a":"b"}'"""
+
+
 # ============================================================================
 # Migration field signature tests
 # ============================================================================

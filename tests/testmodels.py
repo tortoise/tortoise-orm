@@ -959,6 +959,16 @@ class DefaultModel(Model):
     )
 
 
+class QuotedDefaultModel(Model):
+    """Model with string db_default values that need quoting in SQL."""
+
+    quote_default = fields.CharField(max_length=20, db_default="it's")
+    backslash_default = fields.CharField(max_length=20, db_default="C:\\tortoise")
+
+    class Meta:
+        table = "quoted_default_model"
+
+
 class SqlDefaultModel(Model):
     """Model with SqlDefault expressions for db_default."""
 

@@ -248,3 +248,38 @@ def test_schema_editor_matches_schema_generator_for_generated_column() -> None:
 
     assert editor_statements == generator_statements
     assert any("GENERATED ALWAYS AS" in stmt for stmt in editor_statements)
+
+
+@pytest.mark.parametrize(
+    ("editor_cls", "generator_path", "generator_name", "client_kwargs"),
+    BACKEND_GENERATORS,
+)
+def test_schema_editor_and_schema_generator_quote_string_db_default(
+    editor_cls: type[BaseSchemaEditor],
+    generator_path: Path,
+    generator_name: str,
+    client_kwargs: dict,
+) -> None:
+    class Note(Model):
+        id = fields.IntField(pk=True)
+        title = fields.CharField(max_length=20, db_default="it's C:\\x")
+
+        class Meta:
+            app = "models"
+            table = "note"
+
+    init_apps(Note)
+    client = FakeClient(**client_kwargs)
+    editor = editor_cls(client)
+    generator_cls = load_schema_generator(generator_path, generator_name)
+
+    editor_statements = schema_editor_sql(editor, Note)
+    generator_statements = schema_generator_sql(generator_cls, client, Note, (Note,))
+
+    if client_kwargs["dialect"] == "mysql":
+        # MySQL treats backslashes in string literals as escape characters.
+        expected = "DEFAULT 'it\\'s C:\\\\x'"
+    else:
+        expected = "DEFAULT 'it''s C:\\x'"
+    assert expected in editor_statements[0]
+    assert expected in generator_statements[0]

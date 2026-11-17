@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from copy import copy
 
+from tortoise.converters import escape_str
 from tortoise.fields.base import CASCADE, DB_DEFAULT_NOT_SET, Field
 from tortoise.fields.relational import ForeignKeyFieldInstance, ManyToManyFieldInstance
 from tortoise.migrations.schema_editor.base import BaseSchemaEditor
@@ -61,6 +62,12 @@ class MySQLSchemaEditor(MySQLQuotingMixin, BaseSchemaEditor):
 
     def _get_column_comment_sql(self, table: str, column: str, comment: str) -> str:
         return f" COMMENT '{self._escape_comment(comment)}'"
+
+    def _escape_default_value(self, default: object) -> str:
+        if isinstance(default, str):
+            # MySQL treats backslashes in string literals as escape characters.
+            return escape_str(default)
+        return super()._escape_default_value(default)
 
     def _get_fk_reference_string(
         self,

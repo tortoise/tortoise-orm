@@ -45,6 +45,7 @@ Fixed
 - Parse false boolean values in database URL options correctly. (#2377)
 - Reject domain names with trailing newlines in ``DomainNameValidator``. (#2386)
 - ``QuerySet.exists()`` now respects ``limit()`` and ``offset()``, so ``limit(0)`` or an offset past the last row returns ``False``. (#2389)
+- String ``db_default`` values are now written as standard SQL literals on SQLite, PostgreSQL, MSSQL and Oracle. A default containing a single quote no longer breaks ``CREATE TABLE``, and backslashes and double quotes (e.g. in a ``JSONField`` default) are no longer stored as escape sequences. (#2398)
 - Respect an explicitly empty ``allowed_schemes`` list in ``URLValidator``. (#2394)
 - Respect the root ``max_recursion`` limit when generating nested Pydantic models. (#2400)
 - ``TextField(null=True)`` now narrows to ``TextField[str | None]`` instead of staying ``TextField[str]``. (#2218)

@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 from tortoise.backends.base.schema_generator import BaseSchemaGenerator
-from tortoise.converters import encoders
+from tortoise.converters import encoders, escape_standard_str
 from tortoise.schema_quoting import SqliteQuotingMixin
 
 
@@ -33,4 +33,6 @@ class SqliteSchemaGenerator(SqliteQuotingMixin, BaseSchemaGenerator):
         return f" DEFAULT {default}"
 
     def _escape_default_value(self, default: Any):
+        if isinstance(default, str):
+            return escape_standard_str(default)
         return encoders.get(type(default))(default)  # type: ignore

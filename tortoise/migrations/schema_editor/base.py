@@ -152,8 +152,10 @@ class BaseSchemaEditor(SchemaQuotingMixin):
         return comment.translate(self._get_escape_translation_table())
 
     def _escape_default_value(self, default: object) -> str:
-        from tortoise.converters import encoders
+        from tortoise.converters import encoders, escape_standard_str
 
+        if isinstance(default, str):
+            return escape_standard_str(default)
         encoder = encoders.get(type(default))
         if encoder:
             return str(encoder(default))  # type: ignore[operator]

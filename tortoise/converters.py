@@ -92,6 +92,16 @@ def escape_str(value: str, mapping=None) -> str:
     return f"'{escape_string(str(value), mapping)}'"
 
 
+def escape_standard_str(value: str, mapping=None) -> str:
+    """Quotes *value* as a standard SQL string literal.
+
+    Single quotes are doubled and backslashes are kept as they are, which is what
+    SQLite, PostgreSQL, MSSQL and Oracle expect. ``escape_str`` uses MySQL's backslash
+    escapes instead.
+    """
+    return "'" + str(value).replace("'", "''") + "'"
+
+
 def escape_None(value: None, mapping=None) -> str:
     return "NULL"
 
