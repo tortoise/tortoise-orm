@@ -25,6 +25,7 @@ Changed
 
 Fixed
 ^^^^^
+- ``values_list(..., flat=True)`` is typed as a list of values (or a single value after ``.get()`` / ``.first()``) instead of tuples. (#2419)
 - ``DecimalField`` no longer raises ``decimal.InvalidOperation`` for values with more than 28 significant digits. (#2349)
 - fix(expressions): inline subquery parameters when ``params_inline`` is enabled (#2340)
 - Use database column names in reverse foreign-key and one-to-one filters with renamed columns or one-to-one primary keys. (#2338)
