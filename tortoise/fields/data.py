@@ -551,6 +551,18 @@ class DatetimeField(Field[T_DATETIME], datetime.datetime):
             now_python = self.to_python_value(now)
             setattr(instance, self.model_field_name, now_python)
             return now  # type: ignore
+        # auto_now_add is initialized as a localized value on the model instance,
+        # but the database representation must remain UTC on later saves too.
+        # Otherwise a naive timestamp read back from MySQL/MSSQL is interpreted as
+        # UTC by to_python_value() and receives the timezone offset a second time.
+        if (
+            self.auto_now_add
+            and value is not None
+            and isinstance(value, datetime.datetime)
+            and get_use_tz()
+            and timezone.is_aware(value)
+        ):
+            value = value.astimezone(datetime.timezone.utc)
         if (
             value is not None
             and isinstance(value, datetime.datetime)
