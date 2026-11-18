@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import json
-import os
 from collections.abc import Mapping
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from tortoise.backends.base.config_generator import generate_config
@@ -217,12 +217,12 @@ class TortoiseConfig:
         )
 
     @classmethod
-    def from_config_file(cls, config_file: str) -> Self:
+    def from_config_file(cls, config_file: Path | str) -> Self:
         """
         Load configuration from a YAML or JSON file.
 
         Args:
-            config_file (str): Path to the configuration file. Supported extensions: .yml, .yaml, .json.
+            config_file: Path to the configuration file. Supported extensions: .yml, .yaml, .json.
 
         Returns:
             Self: The constructed TortoiseConfig.
@@ -230,19 +230,19 @@ class TortoiseConfig:
         Raises:
             ConfigurationError: If the file is missing, unsupported, or contents are invalid.
         """
-        _, extension = os.path.splitext(config_file)
-        if extension in (".yml", ".yaml"):
-            import yaml  # pylint: disable=C0415
+        config_path = Path(config_file)
+        match config_path.suffix:
+            case ".yml" | ".yaml":
+                import yaml  # pylint: disable=C0415
 
-            with open(config_file) as f:
-                config = yaml.safe_load(f)
-        elif extension == ".json":
-            with open(config_file) as f:
-                config = json.load(f)
-        else:
-            raise ConfigurationError(
-                f"Unknown config extension {extension}, only .yml and .json are supported"
-            )
+                with open(config_file) as f:
+                    config = yaml.safe_load(f)
+            case ".json":
+                config = json.loads(config_path.read_bytes())
+            case _ as extension:
+                raise ConfigurationError(
+                    f"Unknown config extension {extension}, only .yml and .json are supported"
+                )
         return cls.from_dict(config)
 
     @classmethod
@@ -274,7 +274,7 @@ class TortoiseConfig:
     def resolve_args(
         cls,
         config: dict[str, Any] | Self | None = None,
-        config_file: str | None = None,
+        config_file: Path | str | None = None,
         db_url: str | None = None,
         modules: dict[str, Iterable[str | ModuleType]] | None = None,
     ) -> Self:
@@ -287,13 +287,8 @@ class TortoiseConfig:
             - or both `db_url` and `modules`.
 
         Args:
-            config (dict[str, Any] | TortoiseConfig | None):
-            config_file (str | None): Path to a config YAML or JSON file.
-            db_url (str | None): Database URL for config generation.
-            modules (dict[str, Iterable[str | ModuleType]] | None): App modules for config generation.
-        Args:
             config: A configuration dict or TortoiseConfig instance.
-            config_file: Path to config file.
+            config_file: Path to a config YAML or JSON file.
             db_url: Database URL for config generation.
             modules: App modules for config generation.
 
