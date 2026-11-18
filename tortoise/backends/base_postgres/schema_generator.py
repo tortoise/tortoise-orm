@@ -51,6 +51,10 @@ class BasePostgresSchemaGenerator(BaseSchemaGenerator):
             self.comments_array.append(comment)
         return ""
 
+    def _column_collation_generator(self, collation: str) -> str:
+        # Postgres collation names are identifiers and need double quoting.
+        return f' COLLATE "{collation}"'
+
     def _post_table_hook(self) -> str:
         val = "\n".join(self.comments_array)
         self.comments_array = []
