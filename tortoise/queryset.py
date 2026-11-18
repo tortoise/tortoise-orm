@@ -407,7 +407,9 @@ class QuerySet(AwaitableQuery[MODEL]):
         queryset.query = self.query
         queryset.capabilities = self.capabilities
         queryset._prefetch_map = copy(self._prefetch_map)
-        queryset._prefetch_queries = copy(self._prefetch_queries)
+        queryset._prefetch_queries = {
+            field: list(queries) for field, queries in self._prefetch_queries.items()
+        }
         queryset._single = self._single
         queryset._raise_does_not_exist = self._raise_does_not_exist
         queryset._db = self._db
