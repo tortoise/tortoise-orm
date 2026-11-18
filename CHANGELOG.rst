@@ -25,7 +25,6 @@ Changed
 
 Fixed
 ^^^^^
-- ``values_list(..., flat=True)`` is typed as a list of values (or a single value after ``.get()`` / ``.first()``) instead of tuples. (#2419)
 - ``DecimalField`` no longer raises ``decimal.InvalidOperation`` for values with more than 28 significant digits. (#2349)
 - fix(expressions): inline subquery parameters when ``params_inline`` is enabled (#2340)
 - Use database column names in reverse foreign-key and one-to-one filters with renamed columns or one-to-one primary keys. (#2338)
@@ -53,6 +52,7 @@ Fixed
 - Match email domain allowlists without regard to case. (#2403)
 - Allow ``sql_mode=`` in MySQL database URLs to clear the default SQL mode, including connection setup with aiomysql and asyncmy. (#2326)
 - ``migrate``/``plan``/``sqlmigrate`` on a subset of apps now load dependency apps' migrations, so cross-app ``ForeignKeyField`` columns and constraints are no longer silently omitted. (#2278)
+- ``values_list(..., flat=True)`` is typed as a list of values (or a single value after ``.get()`` / ``.first()``) instead of tuples. (#2421)
 
 1.1.9
 -----

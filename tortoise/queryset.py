@@ -44,21 +44,21 @@ from tortoise.utils import chunk
 QUERY: QueryBuilder = QueryBuilder()
 
 if TYPE_CHECKING:  # pragma: nocoverage
-    from tortoise.filters import FilterInfoDict
-    from tortoise.models import Model
+    # TypeVar defaults (PEP 696) are only needed by type checkers, so
+    # ``ValuesListQuery[X]`` keeps meaning a query that is not flat.
+    from typing_extensions import TypeVar as _TypeVarWithDefault
+
+    from .filters import FilterInfoDict
+    from .models import Model
+
+    FLAT = _TypeVarWithDefault("FLAT", bound=bool, default=Literal[False])
+else:
+    FLAT = TypeVar("FLAT", bound=bool)
 
 MODEL = TypeVar("MODEL", bound="Model")
 PRIMARY_KEY = TypeVar("PRIMARY_KEY")
 T_co = TypeVar("T_co", covariant=True)
 SINGLE = TypeVar("SINGLE", bound=bool)
-if TYPE_CHECKING:  # pragma: nocoverage
-    # TypeVar defaults (PEP 696) are only needed by type checkers, so
-    # ``ValuesListQuery[X]`` keeps meaning a query that is not flat.
-    from typing_extensions import TypeVar as _TypeVarWithDefault
-
-    FLAT = _TypeVarWithDefault("FLAT", bound=bool, default=Literal[False])
-else:
-    FLAT = TypeVar("FLAT", bound=bool)
 
 
 class QuerySetSingle(Protocol[T_co]):
@@ -86,17 +86,15 @@ class QuerySetSingle(Protocol[T_co]):
     @overload
     def values_list(
         self, *fields_: str, flat: Literal[False] = False
-    ) -> ValuesListQuery[Literal[True], Literal[False]]: ...  # pragma: nocoverage
+    ) -> ValuesListQuery[Literal[True], Literal[False]]: ...
 
     @overload
     def values_list(
         self, *fields_: str, flat: Literal[True]
-    ) -> ValuesListQuery[Literal[True], Literal[True]]: ...  # pragma: nocoverage
+    ) -> ValuesListQuery[Literal[True], Literal[True]]: ...
 
     @overload
-    def values_list(
-        self, *fields_: str, flat: bool
-    ) -> ValuesListQuery[Literal[True], bool]: ...  # pragma: nocoverage
+    def values_list(self, *fields_: str, flat: bool) -> ValuesListQuery[Literal[True], bool]: ...
 
     def values_list(
         self, *fields_: str, flat: bool = False
