@@ -885,11 +885,15 @@ class Model(metaclass=ModelMeta):
             yield field, getattr(self, field)
 
     def __eq__(self, other: object) -> bool:
-        if type(other) is not type(self):
+        if self is other:
+            return True
+        self_type = type(self)
+        if not isinstance(other, self_type):
+            return NotImplemented
+        if type(other) is not self_type:
             return False
-        if self.pk is None:
-            return self is other
-        return self.pk == other.pk  # type: ignore[attr-defined]
+        pk = self.pk
+        return pk is not None and pk == other.pk
 
     def _get_pk_val(self) -> Any:
         return getattr(self, self._meta.pk_attr, None)

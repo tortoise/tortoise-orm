@@ -1,4 +1,5 @@
 import os
+from unittest.mock import ANY
 from uuid import uuid4
 
 import pytest
@@ -259,6 +260,13 @@ def test_instances_with_default_pk_are_equal_only_by_pk():
 def test_custom_pk_instances_are_equal_by_pk():
     assert RequiredPKModel(id="x", name="a") == RequiredPKModel(id="x", name="b")
     assert RequiredPKModel(id="x", name="a") != RequiredPKModel(id="y", name="a")
+
+
+def test_eq_with_another_type_defers_to_it():
+    instance = IntFields(id=1, intnum=1)
+    assert instance != 1
+    assert instance != RequiredPKModel(id="x", name="a")
+    assert instance == ANY
 
 
 @pytest.mark.asyncio
