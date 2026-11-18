@@ -184,6 +184,16 @@ async def test_noid():
 
 
 @pytest.mark.asyncio
+async def test_sqlite_rejects_text_field_indexes():
+    await _reset_tortoise()
+    try:
+        with pytest.raises(ConfigurationError, match="TextField can't be indexed for sqlite"):
+            await _init_for_sqlite("tests.schema.models_text_index")
+    finally:
+        await _teardown_tortoise()
+
+
+@pytest.mark.asyncio
 async def test_minrelation():
     await _reset_tortoise()
     try:
@@ -1064,6 +1074,19 @@ async def test_asyncpg_noid():
 
 
 @pytest.mark.asyncio
+async def test_asyncpg_text_field_indexes():
+    await _reset_tortoise()
+    try:
+        await _init_for_asyncpg("tests.schema.models_text_index")
+        sql = get_schema_sql(connections.get("default"), safe=False)
+        assert '"unique_text" TEXT NOT NULL UNIQUE' in sql
+        assert 'CREATE INDEX "idx_textindex_indexed_' in sql
+        assert 'ON "textindex" ("indexed_text")' in sql
+    finally:
+        await _teardown_tortoise()
+
+
+@pytest.mark.asyncio
 async def test_asyncpg_table_and_row_comment_generation():
     await _reset_tortoise()
     try:
@@ -1565,6 +1588,19 @@ async def test_psycopg_noid():
         sql = _get_sql(sqls, '"noid"')
         assert '"name" VARCHAR(255)' in sql
         assert '"id" SERIAL NOT NULL PRIMARY KEY' in sql
+    finally:
+        await _teardown_tortoise()
+
+
+@pytest.mark.asyncio
+async def test_psycopg_text_field_indexes():
+    await _reset_tortoise()
+    try:
+        await _init_for_psycopg("tests.schema.models_text_index")
+        sql = get_schema_sql(connections.get("default"), safe=False)
+        assert '"unique_text" TEXT NOT NULL UNIQUE' in sql
+        assert 'CREATE INDEX "idx_textindex_indexed_' in sql
+        assert 'ON "textindex" ("indexed_text")' in sql
     finally:
         await _teardown_tortoise()
 
