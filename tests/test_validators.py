@@ -305,16 +305,25 @@ class TestEmailValidator:
             EmailValidator(),
             EmailValidator(None),
             EmailValidator(allowed_domains=None),
-            EmailValidator([]),
-            EmailValidator(allowed_domains=[]),
         ],
     )
-    def test_email_validator_empty_allowed_domains(self, validator) -> None:
+    def test_email_validator_default_domains(self, validator) -> None:
         validator("allow@any.domain")
         with pytest.raises(InvalidEmailAddress):
             validator("not-allow@invalid-domain")
         with pytest.raises(InvalidEmailAddress):
             validator("not-allow-invalid-user-part@@example.com")
+
+    @pytest.mark.parametrize(
+        "validator",
+        [
+            EmailValidator([]),
+            EmailValidator(allowed_domains=[]),
+        ],
+    )
+    def test_email_validator_rejects_all_domains_when_allowlist_is_empty(self, validator) -> None:
+        with pytest.raises(InvalidEmailAddress):
+            validator("user@example.com")
 
     def test_email_validator_allowed_domains_bypass_domain_syntax(self) -> None:
         # an allowlisted domain is accepted even if it is not a valid public domain
