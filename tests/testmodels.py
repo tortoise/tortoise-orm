@@ -473,6 +473,10 @@ class UniqueTogetherFieldsWithFK(Model):
         unique_together = ("text", "tournament")
 
 
+class OnlyPkModel(Model):
+    id = fields.IntField(primary_key=True)
+
+
 class ImplicitPkModel(Model):
     value = fields.TextField()
 

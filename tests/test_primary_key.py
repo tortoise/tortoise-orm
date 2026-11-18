@@ -10,6 +10,7 @@ from tests.testmodels import (
     CharM2MRelatedModel,
     CharPkModel,
     ImplicitPkModel,
+    OnlyPkModel,
     UUIDFkRelatedModel,
     UUIDM2MRelatedModel,
     UUIDPkModel,
@@ -19,6 +20,18 @@ from tortoise.exceptions import ConfigurationError
 
 
 class TestQueryset:
+    @pytest.mark.asyncio
+    async def test_only_generated_pk_create_and_bulk_create(self, db):
+        # Model whose only column is a generated primary key (#2344)
+        instance = await OnlyPkModel.create()
+        assert instance.pk == 1
+        assert instance.id == 1
+        assert await OnlyPkModel.all().count() == 1
+
+        # bulk_create
+        await OnlyPkModel.bulk_create([OnlyPkModel(), OnlyPkModel()])
+        assert await OnlyPkModel.all().count() == 3
+
     @pytest.mark.asyncio
     async def test_implicit_pk(self, db):
         instance = await ImplicitPkModel.create(value="test")
