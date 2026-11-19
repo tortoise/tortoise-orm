@@ -56,7 +56,10 @@ class SqliteSchemaEditor(SqliteQuotingMixin, BaseSchemaEditor):
     def _get_column_comment_sql(self, table: str, column: str, comment: str) -> str:
         return f" /* {self._escape_comment(comment)} */"
 
-    async def add_field(self, model, field_name: str) -> None:
+    async def add_field(self, model, field_name: str, if_not_exists: bool = False) -> None:
+        if if_not_exists:
+            raise NotImplementedError("IF NOT EXISTS for ADD COLUMN is not supported on SQLite")
+
         field = model._meta.fields_map[field_name]
         if isinstance(field, ManyToManyFieldInstance):
             table_string = self._get_m2m_table_definition(model, field)
@@ -135,7 +138,9 @@ class SqliteSchemaEditor(SqliteQuotingMixin, BaseSchemaEditor):
                 field_definition += f" DEFAULT {escaped}"
 
         await self._run_sql(
-            self.ADD_FIELD_TEMPLATE.format(table=qualified_table, definition=field_definition)
+            self.ADD_FIELD_TEMPLATE.format(
+                table=qualified_table, conditional="", definition=field_definition
+            )
         )
 
         if unique_field:

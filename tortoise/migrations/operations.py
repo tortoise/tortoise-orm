@@ -403,10 +403,13 @@ class AlterModelOptions(TortoiseOperation):
 
 
 class AddField(TortoiseOperation):
-    def __init__(self, model_name: str, name: str, field: FieldLike) -> None:
+    def __init__(
+        self, model_name: str, name: str, field: FieldLike, if_not_exists: bool = False
+    ) -> None:
         self.model_name = model_name
         self.name = name
         self.field = field
+        self.if_not_exists = if_not_exists
 
     def describe(self) -> str:
         return f"Add field {self.name} to {self.model_name}"
@@ -437,7 +440,7 @@ class AddField(TortoiseOperation):
         if not state_editor:
             return
         model = new_state.apps.get_model(f"{app_label}.{self.model_name}")
-        await state_editor.add_field(model, self.name)
+        await state_editor.add_field(model, self.name, if_not_exists=self.if_not_exists)
 
     async def database_backward(
         self,
