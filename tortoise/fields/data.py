@@ -547,35 +547,26 @@ class DatetimeField(Field[T_DATETIME], datetime.datetime):
             or (self.auto_now_add and getattr(instance, self.model_field_name) is None)
         ):
             now = timezone.now()
-            # Convert to match what would be read from DB (apply timezone conversion)
-            now_python = self.to_python_value(now)
-            setattr(instance, self.model_field_name, now_python)
+            if get_use_tz():
+                setattr(instance, self.model_field_name, now.astimezone(get_default_timezone()))
+            else:
+                setattr(instance, self.model_field_name, now)
             return now  # type: ignore
-        # auto_now_add is initialized as a localized value on the model instance,
-        # but the database representation must remain UTC on later saves too.
-        # Otherwise a naive timestamp read back from MySQL/MSSQL is interpreted as
-        # UTC by to_python_value() and receives the timezone offset a second time.
-        if (
-            self.auto_now_add
-            and value is not None
-            and isinstance(value, datetime.datetime)
-            and get_use_tz()
-            and timezone.is_aware(value)
-        ):
-            value = value.astimezone(datetime.timezone.utc)
         if (
             value is not None
             and isinstance(value, datetime.datetime)
             and get_use_tz()
-            and timezone.is_naive(value)
         ):
-            warnings.warn(
-                f"DateTimeField {self.model_field_name} received a naive datetime ({value})"
-                " while time zone support is active.",
-                RuntimeWarning,
-                stacklevel=2,
-            )
-            value = timezone.make_aware(value)  # ty:ignore[invalid-assignment]
+            if timezone.is_aware(value):
+                value = value.astimezone(datetime.timezone.utc)
+            else:
+                warnings.warn(
+                    f"DateTimeField {self.model_field_name} received a naive datetime ({value})"
+                    " while time zone support is active.",
+                    RuntimeWarning,
+                    stacklevel=2,
+                )
+                value = timezone.make_aware(value)  # ty:ignore[invalid-assignment]
         self.validate(value)
         return value
 
