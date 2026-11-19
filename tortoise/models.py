@@ -889,7 +889,7 @@ class Model(metaclass=ModelMeta):
             return True
         self_type = type(self)
         if not isinstance(other, self_type):
-            return NotImplemented
+            return NotImplemented  # defer to other.__eq__ (Python's comparison protocol)
         if type(other) is not self_type:
             return False
         pk = self.pk
