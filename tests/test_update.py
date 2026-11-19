@@ -69,7 +69,7 @@ async def test_bulk_update_iterables(db, object_iterator: bool, field_iterator: 
         == 2
     )
     qs = Tournament.all().order_by("id")
-    assert await qs.values_list("name", flat=True) == ["new1", "new2"]  # type:ignore[comparison-overlap]
+    assert await qs.values_list("name", flat=True) == ["new1", "new2"]
 
 
 @pytest.mark.asyncio

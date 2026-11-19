@@ -1,5 +1,8 @@
+from typing import Any
+
 import pytest
 from pypika_tortoise import CustomFunction
+from typing_extensions import assert_type
 
 from tests.testmodels import Event, Team, Tournament
 from tortoise.contrib import test
@@ -25,6 +28,27 @@ async def test_values_list_related_fk(db):
 
     event2 = await Event.filter(name="Test").values_list("name", "tournament__name")
     assert event2[0] == ("Test", "New Tournament")
+
+
+@pytest.mark.asyncio
+async def test_values_list_flat_typing(db: Any) -> None:
+    tournament = await Tournament.create(name="New Tournament")
+
+    ids = await Tournament.all().values_list("id", flat=True)
+    assert_type(ids, list[Any])
+    assert ids == [tournament.id]
+
+    rows = await Tournament.all().values_list("id", "name")
+    assert_type(rows, list[tuple[Any, ...]])
+    assert rows == [(tournament.id, "New Tournament")]
+
+    name = await Tournament.get(id=tournament.id).values_list("name", flat=True)
+    assert_type(name, Any)
+    assert name == "New Tournament"
+
+    row = await Tournament.get(id=tournament.id).values_list("id", "name")
+    assert_type(row, tuple[Any, ...])
+    assert row == (tournament.id, "New Tournament")
 
 
 @pytest.mark.asyncio
