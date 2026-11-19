@@ -1,10 +1,13 @@
 import os
+from typing import Any
+from unittest.mock import ANY as MockANY
 from uuid import uuid4
 
 import pytest
 import pytest_asyncio
 
 from tests.testmodels import (
+    CharPkModel,
     Dest_null,
     Event,
     IntFields,
@@ -139,7 +142,7 @@ async def test_save(tournament_model):
 @pytest.mark.asyncio
 async def test_save_f_expression(db):
     int_field = await IntFields.create(intnum=1)
-    int_field.intnum = F("intnum") + 1
+    int_field.intnum = F("intnum") + 1  # ty:ignore[invalid-assignment]
     await int_field.save(update_fields=["intnum"])
     n_int = await IntFields.get(pk=int_field.pk)
     assert n_int.intnum == 2
@@ -230,6 +233,80 @@ async def test_eq(tournament_model):
     assert mdl == fetched_mdl
 
 
+def test_unsaved_instances_are_not_equal():
+    first = IntFields(intnum=1)
+    second = IntFields(intnum=2)
+    assert first.pk is None and second.pk is None
+    assert first != second
+    alias = first
+    assert first == alias
+    assert alias in [first]
+    assert second not in [first]
+    pending = [first, second]
+    pending.remove(second)
+    assert pending == [first]
+
+
+def test_saved_pk_instances_with_equal_pk_are_equal():
+    assert IntFields(id=1, intnum=1) == IntFields(id=1, intnum=2)
+    assert IntFields(id=0, intnum=1) == IntFields(id=0, intnum=0)
+    assert IntFields(id=1, intnum=1) != IntFields(id=2, intnum=1)
+    assert IntFields(id=0, intnum=1) != IntFields(id=1, intnum=1)
+    assert IntFields(id=1, intnum=1) != IntFields(id=0, intnum=1)
+
+
+def test_instances_with_default_pk_are_equal_only_by_pk():
+    first = UUIDFkRelatedNullModel(name="a")
+    second = UUIDFkRelatedNullModel(name="b")
+    assert first.pk is not None
+    assert first != second
+    assert first == UUIDFkRelatedNullModel(id=first.pk, name="c")
+
+
+def test_custom_pk_instances_are_equal_by_pk():
+    assert RequiredPKModel(id="x", name="a") == RequiredPKModel(id="x", name="b")
+    assert RequiredPKModel(id="x", name="a") != RequiredPKModel(id="y", name="a")
+    assert CharPkModel(id="") == CharPkModel(id="")
+    assert CharPkModel(id="") != CharPkModel()
+    assert CharPkModel() != CharPkModel()
+
+
+def test_eq_with_another_type_defers_to_it():
+    instance = IntFields(id=1, intnum=1)
+    assert instance != 1
+    assert instance != RequiredPKModel(id="x", name="a")
+    assert instance == MockANY
+
+    class SubClass(IntFields):
+        pass
+
+    assert instance != SubClass(id=1, intnum=1)
+
+    class CustomEqual(IntFields):
+        def __eq__(self, other) -> bool:
+            return self is other or (
+                isinstance(other, IntFields)
+                and self.pk is not None
+                and self.pk == other.pk
+                and self.intnum == other.intnum
+            )
+
+    # Right operand is a strict subclass, so Python calls CustomEqual.__eq__
+    # first; the parent's `type(other) is not self_type: return False` branch
+    # is not reached here. The SubClass test above covers that branch instead.
+    assert instance == CustomEqual(id=1, intnum=1)
+    assert instance != CustomEqual(intnum=1)
+    assert instance != CustomEqual(id=1, intnum=2)
+    assert instance != CustomEqual(id=0, intnum=1)
+
+    class Unrelated:
+        def __eq__(self, other) -> bool:
+            return bool(getattr(other, "pk", None))
+
+    assert instance == Unrelated()
+    assert IntFields(intnum=1) != Unrelated()
+
+
 @pytest.mark.asyncio
 async def test_get_or_create(tournament_model):
     # regression test for #1634: instance fields are silently dropped by the
@@ -297,7 +374,7 @@ async def test_update_or_create_with_defaults(tournament_model):
     desc = str(uuid4())
     # If there is no conflict with defaults and kwargs, it will be success to update or create
     defaults = dict(mdl_dict, desc=desc)
-    kwargs = {"id": defaults["id"], "name": defaults["name"]}
+    kwargs: dict[str, Any] = {"id": defaults["id"], "name": defaults["name"]}
     updated_mdl, created = await Tournament.update_or_create(defaults, **kwargs)
     assert created is False
     assert defaults["desc"] == updated_mdl.desc
@@ -311,7 +388,7 @@ async def test_update_or_create_with_defaults(tournament_model):
     # Missing query: success to create if no conflict
     not_exist_name = str(uuid4())
     no_conflict_defaults = {"name": not_exist_name, "desc": desc}
-    no_conflict_kwargs = {"name": not_exist_name}
+    no_conflict_kwargs: dict[str, Any] = {"name": not_exist_name}
     created_mdl, created = await Tournament.update_or_create(
         no_conflict_defaults, **no_conflict_kwargs
     )
@@ -345,6 +422,7 @@ async def test_update_or_create_propagates_unrelated_integrity_error(db):
 async def test_first(tournament_model):
     mdl = tournament_model
     fetched_mdl = await Tournament.first()
+    assert fetched_mdl is not None
     assert mdl.id == fetched_mdl.id
 
 
@@ -352,6 +430,7 @@ async def test_first(tournament_model):
 async def test_last(tournament_model):
     mdl = tournament_model
     fetched_mdl = await Tournament.last()
+    assert fetched_mdl is not None
     assert mdl.id == fetched_mdl.id
 
 
@@ -359,6 +438,7 @@ async def test_last(tournament_model):
 async def test_latest(tournament_model):
     mdl = tournament_model
     fetched_mdl = await Tournament.latest("name")
+    assert fetched_mdl is not None
     assert mdl.id == fetched_mdl.id
 
 
@@ -366,6 +446,7 @@ async def test_latest(tournament_model):
 async def test_earliest(tournament_model):
     mdl = tournament_model
     fetched_mdl = await Tournament.earliest("name")
+    assert fetched_mdl is not None
     assert mdl.id == fetched_mdl.id
 
 
@@ -373,6 +454,7 @@ async def test_earliest(tournament_model):
 async def test_filter(tournament_model):
     mdl = tournament_model
     fetched_mdl = await Tournament.filter(name="Test").first()
+    assert fetched_mdl is not None
     assert mdl.id == fetched_mdl.id
     fetched_mdl = await Tournament.filter(name="Test2").first()
     assert fetched_mdl is None
@@ -418,6 +500,7 @@ async def test_exists(db):
 async def test_get_or_none(tournament_model):
     mdl = tournament_model
     fetched_mdl = await Tournament.get_or_none(name="Test")
+    assert fetched_mdl is not None
     assert mdl.id == fetched_mdl.id
 
     fetched_mdl = await Tournament.get_or_none(name="Test2")
@@ -439,7 +522,7 @@ async def test_update_from_dict(db):
     assert evt1.name == "b"
 
     with pytest.raises(AttributeError):
-        _ = evt1.bad_name
+        _ = evt1.bad_name  # ty:ignore[missing-attribute]
 
     evt2 = await Event.get(name="b")
     assert evt1.pk == evt2.pk
@@ -585,7 +668,7 @@ async def test_noid_save(noid_model):
 @pytest.mark.asyncio
 async def test_noid_save_f_expression(db):
     int_field = await IntFields.create(intnum=1)
-    int_field.intnum = F("intnum") + 1
+    int_field.intnum = F("intnum") + 1  # ty:ignore[invalid-assignment]
     await int_field.save(update_fields=["intnum"])
     n_int = await IntFields.get(pk=int_field.pk)
     assert n_int.intnum == 2
@@ -692,30 +775,35 @@ async def test_noid_update_or_create(noid_model):
 @pytest.mark.asyncio
 async def test_noid_first(noid_model):
     fetched_mdl = await NoID.first()
+    assert fetched_mdl is not None
     assert noid_model.id == fetched_mdl.id
 
 
 @pytest.mark.asyncio
 async def test_noid_last(noid_model):
     fetched_mdl = await NoID.last()
+    assert fetched_mdl is not None
     assert noid_model.id == fetched_mdl.id
 
 
 @pytest.mark.asyncio
 async def test_noid_latest(noid_model):
     fetched_mdl = await NoID.latest("name")
+    assert fetched_mdl is not None
     assert noid_model.id == fetched_mdl.id
 
 
 @pytest.mark.asyncio
 async def test_noid_earliest(noid_model):
     fetched_mdl = await NoID.earliest("name")
+    assert fetched_mdl is not None
     assert noid_model.id == fetched_mdl.id
 
 
 @pytest.mark.asyncio
 async def test_noid_filter(noid_model):
     fetched_mdl = await NoID.filter(name="Test").first()
+    assert fetched_mdl is not None
     assert noid_model.id == fetched_mdl.id
     fetched_mdl = await NoID.filter(name="Test2").first()
     assert fetched_mdl is None
@@ -758,6 +846,7 @@ async def test_noid_exists(noid_model):
 @pytest.mark.asyncio
 async def test_noid_get_or_none(noid_model):
     fetched_mdl = await NoID.get_or_none(name="Test")
+    assert fetched_mdl is not None
     assert noid_model.id == fetched_mdl.id
 
     fetched_mdl = await NoID.get_or_none(name="Test2")
