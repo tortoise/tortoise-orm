@@ -6,6 +6,7 @@ import pytest
 import pytest_asyncio
 
 from tests.testmodels import (
+    CharPkModel,
     Dest_null,
     Event,
     IntFields,
@@ -236,8 +237,9 @@ def test_unsaved_instances_are_not_equal():
     second = IntFields(intnum=2)
     assert first.pk is None and second.pk is None
     assert first != second
-    assert first == first
-    assert second in [second]
+    alias = first
+    assert first == alias
+    assert alias in [first]
     assert second not in [first]
     pending = [first, second]
     pending.remove(second)
@@ -246,7 +248,10 @@ def test_unsaved_instances_are_not_equal():
 
 def test_saved_pk_instances_with_equal_pk_are_equal():
     assert IntFields(id=1, intnum=1) == IntFields(id=1, intnum=2)
+    assert IntFields(id=0, intnum=1) == IntFields(id=0, intnum=0)
     assert IntFields(id=1, intnum=1) != IntFields(id=2, intnum=1)
+    assert IntFields(id=0, intnum=1) != IntFields(id=1, intnum=1)
+    assert IntFields(id=1, intnum=1) != IntFields(id=0, intnum=1)
 
 
 def test_instances_with_default_pk_are_equal_only_by_pk():
@@ -260,6 +265,9 @@ def test_instances_with_default_pk_are_equal_only_by_pk():
 def test_custom_pk_instances_are_equal_by_pk():
     assert RequiredPKModel(id="x", name="a") == RequiredPKModel(id="x", name="b")
     assert RequiredPKModel(id="x", name="a") != RequiredPKModel(id="y", name="a")
+    assert CharPkModel(id="") == CharPkModel(id="")
+    assert CharPkModel(id="") != CharPkModel()
+    assert CharPkModel() != CharPkModel()
 
 
 def test_eq_with_another_type_defers_to_it():
@@ -267,6 +275,35 @@ def test_eq_with_another_type_defers_to_it():
     assert instance != 1
     assert instance != RequiredPKModel(id="x", name="a")
     assert instance == ANY
+
+    class SubClass(IntFields):
+        pass
+
+    assert instance != SubClass(id=1, intnum=1)
+
+    class CustomEqual(IntFields):
+        def __eq__(self, other) -> bool:
+            return self is other or (
+                isinstance(other, IntFields)
+                and self.pk is not None
+                and self.pk == other.pk
+                and self.intnum == other.intnum
+            )
+
+    # Right operand is a strict subclass, so Python calls CustomEqual.__eq__
+    # first; the parent's `type(other) is not self_type: return False` branch
+    # is not reached here. The SubClass test above covers that branch instead.
+    assert instance == CustomEqual(id=1, intnum=1)
+    assert instance != CustomEqual(intnum=1)
+    assert instance != CustomEqual(id=1, intnum=2)
+    assert instance != CustomEqual(id=0, intnum=1)
+
+    class Unrelated:
+        def __eq__(self, other) -> bool:
+            return bool(getattr(other, "pk", None))
+
+    assert instance == Unrelated()
+    assert IntFields(intnum=1) != Unrelated()
 
 
 @pytest.mark.asyncio
