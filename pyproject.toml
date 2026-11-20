@@ -211,6 +211,13 @@ filterwarnings = [
 
 [tool.coverage.report]
 show_missing = true
+exclude_also = [
+    "pragma: no cover",
+    "pragma: nocoverage",
+    "@overload",
+    'if __name__ == "__main__":',
+    "if TYPE_CHECKING:",
+]
 
 [tool.ruff]
 line-length = 100
