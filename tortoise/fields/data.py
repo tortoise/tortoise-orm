@@ -518,9 +518,17 @@ class DatetimeField(Field[T_DATETIME], datetime.datetime):
                     else parse_datetime(value)
                 )
             if get_use_tz():
-                # When use_tz=True, ensure all datetimes are timezone-aware
+                # When use_tz=True, ensure all datetimes are timezone-aware.
+                # auto_now/auto_now_add values are written in UTC. Backends with
+                # timezone-naive timestamp columns return those values as naive
+                # datetimes, so interpret them as UTC before converting to the
+                # configured timezone. User-supplied naive datetimes retain the
+                # existing behavior of being interpreted in the configured zone.
                 if timezone.is_naive(value):
-                    value = timezone.make_aware(value)
+                    if self.auto_now or self.auto_now_add:
+                        value = timezone.make_aware(value, "UTC").astimezone(get_default_timezone())
+                    else:
+                        value = timezone.make_aware(value)
                 else:
                     value = value.astimezone(get_default_timezone())
             else:
@@ -538,24 +546,27 @@ class DatetimeField(Field[T_DATETIME], datetime.datetime):
             self.auto_now
             or (self.auto_now_add and getattr(instance, self.model_field_name) is None)
         ):
-            now = timezone.localtime() if get_use_tz() else timezone.now()
-            # Convert to match what would be read from DB (apply timezone conversion)
-            now_python = self.to_python_value(now)
-            setattr(instance, self.model_field_name, now_python)
+            now = timezone.now()
+            if get_use_tz():
+                setattr(instance, self.model_field_name, now.astimezone(get_default_timezone()))
+            else:
+                setattr(instance, self.model_field_name, now)
             return now  # type: ignore
         if (
             value is not None
             and isinstance(value, datetime.datetime)
             and get_use_tz()
-            and timezone.is_naive(value)
         ):
-            warnings.warn(
-                f"DateTimeField {self.model_field_name} received a naive datetime ({value})"
-                " while time zone support is active.",
-                RuntimeWarning,
-                stacklevel=2,
-            )
-            value = timezone.make_aware(value)  # ty:ignore[invalid-assignment]
+            if timezone.is_aware(value):
+                value = value.astimezone(datetime.timezone.utc)
+            else:
+                warnings.warn(
+                    f"DateTimeField {self.model_field_name} received a naive datetime ({value})"
+                    " while time zone support is active.",
+                    RuntimeWarning,
+                    stacklevel=2,
+                )
+                value = timezone.make_aware(value)  # ty:ignore[invalid-assignment]
         self.validate(value)
         return value
 
