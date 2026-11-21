@@ -53,6 +53,8 @@ Fixed
 - Match email domain allowlists without regard to case. (#2403)
 - Allow ``sql_mode=`` in MySQL database URLs to clear the default SQL mode, including connection setup with aiomysql and asyncmy. (#2326)
 - ``migrate``/``plan``/``sqlmigrate`` on a subset of apps now load dependency apps' migrations, so cross-app ``ForeignKeyField`` columns and constraints are no longer silently omitted. (#2278)
+- ``values_list(..., flat=True)`` is typed as a list of values (or a single value after ``.get()`` / ``.first()``) instead of tuples. (#2421)
+- Model instances without a primary key now compare equal only to themselves, so two distinct unsaved instances are no longer equal. (#2420)
 
 1.1.9
 -----

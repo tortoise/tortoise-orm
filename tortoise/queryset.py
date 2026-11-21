@@ -44,8 +44,16 @@ from tortoise.utils import chunk
 QUERY: QueryBuilder = QueryBuilder()
 
 if TYPE_CHECKING:  # pragma: nocoverage
-    from tortoise.filters import FilterInfoDict
-    from tortoise.models import Model
+    # TypeVar defaults (PEP 696) are only needed by type checkers, so
+    # ``ValuesListQuery[X]`` keeps meaning a query that is not flat.
+    from typing_extensions import TypeVar as _TypeVarWithDefault
+
+    from .filters import FilterInfoDict
+    from .models import Model
+
+    FLAT = _TypeVarWithDefault("FLAT", bound=bool, default=Literal[False])
+else:
+    FLAT = TypeVar("FLAT", bound=bool)
 
 MODEL = TypeVar("MODEL", bound="Model")
 PRIMARY_KEY = TypeVar("PRIMARY_KEY")
@@ -75,9 +83,22 @@ class QuerySetSingle(Protocol[T_co]):
 
     def only(self, *fields_for_select: str) -> QuerySetSingle[T_co]: ...  # pragma: nocoverage
 
+    @overload
+    def values_list(
+        self, *fields_: str, flat: Literal[False] = False
+    ) -> ValuesListQuery[Literal[True], Literal[False]]: ...
+
+    @overload
+    def values_list(
+        self, *fields_: str, flat: Literal[True]
+    ) -> ValuesListQuery[Literal[True], Literal[True]]: ...
+
+    @overload
+    def values_list(self, *fields_: str, flat: bool) -> ValuesListQuery[Literal[True], bool]: ...
+
     def values_list(
         self, *fields_: str, flat: bool = False
-    ) -> ValuesListQuery[Literal[True]]: ...  # pragma: nocoverage
+    ) -> ValuesListQuery[Literal[True], Any]: ...  # pragma: nocoverage
 
     def values(
         self, *args: str, **kwargs: str
@@ -694,7 +715,22 @@ class QuerySet(AwaitableQuery[MODEL]):
         queryset._group_bys = fields
         return queryset
 
-    def values_list(self, *fields_: str, flat: bool = False) -> ValuesListQuery[Literal[False]]:
+    @overload
+    def values_list(
+        self, *fields_: str, flat: Literal[False] = False
+    ) -> ValuesListQuery[Literal[False], Literal[False]]: ...
+
+    @overload
+    def values_list(
+        self, *fields_: str, flat: Literal[True]
+    ) -> ValuesListQuery[Literal[False], Literal[True]]: ...
+
+    @overload
+    def values_list(self, *fields_: str, flat: bool) -> ValuesListQuery[Literal[False], bool]: ...
+
+    def values_list(
+        self, *fields_: str, flat: bool = False
+    ) -> ValuesListQuery[Literal[False], Any]:
         """
         Make QuerySet returns list of tuples for given args instead of objects.
 
@@ -1763,7 +1799,7 @@ class FieldSelectQuery(AwaitableQuery):
         return group_bys
 
 
-class ValuesListQuery(FieldSelectQuery, Generic[SINGLE]):
+class ValuesListQuery(FieldSelectQuery, Generic[SINGLE, FLAT]):
     __slots__ = (
         "_distinct",
         "_fields_for_select_list",
@@ -1857,20 +1893,38 @@ class ValuesListQuery(FieldSelectQuery, Generic[SINGLE]):
 
     @overload
     def __await__(
-        self: ValuesListQuery[Literal[False]],
+        self: ValuesListQuery[Literal[False], Literal[False]],
     ) -> Generator[Any, None, list[tuple[Any, ...]]]: ...
 
     @overload
     def __await__(
-        self: ValuesListQuery[Literal[True]],
+        self: ValuesListQuery[Literal[True], Literal[False]],
     ) -> Generator[Any, None, tuple[Any, ...]]: ...
+
+    @overload
+    def __await__(
+        self: ValuesListQuery[Literal[False], Literal[True]],
+    ) -> Generator[Any, None, list[Any]]: ...
+
+    @overload
+    def __await__(
+        self: ValuesListQuery[Literal[True], Literal[True]],
+    ) -> Generator[Any, None, Any]: ...
+
+    @overload
+    def __await__(
+        self: ValuesListQuery[Literal[False], bool],
+    ) -> Generator[Any, None, list[Any]]: ...
+
+    @overload
+    def __await__(self: ValuesListQuery[Literal[True], bool]) -> Generator[Any, None, Any]: ...
 
     def __await__(self) -> Generator[Any, None, list[Any] | tuple[Any, ...]]:
         self._choose_db_if_not_chosen()
         self._make_query()
         return self._execute().__await__()  # pylint: disable=E1101
 
-    async def __aiter__(self: ValuesListQuery[Any]) -> AsyncIterator[Any]:
+    async def __aiter__(self: ValuesListQuery[Any, Any]) -> AsyncIterator[Any]:
         for val in await self:
             yield val
 
