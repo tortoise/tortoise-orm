@@ -22,6 +22,8 @@ Changed
 ^^^^^
 - ``MigrationRecorder.applied_migrations()`` now checks for the migrations table before querying history, allowing catalog lookup errors to propagate while retaining the empty-list fallback for history query errors. (#2382)
 - ``parse_datetime`` now prefers the C-accelerated ``datetime.fromisoformat``, only falling back to ``iso8601`` for formats it can't parse. (#2363)
+- ``URLValidator(allowed_schemes=[])`` now rejects every scheme instead of disabling the allowlist; omit ``allowed_schemes`` or pass ``None`` for the previous behavior. (#2394)
+- ``EmailValidator([])`` now rejects every domain instead of disabling the allowlist; omit ``allowed_domains`` or pass ``None`` for the previous behavior. (#2422)
 
 Fixed
 ^^^^^
@@ -45,8 +47,6 @@ Fixed
 - Parse false boolean values in database URL options correctly. (#2377)
 - Reject domain names with trailing newlines in ``DomainNameValidator``. (#2386)
 - ``QuerySet.exists()`` now respects ``limit()`` and ``offset()``, so ``limit(0)`` or an offset past the last row returns ``False``. (#2389)
-- Respect an explicitly empty ``allowed_schemes`` list in ``URLValidator``. (#2394)
-- Respect an explicitly empty ``allowed_domains`` list in ``EmailValidator``.
 - Respect the root ``max_recursion`` limit when generating nested Pydantic models. (#2400)
 - ``TextField(null=True)`` now narrows to ``TextField[str | None]`` instead of staying ``TextField[str]``. (#2218)
 - docs: fix relation accessors in model and query examples. (#2411)
