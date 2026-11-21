@@ -206,7 +206,7 @@ class MSSQLSchemaEditor(MSSQLQuotingMixin, BaseSchemaEditor):
     def _get_m2m_table_definition(
         self, model: type[Model], field: ManyToManyFieldInstance
     ) -> str | None:
-        if field._generated:
+        if field._generated or self._through_is_explicit(model, field):
             return None
         related_model = field.related_model
         if not related_model:
@@ -289,6 +289,8 @@ class MSSQLSchemaEditor(MSSQLQuotingMixin, BaseSchemaEditor):
 
     async def remove_field(self, model: type[Model], field) -> None:
         if isinstance(field, ManyToManyFieldInstance):
+            if self._through_is_explicit(model, field):
+                return
             await self._run_sql(
                 self.DELETE_TABLE_TEMPLATE.format(
                     table=self._qualify_table_name(field.through, model._meta.schema)
