@@ -1,9 +1,12 @@
+import asyncio
+from types import SimpleNamespace
 from unittest.mock import Mock
 
 import pytest
 
 from tests.testmodels import CharPkModel, Event, Team, Tournament
 from tortoise import connections
+from tortoise.backends.base.client import TransactionContextPooled
 from tortoise.contrib.test import requireCapability
 from tortoise.exceptions import OperationalError, TransactionManagementError
 from tortoise.transactions import atomic, in_transaction
@@ -425,3 +428,84 @@ async def test_commit_raising_exception(db_isolated):
             tx_conn.commit = Mock(side_effect=ValueError("commit"))
 
     assert connections.get("models") == conn
+
+
+class PoolStub:
+    """Minimal pool stand-in that only tracks acquire/release bookkeeping."""
+
+    def __init__(self, size: int = 2) -> None:
+        self.size = size
+        self.available = size
+        self.acquired = 0
+        self.released = 0
+
+    async def acquire(self):
+        if not self.available:
+            raise RuntimeError("pool exhausted")
+        self.available -= 1
+        self.acquired += 1
+        return object()
+
+    async def release(self, connection) -> None:
+        self.available += 1
+        self.released += 1
+
+
+class BlockingBeginClient:
+    """Stand-in for a pooled transactional client whose BEGIN does not return."""
+
+    _finalized = False
+    connection_name = "repro-begin"
+
+    def __init__(self, pool: PoolStub, begin_error: BaseException | None = None) -> None:
+        self._parent = SimpleNamespace(_pool=pool)
+        self._connection = None
+        self._begin_error = begin_error
+        self.rolled_back = 0
+
+    async def begin(self) -> None:
+        if self._begin_error is not None:
+            raise self._begin_error
+        await asyncio.Event().wait()  # never returns, the caller cancels it
+
+    async def rollback(self) -> None:
+        self.rolled_back += 1
+
+
+@pytest.mark.asyncio
+async def test_cancelled_begin_returns_the_connection_to_the_pool(db_simple):
+    """A deadline that lands inside BEGIN must not cost a pool slot."""
+    pool = PoolStub()
+    client = BlockingBeginClient(pool)
+    context = TransactionContextPooled(client, asyncio.Lock())
+
+    async def enter() -> None:
+        async with context:
+            pass  # pragma: nocoverage
+
+    task = asyncio.ensure_future(enter())
+    await asyncio.sleep(0.05)
+    task.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await task
+
+    assert pool.acquired == 1
+    assert pool.released == 1
+    assert pool.available == pool.size
+    assert client.rolled_back == 1
+
+
+@pytest.mark.asyncio
+async def test_failed_begin_returns_the_connection_to_the_pool(db_simple):
+    """A BEGIN that raises must release the connection just like __aexit__ does."""
+    pool = PoolStub()
+    client = BlockingBeginClient(pool, begin_error=OperationalError("BEGIN failed"))
+    context = TransactionContextPooled(client, asyncio.Lock())
+
+    with pytest.raises(OperationalError):
+        async with context:
+            pass  # pragma: nocoverage
+
+    assert pool.released == 1
+    assert pool.available == pool.size
+    assert client.rolled_back == 1

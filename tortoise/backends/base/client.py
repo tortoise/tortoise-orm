@@ -367,8 +367,30 @@ class TransactionContextPooled(TransactionContext):
         # Set the context variable so the current task is always seeing a
         # TransactionWrapper connection.
         self.token = get_connections().set(self.connection_name, self.client)
-        await self.client.begin()
+        try:
+            await self.client.begin()
+        except BaseException:
+            # ``__aexit__`` is not called when ``__aenter__`` fails, so the
+            # connection has to be handed back here. Otherwise a task cancelled
+            # while BEGIN is in flight, or a BEGIN that fails outright, loses a
+            # pool slot for good.
+            await self._discard_failed_transaction()
+            raise
         return self.client
+
+    async def _discard_failed_transaction(self) -> None:
+        """Roll back and return the connection acquired by a failed ``__aenter__``."""
+        pool = self.client._parent._pool
+        try:
+            try:
+                if not self.client._finalized:
+                    await self.client.rollback()
+            except BaseException:  # the transaction never started, nothing to undo
+                pass
+            if pool:
+                await pool.release(self.client._connection)
+        finally:
+            get_connections().reset(self.token)
 
     async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
         try:
