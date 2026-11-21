@@ -1,6 +1,16 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 from pypika_tortoise import SqlContext, functions
 
 from tortoise.expressions import Aggregate, Function
+
+if TYPE_CHECKING:
+    from pypika_tortoise.terms import Function as PypikaFunction
+    from pypika_tortoise.terms import Term
+
+    from .expressions import CombinedExpression, F
 
 ##############################################################################
 # Standard functions
@@ -12,9 +22,19 @@ class Trim(Function):
     Trims whitespace off edges of text.
 
     :samp:`Trim("{FIELD_NAME}")`
+    :samp:`Trim("{FIELD_NAME}", chars="x")`
     """
 
     database_func = functions.Trim
+
+    def __init__(
+        self, field: str | F | CombinedExpression | Function | Term, *, chars: str | None = None
+    ) -> None:
+        super().__init__(field)
+        self.chars = chars
+
+    def _get_function_field(self, field: Term | str, *default_values) -> PypikaFunction:
+        return self.database_func(field, *default_values, chars=self.chars)
 
 
 class Length(Function):
