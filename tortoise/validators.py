@@ -301,8 +301,8 @@ class EmailValidator(Validator):
     (before @) and domain part (after @). Supports domain allowlisting for
     restricting to specific domains.
 
-    :param allowed_domains: List of allowed domain names. If provided, only emails
-                            from these domains will be accepted.
+    :param allowed_domains: List of allowed domain names. Defaults to None (all valid
+        domains accepted). An empty list blocks all domains.
     :raises InvalidEmailAddress: if the value is not a valid email address.
     """
 
@@ -349,7 +349,9 @@ class EmailValidator(Validator):
         return False
 
     def __init__(self, allowed_domains: list[str] | None = None) -> None:
-        self.allowed_domains: list[str] = [i.lower() for i in allowed_domains or ()]
+        self.allowed_domains: list[str] | None = (
+            [i.lower() for i in allowed_domains] if allowed_domains is not None else None
+        )
 
     def __call__(self, value: str) -> None:
         if "@" not in value or len(value) > self.MAX_EMAIL_LENGTH:
@@ -360,7 +362,7 @@ class EmailValidator(Validator):
         if not self._user_regex.match(user_part):
             raise InvalidEmailAddress()
 
-        if self.allowed_domains:
+        if self.allowed_domains is not None:
             if domain_part.lower() not in self.allowed_domains:
                 raise InvalidEmailAddress()
         elif not self._validate_domain_part(domain_part):
