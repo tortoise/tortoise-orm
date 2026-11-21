@@ -557,6 +557,11 @@ class PydanticModelCreator:
         if not allow_cycles and model_cls in (c[0] for c in stack[:-1]):
             return None
 
+        # Stack entries are (model_class, field_name, max_recursion), so [0][2]
+        # is the root model's effective max_recursion, including meta_override.
+        if stack and len(stack) > stack[0][2]:
+            return None
+
         level = 1
         for _, _, parent_max_recursion in stack[1:]:
             if level >= parent_max_recursion:

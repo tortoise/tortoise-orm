@@ -55,9 +55,9 @@ You can also create related objects directly through the reverse ForeignKey rela
 .. code-block:: python3
 
     # Create a related object automatically setting the foreign key
-    new_event = await team.events.create(name='New Event')
+    new_event = await tournament.events.create(name='New Event')
     # Equivalent to:
-    # new_event = await Event.create(name='New Event', team=team)
+    # new_event = await Event.create(name='New Event', tournament=tournament)
 
 QuerySet
 ========
@@ -120,7 +120,7 @@ query around related entities:
     await Team.filter(events__id__in=[1,2,3])
 
     # Gets all tournaments where teams with "junior" in their name are participating
-    await Tournament.filter(event__participants__name__icontains='junior').distinct()
+    await Tournament.filter(events__participants__name__icontains='junior').distinct()
 
 Forward foreign key and one-to-one relations support ``in`` and ``not_in`` with
 related model instances or referenced values. Model instances use the relation's

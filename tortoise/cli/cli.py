@@ -94,7 +94,7 @@ def _launch_ipython_shell(namespace: dict[str, Any]) -> None:
         from IPython.terminal.embed import InteractiveShellEmbed
 
         model_names = [
-            k for k in namespace.keys() if k not in ("Tortoise", "tortoise", "connections", "apps")
+            k for k in namespace if k not in ("Tortoise", "tortoise", "connections", "apps")
         ]
         models_info = (
             f"Available models: {', '.join(model_names)}" if model_names else "No models loaded"
@@ -126,9 +126,7 @@ async def _launch_ptpython_shell(namespace: dict[str, Any]) -> None:
     if platform.system() == "Windows":
         _patch_loop_factory_for_ptpython()
 
-    model_names = [
-        k for k in namespace.keys() if k not in ("Tortoise", "tortoise", "connections", "apps")
-    ]
+    model_names = [k for k in namespace if k not in ("Tortoise", "tortoise", "connections", "apps")]
 
     # Print banner before launching ptpython
     models_info = (
