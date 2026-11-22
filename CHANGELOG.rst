@@ -55,6 +55,7 @@ Fixed
 - ``migrate``/``plan``/``sqlmigrate`` on a subset of apps now load dependency apps' migrations, so cross-app ``ForeignKeyField`` columns and constraints are no longer silently omitted. (#2278)
 - ``values_list(..., flat=True)`` is typed as a list of values (or a single value after ``.get()`` / ``.first()``) instead of tuples. (#2421)
 - Model instances without a primary key now compare equal only to themselves, so two distinct unsaved instances are no longer equal. (#2420)
+- With ``use_tz=True``, ``DatetimeField`` no longer reads an ``int`` Unix timestamp in the host's local time and labels it with ``TIMEZONE``, which stored the wrong instant when the server's timezone differed; ``float`` timestamps are now accepted as well. (#2423)
 
 1.1.9
 -----

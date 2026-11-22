@@ -513,8 +513,10 @@ class DatetimeField(Field[T_DATETIME], datetime.datetime):
         if value is not None:
             if not isinstance(value, datetime.datetime):
                 value = (
-                    datetime.datetime.fromtimestamp(value)
-                    if isinstance(value, int)
+                    datetime.datetime.fromtimestamp(
+                        value, tz=timezone.UTC if get_use_tz() else None
+                    )
+                    if isinstance(value, (int, float))
                     else parse_datetime(value)
                 )
             if get_use_tz():
