@@ -562,7 +562,9 @@ class DatetimeField(Field[T_DATETIME], datetime.datetime):
                 )
                 # Naive inputs are local to the configured timezone; normalize
                 # them to UTC just like explicitly-aware inputs before persistence.
-                value = timezone.make_aware(value).astimezone(datetime.timezone.utc)  # ty:ignore[invalid-assignment]
+                value = timezone.make_aware(value).astimezone(
+                    datetime.timezone.utc
+                )  # ty:ignore[invalid-assignment]
         self.validate(value)
         return value
 
