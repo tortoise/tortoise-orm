@@ -216,6 +216,8 @@ class URLValidator(Validator):
 
     :param allowed_schemes: List of allowed URL schemes. Defaults to ["http", "https",
         "ftp", "ftps"] when omitted or None. An empty list blocks all schemes.
+        Scheme names are matched case-insensitively, as they are case-insensitive
+        per RFC 3986 section 3.1.
     :raises InvalidURL: if the value is not a valid URL.
     :raises InvalidScheme: if the URL scheme is not in the allowed list.
     """
@@ -250,7 +252,9 @@ class URLValidator(Validator):
 
     def __init__(self, allowed_schemes: list[str] | None = None) -> None:
         self.allowed_schemes = (
-            allowed_schemes if allowed_schemes is not None else ["http", "https", "ftp", "ftps"]
+            [scheme.lower() for scheme in allowed_schemes]
+            if allowed_schemes is not None
+            else ["http", "https", "ftp", "ftps"]
         )
 
     def __call__(self, value: str) -> None:
@@ -267,6 +271,14 @@ class URLValidator(Validator):
 
         if split_url.scheme.lower() not in self.allowed_schemes:
             raise InvalidScheme(split_url.scheme.lower())
+
+        # urlsplit does not range-check the port; accessing it raises
+        # ValueError for ports outside 0-65535 (and for non-numeric ports,
+        # which the regex below would reject anyway).
+        try:
+            _port = split_url.port
+        except ValueError as e:
+            raise InvalidURL() from e
 
         if split_url.hostname is None or len(split_url.hostname) > self.MAX_HOSTNAME_LENGTH:
             raise InvalidURL()
