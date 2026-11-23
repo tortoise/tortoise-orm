@@ -25,6 +25,7 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14",
+    "Programming Language :: Python :: 3.15",
     "Programming Language :: Python :: Implementation :: CPython",
     "Programming Language :: Python :: Implementation :: PyPy",
     "Programming Language :: PL/SQL",
@@ -210,12 +211,21 @@ filterwarnings = [
 
 [tool.coverage.report]
 show_missing = true
+exclude_also = [
+    "pragma: no cover",
+    "pragma: nocoverage",
+    "@overload",
+    'if __name__ == "__main__":',
+    "if TYPE_CHECKING:",
+]
 
 [tool.ruff]
 line-length = 100
 exclude = ["docs/type_globals.py"]
 [tool.ruff.lint]
-ignore = ["E501"]
+ignore = [
+    "BLE001",  # https://docs.astral.sh/ruff/rules/blind-except/
+]
 extend-select = [
     "I", # https://docs.astral.sh/ruff/rules/#isort-i
     "FA", # https://docs.astral.sh/ruff/rules/#flake8-future-annotations-fa

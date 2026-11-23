@@ -214,7 +214,8 @@ class URLValidator(Validator):
     Validates URLs according to RFC 3986. Checks scheme, host, port, and path
     components. Supports HTTP, HTTPS, FTP, and FTPS schemes by default.
 
-    :param allowed_schemes: List of allowed URL schemes. Defaults to ["http", "https", "ftp", "ftps"].
+    :param allowed_schemes: List of allowed URL schemes. Defaults to ["http", "https",
+        "ftp", "ftps"] when omitted or None. An empty list blocks all schemes.
     :raises InvalidURL: if the value is not a valid URL.
     :raises InvalidScheme: if the URL scheme is not in the allowed list.
     """
@@ -248,7 +249,9 @@ class URLValidator(Validator):
         return re.compile(self.URL_REGEX, re.IGNORECASE)
 
     def __init__(self, allowed_schemes: list[str] | None = None) -> None:
-        self.allowed_schemes = allowed_schemes or ["http", "https", "ftp", "ftps"]
+        self.allowed_schemes = (
+            allowed_schemes if allowed_schemes is not None else ["http", "https", "ftp", "ftps"]
+        )
 
     def __call__(self, value: str) -> None:
         if len(value) > self.MAX_URL_LENGTH:
@@ -298,8 +301,8 @@ class EmailValidator(Validator):
     (before @) and domain part (after @). Supports domain allowlisting for
     restricting to specific domains.
 
-    :param allowed_domains: List of allowed domain names. If provided, only emails
-                            from these domains will be accepted.
+    :param allowed_domains: List of allowed domain names. Defaults to None (all valid
+        domains accepted). An empty list blocks all domains.
     :raises InvalidEmailAddress: if the value is not a valid email address.
     """
 
@@ -346,7 +349,9 @@ class EmailValidator(Validator):
         return False
 
     def __init__(self, allowed_domains: list[str] | None = None) -> None:
-        self.allowed_domains: list[str] = allowed_domains or []
+        self.allowed_domains: list[str] | None = (
+            [i.lower() for i in allowed_domains] if allowed_domains is not None else None
+        )
 
     def __call__(self, value: str) -> None:
         if "@" not in value or len(value) > self.MAX_EMAIL_LENGTH:
@@ -357,8 +362,8 @@ class EmailValidator(Validator):
         if not self._user_regex.match(user_part):
             raise InvalidEmailAddress()
 
-        if self.allowed_domains:
-            if domain_part not in self.allowed_domains:
+        if self.allowed_domains is not None:
+            if domain_part.lower() not in self.allowed_domains:
                 raise InvalidEmailAddress()
         elif not self._validate_domain_part(domain_part):
             raise InvalidEmailAddress()

@@ -440,6 +440,10 @@ class NoID(Model):
     name = fields.CharField(max_length=255, null=True)
     desc = fields.TextField(null=True)
 
+    # Tortoise adds an implicit primary key at runtime; this annotation only
+    # tells type checkers the attribute exists.
+    id: int | None
+
 
 class UniqueName(Model):
     id = fields.IntField(primary_key=True)
