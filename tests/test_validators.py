@@ -223,6 +223,51 @@ def test_url_validator_invalid_scheme() -> None:
 
 
 @pytest.mark.parametrize(
+    "allowed_schemes,value",
+    [
+        (["HTTPS"], "https://example.com"),
+        (["Http", "HTTPS"], "http://example.com"),
+        (["Http", "HTTPS"], "https://example.com"),
+        (["https"], "HTTPS://example.com"),
+    ],
+)
+def test_url_validator_allowed_schemes_ignore_case(allowed_schemes, value) -> None:
+    validator = URLValidator(allowed_schemes=allowed_schemes)
+    validator(value)
+
+
+def test_url_validator_uppercase_allowlist_still_rejects_other_schemes() -> None:
+    validator = URLValidator(allowed_schemes=["HTTPS"])
+    with pytest.raises(InvalidScheme):
+        validator("ftp://example.com")
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        "https://example.com:65536/",
+        "https://example.com:99999/",
+        "https://[::1]:99999/",
+    ],
+)
+def test_url_validator_port_out_of_range(value) -> None:
+    with pytest.raises(InvalidURL):
+        validate_url(value)
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        "https://example.com:0/",
+        "https://example.com:65535/",
+        "https://[::1]:65535/",
+    ],
+)
+def test_url_validator_port_at_range_boundary(value) -> None:
+    validate_url(value)
+
+
+@pytest.mark.parametrize(
     "value",
     [
         "",
