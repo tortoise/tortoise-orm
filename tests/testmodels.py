@@ -113,6 +113,7 @@ class Event(Model):
     reporter: fields.ForeignKeyNullableRelation[Reporter] = fields.ForeignKeyField(
         to=Reporter, null=True
     )
+    reporter_id: int | None  # Put it here to improve type hints
     participants: fields.ManyToManyRelation["Team"] = fields.ManyToManyField(
         "models.Team",
         related_name="events",
@@ -438,6 +439,10 @@ class M2MTwo(Model):
 class NoID(Model):
     name = fields.CharField(max_length=255, null=True)
     desc = fields.TextField(null=True)
+
+    # Tortoise adds an implicit primary key at runtime; this annotation only
+    # tells type checkers the attribute exists.
+    id: int | None
 
 
 class UniqueName(Model):

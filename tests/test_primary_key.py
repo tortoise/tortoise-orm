@@ -38,7 +38,7 @@ class TestQueryset:
     async def test_uuid_pk_default(self, db):
         instance1 = await UUIDPkModel.create()
         assert isinstance(instance1.id, uuid.UUID)
-        assert instance1.pk == instance1.pk
+        assert instance1.pk == instance1.id
 
         instance2 = await UUIDPkModel.get(id=instance1.id)
         assert instance2.id == instance1.id
