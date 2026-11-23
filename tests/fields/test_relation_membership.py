@@ -139,3 +139,19 @@ async def test_nested_forward_relation_membership(db) -> None:
     await testmodels.Principal.create(name="second", school=second)
 
     assert await testmodels.Student.filter(school__principal__school__in=[first]) == [selected]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("lookup", ["in", "not_in"])
+async def test_nullable_foreign_key_membership_with_none(db, lookup: str) -> None:
+    tournament = await testmodels.Tournament.create(name="t")
+    first = await testmodels.Reporter.create(name="first")
+    second = await testmodels.Reporter.create(name="second")
+    with_first = await testmodels.Event.create(name="a", tournament=tournament, reporter=first)
+    with_second = await testmodels.Event.create(name="b", tournament=tournament, reporter=second)
+    without = await testmodels.Event.create(name="c", tournament=tournament)
+
+    result = await testmodels.Event.filter(**{f"reporter__{lookup}": [first, None]}).order_by(
+        "event_id"
+    )
+    assert result == ([with_first, without] if lookup == "in" else [with_second])

@@ -235,8 +235,8 @@ In the following example, we filter the Team model to find all teams whose names
 The following lookup types are available:
 
 - ``not``
-- ``in`` - checks if value of field is in passed list
-- ``not_in``
+- ``in`` - checks if value of field is in passed list; a ``None`` in the list matches NULL
+- ``not_in`` - checks if value of field is not in passed list; a ``None`` in the list excludes NULL
 - ``gte`` - greater or equals than passed value
 - ``gt`` - greater than passed value
 - ``lte`` - lower or equals than passed value

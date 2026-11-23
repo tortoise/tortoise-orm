@@ -115,6 +115,38 @@ async def test_char_field_not_in_empty(db, char_fields_data):
 
 
 @pytest.mark.asyncio
+async def test_char_field_in_with_none(db):
+    await CharFields.create(char="a", char_null=None)
+    await CharFields.create(char="b", char_null="x")
+    await CharFields.create(char="c", char_null="y")
+    assert set(
+        await CharFields.filter(char_null__in=["x", None]).values_list("char", flat=True)
+    ) == {"a", "b"}
+    assert set(await CharFields.filter(char_null__in=[None]).values_list("char", flat=True)) == {
+        "a"
+    }
+    assert set(
+        await CharFields.exclude(char_null__in=["x", None]).values_list("char", flat=True)
+    ) == {"c"}
+
+
+@pytest.mark.asyncio
+async def test_char_field_not_in_with_none(db):
+    await CharFields.create(char="a", char_null=None)
+    await CharFields.create(char="b", char_null="x")
+    await CharFields.create(char="c", char_null="y")
+    assert set(
+        await CharFields.filter(char_null__not_in=["x", None]).values_list("char", flat=True)
+    ) == {"c"}
+    assert set(
+        await CharFields.filter(char_null__not_in=[None]).values_list("char", flat=True)
+    ) == {"b", "c"}
+    assert set(
+        await CharFields.exclude(char_null__not_in=["x", None]).values_list("char", flat=True)
+    ) == {"a", "b"}
+
+
+@pytest.mark.asyncio
 async def test_char_field_isnull(db, char_fields_data):
     assert set(await CharFields.filter(char_null__isnull=True).values_list("char", flat=True)) == {
         "moo",

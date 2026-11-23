@@ -116,7 +116,18 @@ def array_encoder(value: Any | Sequence[Any], instance: Model, field: Field) -> 
 ##############################################################################
 
 
+def _split_none(value: Any) -> tuple[Any, bool]:
+    # ``x IN (..., NULL)`` never matches a NULL column, and ``x NOT IN (..., NULL)``
+    # never matches anything, so a None in the list is turned into an IS NULL check.
+    if isinstance(value, (list, tuple, set, frozenset)) and None in value:
+        return [item for item in value if item is not None], True
+    return value, False
+
+
 def is_in(field: Term, value: Any) -> Criterion:
+    value, has_none = _split_none(value)
+    if has_none:
+        return field.isin(value) | field.isnull() if value else field.isnull()
     if value:
         return field.isin(value)
     # SQL has no False, so we return 1=0
@@ -128,6 +139,9 @@ def is_in(field: Term, value: Any) -> Criterion:
 
 
 def not_in(field: Term, value: Any) -> Criterion:
+    value, has_none = _split_none(value)
+    if has_none:
+        return field.notin(value) & field.notnull() if value else field.notnull()
     if value:
         return field.notin(value) | field.isnull()
     # SQL has no True, so we return 1=1
