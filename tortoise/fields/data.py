@@ -518,19 +518,13 @@ class DatetimeField(Field[T_DATETIME], datetime.datetime):
                     else parse_datetime(value)
                 )
             if get_use_tz():
-                # When use_tz=True, ensure all datetimes are timezone-aware.
-                # auto_now/auto_now_add values are written in UTC. Backends with
-                # timezone-naive timestamp columns return those values as naive
-                # datetimes, so interpret them as UTC before converting to the
-                # configured timezone. User-supplied naive datetimes retain the
-                # existing behavior of being interpreted in the configured zone.
+                # With timezone support enabled, datetime values are stored in UTC.
+                # Backends with timezone-naive timestamp columns therefore return UTC
+                # values without tzinfo; make them UTC-aware before presenting them
+                # in the configured timezone.
                 if timezone.is_naive(value):
-                    if self.auto_now or self.auto_now_add:
-                        value = timezone.make_aware(value, "UTC").astimezone(get_default_timezone())
-                    else:
-                        value = timezone.make_aware(value)
-                else:
-                    value = value.astimezone(get_default_timezone())
+                    value = timezone.make_aware(value, datetime.timezone.utc)
+                value = value.astimezone(get_default_timezone())
             else:
                 # When use_tz=False, ensure all datetimes are naive
                 # Some backends (PostgreSQL TIMESTAMPTZ) return aware datetimes natively
@@ -566,7 +560,9 @@ class DatetimeField(Field[T_DATETIME], datetime.datetime):
                     RuntimeWarning,
                     stacklevel=2,
                 )
-                value = timezone.make_aware(value)  # ty:ignore[invalid-assignment]
+                # Naive inputs are local to the configured timezone; normalize
+                # them to UTC just like explicitly-aware inputs before persistence.
+                value = timezone.make_aware(value).astimezone(datetime.timezone.utc)  # ty:ignore[invalid-assignment]
         self.validate(value)
         return value
 
