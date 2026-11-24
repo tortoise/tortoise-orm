@@ -24,6 +24,8 @@ if TYPE_CHECKING:  # pragma: nocoverage
 
 MODEL = TypeVar("MODEL", bound="Model")
 
+_UNSET: object = object()  # sentinel for detecting omitted on_delete
+
 
 class _NoneAwaitable:
     __slots__ = ()
@@ -325,13 +327,21 @@ class ForeignKeyFieldInstance(RelationalField[MODEL]):
         self,
         model_name: type[Model] | str,
         related_name: str | None | Literal[False] = None,
-        on_delete: OnDelete = CASCADE,
+        on_delete: OnDelete = _UNSET,  # type: ignore[assignment]
         **kwargs: Any,
     ) -> None:
         super().__init__(None, **kwargs)  # type:ignore[arg-type]
         self.validate_model_name(model_name)
         self.model_name = model_name
         self.related_name = related_name
+        if on_delete is _UNSET:
+            warnings.warn(
+                "Not passing `on_delete` to ForeignKeyField is deprecated and will be an error "
+                "in a future release. Pass `on_delete` explicitly (e.g. on_delete=fields.CASCADE).",
+                DeprecationWarning,
+                stacklevel=3,
+            )
+            on_delete = CASCADE
         if on_delete not in set(OnDelete):
             raise ConfigurationError(
                 "on_delete can only be CASCADE, RESTRICT, SET_NULL, SET_DEFAULT or NO_ACTION"
@@ -382,7 +392,7 @@ class OneToOneFieldInstance(ForeignKeyFieldInstance[MODEL]):
         self,
         model_name: type[MODEL] | str,
         related_name: str | None | Literal[False] = None,
-        on_delete: OnDelete = CASCADE,
+        on_delete: OnDelete = _UNSET,  # type: ignore[assignment]
         **kwargs: Any,
     ) -> None:
         super().__init__(model_name, related_name, on_delete, unique=True, **kwargs)
@@ -408,7 +418,7 @@ class ManyToManyFieldInstance(RelationalField[MODEL]):
         forward_key: str | None = None,
         backward_key: str = "",
         related_name: str = "",
-        on_delete: OnDelete = CASCADE,
+        on_delete: OnDelete = _UNSET,  # type: ignore[assignment]
         field_type: type[MODEL] = None,  # type: ignore
         unique: bool = True,
         **kwargs: Any,
@@ -422,6 +432,14 @@ class ManyToManyFieldInstance(RelationalField[MODEL]):
                 stacklevel=2,
             )
             unique = kwargs.pop("create_unique_index")
+        if on_delete is _UNSET:
+            warnings.warn(
+                "Not passing `on_delete` to ManyToManyField is deprecated and will be an error "
+                "in a future release. Pass `on_delete` explicitly (e.g. on_delete=fields.CASCADE).",
+                DeprecationWarning,
+                stacklevel=3,
+            )
+            on_delete = CASCADE
         super().__init__(field_type, unique=unique, **kwargs)
         self.validate_model_name(model_name)
         self.model_name = model_name
@@ -483,7 +501,7 @@ def OneToOneField(
 def OneToOneField(
     to: type[MODEL] | str,
     related_name: str | None | Literal[False] = None,
-    on_delete: OnDelete = CASCADE,
+    on_delete: OnDelete = _UNSET,  # type: ignore[assignment]
     db_constraint: bool = True,
     null: bool = False,
     **kwargs: Any,
@@ -558,7 +576,7 @@ def ForeignKeyField(
 def ForeignKeyField(
     to: type[MODEL] | str,
     related_name: str | None | Literal[False] = None,
-    on_delete: OnDelete = CASCADE,
+    on_delete: OnDelete = _UNSET,  # type: ignore[assignment]
     db_constraint: bool = True,
     null: bool = False,
     **kwargs: Any,
@@ -613,7 +631,7 @@ def ManyToManyField(
     forward_key: str | None = None,
     backward_key: str = "",
     related_name: str = "",
-    on_delete: OnDelete = CASCADE,
+    on_delete: OnDelete = _UNSET,  # type: ignore[assignment]
     db_constraint: bool = True,
     unique: bool = True,
     **kwargs: Unpack[ManyToManyFieldKwargs],
