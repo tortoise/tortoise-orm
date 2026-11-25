@@ -552,6 +552,7 @@ class PydanticModelCreator:
         name: str | None = None,
         allow_cycles: bool = False,
         sort_alphabetically: bool | None = None,
+        model_config: ConfigDict | None = None,
     ) -> type[PydanticModel] | None:
         """Create a Pydantic submodel with recursion protection against cyclic references."""
         if not allow_cycles and model_cls in (c[0] for c in stack[:-1]):
@@ -577,6 +578,7 @@ class PydanticModelCreator:
             _stack=stack,
             allow_cycles=allow_cycles,
             sort_alphabetically=sort_alphabetically,
+            model_config=model_config,
             _as_submodel=True,
         )
         return pmc.create_pydantic_model()
@@ -596,6 +598,13 @@ class PydanticModelCreator:
                     str(v[prefix_len:]) for v in field_tuple if v.startswith(field_name + ".")
                 )
 
+            sub_model_config: ConfigDict | None = None
+            if self._call_model_config:
+                # Omit root-level title so each submodel retains its own schema title.
+                filtered = {k: v for k, v in self._call_model_config.items() if k != "title"}
+                if filtered:
+                    sub_model_config = cast(ConfigDict, filtered)
+
             pmodel = self._create_submodel(
                 _model,
                 exclude=get_fields_to_carry_on(self.meta.exclude),
@@ -604,6 +613,7 @@ class PydanticModelCreator:
                 stack=new_stack,
                 allow_cycles=self.meta.allow_cycles,
                 sort_alphabetically=self.meta.sort_alphabetically,
+                model_config=sub_model_config,
             )
         else:
             pmodel = None

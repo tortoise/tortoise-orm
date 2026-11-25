@@ -1,4 +1,5 @@
 import copy
+from datetime import datetime
 from typing import Annotated, Any, Literal, get_args
 
 import pytest
@@ -2436,3 +2437,101 @@ def test_pydantic_creator_cache_module(db_simple) -> None:
 
     cached_custom = pydantic_model_creator(Tournament, module="custom_module")
     assert cached_custom is custom_model
+
+
+def test_pydantic_creator_propagates_model_config_to_submodels(db_simple) -> None:
+    custom_model = pydantic_model_creator(
+        Tournament,
+        model_config=ConfigDict(str_to_upper=True, extra="allow", title="CustomTournament"),
+    )
+
+    event_model = get_args(custom_model.model_fields["events"].annotation)[0]
+    team_model = get_args(event_model.model_fields["participants"].annotation)[0]
+
+    assert custom_model.model_config.get("title") == "CustomTournament"
+    assert event_model.model_config.get("title") == "Event"
+    assert team_model.model_config.get("title") == "Team"
+    assert event_model.model_config.get("str_to_upper") is True
+    assert event_model.model_config.get("extra") == "allow"
+    assert team_model.model_config.get("str_to_upper") is True
+    assert team_model.model_config.get("extra") == "allow"
+
+    parsed = custom_model.model_validate(
+        {
+            "id": 1,
+            "name": "world cup",
+            "created": "2020-01-01T00:00:00",
+            "events": [
+                {
+                    "event_id": 10,
+                    "name": "final",
+                    "modified": "2020-01-02T00:00:00",
+                    "token": "abc",
+                    "participants": [{"id": 2, "name": "alpha"}],
+                    "extra_event_field": 42,
+                }
+            ],
+        }
+    )
+    parsed_data = parsed.model_dump()
+    assert parsed_data["name"] == "WORLD CUP"
+    assert parsed_data["events"][0]["name"] == "FINAL"
+    assert parsed_data["events"][0]["extra_event_field"] == 42
+    assert parsed_data["events"][0]["participants"][0]["name"] == "ALPHA"
+
+    event_root_model = pydantic_model_creator(
+        Event,
+        model_config=ConfigDict(str_to_upper=True, extra="allow"),
+    )
+    tournament_submodel = event_root_model.model_fields["tournament"].annotation
+    reporter_submodel = get_args(event_root_model.model_fields["reporter"].annotation)[0]
+    assert tournament_submodel is not None
+    assert tournament_submodel.model_config.get("str_to_upper") is True
+    assert tournament_submodel.model_config.get("extra") == "allow"
+    assert reporter_submodel.model_config.get("str_to_upper") is True
+    assert reporter_submodel.model_config.get("extra") == "allow"
+
+
+def test_pydantic_creator_submodel_cache_respects_model_config(db_simple) -> None:
+    default_model = pydantic_model_creator(Tournament)
+    custom_model = pydantic_model_creator(Tournament, model_config=ConfigDict(extra="allow"))
+    title_only_model = pydantic_model_creator(
+        Tournament, model_config=ConfigDict(title="OnlyTitle")
+    )
+
+    default_event = get_args(default_model.model_fields["events"].annotation)[0]
+    custom_event = get_args(custom_model.model_fields["events"].annotation)[0]
+    title_only_event = get_args(title_only_model.model_fields["events"].annotation)[0]
+
+    assert default_event is not custom_event
+    assert default_event.model_config.get("extra") == "forbid"
+    assert custom_event.model_config.get("extra") == "allow"
+    assert title_only_event.model_config.get("title") == "Event"
+    assert title_only_event is default_event
+
+
+def test_pydantic_creator_submodel_inherits_json_encoders(db_simple) -> None:
+    custom_model = pydantic_model_creator(
+        Tournament,
+        model_config=ConfigDict(json_encoders={datetime: lambda dt: "CUSTOM_DT"}),
+    )
+
+    parsed = custom_model.model_validate(
+        {
+            "id": 1,
+            "name": "Cup",
+            "created": "2020-01-01T00:00:00",
+            "events": [
+                {
+                    "event_id": 10,
+                    "name": "Final",
+                    "modified": "2020-01-02T00:00:00",
+                    "token": "tok",
+                    "participants": [],
+                }
+            ],
+        }
+    )
+    dumped = parsed.model_dump_json()
+    assert '"created":"CUSTOM_DT"' in dumped
+    assert '"modified":"CUSTOM_DT"' in dumped
