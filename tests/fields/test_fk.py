@@ -93,6 +93,27 @@ async def test_event__create_by_name(db) -> None:
     assert (await tour.events.all())[0] == rel
 
 
+def _set_reporter(event: testmodels.Event, reporter: testmodels.Reporter | None) -> None:
+    event.reporter = reporter
+
+
+@pytest.mark.asyncio
+async def test_nullable_fk_assign_optional_model(db) -> None:
+    tour = await testmodels.Tournament.create(name="Team1")
+    reporter = await testmodels.Reporter.create(name="Reporter")
+    event = await testmodels.Event.create(name="Event", tournament=tour)
+
+    _set_reporter(event, reporter)
+    await event.save()
+    await event.refresh_from_db()
+    assert event.reporter_id == reporter.id
+
+    _set_reporter(event, None)
+    await event.save()
+    await event.refresh_from_db()
+    assert event.reporter_id is None
+
+
 @pytest.mark.asyncio
 async def test_update_by_name(db) -> None:
     tour = await testmodels.Tournament.create(name="Team1")
