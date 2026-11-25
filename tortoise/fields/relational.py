@@ -678,21 +678,33 @@ def ManyToManyField(
     )
 
 
-OneToOneNullableRelation = OneToOneFieldInstance[MODEL] | None
-"""
-Type hint for the result of accessing the :func:`.OneToOneField` field in the model
-when obtained model can be nullable.
-"""
+if TYPE_CHECKING:
+    # ``__set__`` accepts None so that assigning ``Model | None`` also type checks with pyright.
+
+    class _NullableOneToOneFieldInstance(OneToOneFieldInstance[MODEL]):
+        def __set__(self, instance: Model, value: MODEL | None) -> None: ...
+
+    class _NullableForeignKeyFieldInstance(ForeignKeyFieldInstance[MODEL]):
+        def __set__(self, instance: Model, value: MODEL | None) -> None: ...
+
+    OneToOneNullableRelation = _NullableOneToOneFieldInstance[MODEL] | None
+    ForeignKeyNullableRelation = _NullableForeignKeyFieldInstance[MODEL] | None
+else:
+    OneToOneNullableRelation = OneToOneFieldInstance[MODEL] | None
+    """
+    Type hint for the result of accessing the :func:`.OneToOneField` field in the model
+    when obtained model can be nullable.
+    """
+
+    ForeignKeyNullableRelation = ForeignKeyFieldInstance[MODEL] | None
+    """
+    Type hint for the result of accessing the :func:`.ForeignKeyField` field in the model
+    when obtained model can be nullable.
+    """
 
 OneToOneRelation = OneToOneFieldInstance[MODEL]
 """
 Type hint for the result of accessing the :func:`.OneToOneField` field in the model.
-"""
-
-ForeignKeyNullableRelation = ForeignKeyFieldInstance[MODEL] | None
-"""
-Type hint for the result of accessing the :func:`.ForeignKeyField` field in the model
-when obtained model can be nullable.
 """
 
 ForeignKeyRelation = ForeignKeyFieldInstance[MODEL]

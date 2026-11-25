@@ -55,6 +55,7 @@ Fixed
 - ``migrate``/``plan``/``sqlmigrate`` on a subset of apps now load dependency apps' migrations, so cross-app ``ForeignKeyField`` columns and constraints are no longer silently omitted. (#2278)
 - ``values_list(..., flat=True)`` is typed as a list of values (or a single value after ``.get()`` / ``.first()``) instead of tuples. (#2421)
 - Model instances without a primary key now compare equal only to themselves, so two distinct unsaved instances are no longer equal. (#2420)
+- Assigning ``Model | None`` (or ``None``) to a ``ForeignKeyNullableRelation`` or ``OneToOneNullableRelation`` attribute no longer fails type checking with pyright (This only affects type-hint checking results without affecting runtime behavior). (#1986)
 
 1.1.9
 -----
