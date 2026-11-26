@@ -183,7 +183,7 @@ class MySQLSchemaEditor(MySQLQuotingMixin, BaseSchemaEditor):
                     m2m_create_string = "\n".join(lines)
         return m2m_create_string
 
-    async def add_field(self, model, field_name) -> None:
+    async def add_field(self, model, field_name, if_not_exists=False) -> None:
         """Override to work around MySQL error 1674.
 
         MySQL rejects ``ALTER TABLE ADD COLUMN ... DEFAULT (expr)`` when
@@ -195,6 +195,9 @@ class MySQLSchemaEditor(MySQLQuotingMixin, BaseSchemaEditor):
 
         from tortoise.fields.db_defaults import SqlDefault
 
+        if if_not_exists:
+            raise NotImplementedError("Conditional ADD COLUMN is not supported by MySQL")
+
         field = model._meta.fields_map[field_name]
         if field.has_db_default() and isinstance(field.db_default, SqlDefault):
             default_sql = field.db_default.get_sql(dialect=self.DIALECT)
@@ -204,7 +207,7 @@ class MySQLSchemaEditor(MySQLQuotingMixin, BaseSchemaEditor):
             temp_field.db_default = DB_DEFAULT_NOT_SET
             model._meta.fields_map[field_name] = temp_field
             try:
-                await super().add_field(model, field_name)
+                await super().add_field(model, field_name, if_not_exists)
             finally:
                 model._meta.fields_map[field_name] = field
             # Now set the expression default separately
@@ -219,7 +222,7 @@ class MySQLSchemaEditor(MySQLQuotingMixin, BaseSchemaEditor):
                 )
             )
             return
-        await super().add_field(model, field_name)
+        await super().add_field(model, field_name, if_not_exists)
 
     async def add_index(self, model, index) -> None:
         # MySQL's _get_index_sql stores SQL in _field_indexes for inline CREATE TABLE
