@@ -387,16 +387,7 @@ class SqliteSchemaEditor(SqliteQuotingMixin, BaseSchemaEditor):
 
             field_definitions.append(field_def)
 
-        # Include CHECK constraints from model._meta.constraints in the CREATE TABLE
-        from tortoise.migrations.constraints import CheckConstraint as _CheckConstraint
-
-        for constraint in getattr(model._meta, "constraints", None) or ():
-            if isinstance(constraint, _CheckConstraint):
-                field_definitions.append(
-                    self.CHECK_CONSTRAINT_CREATE_TEMPLATE.format(
-                        name=constraint.name, check=constraint.check
-                    )
-                )
+        field_definitions.extend(self._table_constraint_sqls(model))
 
         qualified_new = self._qualify_table_name(new_table_name, model._meta.schema)
         qualified_old = self._qualify_table_name(db_table, model._meta.schema)
