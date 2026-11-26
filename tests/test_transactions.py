@@ -6,7 +6,7 @@ from tests.testmodels import CharPkModel, Event, Team, Tournament
 from tortoise import connections
 from tortoise.contrib.test import requireCapability
 from tortoise.exceptions import OperationalError, TransactionManagementError
-from tortoise.transactions import atomic, in_transaction
+from tortoise.transactions import atomic, in_transaction, on_commit
 
 
 class SomeException(Exception):
@@ -425,3 +425,238 @@ async def test_commit_raising_exception(db_isolated):
             tx_conn.commit = Mock(side_effect=ValueError("commit"))
 
     assert connections.get("models") == conn
+
+
+@pytest.mark.asyncio
+async def test_on_commit_outside_transaction(db_isolated):
+    """Test on_commit runs the callback immediately outside a transaction."""
+    calls = []
+    await on_commit(lambda: calls.append("called"))
+    assert calls == ["called"]
+
+
+@requireCapability(supports_transactions=True)
+@pytest.mark.asyncio
+async def test_on_commit(db_isolated):
+    """Test on_commit callbacks run after the transaction commits."""
+    calls = []
+    async with in_transaction():
+        await Tournament.create(name="Test")
+        await on_commit(lambda: calls.append("committed"))
+        assert calls == []
+
+    assert calls == ["committed"]
+
+
+@requireCapability(supports_transactions=True)
+@pytest.mark.asyncio
+async def test_on_commit_sync_and_async_callbacks(db_isolated):
+    """Test on_commit accepts sync and async callbacks and keeps registration order."""
+    calls = []
+
+    async def async_callback():
+        calls.append("async")
+
+    async with in_transaction():
+        await on_commit(lambda: calls.append("sync"))
+        await on_commit(async_callback)
+        await on_commit(lambda: calls.append("sync again"))
+
+    assert calls == ["sync", "async", "sync again"]
+
+
+@requireCapability(supports_transactions=True)
+@pytest.mark.asyncio
+async def test_on_commit_rollback(db_isolated):
+    """Test on_commit callbacks are dropped when the transaction rolls back."""
+    calls = []
+    with pytest.raises(SomeException):
+        async with in_transaction():
+            await on_commit(lambda: calls.append("committed"))
+            raise SomeException("Some error")
+
+    assert calls == []
+
+
+@requireCapability(supports_transactions=True)
+@pytest.mark.asyncio
+async def test_on_commit_nested_transaction(db_isolated):
+    """Test on_commit callbacks of a nested block wait for the outermost commit."""
+    calls = []
+    async with in_transaction():
+        async with in_transaction():
+            await on_commit(lambda: calls.append("inner"))
+        assert calls == []
+        await on_commit(lambda: calls.append("outer"))
+
+    assert calls == ["inner", "outer"]
+
+
+@requireCapability(supports_transactions=True)
+@pytest.mark.asyncio
+async def test_on_commit_nested_rollback(db_isolated):
+    """Test a savepoint rollback only drops the callbacks registered in its block."""
+    calls = []
+    async with in_transaction():
+        await on_commit(lambda: calls.append("before"))
+        try:
+            async with in_transaction():
+                await on_commit(lambda: calls.append("rolled back"))
+                raise SomeException("Some error")
+        except SomeException:
+            pass
+        await on_commit(lambda: calls.append("after"))
+
+    assert calls == ["before", "after"]
+
+
+@requireCapability(supports_transactions=True)
+@pytest.mark.asyncio
+async def test_on_commit_nested_rollback_drops_inner_callbacks(db_isolated):
+    """Test a savepoint rollback drops callbacks of the blocks nested inside it."""
+    calls = []
+    async with in_transaction():
+        try:
+            async with in_transaction():
+                async with in_transaction():
+                    await on_commit(lambda: calls.append("inner"))
+                raise SomeException("Some error")
+        except SomeException:
+            pass
+
+    assert calls == []
+
+
+@requireCapability(supports_transactions=True)
+@pytest.mark.asyncio
+async def test_on_commit_explicit_commit(db_isolated):
+    """Test on_commit callbacks run after an explicit commit, even if the block then raises."""
+    calls = []
+    with pytest.raises(SomeException):
+        async with in_transaction() as connection:
+            await on_commit(lambda: calls.append("committed"))
+            await connection.commit()
+            raise SomeException("Some error")
+
+    assert calls == ["committed"]
+
+
+@requireCapability(supports_transactions=True)
+@pytest.mark.asyncio
+async def test_on_commit_explicit_commit_then_rollback(db_isolated):
+    """Test a rollback after an explicit commit is rejected, so on_commit callbacks still run."""
+    calls = []
+    with pytest.raises(TransactionManagementError):
+        async with in_transaction() as connection:
+            await Tournament.create(name="Test")
+            await on_commit(lambda: calls.append("committed"))
+            await connection.commit()
+            await connection.rollback()
+
+    assert calls == ["committed"]
+    assert await Tournament.filter(name="Test").exists()
+
+
+@requireCapability(supports_transactions=True)
+@pytest.mark.asyncio
+async def test_on_commit_explicit_rollback(db_isolated):
+    """Test on_commit callbacks are dropped after an explicit rollback."""
+    calls = []
+    async with in_transaction() as connection:
+        await on_commit(lambda: calls.append("committed"))
+        await connection.rollback()
+
+    assert calls == []
+
+
+@requireCapability(supports_transactions=True)
+@pytest.mark.asyncio
+async def test_on_commit_transaction_decorator(db_isolated):
+    """Test on_commit callbacks registered in an atomic function run after it returns."""
+    calls = []
+
+    @atomic()
+    async def create_tournament():
+        await Tournament.create(name="Test")
+        await on_commit(lambda: calls.append("committed"))
+        assert calls == []
+
+    await create_tournament()
+    assert calls == ["committed"]
+
+
+@requireCapability(supports_transactions=True)
+@pytest.mark.asyncio
+async def test_on_commit_callback_queries_database(db_isolated):
+    """Test on_commit callbacks can query the database once the transaction is closed."""
+    names = []
+
+    async def read_names():
+        names.extend(await Tournament.all().values_list("name", flat=True))
+
+    async with in_transaction():
+        await Tournament.create(name="Test")
+        await on_commit(read_names)
+
+    assert names == ["Test"]
+
+
+@requireCapability(supports_transactions=True)
+@pytest.mark.asyncio
+async def test_on_commit_callback_raising_exception(db_isolated):
+    """Test a failing on_commit callback does not stop the next ones, then raises in a group."""
+    calls = []
+
+    def fail():
+        raise SomeException("callback")
+
+    with pytest.RaisesGroup(pytest.RaisesExc(SomeException, match="callback")):
+        async with in_transaction():
+            await Tournament.create(name="Test")
+            await on_commit(fail)
+            await on_commit(lambda: calls.append("called"))
+
+    assert calls == ["called"]
+    assert await Tournament.all().count() == 1
+
+
+@requireCapability(supports_transactions=True)
+@pytest.mark.asyncio
+async def test_on_commit_callbacks_raising_different_exceptions(db_isolated):
+    """Test every exception raised by on_commit callbacks ends up in the group."""
+
+    def fail_sync():
+        raise SomeException("sync")
+
+    async def fail_async():
+        raise ValueError("async")
+
+    with pytest.RaisesGroup(SomeException, ValueError):
+        async with in_transaction():
+            await on_commit(fail_sync)
+            await on_commit(fail_async)
+
+
+@pytest.mark.asyncio
+async def test_on_commit_outside_transaction_raising_exception(db_isolated):
+    """Test a failing on_commit callback outside a transaction raises in a group."""
+
+    def fail():
+        raise SomeException("callback")
+
+    with pytest.RaisesGroup(SomeException):
+        await on_commit(fail)
+
+
+@requireCapability(supports_transactions=True)
+@pytest.mark.asyncio
+async def test_on_commit_commit_raising_exception(db_isolated):
+    """Test on_commit callbacks are dropped when the commit itself fails."""
+    calls = []
+    conn = connections.get("models")
+    with pytest.raises(ValueError, match="commit"):
+        async with conn._in_transaction() as tx_conn:
+            await on_commit(lambda: calls.append("committed"))
+            tx_conn.commit = Mock(side_effect=ValueError("commit"))
+
+    assert calls == []
