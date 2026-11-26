@@ -205,11 +205,13 @@ class BaseExecutor:
         # Insert should implement returning new id to saved object
         # Each db has its own methods for it, so each implementation should
         # go to descendant executors
-        query = (
-            self.db.query_class.into(self.model._meta.basetable)
-            .columns(*columns)
-            .insert(*[self.parameter(i) for i in range(len(columns))])
-        )
+        query = self.db.query_class.into(self.model._meta.basetable)
+        if columns:
+            query = query.columns(*columns).insert(
+                *[self.parameter(i) for i in range(len(columns))]
+            )
+        else:
+            query = query.default_values()
         if ignore_conflicts:
             query = query.on_conflict().do_nothing()
         return query

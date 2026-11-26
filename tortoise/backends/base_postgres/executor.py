@@ -98,7 +98,12 @@ class BasePostgresExecutor(BaseExecutor):
         self, columns: Sequence[str], has_generated: bool = True, ignore_conflicts: bool = False
     ) -> PostgreSQLQueryBuilder:
         builder = cast(PostgreSQLQueryBuilder, self.db.query_class.into(self.model._meta.basetable))
-        query = builder.columns(*columns).insert(*[self.parameter(i) for i in range(len(columns))])
+        if columns:
+            query = builder.columns(*columns).insert(
+                *[self.parameter(i) for i in range(len(columns))]
+            )
+        else:
+            query = builder.default_values()
         if has_generated and (generated_fields := self.model._meta.generated_db_fields):
             query = query.returning(*generated_fields)
         if ignore_conflicts:
