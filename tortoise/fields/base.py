@@ -193,6 +193,10 @@ class Field(Generic[VALUE], metaclass=_FieldMeta):
     :param description: Field description. Will also appear in ``Tortoise.describe_model()``
         and as DB comments in the generated DDL.
     :param validators: Validators for this field.
+    :param db_collation: Set a database collation for the column, emitted as ``COLLATE`` in the
+        generated DDL. Only meaningful for text based columns and the value is passed through to
+        the database as given, so use a collation the target database knows (for example
+        ``NOCASE`` on SQLite or ``utf8mb4_unicode_ci`` on MySQL).
 
     **Class Attributes:**
     These attributes needs to be defined when defining an actual field type.
@@ -300,6 +304,7 @@ class Field(Generic[VALUE], metaclass=_FieldMeta):
         description: str | None = None,
         model: Model | None = None,
         validators: list[Validator | Callable] | None = None,
+        db_collation: str | None = None,
         **kwargs: Any,
     ) -> None:
         if (index := kwargs.pop("index", None)) is not None:
@@ -354,6 +359,7 @@ class Field(Generic[VALUE], metaclass=_FieldMeta):
         self.index = bool(db_index)
         self.model_field_name = ""
         self.description = description
+        self.db_collation = db_collation
         self.docstring: str | None = None
         self.validators: list[Validator | Callable] = validators or []
         # TODO: consider making this not be set from constructor
