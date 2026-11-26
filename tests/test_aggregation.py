@@ -300,6 +300,75 @@ async def test_where_and_having(db):
 
 
 @pytest.mark.asyncio
+async def test_aggregate_values_with_related_filter(db):
+    author = await Author.create(name="1")
+    await Book.create(name="First!", author=author, rating=4)
+    await Book.create(name="Second!", author=author, rating=3)
+    await Book.create(name="Third!", author=author, rating=2)
+    other = await Author.create(name="2")
+    await Book.create(name="F-2", author=other, rating=5)
+
+    query = Book.filter(author__name="1").annotate(avg_rating=Avg("rating"), count=Count("id"))
+    assert await query.values("avg_rating", "count") == [{"avg_rating": 3, "count": 3}]
+    assert await query.values_list("count", flat=True) == [3]
+    # The annotation that isn't selected is left out of the SELECT
+    assert await query.values("count") == [{"count": 3}]
+
+
+@pytest.mark.asyncio
+async def test_aggregate_values_with_related_filter_stays_per_object(db):
+    author = await Author.create(name="1")
+    await Book.create(name="First!", author=author, rating=4)
+    await Book.create(name="Second!", author=author, rating=3)
+    await Book.create(name="Third!", author=author, rating=2)
+    other = await Author.create(name="2")
+    await Book.create(name="F-2", author=other, rating=5)
+
+    query = Book.filter(author__name="1").annotate(count=Count("id"))
+    # A model field next to the aggregate still groups per object
+    result = await query.values("name", "count")
+    assert sorted(result, key=lambda row: row["name"]) == [
+        {"name": "First!", "count": 1},
+        {"name": "Second!", "count": 1},
+        {"name": "Third!", "count": 1},
+    ]
+    # So do a HAVING and an ORDER BY
+    assert await query.filter(count__gte=1).values("count") == [{"count": 1}] * 3
+    assert await query.order_by("count").values("count") == [{"count": 1}] * 3
+
+
+@pytest.mark.asyncio
+async def test_aggregate_values_with_m2m_filter(db):
+    tournament = await Tournament.create(name="1")
+    event1 = await Event.create(name="First!", tournament=tournament)
+    event2 = await Event.create(name="Second!", tournament=tournament)
+    team1 = await Team.create(name="1")
+    team2 = await Team.create(name="2")
+    team3 = await Team.create(name="3")
+    await event1.participants.add(team1, team2, team3)
+    await event2.participants.add(team1)
+
+    # The m2m join repeats each event once per matching team
+    query = Event.filter(participants__id__in=[team1.id, team2.id, team3.id])
+    result = await query.annotate(count=Count("event_id")).values("count")
+    assert result == [{"count": 4}]
+    result = await query.annotate(count=Count("event_id", distinct=True)).values("count")
+    assert result == [{"count": 2}]
+
+
+@pytest.mark.asyncio
+async def test_aggregate_values_over_relation_stays_per_object(db):
+    author = await Author.create(name="1")
+    await Book.create(name="First!", author=author, rating=4)
+    await Book.create(name="Second!", author=author, rating=3)
+    other = await Author.create(name="2")
+    await Book.create(name="F-2", author=other, rating=5)
+
+    query = Author.annotate(count=Count("books"))
+    assert sorted(await query.values_list("count", flat=True)) == [1, 2]
+
+
+@pytest.mark.asyncio
 async def test_count_without_matching(db) -> None:
     await Tournament.create(name="Test")
 
