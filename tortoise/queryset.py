@@ -1129,7 +1129,9 @@ class QuerySet(AwaitableQuery[MODEL]):
         :raises FieldError: If the field to prefetch on is not a relation, or not found.
         """
         queryset = self._clone()
-        queryset._prefetch_map = {}
+        queryset._prefetch_map = {
+            field: set(relations) for field, relations in self._prefetch_map.items()
+        }
 
         for relation in args:
             if isinstance(relation, Prefetch):
